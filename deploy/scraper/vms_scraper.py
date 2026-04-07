@@ -64,17 +64,33 @@ SKU_MAP = {
     "one piece eb - 04 (box)": "EB 04",
 }
 
+def normalize(text: str) -> str:
+    """Normalize text: lowercase, single spaces, ASCII dash"""
+    import unicodedata
+    text = unicodedata.normalize("NFKC", text)  # normalize unicode
+    text = text.lower().strip()
+    # แปลง en-dash, em-dash → hyphen
+    text = text.replace("\u2013", "-").replace("\u2014", "-")
+    # ลด whitespace ซ้ำ
+    text = " ".join(text.split())
+    return text
+
 def map_sku(product_name: str) -> str | None:
     """แปลงชื่อสินค้าจาก VMS เป็น SKU ID"""
-    key = product_name.strip().lower()
+    key = normalize(product_name)
     # ลอง exact match ก่อน
     if key in SKU_MAP:
         return SKU_MAP[key]
+    # ลอง normalized match กับทุก key ใน map
+    for vms_name, sku_id in SKU_MAP.items():
+        if normalize(vms_name) == key:
+            return sku_id
     # ลอง partial match
     for vms_name, sku_id in SKU_MAP.items():
-        if vms_name in key or key in vms_name:
+        n = normalize(vms_name)
+        if n in key or key in n:
             return sku_id
-    print(f"  ⚠️  ไม่พบ SKU สำหรับ: {product_name}")
+    print(f"  ⚠️  ไม่พบ SKU สำหรับ: {product_name!r}")
     return None
 
 def download_xlsx(page, date_from: str, date_to: str) -> Path:
