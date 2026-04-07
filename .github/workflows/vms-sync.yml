@@ -23,8 +23,7 @@ jobs:
       - name: Install dependencies
         run: |
           pip install -r deploy/scraper/requirements.txt
-          playwright install chromium
-          playwright install-deps chromium
+          playwright install --with-deps chromium
 
       - name: Run VMS Scraper
         env:
