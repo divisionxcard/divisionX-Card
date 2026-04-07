@@ -7,11 +7,15 @@ import {
 import {
   Package, TrendingUp, ShoppingCart, AlertTriangle,
   PlusCircle, MinusCircle, BarChart2, Home, Menu, X,
-  CheckCircle, Clock, Search, RefreshCw, ArrowUpCircle, Loader2
+  CheckCircle, Clock, Search, RefreshCw, ArrowUpCircle, Loader2,
+  Pencil, Trash2
 } from "lucide-react"
 import {
   getStockBalance, getStockIn, getStockOut,
   addStockIn as dbAddStockIn, addStockOut as dbAddStockOut,
+  updateStockIn as dbUpdateStockIn,
+  deleteStockIn as dbDeleteStockIn,
+  deleteStockOut as dbDeleteStockOut,
   getMachines, getSalesByMachine
 } from "../lib/supabase"
 
@@ -322,6 +326,132 @@ function PageDashboard({ machines, stockIn, stockOut, stockBalance, sales }) {
 // ─────────────────────────────────────────────
 // PAGE 2: STOCK
 // ─────────────────────────────────────────────
+// ─────────────────────────────────────────────
+// EDIT STOCK IN MODAL
+// ─────────────────────────────────────────────
+function EditStockInModal({ record, onSave, onClose }) {
+  const [form, setForm] = useState({
+    lot_number:   record.lot_number || "",
+    purchased_at: record.purchased_at?.slice(0,10) || today(),
+    source:       record.source || "",
+    sku_id:       record.sku_id || "OP 01",
+    unit:         record.unit || "box",
+    quantity:     String(record.quantity || 1),
+    unit_cost:    String(record.unit_cost || ""),
+    note:         record.note || "",
+  })
+  const [saving, setSaving] = useState(false)
+
+  const sku       = SKUS.find(s => s.sku_id === form.sku_id)
+  const qty       = parseInt(form.quantity) || 0
+  const packs     = convertToPacks(qty, form.unit, sku)
+  const unitCost  = parseFloat(form.unit_cost) || 0
+  const totalCost = qty * unitCost
+  const cpp       = packs > 0 ? totalCost / packs : 0
+
+  const handleSave = async () => {
+    if (!form.lot_number || !form.source || !qty || !unitCost) return
+    setSaving(true)
+    try {
+      await onSave(record.id, {
+        lot_number:    form.lot_number,
+        purchased_at:  form.purchased_at,
+        source:        form.source,
+        sku_id:        form.sku_id,
+        unit:          form.unit,
+        quantity:      qty,
+        quantity_packs: packs,
+        unit_cost:     unitCost,
+        total_cost:    totalCost,
+        note:          form.note,
+      })
+      onClose()
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between p-5 border-b border-gray-100">
+          <h2 className="font-semibold text-gray-800">แก้ไขข้อมูลการรับสินค้า</h2>
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100"><X size={18}/></button>
+        </div>
+        <div className="p-5 space-y-4">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">เลขที่ Lot</label>
+              <input value={form.lot_number} onChange={e => setForm({...form, lot_number:e.target.value})}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-200"/>
+            </div>
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">วันที่ซื้อ</label>
+              <input type="date" value={form.purchased_at} onChange={e => setForm({...form, purchased_at:e.target.value})}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"/>
+            </div>
+          </div>
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">Supplier</label>
+            <input value={form.source} onChange={e => setForm({...form, source:e.target.value})}
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"/>
+          </div>
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">สินค้า (SKU)</label>
+            <select value={form.sku_id} onChange={e => setForm({...form, sku_id:e.target.value})}
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200">
+              {SKUS.map(s => <option key={s.sku_id} value={s.sku_id}>{s.sku_id} — {s.name}</option>)}
+            </select>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">หน่วย</label>
+              <select value={form.unit} onChange={e => setForm({...form, unit:e.target.value})}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200">
+                <option value="pack">ซอง (Pack)</option>
+                <option value="box">กล่อง (Box)</option>
+                <option value="cotton">Cotton</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">จำนวน</label>
+              <input type="number" min="1" value={form.quantity} onChange={e => setForm({...form, quantity:e.target.value})}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"/>
+            </div>
+          </div>
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">ราคาต้นทุนต่อหน่วย (บาท)</label>
+            <input type="number" min="0" step="0.01" value={form.unit_cost} onChange={e => setForm({...form, unit_cost:e.target.value})}
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"/>
+          </div>
+          {qty > 0 && unitCost > 0 && (
+            <div className="p-3 bg-blue-50 rounded-xl grid grid-cols-3 gap-2 text-center">
+              <div><p className="text-xs text-gray-400">ซองรวม</p><p className="text-sm font-bold text-blue-700">{fmt(packs)}</p></div>
+              <div><p className="text-xs text-gray-400">ต้นทุน/ซอง</p><p className="text-sm font-bold text-purple-600">{fmtB(cpp.toFixed(2))}</p></div>
+              <div><p className="text-xs text-gray-400">มูลค่ารวม</p><p className="text-sm font-bold text-gray-800">{fmtB(totalCost)}</p></div>
+            </div>
+          )}
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">หมายเหตุ</label>
+            <input value={form.note} onChange={e => setForm({...form, note:e.target.value})}
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"/>
+          </div>
+        </div>
+        <div className="flex gap-3 p-5 border-t border-gray-100">
+          <button onClick={onClose} className="flex-1 px-4 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-600 hover:bg-gray-50">
+            ยกเลิก
+          </button>
+          <button onClick={handleSave} disabled={saving || !form.lot_number || !form.source || !qty || !unitCost}
+            className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-semibold py-2.5 rounded-xl text-sm flex items-center justify-center gap-2">
+            {saving ? <Loader2 size={15} className="animate-spin"/> : <CheckCircle size={15}/>}
+            {saving ? "กำลังบันทึก..." : "บันทึกการแก้ไข"}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function genLotNumber() {
   const d = new Date()
   const ymd = d.toISOString().slice(0,10).replace(/-/g,"")
@@ -329,7 +459,7 @@ function genLotNumber() {
   return `LOT-${ymd}-${hm}`
 }
 
-function PageStock({ stockIn, stockBalance, onAddStockIn }) {
+function PageStock({ stockIn, stockBalance, onAddStockIn, onUpdateStockIn, onDeleteStockIn }) {
   const [tab, setTab]       = useState("balance")
   const [search, setSearch] = useState("")
   const [seriesSel, setSeriesSel] = useState("ทั้งหมด")
@@ -344,7 +474,23 @@ function PageStock({ stockIn, stockBalance, onAddStockIn }) {
     unit_cost:    "",
     note:         "",
   })
-  const [toast, setToast]   = useState(null)
+  const [toast, setToast]       = useState(null)
+  const [editRecord, setEditRecord] = useState(null)   // record กำลัง edit
+  const [deleteId, setDeleteId]     = useState(null)   // id กำลัง confirm ลบ
+  const [deleting, setDeleting]     = useState(false)
+
+  const handleDelete = async (id) => {
+    setDeleting(true)
+    try {
+      await onDeleteStockIn(id)
+      setDeleteId(null)
+      showToast("ลบข้อมูลสำเร็จ")
+    } catch (err) {
+      showToast("ลบไม่สำเร็จ: " + err.message, "error")
+    } finally {
+      setDeleting(false)
+    }
+  }
 
   // Balance map from view
   const balMap = Object.fromEntries(stockBalance.map(r => [r.sku_id, {
@@ -408,6 +554,14 @@ function PageStock({ stockIn, stockBalance, onAddStockIn }) {
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold text-gray-800">จัดการสต็อกสินค้า</h1>
+
+      {editRecord && (
+        <EditStockInModal
+          record={editRecord}
+          onSave={async (id, data) => { await onUpdateStockIn(id, data); setEditRecord(null) }}
+          onClose={() => setEditRecord(null)}
+        />
+      )}
 
       {toast && (
         <div className={`fixed top-4 left-4 right-4 sm:left-auto sm:right-4 sm:max-w-sm z-50 px-4 py-3 rounded-xl shadow-lg text-white text-sm flex items-center gap-2 ${toast.type==="error"?"bg-red-500":"bg-green-500"}`}>
@@ -618,12 +772,13 @@ function PageStock({ stockIn, stockBalance, onAddStockIn }) {
             ) : (
               <div className="space-y-3 max-h-[520px] overflow-y-auto pr-1">
                 {[...stockIn].slice(0, 15).map((r, i) => {
-                  const s = SKUS.find(sk => sk.sku_id === r.sku_id)
+                  const s   = SKUS.find(sk => sk.sku_id === r.sku_id)
                   const cpp = r.quantity_packs > 0 ? r.total_cost / r.quantity_packs : 0
+                  const isConfirmingDelete = deleteId === r.id
                   return (
                     <div key={i} className="p-3 rounded-xl bg-gray-50 border border-gray-100">
                       <div className="flex items-start justify-between gap-2">
-                        <div>
+                        <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
                             <span className="font-mono text-xs font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded">
                               {r.lot_number || "—"}
@@ -639,23 +794,40 @@ function PageStock({ stockIn, stockBalance, onAddStockIn }) {
                         <div className="text-right flex-shrink-0">
                           <p className="text-sm font-bold text-blue-600">+{fmt(r.quantity_packs)} ซอง</p>
                           <p className="text-xs text-gray-500">{fmt(r.quantity)} {r.unit}</p>
+                          <div className="flex gap-1 justify-end mt-1">
+                            <button onClick={() => setEditRecord(r)}
+                              className="p-1 rounded-lg bg-blue-100 text-blue-600 hover:bg-blue-200">
+                              <Pencil size={12}/>
+                            </button>
+                            <button onClick={() => setDeleteId(r.id)}
+                              className="p-1 rounded-lg bg-red-100 text-red-500 hover:bg-red-200">
+                              <Trash2 size={12}/>
+                            </button>
+                          </div>
                         </div>
                       </div>
                       <div className="mt-2 pt-2 border-t border-gray-100 grid grid-cols-3 gap-2 text-center">
-                        <div>
-                          <p className="text-xs text-gray-400">ต้นทุน/{r.unit}</p>
-                          <p className="text-xs font-bold text-gray-700">{fmtB(r.unit_cost)}</p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-gray-400">ต้นทุน/ซอง</p>
-                          <p className="text-xs font-bold text-purple-600">{fmtB(cpp.toFixed(2))}</p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-gray-400">มูลค่า Lot</p>
-                          <p className="text-xs font-bold text-gray-800">{fmtB(r.total_cost)}</p>
-                        </div>
+                        <div><p className="text-xs text-gray-400">ต้นทุน/{r.unit}</p><p className="text-xs font-bold text-gray-700">{fmtB(r.unit_cost)}</p></div>
+                        <div><p className="text-xs text-gray-400">ต้นทุน/ซอง</p><p className="text-xs font-bold text-purple-600">{fmtB(cpp.toFixed(2))}</p></div>
+                        <div><p className="text-xs text-gray-400">มูลค่า Lot</p><p className="text-xs font-bold text-gray-800">{fmtB(r.total_cost)}</p></div>
                       </div>
                       {r.note && <p className="text-xs text-gray-400 mt-1 italic">"{r.note}"</p>}
+                      {isConfirmingDelete && (
+                        <div className="mt-2 pt-2 border-t border-red-100 flex items-center justify-between bg-red-50 rounded-lg p-2">
+                          <p className="text-xs text-red-600 font-medium">ยืนยันลบ Lot นี้?</p>
+                          <div className="flex gap-2">
+                            <button onClick={() => setDeleteId(null)}
+                              className="px-3 py-1 text-xs rounded-lg border border-gray-200 text-gray-600 hover:bg-white">
+                              ยกเลิก
+                            </button>
+                            <button onClick={() => handleDelete(r.id)} disabled={deleting}
+                              className="px-3 py-1 text-xs rounded-lg bg-red-500 text-white hover:bg-red-600 disabled:opacity-50 flex items-center gap-1">
+                              {deleting ? <Loader2 size={10} className="animate-spin"/> : <Trash2 size={10}/>}
+                              ลบ
+                            </button>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )
                 })}
@@ -739,10 +911,26 @@ function PageStock({ stockIn, stockBalance, onAddStockIn }) {
 // ─────────────────────────────────────────────
 // PAGE 3: WITHDRAWAL
 // ─────────────────────────────────────────────
-function PageWithdrawal({ machines, stockOut, stockBalance, onAddStockOut }) {
+function PageWithdrawal({ machines, stockOut, stockBalance, onAddStockOut, onDeleteStockOut }) {
   const [form, setForm]   = useState({ sku_id:"OP 01", machine_id:"", unit:"box", quantity:"1", note:"" })
   const [toast, setToast] = useState(null)
   const [saving, setSaving] = useState(false)
+
+  const [deleteOutId, setDeleteOutId] = useState(null)
+  const [deletingOut, setDeletingOut] = useState(false)
+
+  const handleDeleteOut = async (id) => {
+    setDeletingOut(true)
+    try {
+      await onDeleteStockOut(id)
+      setDeleteOutId(null)
+      showToast("ลบรายการเบิกสำเร็จ")
+    } catch (err) {
+      showToast("ลบไม่สำเร็จ: " + err.message, "error")
+    } finally {
+      setDeletingOut(false)
+    }
+  }
 
   const machineId  = form.machine_id || machines[0]?.machine_id || ""
   const balMap     = Object.fromEntries(stockBalance.map(r => [r.sku_id, parseFloat(r.balance) || 0]))
@@ -918,16 +1106,13 @@ function PageWithdrawal({ machines, stockOut, stockBalance, onAddStockOut }) {
               {stockOut.map((r, i) => {
                 const sku     = SKUS.find(s => s.sku_id === r.sku_id)
                 const machine = machines.find(m => m.machine_id === r.machine_id)
-                // แยก unit info จาก note ที่บันทึกไว้ เช่น [3กล่อง]
                 const unitMatch = r.note?.match(/^\[(\d+)(กล่อง|ซอง)\]/)
-                const unitLabel = unitMatch
-                  ? `${unitMatch[1]} ${unitMatch[1].includes("กล่อง") ? "กล่อง" : unitMatch[2]}`
-                  : null
                 const cleanNote = r.note?.replace(/^\[\d+(กล่อง|ซอง)\]\s*/, "") || ""
+                const isConfirming = deleteOutId === r.id
                 return (
                   <div key={i} className="p-3 rounded-xl bg-gray-50">
                     <div className="flex items-start justify-between">
-                      <div>
+                      <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className="font-mono text-xs font-bold text-gray-700">{r.sku_id}</span>
                           <Badge series={sku?.series || "OP"}/>
@@ -945,10 +1130,32 @@ function PageWithdrawal({ machines, stockOut, stockBalance, onAddStockOut }) {
                         </p>
                         {cleanNote && <p className="text-xs text-gray-400 mt-0.5 italic">"{cleanNote}"</p>}
                       </div>
-                      <span className="text-orange-500 font-bold text-sm flex-shrink-0 ml-2">
-                        -{fmt(r.quantity_packs)} ซอง
-                      </span>
+                      <div className="flex-shrink-0 ml-2 text-right">
+                        <span className="text-orange-500 font-bold text-sm block">
+                          -{fmt(r.quantity_packs)} ซอง
+                        </span>
+                        <button onClick={() => setDeleteOutId(r.id)}
+                          className="mt-1 p-1 rounded-lg bg-red-100 text-red-500 hover:bg-red-200">
+                          <Trash2 size={12}/>
+                        </button>
+                      </div>
                     </div>
+                    {isConfirming && (
+                      <div className="mt-2 pt-2 border-t border-red-100 flex items-center justify-between bg-red-50 rounded-lg p-2">
+                        <p className="text-xs text-red-600 font-medium">ยืนยันลบรายการนี้?</p>
+                        <div className="flex gap-2">
+                          <button onClick={() => setDeleteOutId(null)}
+                            className="px-3 py-1 text-xs rounded-lg border border-gray-200 text-gray-600 hover:bg-white">
+                            ยกเลิก
+                          </button>
+                          <button onClick={() => handleDeleteOut(r.id)} disabled={deletingOut}
+                            className="px-3 py-1 text-xs rounded-lg bg-red-500 text-white hover:bg-red-600 disabled:opacity-50 flex items-center gap-1">
+                            {deletingOut ? <Loader2 size={10} className="animate-spin"/> : <Trash2 size={10}/>}
+                            ลบ
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )
               })}
@@ -1306,6 +1513,27 @@ export default function DivisionXApp() {
     setStockBalance(newSB)
   }
 
+  const updateStockIn = async (id, record) => {
+    await dbUpdateStockIn(id, record)
+    const [newSI, newSB] = await Promise.all([getStockIn(), getStockBalance()])
+    setStockIn(newSI)
+    setStockBalance(newSB)
+  }
+
+  const deleteStockIn = async (id) => {
+    await dbDeleteStockIn(id)
+    const [newSI, newSB] = await Promise.all([getStockIn(), getStockBalance()])
+    setStockIn(newSI)
+    setStockBalance(newSB)
+  }
+
+  const deleteStockOut = async (id) => {
+    await dbDeleteStockOut(id)
+    const [newSO, newSB] = await Promise.all([getStockOut(), getStockBalance()])
+    setStockOut(newSO)
+    setStockBalance(newSB)
+  }
+
   // ── Derived ──
   const balMap   = Object.fromEntries(stockBalance.map(r => [r.sku_id, parseFloat(r.balance) || 0]))
   const lowCount = SKUS.filter(s => (balMap[s.sku_id] || 0) < 24).length
@@ -1380,8 +1608,8 @@ export default function DivisionXApp() {
 
         <main className="flex-1 p-4 lg:p-6 overflow-y-auto">
           {page === "dashboard"  && <PageDashboard machines={machines} stockIn={stockIn} stockOut={stockOut} stockBalance={stockBalance} sales={sales}/>}
-          {page === "stock"      && <PageStock     stockIn={stockIn} stockBalance={stockBalance} onAddStockIn={addStockIn}/>}
-          {page === "withdrawal" && <PageWithdrawal machines={machines} stockOut={stockOut} stockBalance={stockBalance} onAddStockOut={addStockOut}/>}
+          {page === "stock"      && <PageStock     stockIn={stockIn} stockBalance={stockBalance} onAddStockIn={addStockIn} onUpdateStockIn={updateStockIn} onDeleteStockIn={deleteStockIn}/>}
+          {page === "withdrawal" && <PageWithdrawal machines={machines} stockOut={stockOut} stockBalance={stockBalance} onAddStockOut={addStockOut} onDeleteStockOut={deleteStockOut}/>}
           {page === "sales"      && <PageSales     machines={machines} sales={sales}/>}
           {page === "analytics"  && <PageAnalytics sales={sales}/>}
         </main>

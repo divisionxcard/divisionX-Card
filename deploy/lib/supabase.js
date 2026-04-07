@@ -96,6 +96,36 @@ export async function getTopSkus(days = 30) {
   return data
 }
 
+// ── แก้ไข Stock In ───────────────────────────────────────────
+export async function updateStockIn(id, record) {
+  const { data, error } = await supabase
+    .from("stock_in")
+    .update(record)
+    .eq("id", id)
+    .select()
+    .single()
+  if (error) throw error
+  return data
+}
+
+// ── ลบ Stock In ───────────────────────────────────────────────
+export async function deleteStockIn(id) {
+  const { error } = await supabase
+    .from("stock_in")
+    .delete()
+    .eq("id", id)
+  if (error) throw error
+}
+
+// ── ลบ Stock Out ──────────────────────────────────────────────
+export async function deleteStockOut(id) {
+  const { error } = await supabase
+    .from("stock_out")
+    .delete()
+    .eq("id", id)
+  if (error) throw error
+}
+
 // ── Machines ──────────────────────────────────────────────────
 export async function getMachines() {
   const { data, error } = await supabase
