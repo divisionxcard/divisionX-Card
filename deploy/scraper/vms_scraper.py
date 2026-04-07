@@ -1,0 +1,223 @@
+"""
+DivisionX Card — VMS Scraper
+Login VMS → Export XLSX → Parse → Save to Supabase
+รันผ่าน GitHub Actions ทุกวัน
+"""
+
+import os, re, time, requests
+from datetime import datetime, timedelta
+from pathlib import Path
+import pandas as pd
+from playwright.sync_api import sync_playwright
+from supabase import create_client
+
+# ── Config จาก Environment Variables ────────────────────────────
+VMS_URL      = os.environ["VMS_URL"]       # https://vms.inboxcorp.co.th/th/login
+VMS_USER     = os.environ["VMS_USERNAME"]
+VMS_PASS     = os.environ["VMS_PASSWORD"]
+SUPABASE_URL = os.environ["SUPABASE_URL"]
+SUPABASE_KEY = os.environ["SUPABASE_SERVICE_KEY"]
+
+# ── VMS Product Name → SKU ID Mapping ───────────────────────────
+SKU_MAP = {
+    "one piece op - 01 pack": "OP 01",
+    "one piece op - 01 (box)": "OP 01",
+    "one piece op - 02 pack": "OP 02",
+    "one piece op - 02 (box)": "OP 02",
+    "one piece op - 03 pack": "OP 03",
+    "one piece op - 03 (box)": "OP 03",
+    "one piece op - 04 pack": "OP 04",
+    "one piece op - 04 (box)": "OP 04",
+    "one piece op - 05 pack": "OP 05",
+    "one piece op - 05 (box)": "OP 05",
+    "one piece op - 06 pack": "OP 06",
+    "one piece op - 06 (box)": "OP 06",
+    "one piece op - 07 pack": "OP 07",
+    "one piece op - 07 (box)": "OP 07",
+    "one piece op - 08 pack": "OP 08",
+    "one piece op - 08 (box)": "OP 08",
+    "one piece op - 09 pack": "OP 09",
+    "one piece op - 09 (box)": "OP 09",
+    "one piece op - 10 pack": "OP 10",
+    "one piece op - 10 (box)": "OP 10",
+    "one piece op - 11 pack": "OP 11",
+    "one piece op - 11 (box)": "OP 11",
+    "one piece op - 12 pack": "OP 12",
+    "one piece op - 12 (box)": "OP 12",
+    "one piece op - 13 pack": "OP 13",
+    "one piece op - 13 (box)": "OP 13",
+    "one piece op - 14 pack": "OP 14",
+    "one piece op - 14 (box)": "OP 14",
+    "one piece op - 15 pack": "OP 15",
+    "one piece op - 15 (box)": "OP 15",
+    "prb - 01 (pack)": "PRB 01",
+    "prb - 01 (box)": "PRB 01",
+    "prb - 02 (pack)": "PRB 02",
+    "prb - 02 (box)": "PRB 02",
+    "one piece eb - 01 pack": "EB 01",
+    "one piece eb - 01 (box)": "EB 01",
+    "one piece eb - 02 pack": "EB 02",
+    "one piece eb - 02 (box)": "EB 02",
+    "one piece eb - 03 pack": "EB 03",
+    "one piece eb - 03 (box)": "EB 03",
+    "one piece eb - 04 pack": "EB 04",
+    "one piece eb - 04 (box)": "EB 04",
+}
+
+def map_sku(product_name: str) -> str | None:
+    """แปลงชื่อสินค้าจาก VMS เป็น SKU ID"""
+    key = product_name.strip().lower()
+    # ลอง exact match ก่อน
+    if key in SKU_MAP:
+        return SKU_MAP[key]
+    # ลอง partial match
+    for vms_name, sku_id in SKU_MAP.items():
+        if vms_name in key or key in vms_name:
+            return sku_id
+    print(f"  ⚠️  ไม่พบ SKU สำหรับ: {product_name}")
+    return None
+
+def download_xlsx(page, date_from: str, date_to: str) -> Path:
+    """Login VMS และ Export XLSX รายงานการขาย"""
+    print(f"🔐 Login VMS...")
+    page.goto(VMS_URL)
+    page.wait_for_load_state("networkidle")
+
+    # Login
+    page.fill('input[type="text"], input[name="username"], input[placeholder*="ชื่อผู้ใช้"]', VMS_USER)
+    page.fill('input[type="password"]', VMS_PASS)
+    page.click('button[type="submit"]')
+    page.wait_for_load_state("networkidle")
+    time.sleep(2)
+
+    print(f"📊 ไปหน้า รายงานการขาย...")
+    # ไปหน้า รายงาน → ยอดขาย
+    page.goto(VMS_URL.replace("/th/login", "/th/report/order"))
+    page.wait_for_load_state("networkidle")
+    time.sleep(2)
+
+    # ตั้งวันที่
+    print(f"📅 ตั้งวันที่ {date_from} ถึง {date_to}...")
+    try:
+        date_inputs = page.query_selector_all('input[type="date"], input[placeholder*="วัน"]')
+        if len(date_inputs) >= 2:
+            date_inputs[0].fill(date_from)
+            date_inputs[1].fill(date_to)
+            page.keyboard.press("Enter")
+            time.sleep(1)
+    except Exception as e:
+        print(f"  ⚠️  ตั้งวันที่ไม่สำเร็จ: {e}")
+
+    # กดปุ่ม ส่งออก/Export
+    print("📥 กด Export...")
+    xlsx_path = Path("/tmp/vms_sales.xlsx")
+    with page.expect_download() as dl:
+        try:
+            page.click('button:has-text("ส่งออก"), button:has-text("Export"), a:has-text("ส่งออก")')
+        except:
+            # ลอง selector อื่น
+            export_btn = page.query_selector('[class*="export"], [class*="download"]')
+            if export_btn:
+                export_btn.click()
+    download = dl.value
+    download.save_as(str(xlsx_path))
+    print(f"✅ ดาวน์โหลดสำเร็จ: {xlsx_path}")
+    return xlsx_path
+
+def parse_xlsx(xlsx_path: Path) -> list[dict]:
+    """อ่านและแปลงข้อมูลจาก XLSX"""
+    print(f"📋 อ่านไฟล์ XLSX...")
+    df = pd.read_excel(xlsx_path)
+
+    # Filter เฉพาะ paid
+    df = df[df["Status"] == "paid"].copy()
+    print(f"  รายการ paid: {len(df)} แถว")
+
+    records = []
+    skipped = 0
+    # นับ line_index ต่อ transaction_id (แก้ปัญหา 1 transaction มีหลาย SKU ซ้ำกัน)
+    txn_counter = {}
+
+    for _, row in df.iterrows():
+        product_raw = str(row.get("Product Name", "")).strip()
+        if not product_raw or product_raw == "nan" or product_raw == "No Products":
+            skipped += 1
+            continue
+
+        sku_id = map_sku(product_raw)
+        if not sku_id:
+            skipped += 1
+            continue
+
+        txn_id = str(row.get("Transaction ID", ""))
+        # นับ index ภายใน transaction เดียวกัน
+        txn_counter[txn_id] = txn_counter.get(txn_id, -1) + 1
+        sale_key = f"{txn_id}-{txn_counter[txn_id]}"
+
+        # Parse วันที่
+        sold_at_raw = str(row.get("Transaction Date", ""))
+        try:
+            sold_at = pd.to_datetime(sold_at_raw).isoformat()
+        except:
+            sold_at = datetime.now().isoformat()
+
+        records.append({
+            "sale_key":         sale_key,
+            "transaction_id":   txn_id,
+            "machine_id":       str(row.get("KioskID", "")),
+            "sku_id":           sku_id,
+            "product_name_raw": product_raw,
+            "quantity_sold":    1,
+            "grand_total":      float(row.get("Grand Total", 0) or 0),
+            "sold_at":          sold_at,
+        })
+
+    print(f"  แปลงสำเร็จ: {len(records)} รายการ | ข้าม: {skipped}")
+    return records
+
+def save_to_supabase(records: list[dict]):
+    """บันทึกลง Supabase (upsert ป้องกันซ้ำ)"""
+    if not records:
+        print("⚠️  ไม่มีข้อมูลที่จะบันทึก")
+        return
+
+    supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+    print(f"💾 บันทึก {len(records)} รายการลง Supabase...")
+
+    # แบ่งเป็น batch ละ 100
+    batch_size = 100
+    saved = 0
+    for i in range(0, len(records), batch_size):
+        batch = records[i:i+batch_size]
+        result = supabase.table("sales").upsert(
+            batch, on_conflict="sale_key"
+        ).execute()
+        saved += len(batch)
+        print(f"  ✅ batch {i//batch_size + 1}: {len(batch)} รายการ")
+
+    print(f"🎉 บันทึกทั้งหมด {saved} รายการ")
+
+def main():
+    # ดึงข้อมูลย้อนหลัง 7 วัน
+    date_to   = datetime.now().strftime("%Y-%m-%d")
+    date_from = (datetime.now() - timedelta(days=7)).strftime("%Y-%m-%d")
+    print(f"\n{'='*50}")
+    print(f"DivisionX Card — VMS Scraper")
+    print(f"ช่วงเวลา: {date_from} → {date_to}")
+    print(f"{'='*50}\n")
+
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
+        page = browser.new_page()
+        try:
+            xlsx_path = download_xlsx(page, date_from, date_to)
+            records   = parse_xlsx(xlsx_path)
+            save_to_supabase(records)
+        except Exception as e:
+            print(f"❌ Error: {e}")
+            raise
+        finally:
+            browser.close()
+
+if __name__ == "__main__":
+    main()
