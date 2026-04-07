@@ -22,7 +22,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install -r scraper/requirements.txt
+          pip install -r deploy/scraper/requirements.txt
           playwright install chromium
           playwright install-deps chromium
 
@@ -33,4 +33,4 @@ jobs:
           VMS_PASSWORD:         ${{ secrets.VMS_PASSWORD }}
           SUPABASE_URL:         ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
-        run: python scraper/vms_scraper.py
+        run: python deploy/scraper/vms_scraper.py
