@@ -740,15 +740,22 @@ function PageStock({ stockIn, stockBalance, onAddStockIn }) {
 // PAGE 3: WITHDRAWAL
 // ─────────────────────────────────────────────
 function PageWithdrawal({ machines, stockOut, stockBalance, onAddStockOut }) {
-  const [form, setForm]   = useState({ sku_id:"OP 01", machine_id:"", quantity_packs:"12", note:"" })
+  const [form, setForm]   = useState({ sku_id:"OP 01", machine_id:"", unit:"box", quantity:"1", note:"" })
   const [toast, setToast] = useState(null)
   const [saving, setSaving] = useState(false)
 
-  // Set default machine once loaded
-  const machineId = form.machine_id || machines[0]?.machine_id || ""
+  const machineId  = form.machine_id || machines[0]?.machine_id || ""
+  const balMap     = Object.fromEntries(stockBalance.map(r => [r.sku_id, parseFloat(r.balance) || 0]))
+  const available  = balMap[form.sku_id] || 0
+  const selectedSku = SKUS.find(s => s.sku_id === form.sku_id)
+  const availBoxes = selectedSku ? Math.floor(available / selectedSku.packs_per_box) : 0
 
-  const balMap  = Object.fromEntries(stockBalance.map(r => [r.sku_id, parseFloat(r.balance) || 0]))
-  const available = balMap[form.sku_id] || 0
+  // คำนวณซองที่จะเบิก
+  const withdrawQty   = parseInt(form.quantity) || 0
+  const withdrawPacks = form.unit === "box"
+    ? withdrawQty * (selectedSku?.packs_per_box || 12)
+    : withdrawQty
+  const overStock = withdrawPacks > available
 
   const showToast = (msg, type="success") => {
     setToast({msg, type}); setTimeout(() => setToast(null), 3500)
@@ -756,24 +763,23 @@ function PageWithdrawal({ machines, stockOut, stockBalance, onAddStockOut }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    const qty = parseInt(form.quantity_packs)
-    if (!qty || qty <= 0) { showToast("กรุณาระบุจำนวนที่ถูกต้อง","error"); return }
-    if (!machineId)       { showToast("กรุณาเลือกตู้ปลายทาง","error"); return }
-    if (qty > available)  {
-      showToast(`สต็อกไม่เพียงพอ: คงเหลือ ${available} ซอง แต่ต้องการ ${qty} ซอง`, "error"); return
-    }
+    if (!withdrawQty || withdrawQty <= 0) { showToast("กรุณาระบุจำนวนที่ถูกต้อง","error"); return }
+    if (!machineId)    { showToast("กรุณาเลือกตู้ปลายทาง","error"); return }
+    if (overStock)     { showToast(`สต็อกไม่เพียงพอ: คงเหลือ ${available} ซอง (${availBoxes} กล่อง)`, "error"); return }
     try {
       setSaving(true)
-      await onAddStockOut({
-        sku_id:        form.sku_id,
-        machine_id:    machineId,
-        quantity_packs: qty,
-        withdrawn_at:  today(),
-        note:          form.note,
-      })
       const machine = machines.find(m => m.machine_id === machineId)
-      showToast(`เบิกสำเร็จ: ${form.sku_id} → ${machine?.name ?? machineId} ${qty} ซอง`)
-      setForm(f => ({...f, quantity_packs:"12", note:""}))
+      await onAddStockOut({
+        sku_id:         form.sku_id,
+        machine_id:     machineId,
+        quantity_packs: withdrawPacks,
+        withdrawn_at:   today(),
+        note:           form.note
+          ? `[${form.unit === "box" ? withdrawQty+"กล่อง" : withdrawQty+"ซอง"}] ${form.note}`
+          : `[${form.unit === "box" ? withdrawQty+"กล่อง" : withdrawQty+"ซอง"}]`,
+      })
+      showToast(`เบิกสำเร็จ: ${form.sku_id} → ${machine?.name ?? machineId} ${fmt(withdrawPacks)} ซอง`)
+      setForm(f => ({...f, quantity:"1", note:""}))
     } catch (err) {
       showToast("เกิดข้อผิดพลาด: " + err.message, "error")
     } finally {
@@ -794,24 +800,87 @@ function PageWithdrawal({ machines, stockOut, stockBalance, onAddStockOut }) {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Form */}
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-          <h2 className="font-semibold text-gray-700 mb-4">บันทึกการเบิกสินค้า</h2>
+          <h2 className="font-semibold text-gray-700 mb-1">บันทึกการเบิกสินค้าเติมตู้</h2>
+          <p className="text-xs text-gray-400 mb-4">เลือกเบิกเป็น กล่อง หรือ ซอง ระบบจะคำนวณจำนวนซองให้อัตโนมัติ</p>
           <form onSubmit={handleSubmit} className="space-y-4">
+
+            {/* SKU */}
             <div>
-              <label className="block text-xs text-gray-500 mb-1">SKU ที่ต้องการเบิก</label>
+              <label className="block text-xs text-gray-500 mb-1">สินค้า (SKU)</label>
               <select value={form.sku_id} onChange={e => setForm({...form, sku_id:e.target.value})}
                 className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-200">
                 {SKUS.map(s => <option key={s.sku_id} value={s.sku_id}>{s.sku_id} — {s.name}</option>)}
               </select>
             </div>
 
-            <div className={`p-3 rounded-xl text-sm flex items-center justify-between ${available < 24 ? "bg-amber-50 text-amber-700":"bg-green-50 text-green-700"}`}>
-              <span>สต็อกคงเหลือ ({form.sku_id})</span>
-              <span className="font-bold">{fmt(available)} ซอง</span>
+            {/* สต็อกคงเหลือ */}
+            <div className={`p-3 rounded-xl text-sm grid grid-cols-2 gap-2 ${available < 24 ? "bg-amber-50":"bg-green-50"}`}>
+              <div className="text-center">
+                <p className={`text-xs ${available < 24 ? "text-amber-500":"text-green-500"}`}>คงเหลือ (ซอง)</p>
+                <p className={`text-lg font-bold ${available < 24 ? "text-amber-700":"text-green-700"}`}>{fmt(available)}</p>
+              </div>
+              <div className="text-center border-l border-white/60">
+                <p className={`text-xs ${available < 24 ? "text-amber-500":"text-green-500"}`}>คงเหลือ (กล่อง)</p>
+                <p className={`text-lg font-bold ${available < 24 ? "text-amber-700":"text-green-700"}`}>
+                  {availBoxes}
+                  <span className="text-xs font-normal ml-1">({selectedSku?.packs_per_box} ซอง/กล่อง)</span>
+                </p>
+              </div>
             </div>
 
+            {/* เลือกหน่วย */}
             <div>
-              <label className="block text-xs text-gray-500 mb-1">ปลายทาง (ตู้)</label>
-              <div className={`grid gap-2 ${machines.length <= 2 ? "grid-cols-2" : "grid-cols-2 lg:grid-cols-4"}`}>
+              <label className="block text-xs text-gray-500 mb-2">เบิกเป็น</label>
+              <div className="grid grid-cols-2 gap-2">
+                {[{v:"box",l:"กล่อง (Box)",sub:`${selectedSku?.packs_per_box} ซอง/กล่อง`},
+                  {v:"pack",l:"ซอง (Pack)",sub:"ระบุจำนวนซองตรงๆ"}].map(opt => (
+                  <button type="button" key={opt.v}
+                    onClick={() => setForm({...form, unit:opt.v, quantity:"1"})}
+                    className={`py-3 px-4 rounded-xl border-2 text-left transition-all ${form.unit===opt.v?"border-orange-400 bg-orange-50":"border-gray-200 hover:border-gray-300"}`}>
+                    <p className={`text-sm font-bold ${form.unit===opt.v?"text-orange-700":"text-gray-700"}`}>{opt.l}</p>
+                    <p className="text-xs text-gray-400 mt-0.5">{opt.sub}</p>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* จำนวน */}
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">
+                จำนวน{form.unit === "box" ? "กล่อง" : "ซอง"}
+              </label>
+              <input type="number" min="1"
+                max={form.unit === "box" ? availBoxes : available}
+                value={form.quantity}
+                onChange={e => setForm({...form, quantity:e.target.value})}
+                className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-200 ${overStock?"border-red-300":"border-gray-200"}`}/>
+
+              {/* สรุปการเบิก */}
+              {withdrawQty > 0 && (
+                <div className={`mt-2 p-3 rounded-xl text-sm ${overStock?"bg-red-50 text-red-700":"bg-orange-50 text-orange-700"}`}>
+                  {form.unit === "box" ? (
+                    <span>
+                      เบิก <span className="font-bold">{withdrawQty} กล่อง</span>
+                      {" = "}
+                      <span className="font-bold">{fmt(withdrawPacks)} ซอง</span>
+                    </span>
+                  ) : (
+                    <span>เบิก <span className="font-bold">{fmt(withdrawPacks)} ซอง</span></span>
+                  )}
+                  {overStock && <span className="ml-2 font-semibold">⚠️ เกินสต็อก!</span>}
+                  {!overStock && (
+                    <span className="ml-2 text-xs opacity-70">
+                      เหลือ {fmt(available - withdrawPacks)} ซอง
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* ตู้ปลายทาง */}
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">ตู้ปลายทาง</label>
+              <div className={`grid gap-2 ${machines.length <= 2 ? "grid-cols-2" : "grid-cols-2"}`}>
                 {machines.map(m => (
                   <button type="button" key={m.machine_id}
                     onClick={() => setForm({...form, machine_id:m.machine_id})}
@@ -823,26 +892,18 @@ function PageWithdrawal({ machines, stockOut, stockBalance, onAddStockOut }) {
               </div>
             </div>
 
-            <div>
-              <label className="block text-xs text-gray-500 mb-1">จำนวนซอง</label>
-              <input type="number" min="1" max={available} value={form.quantity_packs}
-                onChange={e => setForm({...form, quantity_packs:e.target.value})}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-200"/>
-              {parseInt(form.quantity_packs) > available && (
-                <p className="text-xs text-red-500 mt-1">⚠️ เกินจำนวนสต็อกที่มี ({available} ซอง)</p>
-              )}
-            </div>
-
+            {/* หมายเหตุ */}
             <div>
               <label className="block text-xs text-gray-500 mb-1">หมายเหตุ (ไม่บังคับ)</label>
               <input value={form.note} onChange={e => setForm({...form, note:e.target.value})}
+                placeholder="เช่น เติมเพิ่มหลังงานอีเว้นท์"
                 className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-200"/>
             </div>
 
-            <button type="submit" disabled={saving}
+            <button type="submit" disabled={saving || overStock}
               className="w-full bg-orange-500 hover:bg-orange-600 disabled:opacity-60 text-white font-semibold py-2.5 rounded-xl text-sm transition-colors flex items-center justify-center gap-2">
               {saving ? <Loader2 size={16} className="animate-spin"/> : <ArrowUpCircle size={16}/>}
-              {saving ? "กำลังบันทึก..." : "บันทึกการเบิก"}
+              {saving ? "กำลังบันทึก..." : `บันทึกเบิก ${withdrawQty > 0 ? fmt(withdrawPacks)+" ซอง" : ""}`}
             </button>
           </form>
         </div>
@@ -853,26 +914,41 @@ function PageWithdrawal({ machines, stockOut, stockBalance, onAddStockOut }) {
           {stockOut.length === 0 ? (
             <p className="text-gray-400 text-sm">ยังไม่มีประวัติการเบิก</p>
           ) : (
-            <div className="space-y-2 max-h-[480px] overflow-y-auto pr-1">
-              {[...stockOut].reverse().map((r, i) => {
+            <div className="space-y-2 max-h-[560px] overflow-y-auto pr-1">
+              {stockOut.map((r, i) => {
                 const sku     = SKUS.find(s => s.sku_id === r.sku_id)
                 const machine = machines.find(m => m.machine_id === r.machine_id)
+                // แยก unit info จาก note ที่บันทึกไว้ เช่น [3กล่อง]
+                const unitMatch = r.note?.match(/^\[(\d+)(กล่อง|ซอง)\]/)
+                const unitLabel = unitMatch
+                  ? `${unitMatch[1]} ${unitMatch[1].includes("กล่อง") ? "กล่อง" : unitMatch[2]}`
+                  : null
+                const cleanNote = r.note?.replace(/^\[\d+(กล่อง|ซอง)\]\s*/, "") || ""
                 return (
-                  <div key={i} className="p-3 rounded-xl bg-gray-50 flex items-center justify-between">
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-mono text-xs font-bold text-gray-700">{r.sku_id}</span>
-                        <Badge series={sku?.series || "OP"}/>
+                  <div key={i} className="p-3 rounded-xl bg-gray-50">
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-mono text-xs font-bold text-gray-700">{r.sku_id}</span>
+                          <Badge series={sku?.series || "OP"}/>
+                          {unitMatch && (
+                            <span className="text-xs bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded font-medium">
+                              {unitMatch[1]} {unitMatch[2]}
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs text-gray-500 mt-0.5">
+                          → <span className="font-medium text-orange-600">{machine?.name ?? r.machine_id}</span>
+                        </p>
+                        <p className="text-xs text-gray-400 flex items-center gap-1 mt-0.5">
+                          <Clock size={10}/> {r.withdrawn_at?.slice(0,10)}
+                        </p>
+                        {cleanNote && <p className="text-xs text-gray-400 mt-0.5 italic">"{cleanNote}"</p>}
                       </div>
-                      <p className="text-xs text-gray-500 mt-0.5">
-                        → <span className="font-medium text-orange-600">{machine?.name ?? r.machine_id}</span>
-                        {r.note && <span className="ml-2 text-gray-400">({r.note})</span>}
-                      </p>
-                      <p className="text-xs text-gray-400 flex items-center gap-1 mt-0.5">
-                        <Clock size={10}/> {r.withdrawn_at}
-                      </p>
+                      <span className="text-orange-500 font-bold text-sm flex-shrink-0 ml-2">
+                        -{fmt(r.quantity_packs)} ซอง
+                      </span>
                     </div>
-                    <span className="text-orange-500 font-bold text-sm">-{fmt(r.quantity_packs)} ซอง</span>
                   </div>
                 )
               })}
