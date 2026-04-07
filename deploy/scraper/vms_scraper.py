@@ -92,7 +92,7 @@ def download_xlsx(page, date_from: str, date_to: str) -> Path:
 
     print(f"📊 ไปหน้า รายงานการขาย...")
     # ไปหน้า รายงาน → ยอดขาย
-    page.goto(VMS_URL.replace("/th/login", "/th/report/order"))
+    page.goto(VMS_URL.replace("/th/login", "/th/report/sales"))
     page.wait_for_load_state("networkidle")
     time.sleep(2)
 
