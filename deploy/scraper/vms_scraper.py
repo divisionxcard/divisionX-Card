@@ -111,14 +111,22 @@ def download_xlsx(page, date_from: str, date_to: str) -> Path:
     # กดปุ่ม ส่งออก/Export
     print("📥 กด Export...")
     xlsx_path = Path("/tmp/vms_sales.xlsx")
-    with page.expect_download() as dl:
+
+    # Screenshot ก่อนกด Export เพื่อ debug
+    page.screenshot(path="/tmp/before_export.png")
+    print("📸 screenshot: /tmp/before_export.png")
+
+    with page.expect_download(timeout=90000) as dl:
         try:
-            page.click('button:has-text("ส่งออก"), button:has-text("Export"), a:has-text("ส่งออก")')
+            page.click('button:has-text("ส่งออก"), button:has-text("Export"), a:has-text("ส่งออก")', timeout=10000)
         except:
             # ลอง selector อื่น
             export_btn = page.query_selector('[class*="export"], [class*="download"]')
             if export_btn:
                 export_btn.click()
+            else:
+                page.screenshot(path="/tmp/no_export_btn.png")
+                raise Exception("ไม่พบปุ่ม Export")
     download = dl.value
     download.save_as(str(xlsx_path))
     print(f"✅ ดาวน์โหลดสำเร็จ: {xlsx_path}")
