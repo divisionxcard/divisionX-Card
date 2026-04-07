@@ -10,9 +10,9 @@ SELECT
   s.series,
   s.sell_price,
   s.cost_price,
-  COALESCE(si.total_in,  0) AS total_packs_in,
-  COALESCE(so.total_out, 0) AS total_packs_out,
-  COALESCE(si.total_in, 0) - COALESCE(so.total_out, 0) AS balance_packs
+  COALESCE(si.total_in,  0) AS total_in,
+  COALESCE(so.total_out, 0) AS total_out,
+  COALESCE(si.total_in,  0) - COALESCE(so.total_out, 0) AS balance
 FROM skus s
 LEFT JOIN (
   SELECT sku_id, SUM(quantity_packs) AS total_in
