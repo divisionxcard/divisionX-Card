@@ -98,7 +98,7 @@ function KpiCard({ icon: Icon, label, value, sub, color }) {
       <div className={`rounded-xl p-3 ${bg[color]}`}><Icon size={22}/></div>
       <div>
         <p className="text-xs text-gray-500 mb-1">{label}</p>
-        <p className="text-2xl font-bold text-gray-800">{value}</p>
+        <p className="text-xl sm:text-2xl font-bold text-gray-800 break-all">{value}</p>
         {sub && <p className="text-xs text-gray-400 mt-0.5">{sub}</p>}
       </div>
     </div>
@@ -381,7 +381,7 @@ function PageStock({ stockIn, stockBalance, onAddStockIn }) {
       <h1 className="text-2xl font-bold text-gray-800">จัดการสต็อกสินค้า</h1>
 
       {toast && (
-        <div className={`fixed top-4 right-4 z-50 px-4 py-3 rounded-xl shadow-lg text-white text-sm flex items-center gap-2 ${toast.type==="error"?"bg-red-500":"bg-green-500"}`}>
+        <div className={`fixed top-4 left-4 right-4 sm:left-auto sm:right-4 sm:max-w-sm z-50 px-4 py-3 rounded-xl shadow-lg text-white text-sm flex items-center gap-2 ${toast.type==="error"?"bg-red-500":"bg-green-500"}`}>
           {toast.type==="error" ? <X size={16}/> : <CheckCircle size={16}/>} {toast.msg}
         </div>
       )}
@@ -415,7 +415,37 @@ function PageStock({ stockIn, stockBalance, onAddStockIn }) {
               ))}
             </div>
           </div>
-          <div className="overflow-x-auto">
+          {/* Mobile: card view */}
+          <div className="sm:hidden space-y-2">
+            {filtered.map(s => {
+              const b   = balMap[s.sku_id] || { total_in:0, total_out:0, balance:0 }
+              const low = b.balance < 24
+              return (
+                <div key={s.sku_id} className="flex items-center justify-between p-3 rounded-xl bg-gray-50">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono text-xs font-bold text-gray-700">{s.sku_id}</span>
+                      <Badge series={s.series}/>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-0.5">{s.name}</p>
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      <span className="text-blue-500">+{fmt(b.total_in)}</span>
+                      {" / "}
+                      <span className="text-orange-400">-{fmt(b.total_out)}</span>
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-bold text-gray-800">{fmt(b.balance)} ซอง</p>
+                    <span className={`px-2 py-0.5 rounded text-xs font-medium ${low?"bg-amber-100 text-amber-700":"bg-green-100 text-green-700"}`}>
+                      {low ? "⚠️ ใกล้หมด" : "✓ ปกติ"}
+                    </span>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+          {/* Desktop: table view */}
+          <div className="hidden sm:block overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-gray-100">
@@ -601,7 +631,7 @@ function PageWithdrawal({ machines, stockOut, stockBalance, onAddStockOut }) {
       <h1 className="text-2xl font-bold text-gray-800">เบิกสินค้าเติมตู้</h1>
 
       {toast && (
-        <div className={`fixed top-4 right-4 z-50 px-4 py-3 rounded-xl shadow-lg text-white text-sm flex items-center gap-2 ${toast.type==="error"?"bg-red-500":"bg-green-500"}`}>
+        <div className={`fixed top-4 left-4 right-4 sm:left-auto sm:right-4 sm:max-w-sm z-50 px-4 py-3 rounded-xl shadow-lg text-white text-sm flex items-center gap-2 ${toast.type==="error"?"bg-red-500":"bg-green-500"}`}>
           {toast.type==="error"?<X size={16}/>:<CheckCircle size={16}/>} {toast.msg}
         </div>
       )}
@@ -884,10 +914,10 @@ function PageAnalytics({ sales }) {
       <h1 className="text-2xl font-bold text-gray-800">วิเคราะห์ยอดขาย SKU</h1>
 
       {/* Series Overview */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {seriesData.map((s, i) => (
           <div key={s.name} className="bg-white rounded-2xl border shadow-sm p-4 flex items-center gap-4">
-            <div className="w-3 h-12 rounded-full" style={{backgroundColor:Object.values(SERIES_COLOR)[i]}}/>
+            <div className="w-3 h-12 rounded-full flex-shrink-0" style={{backgroundColor:Object.values(SERIES_COLOR)[i]}}/>
             <div>
               <Badge series={s.name}/><br/>
               <span className="text-lg font-bold text-gray-800 mt-1 block">{fmtB(s.ยอดขาย)}</span>
@@ -916,11 +946,11 @@ function PageAnalytics({ sales }) {
               <tr className="border-b border-gray-100">
                 <th className="text-left py-2 text-xs text-gray-400 w-8">#</th>
                 <th className="text-left py-2 text-xs text-gray-400">SKU</th>
-                <th className="text-center py-2 text-xs text-gray-400">Series</th>
-                <th className="text-right py-2 text-xs text-gray-400">ซองที่ขาย</th>
+                <th className="text-center py-2 text-xs text-gray-400 hidden sm:table-cell">Series</th>
+                <th className="text-right py-2 text-xs text-gray-400 hidden sm:table-cell">ซองที่ขาย</th>
                 <th className="text-right py-2 text-xs text-gray-400">รายรับ</th>
                 <th className="text-right py-2 text-xs text-gray-400">กำไร</th>
-                <th className="py-2 px-2 text-xs text-gray-400 w-28">สัดส่วน</th>
+                <th className="py-2 px-2 text-xs text-gray-400 w-20 hidden sm:table-cell">สัดส่วน</th>
               </tr>
             </thead>
             <tbody>
@@ -933,11 +963,11 @@ function PageAnalytics({ sales }) {
                       {i===0?"🥇":i===1?"🥈":i===2?"🥉":<span className="text-gray-400 text-xs">{i+1}</span>}
                     </td>
                     <td className="py-2.5 font-mono text-xs font-bold text-gray-700">{r.sku_id}</td>
-                    <td className="py-2.5 text-center"><Badge series={r.series}/></td>
-                    <td className="py-2.5 text-right font-medium text-gray-700">{fmt(r.qty)}</td>
+                    <td className="py-2.5 text-center hidden sm:table-cell"><Badge series={r.series}/></td>
+                    <td className="py-2.5 text-right font-medium text-gray-700 hidden sm:table-cell">{fmt(r.qty)}</td>
                     <td className="py-2.5 text-right font-semibold text-green-600">{fmtB(r.rev)}</td>
                     <td className="py-2.5 text-right font-semibold text-purple-600">{fmtB(r.profit)}</td>
-                    <td className="py-2.5 px-2">
+                    <td className="py-2.5 px-2 hidden sm:table-cell">
                       <div className="w-full bg-gray-100 rounded-full h-2">
                         <div className="h-2 rounded-full bg-blue-400" style={{width:`${pct}%`}}/>
                       </div>
