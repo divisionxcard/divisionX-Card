@@ -1,0 +1,50 @@
+# =============================================================
+# DivisionX Card — .gitignore
+# =============================================================
+
+# ─── Environment (ห้าม commit เด็ดขาด!) ─────────────────────
+.env
+.env.local
+.env.development
+.env.production
+.env.staging
+*.env
+
+# ─── Dependencies ────────────────────────────────────────────
+node_modules/
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# ─── Build Output ────────────────────────────────────────────
+.next/
+dist/
+build/
+out/
+*.tsbuildinfo
+
+# ─── Logs ────────────────────────────────────────────────────
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+
+# ─── OS / Editor ─────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# ─── VMS Scraper ─────────────────────────────────────────────
+scripts/vms-scraper/cookies.json
+scripts/vms-scraper/session.json
+scripts/vms-scraper/*.png
+scripts/vms-scraper/*.har
+
+# ─── Database dumps ──────────────────────────────────────────
+*.sql.gz
+*.dump
