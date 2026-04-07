@@ -146,3 +146,23 @@ export async function getSkus() {
   if (error) throw error
   return data
 }
+
+// ── เพิ่ม SKU ใหม่ ────────────────────────────────────────────
+export async function addSku(record) {
+  const { data, error } = await supabase
+    .from("skus")
+    .insert([record])
+    .select()
+    .single()
+  if (error) throw error
+  return data
+}
+
+// ── ปิดใช้งาน SKU (soft delete) ──────────────────────────────
+export async function deactivateSku(skuId) {
+  const { error } = await supabase
+    .from("skus")
+    .update({ is_active: false })
+    .eq("sku_id", skuId)
+  if (error) throw error
+}

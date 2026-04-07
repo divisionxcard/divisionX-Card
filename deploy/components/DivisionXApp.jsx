@@ -16,7 +16,8 @@ import {
   updateStockIn as dbUpdateStockIn,
   deleteStockIn as dbDeleteStockIn,
   deleteStockOut as dbDeleteStockOut,
-  getMachines, getSalesByMachine
+  getMachines, getSalesByMachine,
+  getSkus, addSku as dbAddSku, deactivateSku as dbDeactivateSku,
 } from "../lib/supabase"
 
 // ─────────────────────────────────────────────
@@ -139,7 +140,7 @@ function ErrorScreen({ msg, onRetry }) {
 // ─────────────────────────────────────────────
 // PAGE 1: DASHBOARD — Stock Overview with Lots
 // ─────────────────────────────────────────────
-function PageDashboard({ stockIn, stockBalance }) {
+function PageDashboard({ stockIn, stockBalance, skus }) {
   const [expandedSku, setExpandedSku] = useState(null)
   const [seriesSel,   setSeriesSel]   = useState("ทั้งหมด")
   const [search,      setSearch]      = useState("")
@@ -152,7 +153,7 @@ function PageDashboard({ stockIn, stockBalance }) {
   }]))
 
   const totalPacks     = stockBalance.reduce((a, r) => a + (parseFloat(r.balance) || 0), 0)
-  const lowStock       = SKUS.filter(s => (balMap[s.sku_id]?.balance || 0) < 24)
+  const lowStock       = skus.filter(s => (balMap[s.sku_id]?.balance || 0) < 24)
   const totalLotValue  = stockIn.reduce((a, r) => a + (parseFloat(r.total_cost) || 0), 0)
 
   // Lots grouped by SKU (sorted newest first)
@@ -165,7 +166,7 @@ function PageDashboard({ stockIn, stockBalance }) {
     arr.sort((a, b) => new Date(b.purchased_at) - new Date(a.purchased_at))
   )
 
-  const filtered = SKUS
+  const filtered = skus
     .filter(s => s.sku_id.toLowerCase().includes(search.toLowerCase()) ||
                  s.name.toLowerCase().includes(search.toLowerCase()))
     .filter(s => seriesSel === "ทั้งหมด" || s.series === seriesSel)
@@ -335,7 +336,7 @@ function PageDashboard({ stockIn, stockBalance }) {
 // ─────────────────────────────────────────────
 // EDIT STOCK IN MODAL
 // ─────────────────────────────────────────────
-function EditStockInModal({ record, onSave, onClose }) {
+function EditStockInModal({ record, onSave, onClose, skus }) {
   const [form, setForm] = useState({
     lot_number:   record.lot_number || "",
     purchased_at: record.purchased_at?.slice(0,10) || today(),
@@ -348,7 +349,7 @@ function EditStockInModal({ record, onSave, onClose }) {
   })
   const [saving, setSaving] = useState(false)
 
-  const sku       = SKUS.find(s => s.sku_id === form.sku_id)
+  const sku       = skus.find(s => s.sku_id === form.sku_id)
   const qty       = parseInt(form.quantity) || 0
   const packs     = convertToPacks(qty, form.unit, sku)
   const unitCost  = parseFloat(form.unit_cost) || 0
@@ -406,7 +407,7 @@ function EditStockInModal({ record, onSave, onClose }) {
             <label className="block text-xs text-gray-500 mb-1">สินค้า (SKU)</label>
             <select value={form.sku_id} onChange={e => setForm({...form, sku_id:e.target.value})}
               className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200">
-              {SKUS.map(s => <option key={s.sku_id} value={s.sku_id}>{s.sku_id} — {s.name}</option>)}
+              {skus.map(s => <option key={s.sku_id} value={s.sku_id}>{s.sku_id} — {s.name}</option>)}
             </select>
           </div>
           <div className="grid grid-cols-2 gap-3">
@@ -465,7 +466,7 @@ function genLotNumber() {
   return `LOT-${ymd}-${hm}`
 }
 
-function PageStock({ stockIn, stockBalance, onAddStockIn, onUpdateStockIn, onDeleteStockIn }) {
+function PageStock({ stockIn, stockBalance, onAddStockIn, onUpdateStockIn, onDeleteStockIn, skus, onAddSku, onDeactivateSku }) {
   const [tab, setTab]       = useState("balance")
   const [search, setSearch] = useState("")
   const [seriesSel, setSeriesSel] = useState("ทั้งหมด")
@@ -505,7 +506,7 @@ function PageStock({ stockIn, stockBalance, onAddStockIn, onUpdateStockIn, onDel
     balance:   parseFloat(r.balance)   || 0,
   }]))
 
-  const filtered = SKUS
+  const filtered = skus
     .filter(s => s.sku_id.toLowerCase().includes(search.toLowerCase()) || s.name.toLowerCase().includes(search.toLowerCase()))
     .filter(s => seriesSel === "ทั้งหมด" || s.series === seriesSel)
 
@@ -513,7 +514,7 @@ function PageStock({ stockIn, stockBalance, onAddStockIn, onUpdateStockIn, onDel
     setToast({msg, type}); setTimeout(() => setToast(null), 3500)
   }
 
-  const sku     = SKUS.find(s => s.sku_id === form.sku_id)
+  const sku     = skus.find(s => s.sku_id === form.sku_id)
   const qty     = parseInt(form.quantity) || 0
   const packs   = convertToPacks(qty, form.unit, sku)
   const unitCost = parseFloat(form.unit_cost) || 0
@@ -564,6 +565,7 @@ function PageStock({ stockIn, stockBalance, onAddStockIn, onUpdateStockIn, onDel
       {editRecord && (
         <EditStockInModal
           record={editRecord}
+          skus={skus}
           onSave={async (id, data) => { await onUpdateStockIn(id, data); setEditRecord(null) }}
           onClose={() => setEditRecord(null)}
         />
@@ -576,8 +578,8 @@ function PageStock({ stockIn, stockBalance, onAddStockIn, onUpdateStockIn, onDel
       )}
 
       {/* Tabs */}
-      <div className="flex gap-1 bg-gray-100 p-1 rounded-xl w-fit">
-        {[{key:"balance",label:"สต็อกคงเหลือ"},{key:"addin",label:"รับสินค้าเข้า"},{key:"history",label:"ประวัติการรับ"}].map(t => (
+      <div className="flex flex-wrap gap-1 bg-gray-100 p-1 rounded-xl w-fit">
+        {[{key:"balance",label:"สต็อกคงเหลือ"},{key:"addin",label:"รับสินค้าเข้า"},{key:"history",label:"ประวัติการรับ"},{key:"skus",label:"จัดการ SKU"}].map(t => (
           <button key={t.key} onClick={() => setTab(t.key)}
             className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${tab===t.key?"bg-white shadow text-blue-600":"text-gray-500 hover:text-gray-700"}`}>
             {t.label}
@@ -706,7 +708,7 @@ function PageStock({ stockIn, stockBalance, onAddStockIn, onUpdateStockIn, onDel
                 <label className="block text-xs text-gray-500 mb-1">สินค้า (SKU) <span className="text-red-400">*</span></label>
                 <select value={form.sku_id} onChange={e => setForm({...form, sku_id:e.target.value})}
                   className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200">
-                  {SKUS.map(s => <option key={s.sku_id} value={s.sku_id}>{s.sku_id} — {s.name}</option>)}
+                  {skus.map(s => <option key={s.sku_id} value={s.sku_id}>{s.sku_id} — {s.name}</option>)}
                 </select>
               </div>
 
@@ -778,7 +780,7 @@ function PageStock({ stockIn, stockBalance, onAddStockIn, onUpdateStockIn, onDel
             ) : (
               <div className="space-y-3 max-h-[520px] overflow-y-auto pr-1">
                 {[...stockIn].slice(0, 15).map((r, i) => {
-                  const s   = SKUS.find(sk => sk.sku_id === r.sku_id)
+                  const s   = skus.find(sk => sk.sku_id === r.sku_id)
                   const cpp = r.quantity_packs > 0 ? r.total_cost / r.quantity_packs : 0
                   const isConfirmingDelete = deleteId === r.id
                   return (
@@ -910,6 +912,173 @@ function PageStock({ stockIn, stockBalance, onAddStockIn, onUpdateStockIn, onDel
           )}
         </div>
       )}
+
+      {/* ── Tab: Manage SKUs ── */}
+      {tab === "skus" && (
+        <SkuManager skus={skus} onAddSku={onAddSku} onDeactivateSku={onDeactivateSku} showToast={showToast}/>
+      )}
+    </div>
+  )
+}
+
+// ─────────────────────────────────────────────
+// SKU MANAGER (Add / Deactivate)
+// ─────────────────────────────────────────────
+function SkuManager({ skus, onAddSku, onDeactivateSku, showToast }) {
+  const [saving, setSaving]       = useState(false)
+  const [deactId, setDeactId]     = useState(null)
+  const [deacting, setDeacting]   = useState(false)
+  const [form, setForm] = useState({
+    sku_id:           "",
+    name:             "",
+    series:           "OP",
+    packs_per_box:    "12",
+    boxes_per_cotton: "12",
+    sell_price:       "",
+    cost_price:       "",
+  })
+
+  const handleAdd = async (e) => {
+    e.preventDefault()
+    if (!form.sku_id || !form.name) return
+    setSaving(true)
+    try {
+      await onAddSku({
+        sku_id:           form.sku_id.trim().toUpperCase(),
+        name:             form.name.trim(),
+        series:           form.series,
+        packs_per_box:    parseInt(form.packs_per_box) || 12,
+        boxes_per_cotton: parseInt(form.boxes_per_cotton) || 12,
+        sell_price:       parseFloat(form.sell_price) || 0,
+        cost_price:       parseFloat(form.cost_price) || 0,
+        is_active:        true,
+      })
+      showToast(`เพิ่ม SKU ${form.sku_id} สำเร็จ`)
+      setForm({ sku_id:"", name:"", series:"OP", packs_per_box:"12", boxes_per_cotton:"12", sell_price:"", cost_price:"" })
+    } catch (err) {
+      showToast("เพิ่มไม่สำเร็จ: " + err.message, "error")
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleDeactivate = async (skuId) => {
+    setDeacting(true)
+    try {
+      await onDeactivateSku(skuId)
+      setDeactId(null)
+      showToast(`ปิดใช้งาน ${skuId} สำเร็จ`)
+    } catch (err) {
+      showToast("เกิดข้อผิดพลาด: " + err.message, "error")
+    } finally {
+      setDeacting(false)
+    }
+  }
+
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* Add form */}
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+        <h2 className="font-semibold text-gray-700 mb-1">เพิ่ม SKU ใหม่</h2>
+        <p className="text-xs text-gray-400 mb-4">เพิ่มสินค้าใหม่เข้าระบบ ก่อนจะบันทึกรับสต็อกได้</p>
+        <form onSubmit={handleAdd} className="space-y-4">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">รหัส SKU <span className="text-red-400">*</span></label>
+              <input value={form.sku_id} onChange={e => setForm({...form, sku_id:e.target.value})}
+                placeholder="เช่น OP 16, EB 05"
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-200"/>
+            </div>
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">Series <span className="text-red-400">*</span></label>
+              <select value={form.series} onChange={e => setForm({...form, series:e.target.value})}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200">
+                <option value="OP">OP — One Piece</option>
+                <option value="PRB">PRB — Premium Booster</option>
+                <option value="EB">EB — Extra Booster</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">ชื่อสินค้า <span className="text-red-400">*</span></label>
+            <input value={form.name} onChange={e => setForm({...form, name:e.target.value})}
+              placeholder="เช่น One Piece OP-16"
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"/>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">ซอง/กล่อง</label>
+              <input type="number" min="1" value={form.packs_per_box} onChange={e => setForm({...form, packs_per_box:e.target.value})}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"/>
+              <p className="text-xs text-gray-400 mt-0.5">OP/EB=12, PRB=10</p>
+            </div>
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">กล่อง/Cotton</label>
+              <input type="number" min="1" value={form.boxes_per_cotton} onChange={e => setForm({...form, boxes_per_cotton:e.target.value})}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"/>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">ราคาขาย/ซอง (บาท)</label>
+              <input type="number" min="0" step="0.01" value={form.sell_price} onChange={e => setForm({...form, sell_price:e.target.value})}
+                placeholder="0.00"
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"/>
+            </div>
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">ต้นทุน/ซอง (บาท)</label>
+              <input type="number" min="0" step="0.01" value={form.cost_price} onChange={e => setForm({...form, cost_price:e.target.value})}
+                placeholder="0.00"
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"/>
+            </div>
+          </div>
+          <button type="submit" disabled={saving || !form.sku_id || !form.name}
+            className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white font-semibold py-2.5 rounded-xl text-sm flex items-center justify-center gap-2">
+            {saving ? <Loader2 size={16} className="animate-spin"/> : <PlusCircle size={16}/>}
+            {saving ? "กำลังบันทึก..." : "เพิ่ม SKU ใหม่"}
+          </button>
+        </form>
+      </div>
+
+      {/* SKU list */}
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+        <h2 className="font-semibold text-gray-700 mb-3">SKU ที่ใช้งานอยู่ ({skus.length})</h2>
+        <div className="space-y-2 max-h-[520px] overflow-y-auto pr-1">
+          {skus.map(s => (
+            <div key={s.sku_id} className="p-3 rounded-xl bg-gray-50 border border-gray-100">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-mono text-xs font-bold text-gray-800">{s.sku_id}</span>
+                    <Badge series={s.series}/>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-0.5 truncate">{s.name}</p>
+                  <p className="text-xs text-gray-400 mt-0.5">
+                    {s.packs_per_box} ซอง/กล่อง · ขาย {fmtB(s.sell_price)} · ต้นทุน {fmtB(s.cost_price)}
+                  </p>
+                </div>
+                <button onClick={() => setDeactId(s.sku_id)}
+                  className="p-1.5 rounded-lg bg-red-100 text-red-500 hover:bg-red-200 flex-shrink-0">
+                  <Trash2 size={13}/>
+                </button>
+              </div>
+              {deactId === s.sku_id && (
+                <div className="mt-2 pt-2 border-t border-red-100 flex items-center justify-between bg-red-50 rounded-lg p-2">
+                  <p className="text-xs text-red-600 font-medium">ปิดใช้งาน {s.sku_id}?</p>
+                  <div className="flex gap-2">
+                    <button onClick={() => setDeactId(null)}
+                      className="px-3 py-1 text-xs rounded-lg border border-gray-200 text-gray-600 hover:bg-white">ยกเลิก</button>
+                    <button onClick={() => handleDeactivate(s.sku_id)} disabled={deacting}
+                      className="px-3 py-1 text-xs rounded-lg bg-red-500 text-white hover:bg-red-600 disabled:opacity-50 flex items-center gap-1">
+                      {deacting ? <Loader2 size={10} className="animate-spin"/> : <Trash2 size={10}/>} ปิด
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   )
 }
@@ -917,7 +1086,7 @@ function PageStock({ stockIn, stockBalance, onAddStockIn, onUpdateStockIn, onDel
 // ─────────────────────────────────────────────
 // PAGE 3: WITHDRAWAL
 // ─────────────────────────────────────────────
-function PageWithdrawal({ machines, stockOut, stockBalance, onAddStockOut, onDeleteStockOut }) {
+function PageWithdrawal({ machines, stockOut, stockBalance, onAddStockOut, onDeleteStockOut, skus }) {
   const [form, setForm]   = useState({ sku_id:"OP 01", machine_id:"", unit:"box", quantity:"1", note:"" })
   const [toast, setToast] = useState(null)
   const [saving, setSaving] = useState(false)
@@ -941,7 +1110,7 @@ function PageWithdrawal({ machines, stockOut, stockBalance, onAddStockOut, onDel
   const machineId  = form.machine_id || machines[0]?.machine_id || ""
   const balMap     = Object.fromEntries(stockBalance.map(r => [r.sku_id, parseFloat(r.balance) || 0]))
   const available  = balMap[form.sku_id] || 0
-  const selectedSku = SKUS.find(s => s.sku_id === form.sku_id)
+  const selectedSku = skus.find(s => s.sku_id === form.sku_id)
   const availBoxes = selectedSku ? Math.floor(available / selectedSku.packs_per_box) : 0
 
   // คำนวณซองที่จะเบิก
@@ -1003,7 +1172,7 @@ function PageWithdrawal({ machines, stockOut, stockBalance, onAddStockOut, onDel
               <label className="block text-xs text-gray-500 mb-1">สินค้า (SKU)</label>
               <select value={form.sku_id} onChange={e => setForm({...form, sku_id:e.target.value})}
                 className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-200">
-                {SKUS.map(s => <option key={s.sku_id} value={s.sku_id}>{s.sku_id} — {s.name}</option>)}
+                {skus.map(s => <option key={s.sku_id} value={s.sku_id}>{s.sku_id} — {s.name}</option>)}
               </select>
             </div>
 
@@ -1110,7 +1279,7 @@ function PageWithdrawal({ machines, stockOut, stockBalance, onAddStockOut, onDel
           ) : (
             <div className="space-y-2 max-h-[560px] overflow-y-auto pr-1">
               {stockOut.map((r, i) => {
-                const sku     = SKUS.find(s => s.sku_id === r.sku_id)
+                const sku     = skus.find(s => s.sku_id === r.sku_id)
                 const machine = machines.find(m => m.machine_id === r.machine_id)
                 const unitMatch = r.note?.match(/^\[(\d+)(กล่อง|ซอง)\]/)
                 const cleanNote = r.note?.replace(/^\[\d+(กล่อง|ซอง)\]\s*/, "") || ""
@@ -1176,7 +1345,7 @@ function PageWithdrawal({ machines, stockOut, stockBalance, onAddStockOut, onDel
 // ─────────────────────────────────────────────
 // PAGE 4: SALES
 // ─────────────────────────────────────────────
-function PageSales({ machines, sales }) {
+function PageSales({ machines, sales, skus }) {
   const [viewMode, setViewMode]   = useState("daily")
   const [machineSel, setMachineSel] = useState("all")
 
@@ -1210,7 +1379,7 @@ function PageSales({ machines, sales }) {
 
   // Profit estimate
   const profit = filtered.reduce((a, r) => {
-    const s = SKUS.find(sk => sk.sku_id === r.sku_id)
+    const s = skus.find(sk => sk.sku_id === r.sku_id)
     return a + r.quantity_sold * (s ? s.sell_price - s.cost_price : 0)
   }, 0)
 
@@ -1306,7 +1475,7 @@ function PageSales({ machines, sales }) {
 // ─────────────────────────────────────────────
 // PAGE 5: ANALYTICS
 // ─────────────────────────────────────────────
-function PageAnalytics({ sales }) {
+function PageAnalytics({ sales, skus }) {
   const [metric, setMetric] = useState("revenue")
 
   const skuMap = {}
@@ -1318,7 +1487,7 @@ function PageAnalytics({ sales }) {
 
   const ranked = Object.entries(skuMap)
     .map(([id, v]) => {
-      const s = SKUS.find(sk => sk.sku_id === id)
+      const s = skus.find(sk => sk.sku_id === id)
       return { sku_id:id, series:s?.series||"OP", ...v,
         profit: v.qty * ((s?.sell_price||0) - (s?.cost_price||0)) }
     })
@@ -1336,7 +1505,7 @@ function PageAnalytics({ sales }) {
   })
 
   const seriesData = ["OP","PRB","EB"].map(s => {
-    const rows = sales.filter(r => SKUS.find(sk => sk.sku_id === r.sku_id)?.series === s)
+    const rows = sales.filter(r => skus.find(sk => sk.sku_id === r.sku_id)?.series === s)
     return { name:s, ยอดขาย: rows.reduce((a, r) => a+r.revenue, 0), ซอง: rows.reduce((a, r) => a+r.quantity_sold, 0) }
   })
 
@@ -1466,6 +1635,7 @@ export default function DivisionXApp() {
 
   // ── Data State ──
   const [machines,      setMachines]      = useState([])
+  const [skus,          setSkus]          = useState(SKUS)
   const [stockIn,       setStockIn]       = useState([])
   const [stockOut,      setStockOut]      = useState([])
   const [stockBalance,  setStockBalance]  = useState([])
@@ -1478,14 +1648,16 @@ export default function DivisionXApp() {
     try {
       setLoading(true)
       setDataError(null)
-      const [machData, siData, soData, sbData, salesData] = await Promise.all([
+      const [machData, skuData, siData, soData, sbData, salesData] = await Promise.all([
         getMachines(),
+        getSkus(),
         getStockIn(),
         getStockOut(),
         getStockBalance(),
         getSalesByMachine(30),
       ])
       setMachines(machData)
+      if (skuData?.length) setSkus(skuData)
       setStockIn(siData)
       setStockOut(soData)
       setStockBalance(sbData)
@@ -1540,9 +1712,19 @@ export default function DivisionXApp() {
     setStockBalance(newSB)
   }
 
+  const addSku = async (record) => {
+    await dbAddSku(record)
+    setSkus(await getSkus())
+  }
+
+  const deactivateSku = async (skuId) => {
+    await dbDeactivateSku(skuId)
+    setSkus(await getSkus())
+  }
+
   // ── Derived ──
   const balMap   = Object.fromEntries(stockBalance.map(r => [r.sku_id, parseFloat(r.balance) || 0]))
-  const lowCount = SKUS.filter(s => (balMap[s.sku_id] || 0) < 24).length
+  const lowCount = skus.filter(s => (balMap[s.sku_id] || 0) < 24).length
 
   // ── Loading / Error screens ──
   if (loading)   return <LoadingScreen/>
@@ -1613,11 +1795,11 @@ export default function DivisionXApp() {
         </header>
 
         <main className="flex-1 p-4 lg:p-6 overflow-y-auto">
-          {page === "dashboard"  && <PageDashboard stockIn={stockIn} stockBalance={stockBalance}/>}
-          {page === "stock"      && <PageStock     stockIn={stockIn} stockBalance={stockBalance} onAddStockIn={addStockIn} onUpdateStockIn={updateStockIn} onDeleteStockIn={deleteStockIn}/>}
-          {page === "withdrawal" && <PageWithdrawal machines={machines} stockOut={stockOut} stockBalance={stockBalance} onAddStockOut={addStockOut} onDeleteStockOut={deleteStockOut}/>}
-          {page === "sales"      && <PageSales     machines={machines} sales={sales}/>}
-          {page === "analytics"  && <PageAnalytics sales={sales}/>}
+          {page === "dashboard"  && <PageDashboard stockIn={stockIn} stockBalance={stockBalance} skus={skus}/>}
+          {page === "stock"      && <PageStock     stockIn={stockIn} stockBalance={stockBalance} skus={skus} onAddStockIn={addStockIn} onUpdateStockIn={updateStockIn} onDeleteStockIn={deleteStockIn} onAddSku={addSku} onDeactivateSku={deactivateSku}/>}
+          {page === "withdrawal" && <PageWithdrawal machines={machines} stockOut={stockOut} stockBalance={stockBalance} skus={skus} onAddStockOut={addStockOut} onDeleteStockOut={deleteStockOut}/>}
+          {page === "sales"      && <PageSales     machines={machines} sales={sales} skus={skus}/>}
+          {page === "analytics"  && <PageAnalytics sales={sales} skus={skus}/>}
         </main>
       </div>
     </div>
