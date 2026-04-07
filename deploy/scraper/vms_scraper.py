@@ -123,29 +123,38 @@ def download_xlsx(page, date_from: str, date_to: str) -> Path:
             page.screenshot(path="/tmp/no_export_btn.png")
             raise Exception("ไม่พบปุ่ม Export")
 
-    # รอให้ระบบ generate ไฟล์
-    time.sleep(5)
-
-    # ไปหน้า Downloads เพื่อดาวน์โหลดไฟล์
+    # ไปหน้า Downloads เพื่อรอไฟล์
     downloads_url = VMS_URL.replace("/th/login", "/th/downloads")
     print(f"📂 ไปหน้า Downloads: {downloads_url}")
     page.goto(downloads_url)
     page.wait_for_load_state("networkidle")
-    time.sleep(2)
+
+    # รอให้แถวแรก (ล่าสุด) มีสถานะ Completed (poll ทุก 5 วิ สูงสุด 2 นาที)
+    print("⏳ รอสถานะ Completed...")
+    for i in range(24):
+        first_row_status = page.query_selector('table tr:nth-child(2) td, tbody tr:first-child td')
+        status_text = page.inner_text('tbody tr:first-child') if page.query_selector('tbody tr:first-child') else ""
+        print(f"  [{i+1}] status row text: {status_text[:80]}")
+        if "Completed" in status_text or "completed" in status_text.lower():
+            print("  ✅ พบสถานะ Completed")
+            break
+        time.sleep(5)
+        page.reload()
+        page.wait_for_load_state("networkidle")
+    else:
+        page.screenshot(path="/tmp/downloads_timeout.png")
+        raise Exception("Timeout รอสถานะ Completed เกิน 2 นาที")
 
     page.screenshot(path="/tmp/downloads_page.png")
     print("📸 screenshot: /tmp/downloads_page.png")
 
-    # คลิกลิงก์ดาวน์โหลดไฟล์แรก (ล่าสุด)
+    # คลิกปุ่ม ดาวน์โหลด แถวแรก (ล่าสุด)
     with page.expect_download(timeout=30000) as dl:
-        download_link = page.query_selector('a[href*=".xlsx"], a[href*=".xls"], a[href*=".csv"], a[href*="download"]')
-        if not download_link:
-            # ลอง click ปุ่มดาวน์โหลดแถวแรก
-            download_link = page.query_selector('button:has-text("ดาวน์โหลด"), a:has-text("ดาวน์โหลด")')
-        if not download_link:
-            page.screenshot(path="/tmp/no_download_link.png")
-            raise Exception("ไม่พบลิงก์ดาวน์โหลดในหน้า Downloads")
-        download_link.click()
+        btn = page.query_selector('tbody tr:first-child button:has-text("ดาวน์โหลด"), tbody tr:first-child a:has-text("ดาวน์โหลด")')
+        if not btn:
+            page.screenshot(path="/tmp/no_download_btn.png")
+            raise Exception("ไม่พบปุ่ม ดาวน์โหลด ในแถวแรก")
+        btn.click()
 
     dl.value.save_as(str(xlsx_path))
     print(f"✅ ดาวน์โหลดสำเร็จ: {xlsx_path}")
