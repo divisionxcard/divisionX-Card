@@ -8,7 +8,7 @@ import {
   Package, TrendingUp, ShoppingCart, AlertTriangle,
   PlusCircle, MinusCircle, BarChart2, Home, Menu, X,
   CheckCircle, Clock, Search, RefreshCw, ArrowUpCircle, Loader2,
-  Pencil, Trash2
+  Pencil, Trash2, ChevronDown, ChevronUp, Layers
 } from "lucide-react"
 import {
   getStockBalance, getStockIn, getStockOut,
@@ -137,187 +137,193 @@ function ErrorScreen({ msg, onRetry }) {
 }
 
 // ─────────────────────────────────────────────
-// PAGE 1: DASHBOARD
+// PAGE 1: DASHBOARD — Stock Overview with Lots
 // ─────────────────────────────────────────────
-function PageDashboard({ machines, stockIn, stockOut, stockBalance, sales }) {
-  // Balance map from v_stock_balance view
-  const balMap = Object.fromEntries(stockBalance.map(r => [r.sku_id, parseFloat(r.balance) || 0]))
-  const totalPacks = stockBalance.reduce((a, r) => a + (parseFloat(r.balance) || 0), 0)
-  const lowStock   = SKUS.filter(s => (balMap[s.sku_id] || 0) < 24)
+function PageDashboard({ stockIn, stockBalance }) {
+  const [expandedSku, setExpandedSku] = useState(null)
+  const [seriesSel,   setSeriesSel]   = useState("ทั้งหมด")
+  const [search,      setSearch]      = useState("")
 
-  const todayStr   = today()
-  const todaySales = sales.filter(r => r.sold_at === todayStr)
-  const todayRevenue = todaySales.reduce((a, r) => a + r.revenue, 0)
-  const todayQty   = todaySales.reduce((a, r) => a + r.quantity_sold, 0)
+  // Balance map from view
+  const balMap = Object.fromEntries(stockBalance.map(r => [r.sku_id, {
+    total_in:  parseFloat(r.total_in)  || 0,
+    total_out: parseFloat(r.total_out) || 0,
+    balance:   parseFloat(r.balance)   || 0,
+  }]))
 
-  // Last 7 days chart
-  const last7 = getLastNDays(7)
-  const dailyChart = last7.map(d => {
-    const rows = sales.filter(r => r.sold_at === d)
-    return {
-      day: fmtDayLabel(d),
-      ยอดขาย:   rows.reduce((a, r) => a + r.revenue, 0),
-      จำนวนซอง: rows.reduce((a, r) => a + r.quantity_sold, 0),
-    }
+  const totalPacks     = stockBalance.reduce((a, r) => a + (parseFloat(r.balance) || 0), 0)
+  const lowStock       = SKUS.filter(s => (balMap[s.sku_id]?.balance || 0) < 24)
+  const totalLotValue  = stockIn.reduce((a, r) => a + (parseFloat(r.total_cost) || 0), 0)
+
+  // Lots grouped by SKU (sorted newest first)
+  const lotsMap = {}
+  stockIn.forEach(r => {
+    if (!lotsMap[r.sku_id]) lotsMap[r.sku_id] = []
+    lotsMap[r.sku_id].push(r)
   })
+  Object.values(lotsMap).forEach(arr =>
+    arr.sort((a, b) => new Date(b.purchased_at) - new Date(a.purchased_at))
+  )
 
-  // Per-machine today
-  const machineToday = machines.map(m => {
-    const rows = todaySales.filter(r => r.machine_id === m.machine_id)
-    return { name: m.name, ยอดขาย: rows.reduce((a, r) => a + r.revenue, 0) }
-  })
-
-  // Recent stock movements
-  const recent = [
-    ...stockIn.map(r  => ({ ...r, type:"in",  dateKey: r.purchased_at })),
-    ...stockOut.map(r => ({ ...r, type:"out", dateKey: r.withdrawn_at })),
-  ].sort((a, b) => new Date(b.dateKey) - new Date(a.dateKey)).slice(0, 6)
+  const filtered = SKUS
+    .filter(s => s.sku_id.toLowerCase().includes(search.toLowerCase()) ||
+                 s.name.toLowerCase().includes(search.toLowerCase()))
+    .filter(s => seriesSel === "ทั้งหมด" || s.series === seriesSel)
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-gray-800">ภาพรวม Dashboard</h1>
-        <p className="text-sm text-gray-400">อัปเดตล่าสุด: {todayStr}</p>
+        <h1 className="text-2xl font-bold text-gray-800">ภาพรวมสต็อกสินค้า</h1>
+        <p className="text-sm text-gray-400">สต็อกคงเหลือแยกตาม SKU พร้อมประวัติ Lot ต้นทุน</p>
       </div>
 
-      {/* KPI Cards */}
+      {/* KPI */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <KpiCard icon={TrendingUp}    label="ยอดขายวันนี้"   value={fmtB(todayRevenue)}  sub={`${fmt(todayQty)} ซอง`} color="green"/>
-        <KpiCard icon={Package}       label="สต็อกคงเหลือ"   value={`${fmt(totalPacks)} ซอง`} sub={`${SKUS.length} SKU`} color="blue"/>
-        <KpiCard icon={AlertTriangle} label="สต็อกใกล้หมด"  value={lowStock.length}     sub="SKU ต่ำกว่า 24 ซอง" color="amber"/>
-        <KpiCard icon={ShoppingCart}  label="ตู้ที่ใช้งาน"   value={`${machines.filter(m=>m.status==="active").length} ตู้`} sub={`จากทั้งหมด ${machines.length} ตู้`} color="purple"/>
+        <KpiCard icon={Package}       label="สต็อกรวม"      value={`${fmt(totalPacks)} ซอง`}    sub={`≈ ${fmt(Math.floor(totalPacks / 12))} กล่อง`} color="blue"/>
+        <KpiCard icon={AlertTriangle} label="ใกล้หมด"       value={`${lowStock.length} SKU`}   sub="ต่ำกว่า 24 ซอง"    color="amber"/>
+        <KpiCard icon={Layers}        label="Lot ทั้งหมด"   value={`${stockIn.length} Lot`}     sub="รายการรับเข้า"    color="green"/>
+        <KpiCard icon={TrendingUp}    label="มูลค่าซื้อรวม" value={fmtB(totalLotValue)}         sub="ต้นทุนสะสมทั้งหมด" color="purple"/>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Daily Revenue Chart */}
-        <div className="lg:col-span-2 bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-          <h2 className="font-semibold text-gray-700 mb-4">ยอดขาย 7 วันล่าสุด (บาท)</h2>
-          <ResponsiveContainer width="100%" height={220}>
-            <BarChart data={dailyChart} margin={{top:0,right:10,left:0,bottom:0}}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0"/>
-              <XAxis dataKey="day" tick={{fontSize:11}}/>
-              <YAxis tick={{fontSize:11}} tickFormatter={v => fmt(v)}/>
-              <Tooltip formatter={v => [fmtB(v), "ยอดขาย"]}/>
-              <Bar dataKey="ยอดขาย" fill="#3b82f6" radius={[6,6,0,0]}/>
-            </BarChart>
-          </ResponsiveContainer>
+      {/* Filters */}
+      <div className="flex flex-wrap gap-3">
+        <div className="relative flex-1 min-w-[180px]">
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"/>
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="ค้นหา SKU..."
+            className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-200"/>
         </div>
-
-        {/* Per-machine today */}
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-          <h2 className="font-semibold text-gray-700 mb-4">ยอดขายวันนี้ แยกตู้</h2>
-          {machineToday.every(m => m.ยอดขาย === 0) ? (
-            <div className="flex items-center justify-center h-[220px] text-gray-400 text-sm">ยังไม่มีข้อมูลยอดขายวันนี้</div>
-          ) : (
-            <>
-              <ResponsiveContainer width="100%" height={180}>
-                <PieChart>
-                  <Pie data={machineToday} dataKey="ยอดขาย" nameKey="name"
-                    cx="50%" cy="50%" outerRadius={75}
-                    label={({name, percent}) => `${name} ${(percent*100).toFixed(0)}%`} labelLine={false}>
-                    {machineToday.map((_, i) => <Cell key={i} fill={CHART_COLORS[i]}/>)}
-                  </Pie>
-                  <Tooltip formatter={v => fmtB(v)}/>
-                </PieChart>
-              </ResponsiveContainer>
-              <div className="flex gap-3 justify-center mt-2 flex-wrap">
-                {machineToday.map((m, i) => (
-                  <div key={i} className="text-center">
-                    <div className="text-xs text-gray-500">{m.name}</div>
-                    <div className="text-sm font-bold" style={{color:CHART_COLORS[i]}}>{fmtB(m.ยอดขาย)}</div>
-                  </div>
-                ))}
-              </div>
-            </>
-          )}
+        <div className="flex gap-1">
+          {["ทั้งหมด","OP","PRB","EB"].map(s => (
+            <button key={s} onClick={() => setSeriesSel(s)}
+              className={`px-3 py-2 text-xs rounded-lg font-medium transition-all ${seriesSel===s?"bg-blue-600 text-white":"bg-gray-100 text-gray-600 hover:bg-gray-200"}`}>
+              {s}
+            </button>
+          ))}
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Machine Status */}
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-          <h2 className="font-semibold text-gray-700 mb-3">สถานะตู้จำหน่าย</h2>
-          <div className="space-y-3">
-            {machines.map(m => {
-              const mSales = todaySales.filter(r => r.machine_id === m.machine_id)
-              const mRev   = mSales.reduce((a, r) => a + r.revenue, 0)
-              const mQty   = mSales.reduce((a, r) => a + r.quantity_sold, 0)
-              return (
-                <div key={m.machine_id} className="flex items-center justify-between p-3 rounded-xl bg-gray-50">
-                  <div className="flex items-center gap-2">
-                    <StatusDot status={m.status}/>
-                    <div>
-                      <p className="font-semibold text-sm text-gray-700">{m.name}</p>
-                      <p className="text-xs text-gray-400">{m.location}</p>
-                    </div>
+      {/* SKU Cards */}
+      <div className="space-y-3">
+        {filtered.map(s => {
+          const b          = balMap[s.sku_id] || { balance:0, total_in:0, total_out:0 }
+          const boxes      = Math.floor(b.balance / s.packs_per_box)
+          const remPacks   = b.balance % s.packs_per_box
+          const low        = b.balance < 24
+          const lots       = lotsMap[s.sku_id] || []
+          const isExpanded = expandedSku === s.sku_id
+
+          // Weighted avg cost per pack from all lots
+          const totalLotPacks = lots.reduce((a, r) => a + (r.quantity_packs || 0), 0)
+          const totalLotCost  = lots.reduce((a, r) => a + (parseFloat(r.total_cost) || 0), 0)
+          const avgCpp        = totalLotPacks > 0 ? totalLotCost / totalLotPacks : 0
+
+          return (
+            <div key={s.sku_id} className={`bg-white rounded-2xl border shadow-sm overflow-hidden transition-all ${low ? "border-amber-200" : "border-gray-100"}`}>
+
+              {/* Header row — click to expand */}
+              <button onClick={() => setExpandedSku(isExpanded ? null : s.sku_id)}
+                className="w-full p-4 flex items-center gap-3 hover:bg-gray-50 transition-colors text-left">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-mono text-sm font-bold text-gray-800">{s.sku_id}</span>
+                    <Badge series={s.series}/>
+                    {low && b.balance > 0 && (
+                      <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded font-medium">ใกล้หมด</span>
+                    )}
+                    {b.balance === 0 && (
+                      <span className="text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded font-medium">หมดสต็อก</span>
+                    )}
                   </div>
+                  <p className="text-xs text-gray-500 mt-0.5 truncate">{s.name}</p>
+                </div>
+
+                {/* Balance display */}
+                <div className="flex items-center gap-3 flex-shrink-0">
                   <div className="text-right">
-                    <p className="text-sm font-bold text-green-600">{fmtB(mRev)}</p>
-                    <p className="text-xs text-gray-400">{fmt(mQty)} ซอง</p>
+                    <p className={`text-base font-bold ${low ? "text-amber-600" : "text-gray-800"}`}>
+                      {fmt(b.balance)} ซอง
+                    </p>
+                    <p className="text-xs text-gray-400">
+                      {b.balance > 0
+                        ? `${boxes > 0 ? `${fmt(boxes)} กล่อง` : ""}${boxes > 0 && remPacks > 0 ? " + " : ""}${remPacks > 0 ? `${remPacks} ซอง` : boxes === 0 ? `${b.balance} ซอง` : ""}`
+                        : "—"}
+                    </p>
                   </div>
+                  {isExpanded ? <ChevronUp size={16} className="text-gray-400"/> : <ChevronDown size={16} className="text-gray-400"/>}
                 </div>
-              )
-            })}
-          </div>
-        </div>
+              </button>
 
-        {/* Low Stock Alert */}
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-          <h2 className="font-semibold text-gray-700 mb-3 flex items-center gap-2">
-            <AlertTriangle size={16} className="text-amber-500"/> สต็อกใกล้หมด
-          </h2>
-          {lowStock.length === 0 ? (
-            <div className="flex items-center gap-2 text-green-600 text-sm p-3 bg-green-50 rounded-xl">
-              <CheckCircle size={16}/> ทุก SKU มีสต็อกเพียงพอ
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {lowStock.map(s => (
-                <div key={s.sku_id} className="flex items-center justify-between p-2.5 rounded-xl bg-amber-50">
-                  <div>
-                    <span className="text-xs font-mono font-bold text-amber-700">{s.sku_id}</span>
-                    <p className="text-xs text-gray-500">{s.name}</p>
+              {/* Lot breakdown */}
+              {isExpanded && (
+                <div className="border-t border-gray-100">
+                  {/* Summary bar */}
+                  <div className="px-4 py-3 bg-gray-50 flex flex-wrap gap-x-6 gap-y-1 text-xs">
+                    <span className="text-blue-600 font-medium">รับเข้ารวม: {fmt(b.total_in)} ซอง</span>
+                    <span className="text-orange-500 font-medium">เบิกออกรวม: {fmt(b.total_out)} ซอง</span>
+                    {avgCpp > 0 && (
+                      <span className="text-purple-600 font-medium">ต้นทุนเฉลี่ย/ซอง: {fmtB(avgCpp.toFixed(2))}</span>
+                    )}
+                    <span className="text-gray-500">{lots.length} Lot</span>
                   </div>
-                  <span className="text-sm font-bold text-amber-600">{balMap[s.sku_id] || 0} ซอง</span>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
 
-      {/* Recent Movements */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-        <h2 className="font-semibold text-gray-700 mb-3">ความเคลื่อนไหวล่าสุด</h2>
-        {recent.length === 0 ? (
-          <p className="text-gray-400 text-sm">ยังไม่มีการเคลื่อนไหว</p>
-        ) : (
-          <div className="space-y-2">
-            {recent.map((r, i) => {
-              const sku     = SKUS.find(s => s.sku_id === r.sku_id)
-              const isIn    = r.type === "in"
-              return (
-                <div key={i} className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0">
-                  <div className="flex items-center gap-3">
-                    <div className={`rounded-full p-1.5 ${isIn?"bg-blue-50 text-blue-500":"bg-orange-50 text-orange-500"}`}>
-                      {isIn ? <PlusCircle size={14}/> : <MinusCircle size={14}/>}
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-gray-700">
-                        <span className="font-mono text-xs bg-gray-100 px-1 rounded">{r.sku_id}</span>{" "}
-                        {isIn ? `รับเข้า — ${r.source}` : `เบิก → ตู้ ${r.machine_id}`}
-                      </p>
-                      <p className="text-xs text-gray-400">{r.dateKey}</p>
-                    </div>
+                  {/* Lot list */}
+                  <div className="p-4 space-y-2">
+                    {lots.length === 0 ? (
+                      <p className="text-xs text-gray-400 text-center py-4">ยังไม่มีข้อมูลการรับสินค้า</p>
+                    ) : lots.map((lot, i) => {
+                      const cpp     = (lot.quantity_packs || 0) > 0 ? (parseFloat(lot.total_cost) || 0) / lot.quantity_packs : 0
+                      const lBoxes  = Math.floor((lot.quantity_packs || 0) / s.packs_per_box)
+                      const lRem    = (lot.quantity_packs || 0) % s.packs_per_box
+                      return (
+                        <div key={i} className="p-3 bg-gray-50 rounded-xl border border-gray-100">
+                          {/* Lot header */}
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="font-mono text-xs font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded">
+                                  {lot.lot_number || "ไม่ระบุ Lot"}
+                                </span>
+                                <span className="text-xs text-gray-500">{lot.source}</span>
+                              </div>
+                              <p className="text-xs text-gray-400 mt-1 flex items-center gap-1">
+                                <Clock size={10}/> {lot.purchased_at?.slice(0,10)}
+                              </p>
+                            </div>
+                            <div className="text-right flex-shrink-0">
+                              <p className="text-sm font-bold text-blue-600">+{fmt(lot.quantity_packs)} ซอง</p>
+                              <p className="text-xs text-gray-400">
+                                {lBoxes > 0 ? `${lBoxes} กล่อง` : ""}
+                                {lBoxes > 0 && lRem > 0 ? " + " : ""}
+                                {lRem > 0 ? `${lRem} ซอง` : ""}
+                              </p>
+                            </div>
+                          </div>
+
+                          {/* Cost detail */}
+                          <div className="mt-2 pt-2 border-t border-gray-100 grid grid-cols-3 gap-2 text-center">
+                            <div>
+                              <p className="text-xs text-gray-400">ต้นทุน/{lot.unit || "หน่วย"}</p>
+                              <p className="text-xs font-bold text-gray-700">{fmtB(lot.unit_cost)}</p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-gray-400">ต้นทุน/ซอง</p>
+                              <p className="text-xs font-bold text-purple-600">{fmtB(cpp.toFixed(2))}</p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-gray-400">มูลค่า Lot</p>
+                              <p className="text-xs font-bold text-gray-800">{fmtB(lot.total_cost)}</p>
+                            </div>
+                          </div>
+                          {lot.note && <p className="text-xs text-gray-400 mt-1.5 italic">"{lot.note}"</p>}
+                        </div>
+                      )
+                    })}
                   </div>
-                  <span className={`text-sm font-bold ${isIn?"text-blue-600":"text-orange-500"}`}>
-                    {isIn?"+":"-"}{fmt(r.quantity_packs)} ซอง
-                  </span>
                 </div>
-              )
-            })}
-          </div>
-        )}
+              )}
+            </div>
+          )
+        })}
       </div>
     </div>
   )
@@ -1607,7 +1613,7 @@ export default function DivisionXApp() {
         </header>
 
         <main className="flex-1 p-4 lg:p-6 overflow-y-auto">
-          {page === "dashboard"  && <PageDashboard machines={machines} stockIn={stockIn} stockOut={stockOut} stockBalance={stockBalance} sales={sales}/>}
+          {page === "dashboard"  && <PageDashboard stockIn={stockIn} stockBalance={stockBalance}/>}
           {page === "stock"      && <PageStock     stockIn={stockIn} stockBalance={stockBalance} onAddStockIn={addStockIn} onUpdateStockIn={updateStockIn} onDeleteStockIn={deleteStockIn}/>}
           {page === "withdrawal" && <PageWithdrawal machines={machines} stockOut={stockOut} stockBalance={stockBalance} onAddStockOut={addStockOut} onDeleteStockOut={deleteStockOut}/>}
           {page === "sales"      && <PageSales     machines={machines} sales={sales}/>}
