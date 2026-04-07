@@ -108,36 +108,13 @@ def download_xlsx(page, date_from: str, date_to: str) -> Path:
     except Exception as e:
         print(f"  ⚠️  ตั้งวันที่ไม่สำเร็จ: {e}")
 
-    # กดปุ่ม ส่งออก/Export
+    # กดปุ่ม ส่งออก เพื่อสั่ง generate ไฟล์
     print("📥 กด Export...")
     xlsx_path = Path("/tmp/vms_sales.xlsx")
 
-    # Screenshot ก่อนกด Export เพื่อ debug
-    page.screenshot(path="/tmp/before_export.png")
-    print("📸 screenshot: /tmp/before_export.png")
-
-    # คลิกปุ่ม ส่งออก แล้วดักจับ network response แทน browser download event
-    downloaded_bytes = None
-
-    def handle_response(response):
-        nonlocal downloaded_bytes
-        content_type = response.headers.get("content-type", "")
-        content_disp = response.headers.get("content-disposition", "")
-        if (
-            "spreadsheet" in content_type
-            or "octet-stream" in content_type
-            or "excel" in content_type
-            or ".xlsx" in content_disp
-            or ".xls" in content_disp
-            or ".csv" in content_disp
-        ):
-            print(f"  📡 พบ response ไฟล์: {response.url} [{content_type}]")
-            downloaded_bytes = response.body()
-
-    page.on("response", handle_response)
-
     try:
         page.click('button:has-text("ส่งออก"), button:has-text("Export"), a:has-text("ส่งออก")', timeout=10000)
+        print("  ✅ คลิกปุ่ม ส่งออก สำเร็จ")
     except:
         export_btn = page.query_selector('[class*="export"], [class*="download"]')
         if export_btn:
@@ -146,22 +123,31 @@ def download_xlsx(page, date_from: str, date_to: str) -> Path:
             page.screenshot(path="/tmp/no_export_btn.png")
             raise Exception("ไม่พบปุ่ม Export")
 
-    # รอ 5 วิ แล้วดู screenshot หลังคลิก
+    # รอให้ระบบ generate ไฟล์
     time.sleep(5)
-    page.screenshot(path="/tmp/after_export.png")
-    print("📸 screenshot: /tmp/after_export.png")
 
-    if downloaded_bytes:
-        xlsx_path.write_bytes(downloaded_bytes)
-        print(f"✅ ดาวน์โหลดสำเร็จ (via response intercept): {xlsx_path}")
-        return xlsx_path
+    # ไปหน้า Downloads เพื่อดาวน์โหลดไฟล์
+    downloads_url = VMS_URL.replace("/th/login", "/th/downloads")
+    print(f"📂 ไปหน้า Downloads: {downloads_url}")
+    page.goto(downloads_url)
+    page.wait_for_load_state("networkidle")
+    time.sleep(2)
 
-    # fallback: ลอง expect_download
-    print("  ⚠️  ไม่พบ response ไฟล์ ลอง expect_download...")
+    page.screenshot(path="/tmp/downloads_page.png")
+    print("📸 screenshot: /tmp/downloads_page.png")
+
+    # คลิกลิงก์ดาวน์โหลดไฟล์แรก (ล่าสุด)
     with page.expect_download(timeout=30000) as dl:
-        page.click('button:has-text("ส่งออก"), button:has-text("Export"), a:has-text("ส่งออก")', timeout=10000)
-    download = dl.value
-    download.save_as(str(xlsx_path))
+        download_link = page.query_selector('a[href*=".xlsx"], a[href*=".xls"], a[href*=".csv"], a[href*="download"]')
+        if not download_link:
+            # ลอง click ปุ่มดาวน์โหลดแถวแรก
+            download_link = page.query_selector('button:has-text("ดาวน์โหลด"), a:has-text("ดาวน์โหลด")')
+        if not download_link:
+            page.screenshot(path="/tmp/no_download_link.png")
+            raise Exception("ไม่พบลิงก์ดาวน์โหลดในหน้า Downloads")
+        download_link.click()
+
+    dl.value.save_as(str(xlsx_path))
     print(f"✅ ดาวน์โหลดสำเร็จ: {xlsx_path}")
     return xlsx_path
 
