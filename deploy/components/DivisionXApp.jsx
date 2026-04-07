@@ -322,12 +322,28 @@ function PageDashboard({ machines, stockIn, stockOut, stockBalance, sales }) {
 // ─────────────────────────────────────────────
 // PAGE 2: STOCK
 // ─────────────────────────────────────────────
+function genLotNumber() {
+  const d = new Date()
+  const ymd = d.toISOString().slice(0,10).replace(/-/g,"")
+  const hm  = String(d.getHours()).padStart(2,"0") + String(d.getMinutes()).padStart(2,"0")
+  return `LOT-${ymd}-${hm}`
+}
+
 function PageStock({ stockIn, stockBalance, onAddStockIn }) {
   const [tab, setTab]       = useState("balance")
   const [search, setSearch] = useState("")
   const [seriesSel, setSeriesSel] = useState("ทั้งหมด")
   const [saving, setSaving] = useState(false)
-  const [form, setForm]     = useState({ sku_id:"OP 01", source:"", unit:"box", quantity:"1", unit_cost:"", note:"" })
+  const [form, setForm]     = useState({
+    lot_number:   genLotNumber(),
+    sku_id:       "OP 01",
+    source:       "",
+    purchased_at: today(),
+    unit:         "box",
+    quantity:     "1",
+    unit_cost:    "",
+    note:         "",
+  })
   const [toast, setToast]   = useState(null)
 
   // Balance map from view
@@ -345,30 +361,43 @@ function PageStock({ stockIn, stockBalance, onAddStockIn }) {
     setToast({msg, type}); setTimeout(() => setToast(null), 3500)
   }
 
+  const sku     = SKUS.find(s => s.sku_id === form.sku_id)
+  const qty     = parseInt(form.quantity) || 0
+  const packs   = convertToPacks(qty, form.unit, sku)
+  const unitCost = parseFloat(form.unit_cost) || 0
+  const totalCost = qty * unitCost
+  const costPerPack = packs > 0 ? totalCost / packs : 0
+
   const handleSubmit = async (e) => {
     e.preventDefault()
-    if (!form.source || !form.quantity || !form.unit_cost) {
-      showToast("กรุณากรอกข้อมูลให้ครบถ้วน", "error"); return
+    if (!form.lot_number || !form.source || !form.quantity || !form.unit_cost) {
+      showToast("กรุณากรอกข้อมูลให้ครบถ้วน (เลขที่ Lot, Supplier, จำนวน, ราคาต้นทุน)", "error"); return
     }
-    const sku   = SKUS.find(s => s.sku_id === form.sku_id)
-    const qty   = parseInt(form.quantity)
-    const packs = convertToPacks(qty, form.unit, sku)
-    const cost  = parseFloat(form.unit_cost)
     try {
       setSaving(true)
       await onAddStockIn({
+        lot_number:    form.lot_number,
         sku_id:        form.sku_id,
         source:        form.source,
         unit:          form.unit,
         quantity:      qty,
         quantity_packs: packs,
-        unit_cost:     cost,
-        total_cost:    qty * cost,
-        purchased_at:  today(),
+        unit_cost:     unitCost,
+        total_cost:    totalCost,
+        purchased_at:  form.purchased_at,
         note:          form.note,
       })
-      showToast(`บันทึกสำเร็จ: เพิ่ม ${packs} ซอง (${form.sku_id})`)
-      setForm({ sku_id:"OP 01", source:"", unit:"box", quantity:"1", unit_cost:"", note:"" })
+      showToast(`บันทึกสำเร็จ: Lot ${form.lot_number} — ${packs} ซอง (${form.sku_id})`)
+      setForm({
+        lot_number:   genLotNumber(),
+        sku_id:       "OP 01",
+        source:       form.source,
+        purchased_at: today(),
+        unit:         "box",
+        quantity:     "1",
+        unit_cost:    "",
+        note:         "",
+      })
     } catch (err) {
       showToast("เกิดข้อผิดพลาด: " + err.message, "error")
     } finally {
@@ -482,98 +511,224 @@ function PageStock({ stockIn, stockBalance, onAddStockIn }) {
 
       {/* ── Tab: Add Stock In ── */}
       {tab === "addin" && (
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 max-w-lg">
-          <h2 className="font-semibold text-gray-700 mb-4">บันทึกรับสินค้าเข้าสต็อก</h2>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-xs text-gray-500 mb-1">SKU</label>
-              <select value={form.sku_id} onChange={e => setForm({...form, sku_id:e.target.value})}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200">
-                {SKUS.map(s => <option key={s.sku_id} value={s.sku_id}>{s.sku_id} — {s.name}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs text-gray-500 mb-1">แหล่งที่มา / Supplier</label>
-              <input value={form.source} onChange={e => setForm({...form, source:e.target.value})}
-                placeholder="เช่น ตัวแทนจำหน่าย A"
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"/>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs text-gray-500 mb-1">หน่วย</label>
-                <select value={form.unit} onChange={e => setForm({...form, unit:e.target.value})}
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200">
-                  <option value="pack">ซอง (Pack)</option>
-                  <option value="box">กล่อง (Box)</option>
-                  <option value="cotton">Cotton</option>
-                </select>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Form */}
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+            <h2 className="font-semibold text-gray-700 mb-1">บันทึกรับซื้อสินค้าเข้าสต็อก</h2>
+            <p className="text-xs text-gray-400 mb-4">บันทึกแต่ละครั้งที่ซื้อสินค้าเข้ามา พร้อมระบุ Lot และต้นทุน</p>
+            <form onSubmit={handleSubmit} className="space-y-4">
+
+              {/* Lot + วันที่ */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">เลขที่ Lot <span className="text-red-400">*</span></label>
+                  <input value={form.lot_number} onChange={e => setForm({...form, lot_number:e.target.value})}
+                    placeholder="LOT-YYYYMMDD-HHMM"
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 font-mono"/>
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">วันที่ซื้อ <span className="text-red-400">*</span></label>
+                  <input type="date" value={form.purchased_at} onChange={e => setForm({...form, purchased_at:e.target.value})}
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"/>
+                </div>
               </div>
+
+              {/* Supplier */}
               <div>
-                <label className="block text-xs text-gray-500 mb-1">จำนวน</label>
-                <input type="number" min="1" value={form.quantity} onChange={e => setForm({...form, quantity:e.target.value})}
+                <label className="block text-xs text-gray-500 mb-1">Supplier / แหล่งที่มา <span className="text-red-400">*</span></label>
+                <input value={form.source} onChange={e => setForm({...form, source:e.target.value})}
+                  placeholder="เช่น ตัวแทนจำหน่าย A, Bandai Thailand"
                   className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"/>
               </div>
-            </div>
-            {form.quantity && (
-              <div className="p-3 bg-blue-50 rounded-xl text-sm text-blue-700">
-                จะได้ <span className="font-bold">
-                  {fmt(convertToPacks(parseInt(form.quantity)||0, form.unit, SKUS.find(s=>s.sku_id===form.sku_id)))}
-                </span> ซอง
+
+              {/* SKU */}
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">สินค้า (SKU) <span className="text-red-400">*</span></label>
+                <select value={form.sku_id} onChange={e => setForm({...form, sku_id:e.target.value})}
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200">
+                  {SKUS.map(s => <option key={s.sku_id} value={s.sku_id}>{s.sku_id} — {s.name}</option>)}
+                </select>
+              </div>
+
+              {/* หน่วย + จำนวน */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">หน่วยที่ซื้อ</label>
+                  <select value={form.unit} onChange={e => setForm({...form, unit:e.target.value})}
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200">
+                    <option value="pack">ซอง (Pack)</option>
+                    <option value="box">กล่อง (Box)</option>
+                    <option value="cotton">Cotton</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">จำนวน <span className="text-red-400">*</span></label>
+                  <input type="number" min="1" value={form.quantity} onChange={e => setForm({...form, quantity:e.target.value})}
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"/>
+                </div>
+              </div>
+
+              {/* ราคาต้นทุน */}
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">ราคาต้นทุนต่อ{form.unit === "pack" ? "ซอง" : form.unit === "box" ? "กล่อง" : "Cotton"} (บาท) <span className="text-red-400">*</span></label>
+                <input type="number" min="0" step="0.01" value={form.unit_cost} onChange={e => setForm({...form, unit_cost:e.target.value})}
+                  placeholder="0.00"
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"/>
+              </div>
+
+              {/* สรุปต้นทุน Lot */}
+              {qty > 0 && unitCost > 0 && (
+                <div className="p-4 bg-blue-50 rounded-xl space-y-2">
+                  <p className="text-xs font-semibold text-blue-700 mb-2">สรุปต้นทุน Lot นี้</p>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600">จำนวนซองรวม</span>
+                    <span className="font-bold text-blue-700">{fmt(packs)} ซอง</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600">ต้นทุนต่อซอง</span>
+                    <span className="font-bold text-purple-700">{fmtB(costPerPack.toFixed(2))}</span>
+                  </div>
+                  <div className="flex justify-between text-sm border-t border-blue-200 pt-2">
+                    <span className="text-gray-700 font-medium">มูลค่ารวม Lot</span>
+                    <span className="font-bold text-gray-800 text-base">{fmtB(totalCost)}</span>
+                  </div>
+                </div>
+              )}
+
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">หมายเหตุ</label>
+                <input value={form.note} onChange={e => setForm({...form, note:e.target.value})}
+                  placeholder="ไม่บังคับ เช่น ส่วนลด, โปรโมชัน"
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"/>
+              </div>
+
+              <button type="submit" disabled={saving}
+                className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white font-semibold py-2.5 rounded-xl text-sm transition-colors flex items-center justify-center gap-2">
+                {saving ? <Loader2 size={16} className="animate-spin"/> : <PlusCircle size={16}/>}
+                {saving ? "กำลังบันทึก..." : "บันทึกรับสินค้าเข้าสต็อก"}
+              </button>
+            </form>
+          </div>
+
+          {/* Lot Cost Summary */}
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+            <h2 className="font-semibold text-gray-700 mb-3">ประวัติ Lot ล่าสุด</h2>
+            {stockIn.length === 0 ? (
+              <p className="text-gray-400 text-sm">ยังไม่มีประวัติการรับสินค้า</p>
+            ) : (
+              <div className="space-y-3 max-h-[520px] overflow-y-auto pr-1">
+                {[...stockIn].slice(0, 15).map((r, i) => {
+                  const s = SKUS.find(sk => sk.sku_id === r.sku_id)
+                  const cpp = r.quantity_packs > 0 ? r.total_cost / r.quantity_packs : 0
+                  return (
+                    <div key={i} className="p-3 rounded-xl bg-gray-50 border border-gray-100">
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-mono text-xs font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded">
+                              {r.lot_number || "—"}
+                            </span>
+                            <span className="font-mono text-xs font-bold text-gray-700">{r.sku_id}</span>
+                            <Badge series={s?.series || "OP"}/>
+                          </div>
+                          <p className="text-xs text-gray-500 mt-1">{r.source}</p>
+                          <p className="text-xs text-gray-400 mt-0.5 flex items-center gap-1">
+                            <Clock size={10}/> {r.purchased_at?.slice(0,10)}
+                          </p>
+                        </div>
+                        <div className="text-right flex-shrink-0">
+                          <p className="text-sm font-bold text-blue-600">+{fmt(r.quantity_packs)} ซอง</p>
+                          <p className="text-xs text-gray-500">{fmt(r.quantity)} {r.unit}</p>
+                        </div>
+                      </div>
+                      <div className="mt-2 pt-2 border-t border-gray-100 grid grid-cols-3 gap-2 text-center">
+                        <div>
+                          <p className="text-xs text-gray-400">ต้นทุน/{r.unit}</p>
+                          <p className="text-xs font-bold text-gray-700">{fmtB(r.unit_cost)}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-400">ต้นทุน/ซอง</p>
+                          <p className="text-xs font-bold text-purple-600">{fmtB(cpp.toFixed(2))}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-400">มูลค่า Lot</p>
+                          <p className="text-xs font-bold text-gray-800">{fmtB(r.total_cost)}</p>
+                        </div>
+                      </div>
+                      {r.note && <p className="text-xs text-gray-400 mt-1 italic">"{r.note}"</p>}
+                    </div>
+                  )
+                })}
               </div>
             )}
-            <div>
-              <label className="block text-xs text-gray-500 mb-1">ราคาต่อหน่วย (บาท)</label>
-              <input type="number" min="0" step="0.01" value={form.unit_cost} onChange={e => setForm({...form, unit_cost:e.target.value})}
-                placeholder="0.00"
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"/>
-            </div>
-            <div>
-              <label className="block text-xs text-gray-500 mb-1">หมายเหตุ (ไม่บังคับ)</label>
-              <input value={form.note} onChange={e => setForm({...form, note:e.target.value})}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"/>
-            </div>
-            <button type="submit" disabled={saving}
-              className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white font-semibold py-2.5 rounded-xl text-sm transition-colors flex items-center justify-center gap-2">
-              {saving ? <Loader2 size={16} className="animate-spin"/> : <PlusCircle size={16}/>}
-              {saving ? "กำลังบันทึก..." : "บันทึกรับสินค้า"}
-            </button>
-          </form>
+          </div>
         </div>
       )}
 
       {/* ── Tab: History ── */}
       {tab === "history" && (
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-          <h2 className="font-semibold text-gray-700 mb-3">ประวัติการรับสินค้าเข้า (100 รายการล่าสุด)</h2>
+          <h2 className="font-semibold text-gray-700 mb-3">ประวัติรับซื้อสินค้า (100 รายการล่าสุด)</h2>
           {stockIn.length === 0 ? (
             <p className="text-gray-400 text-sm">ยังไม่มีประวัติการรับสินค้า</p>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-gray-100">
-                    {["วันที่","SKU","แหล่งที่มา","หน่วย","จำนวน","ซอง","ราคา/หน่วย","รวม","หมายเหตุ"].map(h => (
-                      <th key={h} className="text-left py-2 text-xs text-gray-400 font-medium pr-3">{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {[...stockIn].reverse().map((r, i) => (
-                    <tr key={i} className="border-b border-gray-50 hover:bg-gray-50">
-                      <td className="py-2 pr-3 text-gray-500 text-xs">{r.purchased_at}</td>
-                      <td className="py-2 pr-3 font-mono font-bold text-xs text-gray-700">{r.sku_id}</td>
-                      <td className="py-2 pr-3 text-gray-600">{r.source}</td>
-                      <td className="py-2 pr-3 text-gray-500">{r.unit}</td>
-                      <td className="py-2 pr-3 text-right font-medium">{fmt(r.quantity)}</td>
-                      <td className="py-2 pr-3 text-right text-blue-600 font-bold">+{fmt(r.quantity_packs)}</td>
-                      <td className="py-2 pr-3 text-right text-gray-600">{fmtB(r.unit_cost)}</td>
-                      <td className="py-2 pr-3 text-right font-semibold">{fmtB(r.total_cost)}</td>
-                      <td className="py-2 text-gray-400 text-xs">{r.note || "-"}</td>
+            <>
+              {/* Mobile cards */}
+              <div className="sm:hidden space-y-3">
+                {stockIn.map((r, i) => {
+                  const cpp = r.quantity_packs > 0 ? r.total_cost / r.quantity_packs : 0
+                  return (
+                    <div key={i} className="p-3 rounded-xl bg-gray-50">
+                      <div className="flex justify-between">
+                        <div>
+                          <span className="font-mono text-xs font-bold text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded">{r.lot_number || "—"}</span>
+                          <span className="ml-2 font-mono text-xs font-bold text-gray-700">{r.sku_id}</span>
+                        </div>
+                        <span className="text-xs text-gray-400">{r.purchased_at?.slice(0,10)}</span>
+                      </div>
+                      <p className="text-xs text-gray-500 mt-1">{r.source}</p>
+                      <div className="flex justify-between mt-1 text-xs">
+                        <span className="text-gray-500">{fmt(r.quantity)} {r.unit} = {fmt(r.quantity_packs)} ซอง</span>
+                        <span className="font-bold text-gray-800">{fmtB(r.total_cost)}</span>
+                      </div>
+                      <div className="text-xs text-purple-600 mt-0.5">ต้นทุน/ซอง: {fmtB(cpp.toFixed(2))}</div>
+                    </div>
+                  )
+                })}
+              </div>
+              {/* Desktop table */}
+              <div className="hidden sm:block overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-gray-100">
+                      {["วันที่","เลขที่ Lot","SKU","Supplier","หน่วย","จำนวน","ซอง","ต้นทุน/หน่วย","ต้นทุน/ซอง","มูลค่า Lot","หมายเหตุ"].map(h => (
+                        <th key={h} className="text-left py-2 text-xs text-gray-400 font-medium pr-3 whitespace-nowrap">{h}</th>
+                      ))}
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {stockIn.map((r, i) => {
+                      const cpp = r.quantity_packs > 0 ? r.total_cost / r.quantity_packs : 0
+                      return (
+                        <tr key={i} className="border-b border-gray-50 hover:bg-gray-50">
+                          <td className="py-2 pr-3 text-gray-500 text-xs whitespace-nowrap">{r.purchased_at?.slice(0,10)}</td>
+                          <td className="py-2 pr-3 font-mono text-xs font-bold text-blue-700">{r.lot_number || "—"}</td>
+                          <td className="py-2 pr-3 font-mono font-bold text-xs text-gray-700">{r.sku_id}</td>
+                          <td className="py-2 pr-3 text-gray-600 text-xs">{r.source}</td>
+                          <td className="py-2 pr-3 text-gray-500 text-xs">{r.unit}</td>
+                          <td className="py-2 pr-3 text-right font-medium">{fmt(r.quantity)}</td>
+                          <td className="py-2 pr-3 text-right text-blue-600 font-bold">+{fmt(r.quantity_packs)}</td>
+                          <td className="py-2 pr-3 text-right text-gray-600">{fmtB(r.unit_cost)}</td>
+                          <td className="py-2 pr-3 text-right text-purple-600 font-medium">{fmtB(cpp.toFixed(2))}</td>
+                          <td className="py-2 pr-3 text-right font-semibold">{fmtB(r.total_cost)}</td>
+                          <td className="py-2 text-gray-400 text-xs">{r.note || "—"}</td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
         </div>
       )}
