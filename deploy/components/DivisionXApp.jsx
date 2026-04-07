@@ -140,7 +140,7 @@ function ErrorScreen({ msg, onRetry }) {
 // ─────────────────────────────────────────────
 // PAGE 1: DASHBOARD — Stock Overview with Lots
 // ─────────────────────────────────────────────
-function PageDashboard({ stockIn, stockBalance, skus }) {
+function PageDashboard({ stockIn, stockOut, stockBalance, skus }) {
   const [expandedSku, setExpandedSku] = useState(null)
   const [seriesSel,   setSeriesSel]   = useState("ทั้งหมด")
   const [search,      setSearch]      = useState("")
@@ -272,11 +272,17 @@ function PageDashboard({ stockIn, stockBalance, skus }) {
                     {lots.length === 0 ? (
                       <p className="text-xs text-gray-400 text-center py-4">ยังไม่มีข้อมูลการรับสินค้า</p>
                     ) : lots.map((lot, i) => {
-                      const cpp     = (lot.quantity_packs || 0) > 0 ? (parseFloat(lot.total_cost) || 0) / lot.quantity_packs : 0
-                      const lBoxes  = Math.floor((lot.quantity_packs || 0) / s.packs_per_box)
-                      const lRem    = (lot.quantity_packs || 0) % s.packs_per_box
+                      const cpp        = (lot.quantity_packs || 0) > 0 ? (parseFloat(lot.total_cost) || 0) / lot.quantity_packs : 0
+                      // คำนวณซองที่เบิกออกจาก Lot นี้
+                      const lotWithdrawn = stockOut
+                        .filter(r => r.lot_number === lot.lot_number)
+                        .reduce((a, r) => a + (r.quantity_packs || 0), 0)
+                      const lotBalance   = (lot.quantity_packs || 0) - lotWithdrawn
+                      const lotDepleted  = lotBalance <= 0
+                      const bBoxes = Math.floor(lotBalance / s.packs_per_box)
+                      const bRem   = lotBalance % s.packs_per_box
                       return (
-                        <div key={i} className="p-3 bg-gray-50 rounded-xl border border-gray-100">
+                        <div key={i} className={`p-3 rounded-xl border ${lotDepleted ? "bg-gray-50/50 border-gray-100 opacity-60" : "bg-gray-50 border-gray-100"}`}>
                           {/* Lot header */}
                           <div className="flex items-start justify-between gap-2">
                             <div className="flex-1 min-w-0">
@@ -285,26 +291,45 @@ function PageDashboard({ stockIn, stockBalance, skus }) {
                                   {lot.lot_number || "ไม่ระบุ Lot"}
                                 </span>
                                 <span className="text-xs text-gray-500">{lot.source}</span>
+                                {lotDepleted && (
+                                  <span className="text-xs bg-gray-200 text-gray-500 px-1.5 py-0.5 rounded">หมดแล้ว</span>
+                                )}
                               </div>
                               <p className="text-xs text-gray-400 mt-1 flex items-center gap-1">
                                 <Clock size={10}/> {lot.purchased_at?.slice(0,10)}
                               </p>
                             </div>
                             <div className="text-right flex-shrink-0">
-                              <p className="text-sm font-bold text-blue-600">+{fmt(lot.quantity_packs)} ซอง</p>
+                              {/* คงเหลือ */}
+                              <p className={`text-sm font-bold ${lotDepleted ? "text-gray-400" : "text-green-600"}`}>
+                                {fmt(lotBalance)} ซอง
+                              </p>
                               <p className="text-xs text-gray-400">
-                                {lBoxes > 0 ? `${lBoxes} กล่อง` : ""}
-                                {lBoxes > 0 && lRem > 0 ? " + " : ""}
-                                {lRem > 0 ? `${lRem} ซอง` : ""}
+                                {lotBalance > 0
+                                  ? `${bBoxes > 0 ? `${bBoxes} กล่อง` : ""}${bBoxes > 0 && bRem > 0 ? "+" : ""}${bRem > 0 ? `${bRem} ซอง` : ""}`
+                                  : "หมด"}
                               </p>
                             </div>
                           </div>
 
+                          {/* Progress bar */}
+                          {lot.quantity_packs > 0 && (
+                            <div className="mt-2 flex items-center gap-2">
+                              <div className="flex-1 bg-gray-200 rounded-full h-1.5">
+                                <div className="h-1.5 rounded-full bg-green-400 transition-all"
+                                  style={{width:`${Math.max(0, (lotBalance / lot.quantity_packs) * 100)}%`}}/>
+                              </div>
+                              <span className="text-xs text-gray-400 flex-shrink-0">
+                                {fmt(lotWithdrawn)}/{fmt(lot.quantity_packs)}
+                              </span>
+                            </div>
+                          )}
+
                           {/* Cost detail */}
                           <div className="mt-2 pt-2 border-t border-gray-100 grid grid-cols-3 gap-2 text-center">
                             <div>
-                              <p className="text-xs text-gray-400">ต้นทุน/{lot.unit || "หน่วย"}</p>
-                              <p className="text-xs font-bold text-gray-700">{fmtB(lot.unit_cost)}</p>
+                              <p className="text-xs text-gray-400">รับเข้า</p>
+                              <p className="text-xs font-bold text-blue-600">+{fmt(lot.quantity_packs)}</p>
                             </div>
                             <div>
                               <p className="text-xs text-gray-400">ต้นทุน/ซอง</p>
@@ -1086,8 +1111,8 @@ function SkuManager({ skus, onAddSku, onDeactivateSku, showToast }) {
 // ─────────────────────────────────────────────
 // PAGE 3: WITHDRAWAL
 // ─────────────────────────────────────────────
-function PageWithdrawal({ machines, stockOut, stockBalance, onAddStockOut, onDeleteStockOut, skus }) {
-  const [form, setForm]   = useState({ sku_id:"OP 01", machine_id:"", unit:"box", quantity:"1", note:"" })
+function PageWithdrawal({ machines, stockOut, stockIn, stockBalance, onAddStockOut, onDeleteStockOut, skus }) {
+  const [form, setForm]   = useState({ sku_id:"OP 01", lot_number:"", machine_id:"", unit:"box", quantity:"1", note:"" })
   const [toast, setToast] = useState(null)
   const [saving, setSaving] = useState(false)
 
@@ -1107,11 +1132,25 @@ function PageWithdrawal({ machines, stockOut, stockBalance, onAddStockOut, onDel
     }
   }
 
-  const machineId  = form.machine_id || machines[0]?.machine_id || ""
-  const balMap     = Object.fromEntries(stockBalance.map(r => [r.sku_id, parseFloat(r.balance) || 0]))
-  const available  = balMap[form.sku_id] || 0
+  const machineId   = form.machine_id || machines[0]?.machine_id || ""
+  const balMap      = Object.fromEntries(stockBalance.map(r => [r.sku_id, parseFloat(r.balance) || 0]))
+  const available   = balMap[form.sku_id] || 0
   const selectedSku = skus.find(s => s.sku_id === form.sku_id)
-  const availBoxes = selectedSku ? Math.floor(available / selectedSku.packs_per_box) : 0
+  const availBoxes  = selectedSku ? Math.floor(available / selectedSku.packs_per_box) : 0
+
+  // ── Lot options สำหรับ SKU ที่เลือก ──
+  const skuLots = stockIn
+    .filter(r => r.sku_id === form.sku_id && r.lot_number)
+    .map(r => {
+      const withdrawn = stockOut
+        .filter(so => so.lot_number === r.lot_number)
+        .reduce((a, so) => a + (so.quantity_packs || 0), 0)
+      return { ...r, lotBalance: r.quantity_packs - withdrawn }
+    })
+    .sort((a, b) => new Date(a.purchased_at) - new Date(b.purchased_at)) // FIFO
+
+  const availableLots = skuLots.filter(r => r.lotBalance > 0)
+  const selectedLot   = skuLots.find(r => r.lot_number === form.lot_number)
 
   // คำนวณซองที่จะเบิก
   const withdrawQty   = parseInt(form.quantity) || 0
@@ -1119,6 +1158,7 @@ function PageWithdrawal({ machines, stockOut, stockBalance, onAddStockOut, onDel
     ? withdrawQty * (selectedSku?.packs_per_box || 12)
     : withdrawQty
   const overStock = withdrawPacks > available
+  const overLot   = selectedLot && withdrawPacks > selectedLot.lotBalance
 
   const showToast = (msg, type="success") => {
     setToast({msg, type}); setTimeout(() => setToast(null), 3500)
@@ -1128,12 +1168,15 @@ function PageWithdrawal({ machines, stockOut, stockBalance, onAddStockOut, onDel
     e.preventDefault()
     if (!withdrawQty || withdrawQty <= 0) { showToast("กรุณาระบุจำนวนที่ถูกต้อง","error"); return }
     if (!machineId)    { showToast("กรุณาเลือกตู้ปลายทาง","error"); return }
-    if (overStock)     { showToast(`สต็อกไม่เพียงพอ: คงเหลือ ${available} ซอง (${availBoxes} กล่อง)`, "error"); return }
+    if (overStock)     { showToast(`สต็อกไม่เพียงพอ: คงเหลือ ${available} ซอง`, "error"); return }
+    if (overLot)       { showToast(`เกินสต็อก Lot นี้: คงเหลือ ${fmt(selectedLot.lotBalance)} ซอง`, "error"); return }
+    if (availableLots.length > 0 && !form.lot_number) { showToast("กรุณาเลือก Lot ที่จะเบิก","error"); return }
     try {
       setSaving(true)
       const machine = machines.find(m => m.machine_id === machineId)
       await onAddStockOut({
         sku_id:         form.sku_id,
+        lot_number:     form.lot_number || null,
         machine_id:     machineId,
         quantity_packs: withdrawPacks,
         withdrawn_at:   today(),
@@ -1141,7 +1184,7 @@ function PageWithdrawal({ machines, stockOut, stockBalance, onAddStockOut, onDel
           ? `[${form.unit === "box" ? withdrawQty+"กล่อง" : withdrawQty+"ซอง"}] ${form.note}`
           : `[${form.unit === "box" ? withdrawQty+"กล่อง" : withdrawQty+"ซอง"}]`,
       })
-      showToast(`เบิกสำเร็จ: ${form.sku_id} → ${machine?.name ?? machineId} ${fmt(withdrawPacks)} ซอง`)
+      showToast(`เบิกสำเร็จ: ${form.sku_id}${form.lot_number ? ` (${form.lot_number})` : ""} → ${machine?.name ?? machineId} ${fmt(withdrawPacks)} ซอง`)
       setForm(f => ({...f, quantity:"1", note:""}))
     } catch (err) {
       showToast("เกิดข้อผิดพลาด: " + err.message, "error")
@@ -1170,22 +1213,83 @@ function PageWithdrawal({ machines, stockOut, stockBalance, onAddStockOut, onDel
             {/* SKU */}
             <div>
               <label className="block text-xs text-gray-500 mb-1">สินค้า (SKU)</label>
-              <select value={form.sku_id} onChange={e => setForm({...form, sku_id:e.target.value})}
+              <select value={form.sku_id} onChange={e => setForm({...form, sku_id:e.target.value, lot_number:""})}
                 className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-200">
                 {skus.map(s => <option key={s.sku_id} value={s.sku_id}>{s.sku_id} — {s.name}</option>)}
               </select>
             </div>
 
+            {/* เลือก Lot */}
+            {skuLots.length > 0 && (
+              <div>
+                <label className="block text-xs text-gray-500 mb-2">
+                  เลือก Lot ที่จะเบิก <span className="text-red-400">*</span>
+                  <span className="ml-1 text-gray-400">({availableLots.length}/{skuLots.length} Lot มีสต็อก)</span>
+                </label>
+                <div className="space-y-2">
+                  {skuLots.map(lot => {
+                    const isSelected = form.lot_number === lot.lot_number
+                    const depleted   = lot.lotBalance <= 0
+                    const lotBoxes   = Math.floor(lot.lotBalance / (selectedSku?.packs_per_box || 12))
+                    const lotRem     = lot.lotBalance % (selectedSku?.packs_per_box || 12)
+                    return (
+                      <button type="button" key={lot.lot_number}
+                        disabled={depleted}
+                        onClick={() => setForm({...form, lot_number: isSelected ? "" : lot.lot_number})}
+                        className={`w-full p-3 rounded-xl border-2 text-left transition-all disabled:opacity-40 disabled:cursor-not-allowed
+                          ${isSelected ? "border-orange-400 bg-orange-50" : depleted ? "border-gray-200 bg-gray-50" : "border-gray-200 hover:border-orange-300"}`}>
+                        <div className="flex items-center justify-between gap-2">
+                          <div>
+                            <span className={`font-mono text-xs font-bold px-1.5 py-0.5 rounded ${isSelected ? "bg-orange-100 text-orange-700" : "bg-blue-50 text-blue-700"}`}>
+                              {lot.lot_number}
+                            </span>
+                            <span className="text-xs text-gray-500 ml-2">{lot.source}</span>
+                            <span className="text-xs text-gray-400 ml-1">· {lot.purchased_at?.slice(0,10)}</span>
+                          </div>
+                          <div className="text-right flex-shrink-0">
+                            <p className={`text-sm font-bold ${depleted ? "text-gray-400" : isSelected ? "text-orange-600" : "text-green-600"}`}>
+                              {fmt(lot.lotBalance)} ซอง
+                            </p>
+                            <p className="text-xs text-gray-400">
+                              {depleted ? "หมดแล้ว" : `${lotBoxes > 0 ? lotBoxes+"กล่อง" : ""}${lotBoxes>0&&lotRem>0?"+":""}${lotRem>0?lotRem+"ซอง":""}`}
+                            </p>
+                          </div>
+                        </div>
+                        {/* Progress */}
+                        {lot.quantity_packs > 0 && (
+                          <div className="mt-1.5 flex items-center gap-2">
+                            <div className="flex-1 bg-gray-200 rounded-full h-1">
+                              <div className={`h-1 rounded-full transition-all ${isSelected?"bg-orange-400":"bg-green-400"}`}
+                                style={{width:`${Math.max(0,(lot.lotBalance/lot.quantity_packs)*100)}%`}}/>
+                            </div>
+                            <span className="text-xs text-gray-400">{fmt(lot.lotBalance)}/{fmt(lot.quantity_packs)}</span>
+                          </div>
+                        )}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+
             {/* สต็อกคงเหลือ */}
             <div className={`p-3 rounded-xl text-sm grid grid-cols-2 gap-2 ${available < 24 ? "bg-amber-50":"bg-green-50"}`}>
               <div className="text-center">
-                <p className={`text-xs ${available < 24 ? "text-amber-500":"text-green-500"}`}>คงเหลือ (ซอง)</p>
-                <p className={`text-lg font-bold ${available < 24 ? "text-amber-700":"text-green-700"}`}>{fmt(available)}</p>
+                <p className={`text-xs ${available < 24 ? "text-amber-500":"text-green-500"}`}>
+                  {selectedLot ? `Lot นี้คงเหลือ` : "คงเหลือรวม (ซอง)"}
+                </p>
+                <p className={`text-lg font-bold ${available < 24 ? "text-amber-700":"text-green-700"}`}>
+                  {fmt(selectedLot ? selectedLot.lotBalance : available)}
+                </p>
               </div>
               <div className="text-center border-l border-white/60">
-                <p className={`text-xs ${available < 24 ? "text-amber-500":"text-green-500"}`}>คงเหลือ (กล่อง)</p>
+                <p className={`text-xs ${available < 24 ? "text-amber-500":"text-green-500"}`}>
+                  {selectedLot ? "คงเหลือ (กล่อง)" : "คงเหลือ (กล่อง)"}
+                </p>
                 <p className={`text-lg font-bold ${available < 24 ? "text-amber-700":"text-green-700"}`}>
-                  {availBoxes}
+                  {selectedLot
+                    ? Math.floor(selectedLot.lotBalance / (selectedSku?.packs_per_box || 12))
+                    : availBoxes}
                   <span className="text-xs font-normal ml-1">({selectedSku?.packs_per_box} ซอง/กล่อง)</span>
                 </p>
               </div>
@@ -1230,10 +1334,10 @@ function PageWithdrawal({ machines, stockOut, stockBalance, onAddStockOut, onDel
                   ) : (
                     <span>เบิก <span className="font-bold">{fmt(withdrawPacks)} ซอง</span></span>
                   )}
-                  {overStock && <span className="ml-2 font-semibold">⚠️ เกินสต็อก!</span>}
-                  {!overStock && (
+                  {(overStock || overLot) && <span className="ml-2 font-semibold">⚠️ เกินสต็อก{overLot && !overStock ? " Lot" : ""}!</span>}
+                  {!overStock && !overLot && (
                     <span className="ml-2 text-xs opacity-70">
-                      เหลือ {fmt(available - withdrawPacks)} ซอง
+                      เหลือ {fmt((selectedLot ? selectedLot.lotBalance : available) - withdrawPacks)} ซอง
                     </span>
                   )}
                 </div>
@@ -1263,7 +1367,7 @@ function PageWithdrawal({ machines, stockOut, stockBalance, onAddStockOut, onDel
                 className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-200"/>
             </div>
 
-            <button type="submit" disabled={saving || overStock}
+            <button type="submit" disabled={saving || overStock || overLot}
               className="w-full bg-orange-500 hover:bg-orange-600 disabled:opacity-60 text-white font-semibold py-2.5 rounded-xl text-sm transition-colors flex items-center justify-center gap-2">
               {saving ? <Loader2 size={16} className="animate-spin"/> : <ArrowUpCircle size={16}/>}
               {saving ? "กำลังบันทึก..." : `บันทึกเบิก ${withdrawQty > 0 ? fmt(withdrawPacks)+" ซอง" : ""}`}
@@ -1291,6 +1395,11 @@ function PageWithdrawal({ machines, stockOut, stockBalance, onAddStockOut, onDel
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className="font-mono text-xs font-bold text-gray-700">{r.sku_id}</span>
                           <Badge series={sku?.series || "OP"}/>
+                          {r.lot_number && (
+                            <span className="font-mono text-xs bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded">
+                              {r.lot_number}
+                            </span>
+                          )}
                           {unitMatch && (
                             <span className="text-xs bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded font-medium">
                               {unitMatch[1]} {unitMatch[2]}
@@ -1795,9 +1904,9 @@ export default function DivisionXApp() {
         </header>
 
         <main className="flex-1 p-4 lg:p-6 overflow-y-auto">
-          {page === "dashboard"  && <PageDashboard stockIn={stockIn} stockBalance={stockBalance} skus={skus}/>}
+          {page === "dashboard"  && <PageDashboard stockIn={stockIn} stockOut={stockOut} stockBalance={stockBalance} skus={skus}/>}
           {page === "stock"      && <PageStock     stockIn={stockIn} stockBalance={stockBalance} skus={skus} onAddStockIn={addStockIn} onUpdateStockIn={updateStockIn} onDeleteStockIn={deleteStockIn} onAddSku={addSku} onDeactivateSku={deactivateSku}/>}
-          {page === "withdrawal" && <PageWithdrawal machines={machines} stockOut={stockOut} stockBalance={stockBalance} skus={skus} onAddStockOut={addStockOut} onDeleteStockOut={deleteStockOut}/>}
+          {page === "withdrawal" && <PageWithdrawal machines={machines} stockOut={stockOut} stockIn={stockIn} stockBalance={stockBalance} skus={skus} onAddStockOut={addStockOut} onDeleteStockOut={deleteStockOut}/>}
           {page === "sales"      && <PageSales     machines={machines} sales={sales} skus={skus}/>}
           {page === "analytics"  && <PageAnalytics sales={sales} skus={skus}/>}
         </main>
