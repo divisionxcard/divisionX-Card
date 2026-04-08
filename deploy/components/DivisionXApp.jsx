@@ -556,9 +556,13 @@ function PageDashboard({ stockIn, stockOut, stockBalance, skus }) {
                 onClick={() => setExpandedSku(isExpanded ? null : s.sku_id)}>
 
                 {/* Image area */}
-                <div className={`relative h-28 bg-gradient-to-br ${seriesBgLight[s.series] || "from-gray-50 to-gray-100"} flex items-center justify-center overflow-hidden`}>
-                  <div className="text-4xl font-black text-white/10 absolute">{s.series}</div>
-                  <div className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${seriesBg[s.series] || "from-gray-400 to-gray-500"} flex items-center justify-center shadow-lg`}>
+                <div className={`relative h-32 bg-gradient-to-br ${seriesBgLight[s.series] || "from-gray-50 to-gray-100"} flex items-center justify-center overflow-hidden`}>
+                  {s.image_url ? (
+                    <img src={s.image_url} alt={s.sku_id}
+                      className="h-full w-full object-contain p-2"
+                      onError={e => { e.target.style.display='none'; e.target.nextSibling.style.display='flex' }}/>
+                  ) : null}
+                  <div className={`${s.image_url ? 'hidden' : 'flex'} w-16 h-16 rounded-2xl bg-gradient-to-br ${seriesBg[s.series] || "from-gray-400 to-gray-500"} items-center justify-center shadow-lg`}>
                     <span className="text-white font-black text-xs leading-tight text-center">{s.sku_id}</span>
                   </div>
                   {/* Status badge */}
