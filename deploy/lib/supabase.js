@@ -20,7 +20,7 @@ export async function getStockIn() {
   const { data, error } = await supabase
     .from("stock_in")
     .select("*")
-    .order("purchased_at", { ascending: false })
+    .order("created_at", { ascending: false })
     .limit(100)
   if (error) throw error
   return data

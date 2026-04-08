@@ -24,27 +24,27 @@ import {
 // STATIC SKU DATA (ราคา/ต้นทุน)
 // ─────────────────────────────────────────────
 const SKUS = [
-  { sku_id:"OP 01",  name:"One Piece OP-01",    series:"OP",  packs_per_box:12, sell_price:60,  cost_price:42 },
-  { sku_id:"OP 02",  name:"One Piece OP-02",    series:"OP",  packs_per_box:12, sell_price:60,  cost_price:42 },
-  { sku_id:"OP 03",  name:"One Piece OP-03",    series:"OP",  packs_per_box:12, sell_price:60,  cost_price:42 },
-  { sku_id:"OP 04",  name:"One Piece OP-04",    series:"OP",  packs_per_box:12, sell_price:65,  cost_price:45 },
-  { sku_id:"OP 05",  name:"One Piece OP-05",    series:"OP",  packs_per_box:12, sell_price:65,  cost_price:45 },
-  { sku_id:"OP 06",  name:"One Piece OP-06",    series:"OP",  packs_per_box:12, sell_price:65,  cost_price:45 },
-  { sku_id:"OP 07",  name:"One Piece OP-07",    series:"OP",  packs_per_box:12, sell_price:70,  cost_price:48 },
-  { sku_id:"OP 08",  name:"One Piece OP-08",    series:"OP",  packs_per_box:12, sell_price:70,  cost_price:48 },
-  { sku_id:"OP 09",  name:"One Piece OP-09",    series:"OP",  packs_per_box:12, sell_price:70,  cost_price:48 },
-  { sku_id:"OP 10",  name:"One Piece OP-10",    series:"OP",  packs_per_box:12, sell_price:70,  cost_price:48 },
-  { sku_id:"OP 11",  name:"One Piece OP-11",    series:"OP",  packs_per_box:12, sell_price:75,  cost_price:52 },
-  { sku_id:"OP 12",  name:"One Piece OP-12",    series:"OP",  packs_per_box:12, sell_price:75,  cost_price:52 },
-  { sku_id:"OP 13",  name:"One Piece OP-13",    series:"OP",  packs_per_box:12, sell_price:75,  cost_price:52 },
-  { sku_id:"OP 14",  name:"One Piece OP-14",    series:"OP",  packs_per_box:12, sell_price:80,  cost_price:55 },
-  { sku_id:"OP 15",  name:"One Piece OP-15",    series:"OP",  packs_per_box:12, sell_price:80,  cost_price:55 },
-  { sku_id:"PRB 01", name:"Premium Booster 01", series:"PRB", packs_per_box:10, sell_price:150, cost_price:110 },
-  { sku_id:"PRB 02", name:"Premium Booster 02", series:"PRB", packs_per_box:10, sell_price:180, cost_price:130 },
-  { sku_id:"EB 01",  name:"Extra Booster 01",   series:"EB",  packs_per_box:12, sell_price:120, cost_price:85  },
-  { sku_id:"EB 02",  name:"Extra Booster 02",   series:"EB",  packs_per_box:12, sell_price:120, cost_price:85  },
-  { sku_id:"EB 03",  name:"Extra Booster 03",   series:"EB",  packs_per_box:12, sell_price:130, cost_price:90  },
-  { sku_id:"EB 04",  name:"Extra Booster 04",   series:"EB",  packs_per_box:12, sell_price:130, cost_price:90  },
+  { sku_id:"OP 01",  name:"One Piece OP-01",    series:"OP",  packs_per_box:24, sell_price:60,  cost_price:42 },
+  { sku_id:"OP 02",  name:"One Piece OP-02",    series:"OP",  packs_per_box:24, sell_price:60,  cost_price:42 },
+  { sku_id:"OP 03",  name:"One Piece OP-03",    series:"OP",  packs_per_box:24, sell_price:60,  cost_price:42 },
+  { sku_id:"OP 04",  name:"One Piece OP-04",    series:"OP",  packs_per_box:24, sell_price:65,  cost_price:45 },
+  { sku_id:"OP 05",  name:"One Piece OP-05",    series:"OP",  packs_per_box:24, sell_price:65,  cost_price:45 },
+  { sku_id:"OP 06",  name:"One Piece OP-06",    series:"OP",  packs_per_box:24, sell_price:65,  cost_price:45 },
+  { sku_id:"OP 07",  name:"One Piece OP-07",    series:"OP",  packs_per_box:24, sell_price:70,  cost_price:48 },
+  { sku_id:"OP 08",  name:"One Piece OP-08",    series:"OP",  packs_per_box:24, sell_price:70,  cost_price:48 },
+  { sku_id:"OP 09",  name:"One Piece OP-09",    series:"OP",  packs_per_box:24, sell_price:70,  cost_price:48 },
+  { sku_id:"OP 10",  name:"One Piece OP-10",    series:"OP",  packs_per_box:24, sell_price:70,  cost_price:48 },
+  { sku_id:"OP 11",  name:"One Piece OP-11",    series:"OP",  packs_per_box:24, sell_price:75,  cost_price:52 },
+  { sku_id:"OP 12",  name:"One Piece OP-12",    series:"OP",  packs_per_box:24, sell_price:75,  cost_price:52 },
+  { sku_id:"OP 13",  name:"One Piece OP-13",    series:"OP",  packs_per_box:24, sell_price:75,  cost_price:52 },
+  { sku_id:"OP 14",  name:"One Piece OP-14",    series:"OP",  packs_per_box:24, sell_price:80,  cost_price:55 },
+  { sku_id:"OP 15",  name:"One Piece OP-15",    series:"OP",  packs_per_box:24, sell_price:80,  cost_price:55 },
+  { sku_id:"PRB 01", name:"Premium Booster 01", series:"PRB", packs_per_box:20, sell_price:150, cost_price:110 },
+  { sku_id:"PRB 02", name:"Premium Booster 02", series:"PRB", packs_per_box:20, sell_price:180, cost_price:130 },
+  { sku_id:"EB 01",  name:"Extra Booster 01",   series:"EB",  packs_per_box:24, sell_price:120, cost_price:85  },
+  { sku_id:"EB 02",  name:"Extra Booster 02",   series:"EB",  packs_per_box:24, sell_price:120, cost_price:85  },
+  { sku_id:"EB 03",  name:"Extra Booster 03",   series:"EB",  packs_per_box:24, sell_price:130, cost_price:90  },
+  { sku_id:"EB 04",  name:"Extra Booster 04",   series:"EB",  packs_per_box:24, sell_price:130, cost_price:90  },
 ]
 
 const SERIES_COLOR = { OP: "#3b82f6", PRB: "#8b5cf6", EB: "#10b981" }
@@ -58,6 +58,17 @@ const THAI_MONTHS = ["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.
 const fmt   = (n) => (n ?? 0).toLocaleString("th-TH")
 const fmtB  = (n) => `฿${(n ?? 0).toLocaleString("th-TH")}`
 const today = () => new Date().toISOString().slice(0, 10)
+
+// แสดงจำนวนเป็น "X กล่อง Y ซอง" (ซ่อน 0 กล่อง / 0 ซอง)
+const fmtBoxPack = (packs, ppb) => {
+  if (!packs || packs === 0) return "0 ซอง"
+  const boxes = Math.floor(packs / ppb)
+  const rem   = packs % ppb
+  if (boxes === 0) return `${fmt(rem)} ซอง`
+  if (rem   === 0) return `${fmt(boxes)} กล่อง`
+  return `${fmt(boxes)} กล่อง ${rem} ซอง`
+}
+const UNIT_LABEL = { pack: "ซอง", box: "กล่อง", cotton: "Cotton" }
 
 function getLastNDays(n) {
   return Array.from({ length: n }, (_, i) => {
@@ -163,7 +174,7 @@ function PageDashboard({ stockIn, stockOut, stockBalance, skus }) {
     lotsMap[r.sku_id].push(r)
   })
   Object.values(lotsMap).forEach(arr =>
-    arr.sort((a, b) => new Date(b.purchased_at) - new Date(a.purchased_at))
+    arr.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
   )
 
   const filtered = skus
@@ -207,8 +218,6 @@ function PageDashboard({ stockIn, stockOut, stockBalance, skus }) {
       <div className="space-y-3">
         {filtered.map(s => {
           const b          = balMap[s.sku_id] || { balance:0, total_in:0, total_out:0 }
-          const boxes      = Math.floor(b.balance / s.packs_per_box)
-          const remPacks   = b.balance % s.packs_per_box
           const low        = b.balance < 24
           const lots       = lotsMap[s.sku_id] || []
           const isExpanded = expandedSku === s.sku_id
@@ -242,12 +251,10 @@ function PageDashboard({ stockIn, stockOut, stockBalance, skus }) {
                 <div className="flex items-center gap-3 flex-shrink-0">
                   <div className="text-right">
                     <p className={`text-base font-bold ${low ? "text-amber-600" : "text-gray-800"}`}>
-                      {fmt(b.balance)} ซอง
+                      {fmtBoxPack(b.balance, s.packs_per_box)}
                     </p>
                     <p className="text-xs text-gray-400">
-                      {b.balance > 0
-                        ? `${boxes > 0 ? `${fmt(boxes)} กล่อง` : ""}${boxes > 0 && remPacks > 0 ? " + " : ""}${remPacks > 0 ? `${remPacks} ซอง` : boxes === 0 ? `${b.balance} ซอง` : ""}`
-                        : "—"}
+                      {b.balance > 0 ? `${fmt(b.balance)} ซอง` : "—"}
                     </p>
                   </div>
                   {isExpanded ? <ChevronUp size={16} className="text-gray-400"/> : <ChevronDown size={16} className="text-gray-400"/>}
@@ -259,8 +266,14 @@ function PageDashboard({ stockIn, stockOut, stockBalance, skus }) {
                 <div className="border-t border-gray-100">
                   {/* Summary bar */}
                   <div className="px-4 py-3 bg-gray-50 flex flex-wrap gap-x-6 gap-y-1 text-xs">
-                    <span className="text-blue-600 font-medium">รับเข้ารวม: {fmt(b.total_in)} ซอง</span>
-                    <span className="text-orange-500 font-medium">เบิกออกรวม: {fmt(b.total_out)} ซอง</span>
+                    <span className="text-blue-600 font-medium">
+                      รับเข้ารวม: {fmtBoxPack(b.total_in, s.packs_per_box)}
+                      <span className="font-normal text-blue-400 ml-1">({fmt(b.total_in)} ซอง)</span>
+                    </span>
+                    <span className="text-orange-500 font-medium">
+                      เบิกออกรวม: {fmtBoxPack(b.total_out, s.packs_per_box)}
+                      <span className="font-normal text-orange-400 ml-1">({fmt(b.total_out)} ซอง)</span>
+                    </span>
                     {avgCpp > 0 && (
                       <span className="text-purple-600 font-medium">ต้นทุนเฉลี่ย/ซอง: {fmtB(avgCpp.toFixed(2))}</span>
                     )}
@@ -279,8 +292,6 @@ function PageDashboard({ stockIn, stockOut, stockBalance, skus }) {
                         .reduce((a, r) => a + (r.quantity_packs || 0), 0)
                       const lotBalance   = (lot.quantity_packs || 0) - lotWithdrawn
                       const lotDepleted  = lotBalance <= 0
-                      const bBoxes = Math.floor(lotBalance / s.packs_per_box)
-                      const bRem   = lotBalance % s.packs_per_box
                       return (
                         <div key={i} className={`p-3 rounded-xl border ${lotDepleted ? "bg-gray-50/50 border-gray-100 opacity-60" : "bg-gray-50 border-gray-100"}`}>
                           {/* Lot header */}
@@ -302,12 +313,10 @@ function PageDashboard({ stockIn, stockOut, stockBalance, skus }) {
                             <div className="text-right flex-shrink-0">
                               {/* คงเหลือ */}
                               <p className={`text-sm font-bold ${lotDepleted ? "text-gray-400" : "text-green-600"}`}>
-                                {fmt(lotBalance)} ซอง
+                                {lotBalance > 0 ? fmtBoxPack(lotBalance, s.packs_per_box) : "หมดแล้ว"}
                               </p>
                               <p className="text-xs text-gray-400">
-                                {lotBalance > 0
-                                  ? `${bBoxes > 0 ? `${bBoxes} กล่อง` : ""}${bBoxes > 0 && bRem > 0 ? "+" : ""}${bRem > 0 ? `${bRem} ซอง` : ""}`
-                                  : "หมด"}
+                                {lotBalance > 0 ? `${fmt(lotBalance)} ซอง` : ""}
                               </p>
                             </div>
                           </div>
@@ -329,7 +338,10 @@ function PageDashboard({ stockIn, stockOut, stockBalance, skus }) {
                           <div className="mt-2 pt-2 border-t border-gray-100 grid grid-cols-3 gap-2 text-center">
                             <div>
                               <p className="text-xs text-gray-400">รับเข้า</p>
-                              <p className="text-xs font-bold text-blue-600">+{fmt(lot.quantity_packs)}</p>
+                              <p className="text-xs font-bold text-blue-600">
+                                +{fmt(lot.quantity)} {UNIT_LABEL[lot.unit] || lot.unit}
+                              </p>
+                              <p className="text-xs text-blue-400">= {fmt(lot.quantity_packs)} ซอง</p>
                             </div>
                             <div>
                               <p className="text-xs text-gray-400">ต้นทุน/ซอง</p>
@@ -568,10 +580,10 @@ function PageStock({ stockIn, stockBalance, onAddStockIn, onUpdateStockIn, onDel
       showToast(`บันทึกสำเร็จ: Lot ${form.lot_number} — ${packs} ซอง (${form.sku_id})`)
       setForm({
         lot_number:   genLotNumber(),
-        sku_id:       "OP 01",
+        sku_id:       form.sku_id,
         source:       form.source,
         purchased_at: today(),
-        unit:         "box",
+        unit:         form.unit,
         quantity:     "1",
         unit_cost:    "",
         note:         "",
@@ -957,7 +969,7 @@ function SkuManager({ skus, onAddSku, onDeactivateSku, showToast }) {
     sku_id:           "",
     name:             "",
     series:           "OP",
-    packs_per_box:    "12",
+    packs_per_box:    "24",
     boxes_per_cotton: "12",
     sell_price:       "",
     cost_price:       "",
@@ -972,7 +984,7 @@ function SkuManager({ skus, onAddSku, onDeactivateSku, showToast }) {
         sku_id:           form.sku_id.trim().toUpperCase(),
         name:             form.name.trim(),
         series:           form.series,
-        packs_per_box:    parseInt(form.packs_per_box) || 12,
+        packs_per_box:    parseInt(form.packs_per_box) || 24,
         boxes_per_cotton: parseInt(form.boxes_per_cotton) || 12,
         sell_price:       parseFloat(form.sell_price) || 0,
         cost_price:       parseFloat(form.cost_price) || 0,
@@ -1035,7 +1047,7 @@ function SkuManager({ skus, onAddSku, onDeactivateSku, showToast }) {
               <label className="block text-xs text-gray-500 mb-1">ซอง/กล่อง</label>
               <input type="number" min="1" value={form.packs_per_box} onChange={e => setForm({...form, packs_per_box:e.target.value})}
                 className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"/>
-              <p className="text-xs text-gray-400 mt-0.5">OP/EB=12, PRB=10</p>
+              <p className="text-xs text-gray-400 mt-0.5">OP/EB=24, PRB=20</p>
             </div>
             <div>
               <label className="block text-xs text-gray-500 mb-1">กล่อง/Cotton</label>
@@ -1155,7 +1167,7 @@ function PageWithdrawal({ machines, stockOut, stockIn, stockBalance, onAddStockO
   // คำนวณซองที่จะเบิก
   const withdrawQty   = parseInt(form.quantity) || 0
   const withdrawPacks = form.unit === "box"
-    ? withdrawQty * (selectedSku?.packs_per_box || 12)
+    ? withdrawQty * (selectedSku?.packs_per_box || 24)
     : withdrawQty
   const overStock = withdrawPacks > available
   const overLot   = selectedLot && withdrawPacks > selectedLot.lotBalance
@@ -1230,8 +1242,8 @@ function PageWithdrawal({ machines, stockOut, stockIn, stockBalance, onAddStockO
                   {skuLots.map(lot => {
                     const isSelected = form.lot_number === lot.lot_number
                     const depleted   = lot.lotBalance <= 0
-                    const lotBoxes   = Math.floor(lot.lotBalance / (selectedSku?.packs_per_box || 12))
-                    const lotRem     = lot.lotBalance % (selectedSku?.packs_per_box || 12)
+                    const lotBoxes   = Math.floor(lot.lotBalance / (selectedSku?.packs_per_box || 24))
+                    const lotRem     = lot.lotBalance % (selectedSku?.packs_per_box || 24)
                     return (
                       <button type="button" key={lot.lot_number}
                         disabled={depleted}
@@ -1288,7 +1300,7 @@ function PageWithdrawal({ machines, stockOut, stockIn, stockBalance, onAddStockO
                 </p>
                 <p className={`text-lg font-bold ${available < 24 ? "text-amber-700":"text-green-700"}`}>
                   {selectedLot
-                    ? Math.floor(selectedLot.lotBalance / (selectedSku?.packs_per_box || 12))
+                    ? Math.floor(selectedLot.lotBalance / (selectedSku?.packs_per_box || 24))
                     : availBoxes}
                   <span className="text-xs font-normal ml-1">({selectedSku?.packs_per_box} ซอง/กล่อง)</span>
                 </p>
