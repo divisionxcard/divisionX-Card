@@ -2162,8 +2162,8 @@ export default function DivisionXApp() {
   const lowCount = skus.filter(s => (balMap[s.sku_id] || 0) < 24).length
 
   // ── Auth / Loading / Error screens ──
-  if (authLoading) return <LoadingScreen/>
-  if (!session)    return <LoginPage/>
+  // if (authLoading) return <LoadingScreen/>
+  // if (!session)    return <LoginPage/>   ← ซ่อน Login ชั่วคราว
   if (loading)     return <LoadingScreen/>
   if (dataError)   return <ErrorScreen msg={dataError} onRetry={loadAll}/>
 
