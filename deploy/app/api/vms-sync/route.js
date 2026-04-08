@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server"
 
 export async function POST() {
-  const token = process.env.GITHUB_PAT
+  const token = process.env.GH_PAT
   if (!token) {
-    return NextResponse.json({ error: "GITHUB_PAT not configured" }, { status: 500 })
+    return NextResponse.json({ error: "GH_PAT not configured" }, { status: 500 })
   }
 
   try {
