@@ -1416,7 +1416,9 @@ function SkuManager({ skus, onAddSku, onDeactivateSku, showToast }) {
 // PAGE 3: WITHDRAWAL
 // ─────────────────────────────────────────────
 function PageWithdrawal({ machines, stockOut, stockIn, stockBalance, onAddStockOut, onDeleteStockOut, skus }) {
-  const [form, setForm]   = useState({ sku_id:"OP 01", lot_number:"", machine_id:"", unit:"box", quantity:"1", note:"" })
+  const nowDate = () => new Date().toISOString().slice(0,10)
+  const nowTime = () => new Date().toTimeString().slice(0,5)
+  const [form, setForm]   = useState({ sku_id:"OP 01", lot_number:"", machine_id:"", unit:"box", quantity:"1", note:"", date: nowDate(), time: nowTime() })
   const [toast, setToast] = useState(null)
   const [saving, setSaving] = useState(false)
 
@@ -1483,7 +1485,7 @@ function PageWithdrawal({ machines, stockOut, stockIn, stockBalance, onAddStockO
         lot_number:     form.lot_number || null,
         machine_id:     machineId,
         quantity_packs: withdrawPacks,
-        withdrawn_at:   today(),
+        withdrawn_at:   `${form.date}T${form.time}:00`,
         note:           form.note
           ? `[${form.unit === "box" ? withdrawQty+"กล่อง" : withdrawQty+"ซอง"}] ${form.note}`
           : `[${form.unit === "box" ? withdrawQty+"กล่อง" : withdrawQty+"ซอง"}]`,
@@ -1648,6 +1650,20 @@ function PageWithdrawal({ machines, stockOut, stockIn, stockBalance, onAddStockO
               )}
             </div>
 
+            {/* วันที่และเวลา */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">วันที่เบิก</label>
+                <input type="date" value={form.date} onChange={e => setForm({...form, date:e.target.value})}
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-200"/>
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">เวลา</label>
+                <input type="time" value={form.time} onChange={e => setForm({...form, time:e.target.value})}
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-200"/>
+              </div>
+            </div>
+
             {/* ตู้ปลายทาง */}
             <div>
               <label className="block text-xs text-gray-500 mb-1">ตู้ปลายทาง</label>
@@ -1714,7 +1730,7 @@ function PageWithdrawal({ machines, stockOut, stockIn, stockBalance, onAddStockO
                           → <span className="font-medium text-orange-600">{machine?.name ?? r.machine_id}</span>
                         </p>
                         <p className="text-xs text-gray-400 flex items-center gap-1 mt-0.5">
-                          <Clock size={10}/> {r.withdrawn_at?.slice(0,10)}
+                          <Clock size={10}/> {r.withdrawn_at?.slice(0,10)} {r.withdrawn_at?.slice(11,16) || ""}
                         </p>
                         {cleanNote && <p className="text-xs text-gray-400 mt-0.5 italic">"{cleanNote}"</p>}
                       </div>
@@ -1756,6 +1772,164 @@ function PageWithdrawal({ machines, stockOut, stockIn, stockBalance, onAddStockO
 }
 
 // ─────────────────────────────────────────────
+// SALES: SKU × Machine breakdown
+// ─────────────────────────────────────────────
+function SalesSkuByMachine({ sales, machines, skus }) {
+  const [expandedMachine, setExpandedMachine] = useState(null)
+  const [sortBy, setSortBy] = useState("rev") // rev, qty
+  const [dateFilter, setDateFilter] = useState("all") // all, daily
+  const [selectedDate, setSelectedDate] = useState(today())
+
+  // วันที่ที่มีข้อมูล (สำหรับ quick nav)
+  const availDates = [...new Set(sales.map(r => r.sold_at).filter(Boolean))].sort().reverse()
+
+  // กรองตามวัน
+  const filteredSales = dateFilter === "daily"
+    ? sales.filter(r => r.sold_at === selectedDate)
+    : sales
+
+  // สร้าง map: machine → sku → { qty, rev }
+  const machineSkuMap = {}
+  machines.forEach(m => { machineSkuMap[m.machine_id] = {} })
+  filteredSales.forEach(r => {
+    if (!machineSkuMap[r.machine_id]) machineSkuMap[r.machine_id] = {}
+    if (!machineSkuMap[r.machine_id][r.sku_id]) machineSkuMap[r.machine_id][r.sku_id] = { qty:0, rev:0 }
+    machineSkuMap[r.machine_id][r.sku_id].qty += r.quantity_sold || 0
+    machineSkuMap[r.machine_id][r.sku_id].rev += r.revenue || 0
+  })
+
+  return (
+    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+        <h2 className="font-semibold text-gray-700">
+          รายการขายแยก SKU ต่อตู้
+          {dateFilter === "daily" && <span className="text-sm font-normal text-gray-400 ml-2">({fmtDayLabel(selectedDate)})</span>}
+        </h2>
+        <div className="flex flex-wrap gap-2 items-center">
+          {/* ตัวกรองวัน */}
+          <div className="flex gap-1 bg-gray-100 p-1 rounded-xl">
+            {[{v:"all",l:"ทั้งหมด"},{v:"daily",l:"รายวัน"}].map(t => (
+              <button key={t.v} onClick={() => setDateFilter(t.v)}
+                className={`px-3 py-1 rounded-lg text-xs font-medium transition-all ${dateFilter===t.v?"bg-white shadow text-blue-600":"text-gray-500"}`}>
+                {t.l}
+              </button>
+            ))}
+          </div>
+          {dateFilter === "daily" && (
+            <input type="date" value={selectedDate} onChange={e => setSelectedDate(e.target.value)}
+              className="border border-gray-200 rounded-lg px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-blue-200"/>
+          )}
+          {/* เรียงลำดับ */}
+          <div className="flex gap-1 bg-gray-100 p-1 rounded-xl">
+            {[{v:"rev",l:"ยอดขาย"},{v:"qty",l:"จำนวน"}].map(t => (
+              <button key={t.v} onClick={() => setSortBy(t.v)}
+                className={`px-3 py-1 rounded-lg text-xs font-medium transition-all ${sortBy===t.v?"bg-white shadow text-blue-600":"text-gray-500"}`}>
+                {t.l}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div className="space-y-3">
+        {machines.map((m, mi) => {
+          const skuData = machineSkuMap[m.machine_id] || {}
+          const skuList = Object.entries(skuData)
+            .map(([skuId, v]) => {
+              const s = skus.find(sk => sk.sku_id === skuId)
+              return { sku_id: skuId, series: s?.series || "OP", name: s?.name || skuId, ...v }
+            })
+            .sort((a, b) => sortBy === "rev" ? b.rev - a.rev : b.qty - a.qty)
+          const machineTotal = skuList.reduce((a, r) => a + r.rev, 0)
+          const machineTotalQty = skuList.reduce((a, r) => a + r.qty, 0)
+          const machineTxn = new Set(filteredSales.filter(r => r.machine_id === m.machine_id).map(r => r.transaction_id).filter(Boolean)).size
+          const isExpanded = expandedMachine === m.machine_id
+
+          return (
+            <div key={m.machine_id} className="border border-gray-100 rounded-xl overflow-hidden">
+              {/* Machine header */}
+              <button onClick={() => setExpandedMachine(isExpanded ? null : m.machine_id)}
+                className="w-full p-4 flex items-center justify-between hover:bg-gray-50 transition-colors">
+                <div className="flex items-center gap-3">
+                  <div className="w-3 h-3 rounded-full" style={{backgroundColor: CHART_COLORS[mi]}}/>
+                  <div className="text-left">
+                    <p className="font-semibold text-sm text-gray-800">{m.name}</p>
+                    <p className="text-xs text-gray-400">{m.location} · {skuList.length} SKU</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-4">
+                  <div className="text-right">
+                    <p className="text-sm font-bold text-green-600">{fmtB(machineTotal)}</p>
+                    <p className="text-xs text-gray-400">{fmt(machineTxn)} ธุรกรรม · {fmt(machineTotalQty)} ซอง</p>
+                  </div>
+                  {isExpanded ? <ChevronUp size={16} className="text-gray-400"/> : <ChevronDown size={16} className="text-gray-400"/>}
+                </div>
+              </button>
+
+              {/* SKU list */}
+              {isExpanded && (
+                <div className="border-t border-gray-100">
+                  {skuList.length === 0 ? (
+                    <p className="text-sm text-gray-400 text-center py-6">ไม่มีข้อมูลการขาย</p>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="bg-gray-50">
+                            <th className="text-left py-2 px-4 text-xs text-gray-400 font-medium">#</th>
+                            <th className="text-left py-2 px-2 text-xs text-gray-400 font-medium">SKU</th>
+                            <th className="text-left py-2 px-2 text-xs text-gray-400 font-medium">ชื่อสินค้า</th>
+                            <th className="text-center py-2 px-2 text-xs text-gray-400 font-medium">Series</th>
+                            <th className="text-right py-2 px-2 text-xs text-gray-400 font-medium">ซองที่ขาย</th>
+                            <th className="text-right py-2 px-2 text-xs text-gray-400 font-medium">ยอดขาย</th>
+                            <th className="py-2 px-4 text-xs text-gray-400 font-medium w-24">สัดส่วน</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {skuList.map((r, i) => {
+                            const maxVal = skuList[0]?.[sortBy] || 1
+                            const pct = (r[sortBy] / maxVal) * 100
+                            return (
+                              <tr key={r.sku_id} className={`border-b border-gray-50 hover:bg-gray-50 ${i < 3 ? "bg-yellow-50/30" : ""}`}>
+                                <td className="py-2 px-4 text-center">
+                                  {i===0?"🥇":i===1?"🥈":i===2?"🥉":<span className="text-gray-400 text-xs">{i+1}</span>}
+                                </td>
+                                <td className="py-2 px-2 font-mono text-xs font-bold text-gray-700">{r.sku_id}</td>
+                                <td className="py-2 px-2 text-xs text-gray-500 truncate max-w-[120px]">{r.name}</td>
+                                <td className="py-2 px-2 text-center"><Badge series={r.series}/></td>
+                                <td className="py-2 px-2 text-right font-medium text-blue-600">{fmt(r.qty)}</td>
+                                <td className="py-2 px-2 text-right font-semibold text-green-600">{fmtB(r.rev)}</td>
+                                <td className="py-2 px-4">
+                                  <div className="w-full bg-gray-100 rounded-full h-1.5">
+                                    <div className="h-1.5 rounded-full bg-blue-400 transition-all" style={{width:`${pct}%`}}/>
+                                  </div>
+                                </td>
+                              </tr>
+                            )
+                          })}
+                        </tbody>
+                        <tfoot>
+                          <tr className="bg-gray-50 font-semibold">
+                            <td colSpan={4} className="py-2 px-4 text-xs text-gray-500">รวม {m.name}</td>
+                            <td className="py-2 px-2 text-right text-blue-700 text-xs">{fmt(machineTotalQty)} ซอง</td>
+                            <td className="py-2 px-2 text-right text-green-700 text-xs">{fmtB(machineTotal)}</td>
+                            <td></td>
+                          </tr>
+                        </tfoot>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+// ─────────────────────────────────────────────
 // PAGE 4: SALES
 // ─────────────────────────────────────────────
 function PageSales({ machines, sales, skus }) {
@@ -1777,6 +1951,7 @@ function PageSales({ machines, sales, skus }) {
 
   const totalRev = filtered.reduce((a, r) => a + r.revenue, 0)
   const totalQty = filtered.reduce((a, r) => a + r.quantity_sold, 0)
+  const totalTxn = new Set(filtered.map(r => r.transaction_id).filter(Boolean)).size
   const dayCount = Math.max(1, [...new Set(filtered.map(r => r.sold_at))].length)
 
   // Top SKUs
@@ -1826,10 +2001,14 @@ function PageSales({ machines, sales, skus }) {
       ) : (
         <>
           {/* Summary KPIs */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
             <div className="bg-white rounded-2xl border p-4 shadow-sm">
               <p className="text-xs text-gray-400">ยอดขายรวม (30 วัน)</p>
               <p className="text-xl font-bold text-green-600 mt-1">{fmtB(totalRev)}</p>
+            </div>
+            <div className="bg-white rounded-2xl border p-4 shadow-sm">
+              <p className="text-xs text-gray-400">จำนวนธุรกรรม</p>
+              <p className="text-xl font-bold text-indigo-600 mt-1">{fmt(totalTxn)} <span className="text-sm font-normal text-gray-400">ครั้ง</span></p>
             </div>
             <div className="bg-white rounded-2xl border p-4 shadow-sm">
               <p className="text-xs text-gray-400">จำนวนซองที่ขาย</p>
@@ -1879,6 +2058,9 @@ function PageSales({ machines, sales, skus }) {
               </ResponsiveContainer>
             </div>
           )}
+
+          {/* รายการขายแยก SKU ต่อตู้ */}
+          <SalesSkuByMachine sales={filtered} machines={machines} skus={skus}/>
         </>
       )}
     </div>
@@ -2029,6 +2211,150 @@ function PageAnalytics({ sales, skus }) {
 }
 
 // ─────────────────────────────────────────────
+// PAGE: MACHINE HISTORY (ประวัติเบิกเติมตู้ย่อย)
+// ─────────────────────────────────────────────
+function PageMachineHistory({ machine, stockOut, skus }) {
+  const [filterMode, setFilterMode] = useState("all") // all, daily, monthly, yearly
+  const [filterDate, setFilterDate] = useState(today())
+  const [filterMonth, setFilterMonth] = useState(today().slice(0,7))
+  const [filterYear, setFilterYear] = useState(today().slice(0,4))
+
+  // กรองเฉพาะตู้นี้
+  const machineOut = stockOut.filter(r => r.machine_id === machine.machine_id)
+
+  // กรองตามช่วงเวลา
+  const filtered = machineOut.filter(r => {
+    const d = r.withdrawn_at?.slice(0,10) || ""
+    if (filterMode === "daily")   return d === filterDate
+    if (filterMode === "monthly") return d.slice(0,7) === filterMonth
+    if (filterMode === "yearly")  return d.slice(0,4) === filterYear
+    return true
+  })
+
+  // สรุปยอด
+  const totalPacks = filtered.reduce((a,r) => a + (r.quantity_packs || 0), 0)
+  const skuSummary = {}
+  filtered.forEach(r => {
+    if (!skuSummary[r.sku_id]) skuSummary[r.sku_id] = 0
+    skuSummary[r.sku_id] += r.quantity_packs || 0
+  })
+  const skuRanked = Object.entries(skuSummary).sort((a,b) => b[1]-a[1])
+
+  // ปีที่มีข้อมูล
+  const years = [...new Set(machineOut.map(r => r.withdrawn_at?.slice(0,4)).filter(Boolean))].sort().reverse()
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold text-gray-800">{machine.name}</h1>
+        <p className="text-sm text-gray-400">{machine.location} — ประวัติการเบิกเติมตู้</p>
+      </div>
+
+      {/* ตัวกรอง */}
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+        <div className="flex flex-wrap gap-2 mb-3">
+          {[{v:"all",l:"ทั้งหมด"},{v:"daily",l:"รายวัน"},{v:"monthly",l:"รายเดือน"},{v:"yearly",l:"รายปี"}].map(t => (
+            <button key={t.v} onClick={() => setFilterMode(t.v)}
+              className={`px-4 py-2 rounded-xl text-sm font-medium transition-all
+                ${filterMode===t.v ? "bg-orange-500 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}>
+              {t.l}
+            </button>
+          ))}
+        </div>
+        {filterMode === "daily" && (
+          <input type="date" value={filterDate} onChange={e => setFilterDate(e.target.value)}
+            className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-200"/>
+        )}
+        {filterMode === "monthly" && (
+          <input type="month" value={filterMonth} onChange={e => setFilterMonth(e.target.value)}
+            className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-200"/>
+        )}
+        {filterMode === "yearly" && (
+          <select value={filterYear} onChange={e => setFilterYear(e.target.value)}
+            className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-200">
+            {years.length > 0 ? years.map(y => <option key={y} value={y}>{y}</option>)
+              : <option value={filterYear}>{filterYear}</option>}
+          </select>
+        )}
+      </div>
+
+      {/* สรุปยอด */}
+      <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+          <p className="text-xs text-gray-400">จำนวนครั้งที่เบิก</p>
+          <p className="text-2xl font-bold text-orange-600 mt-1">{filtered.length} <span className="text-sm font-normal text-gray-400">ครั้ง</span></p>
+        </div>
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+          <p className="text-xs text-gray-400">จำนวนซองที่เบิก</p>
+          <p className="text-2xl font-bold text-blue-600 mt-1">{fmt(totalPacks)} <span className="text-sm font-normal text-gray-400">ซอง</span></p>
+        </div>
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 col-span-2 lg:col-span-1">
+          <p className="text-xs text-gray-400 mb-2">SKU ที่เบิกมากสุด</p>
+          {skuRanked.length === 0 ? (
+            <p className="text-sm text-gray-300">ไม่มีข้อมูล</p>
+          ) : (
+            <div className="space-y-1">
+              {skuRanked.slice(0,3).map(([skuId, packs], i) => (
+                <div key={skuId} className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-gray-400">{i===0?"🥇":i===1?"🥈":"🥉"}</span>
+                    <span className="font-mono text-xs font-bold text-gray-700">{skuId}</span>
+                  </div>
+                  <span className="text-xs font-medium text-orange-600">{fmt(packs)} ซอง</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* รายการเบิก */}
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+        <h2 className="font-semibold text-gray-700 mb-3">
+          รายการเบิก ({filtered.length} รายการ)
+        </h2>
+        {filtered.length === 0 ? (
+          <p className="text-gray-400 text-sm text-center py-8">ไม่มีรายการในช่วงเวลาที่เลือก</p>
+        ) : (
+          <div className="space-y-2 max-h-[500px] overflow-y-auto pr-1">
+            {filtered.map((r, i) => {
+              const sku = skus.find(s => s.sku_id === r.sku_id)
+              const unitMatch = r.note?.match(/^\[(\d+)(กล่อง|ซอง)\]/)
+              const cleanNote = r.note?.replace(/^\[\d+(กล่อง|ซอง)\]\s*/, "") || ""
+              return (
+                <div key={i} className="p-3 rounded-xl bg-gray-50 flex items-start justify-between">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-mono text-xs font-bold text-gray-700">{r.sku_id}</span>
+                      <Badge series={sku?.series || "OP"}/>
+                      {r.lot_number && (
+                        <span className="font-mono text-xs bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded">{r.lot_number}</span>
+                      )}
+                      {unitMatch && (
+                        <span className="text-xs bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded font-medium">
+                          {unitMatch[1]} {unitMatch[2]}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-gray-400 flex items-center gap-1 mt-1">
+                      <Clock size={10}/> {r.withdrawn_at?.slice(0,10)} {r.withdrawn_at?.slice(11,16) || ""}
+                    </p>
+                    {cleanNote && <p className="text-xs text-gray-400 mt-0.5 italic">"{cleanNote}"</p>}
+                  </div>
+                  <span className="text-orange-500 font-bold text-sm flex-shrink-0 ml-2">
+                    -{fmt(r.quantity_packs)} ซอง
+                  </span>
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ─────────────────────────────────────────────
 // NAV
 // ─────────────────────────────────────────────
 const NAV_BASE = [
@@ -2046,6 +2372,7 @@ const NAV_ADMIN = { id:"users", label:"จัดการผู้ใช้", ic
 export default function DivisionXApp() {
   const [page, setPage]         = useState("dashboard")
   const [sideOpen, setSideOpen] = useState(false)
+  const [withdrawalExpanded, setWithdrawalExpanded] = useState(false)
 
   // ── Auth State ──
   const [session,     setSession]     = useState(null)
@@ -2187,22 +2514,61 @@ export default function DivisionXApp() {
           </div>
         </div>
 
-        <nav className="flex-1 p-3 space-y-1">
+        <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
           {NAV.map(n => {
             const Icon   = n.icon
             const active = page === n.id
+            const isWithdrawal = n.id === "withdrawal"
+            const isMachinePage = page.startsWith("machine_")
+            const withdrawalActive = active || (isWithdrawal && isMachinePage)
+
             return (
-              <button key={n.id} onClick={() => { setPage(n.id); setSideOpen(false) }}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all
-                  ${active ? "bg-blue-600 text-white shadow-sm" : "text-gray-600 hover:bg-gray-100"}`}>
-                <Icon size={18}/>
-                <span>{n.label}</span>
-                {n.id === "stock" && lowCount > 0 && (
-                  <span className={`ml-auto text-xs px-1.5 py-0.5 rounded-full font-bold ${active?"bg-white/20 text-white":"bg-amber-100 text-amber-600"}`}>
-                    {lowCount}
-                  </span>
+              <div key={n.id}>
+                <button onClick={() => {
+                  if (isWithdrawal) {
+                    setWithdrawalExpanded(!withdrawalExpanded)
+                    setPage(n.id)
+                    setSideOpen(false)
+                  } else {
+                    setPage(n.id)
+                    setSideOpen(false)
+                  }
+                }}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all
+                    ${withdrawalActive ? "bg-blue-600 text-white shadow-sm" : active ? "bg-blue-600 text-white shadow-sm" : "text-gray-600 hover:bg-gray-100"}`}>
+                  <Icon size={18}/>
+                  <span>{n.label}</span>
+                  {n.id === "stock" && lowCount > 0 && (
+                    <span className={`ml-auto text-xs px-1.5 py-0.5 rounded-full font-bold ${active?"bg-white/20 text-white":"bg-amber-100 text-amber-600"}`}>
+                      {lowCount}
+                    </span>
+                  )}
+                  {isWithdrawal && machines.length > 0 && (
+                    <span className="ml-auto">
+                      {withdrawalExpanded ? <ChevronUp size={14}/> : <ChevronDown size={14}/>}
+                    </span>
+                  )}
+                </button>
+
+                {/* เมนูตู้ย่อย */}
+                {isWithdrawal && withdrawalExpanded && machines.length > 0 && (
+                  <div className="ml-6 mt-1 space-y-0.5">
+                    {machines.map(m => {
+                      const machActive = page === `machine_${m.machine_id}`
+                      return (
+                        <button key={m.machine_id}
+                          onClick={() => { setPage(`machine_${m.machine_id}`); setSideOpen(false) }}
+                          className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-all
+                            ${machActive ? "bg-orange-100 text-orange-700" : "text-gray-500 hover:bg-gray-100 hover:text-gray-700"}`}>
+                          <StatusDot status={m.status}/>
+                          <span>{m.name}</span>
+                          <span className="ml-auto text-xs text-gray-400">{m.location}</span>
+                        </button>
+                      )
+                    })}
+                  </div>
                 )}
-              </button>
+              </div>
             )
           })}
         </nav>
@@ -2249,7 +2615,9 @@ export default function DivisionXApp() {
             <Menu size={20} className="text-gray-600"/>
           </button>
           <span className="font-semibold text-gray-700 text-sm">
-            {NAV.find(n => n.id === page)?.label}
+            {page.startsWith("machine_")
+              ? `เบิกเติมตู้ › ${machines.find(m => `machine_${m.machine_id}` === page)?.name || ""}`
+              : NAV.find(n => n.id === page)?.label}
           </span>
           <div className="ml-auto flex items-center gap-2 text-xs text-gray-400">
             <Clock size={12}/> {today()}
@@ -2263,6 +2631,10 @@ export default function DivisionXApp() {
           {page === "sales"      && <PageSales     machines={machines} sales={sales} skus={skus}/>}
           {page === "analytics"  && <PageAnalytics sales={sales} skus={skus}/>}
           {page === "users"      && <PageUsers     currentProfile={profile}/>}
+          {page.startsWith("machine_") && (() => {
+            const m = machines.find(mc => `machine_${mc.machine_id}` === page)
+            return m ? <PageMachineHistory machine={m} stockOut={stockOut} skus={skus}/> : null
+          })()}
         </main>
       </div>
     </div>

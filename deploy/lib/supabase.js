@@ -95,7 +95,7 @@ export async function getSalesByMachine(days = 30) {
   from.setDate(from.getDate() - days)
   const { data, error } = await supabase
     .from("sales")
-    .select("machine_id, grand_total, quantity_sold, sold_at")
+    .select("machine_id, sku_id, transaction_id, grand_total, quantity_sold, sold_at")
     .gte("sold_at", from.toISOString())
   if (error) throw error
   return data

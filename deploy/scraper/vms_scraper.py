@@ -54,6 +54,7 @@ SKU_MAP = {
     "prb - 01 (box)": "PRB 01",
     "prb - 02 (pack)": "PRB 02",
     "prb - 02 (box)": "PRB 02",
+    "prb - 02 (ฺbox)": "PRB 02",
     "one piece eb - 01 pack": "EB 01",
     "one piece eb - 01 (box)": "EB 01",
     "one piece eb - 02 pack": "EB 02",
