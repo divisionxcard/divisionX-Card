@@ -8,9 +8,11 @@ import {
   Package, TrendingUp, ShoppingCart, AlertTriangle,
   PlusCircle, MinusCircle, BarChart2, Home, Menu, X,
   CheckCircle, Clock, Search, RefreshCw, ArrowUpCircle, Loader2,
-  Pencil, Trash2, ChevronDown, ChevronUp, Layers
+  Pencil, Trash2, ChevronDown, ChevronUp, Layers,
+  LogOut, UserPlus, Users, Shield, Eye, EyeOff
 } from "lucide-react"
 import {
+  supabase,
   getStockBalance, getStockIn, getStockOut,
   addStockIn as dbAddStockIn, addStockOut as dbAddStockOut,
   updateStockIn as dbUpdateStockIn,
@@ -18,6 +20,7 @@ import {
   deleteStockOut as dbDeleteStockOut,
   getMachines, getSalesByMachine,
   getSkus, addSku as dbAddSku, deactivateSku as dbDeactivateSku,
+  signIn as authSignIn, signOut as authSignOut, getProfile,
 } from "../lib/supabase"
 
 // ─────────────────────────────────────────────
@@ -144,6 +147,295 @@ function ErrorScreen({ msg, onRetry }) {
           <RefreshCw size={14}/> ลองใหม่
         </button>
       </div>
+    </div>
+  )
+}
+
+// ─────────────────────────────────────────────
+// LOGIN PAGE
+// ─────────────────────────────────────────────
+function LoginPage() {
+  const [email,    setEmail]    = useState("")
+  const [password, setPassword] = useState("")
+  const [showPw,   setShowPw]   = useState(false)
+  const [loading,  setLoading]  = useState(false)
+  const [error,    setError]    = useState("")
+
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    setError("")
+    setLoading(true)
+    try {
+      await authSignIn(email, password)
+      // onAuthStateChange จัดการ session ให้อัตโนมัติ
+    } catch {
+      setError("อีเมลหรือรหัสผ่านไม่ถูกต้อง")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-8">
+        {/* Logo */}
+        <div className="flex flex-col items-center mb-8">
+          <div className="w-14 h-14 bg-blue-600 rounded-2xl flex items-center justify-center mb-3 shadow-md">
+            <span className="text-white font-black text-xl">DX</span>
+          </div>
+          <h1 className="text-xl font-bold text-gray-800">DivisionX Card</h1>
+          <p className="text-sm text-gray-400 mt-1">ระบบจัดการสต็อก</p>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-xs text-gray-500 mb-1.5 font-medium">อีเมล</label>
+            <input type="email" value={email} onChange={e => setEmail(e.target.value)}
+              placeholder="example@email.com" required autoFocus
+              className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"/>
+          </div>
+          <div>
+            <label className="block text-xs text-gray-500 mb-1.5 font-medium">รหัสผ่าน</label>
+            <div className="relative">
+              <input type={showPw ? "text" : "password"} value={password} onChange={e => setPassword(e.target.value)}
+                placeholder="••••••••" required
+                className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 pr-10"/>
+              <button type="button" onClick={() => setShowPw(!showPw)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                {showPw ? <EyeOff size={16}/> : <Eye size={16}/>}
+              </button>
+            </div>
+          </div>
+          {error && (
+            <p className="text-xs text-red-600 bg-red-50 border border-red-100 px-3 py-2 rounded-lg">{error}</p>
+          )}
+          <button type="submit" disabled={loading}
+            className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white font-semibold py-2.5 rounded-xl text-sm flex items-center justify-center gap-2 transition-colors">
+            {loading && <Loader2 size={16} className="animate-spin"/>}
+            {loading ? "กำลังเข้าสู่ระบบ..." : "เข้าสู่ระบบ"}
+          </button>
+        </form>
+      </div>
+    </div>
+  )
+}
+
+// ─────────────────────────────────────────────
+// PAGE: USER MANAGEMENT (Admin only)
+// ─────────────────────────────────────────────
+function PageUsers({ currentProfile }) {
+  const [users,   setUsers]   = useState([])
+  const [loading, setLoading] = useState(true)
+  const [tab,     setTab]     = useState("list")
+  const [form,    setForm]    = useState({ email:"", display_name:"", password:"", role:"user" })
+  const [showPw,  setShowPw]  = useState(false)
+  const [saving,  setSaving]  = useState(false)
+  const [toast,   setToast]   = useState(null)
+  const [confirmDelete, setConfirmDelete] = useState(null)
+  const [deleting, setDeleting] = useState(false)
+
+  const showToast = (msg, type="success") => { setToast({msg,type}); setTimeout(()=>setToast(null),3500) }
+
+  const loadUsers = async () => {
+    setLoading(true)
+    try {
+      const res  = await fetch("/api/admin/users")
+      const data = await res.json()
+      if (data.error) throw new Error(data.error)
+      setUsers(data)
+    } catch (err) {
+      showToast("โหลดข้อมูลไม่สำเร็จ: " + err.message, "error")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => { loadUsers() }, [])
+
+  const handleAdd = async (e) => {
+    e.preventDefault()
+    setSaving(true)
+    try {
+      const res  = await fetch("/api/admin/users", {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify(form),
+      })
+      const data = await res.json()
+      if (data.error) throw new Error(data.error)
+      showToast(`เพิ่มผู้ใช้ ${form.email} สำเร็จ`)
+      setForm({ email:"", display_name:"", password:"", role:"user" })
+      setTab("list")
+      loadUsers()
+    } catch (err) {
+      showToast("เพิ่มไม่สำเร็จ: " + err.message, "error")
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleDelete = async (userId, email) => {
+    setDeleting(true)
+    try {
+      const res  = await fetch("/api/admin/users", {
+        method:  "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({ userId }),
+      })
+      const data = await res.json()
+      if (data.error) throw new Error(data.error)
+      showToast(`ลบผู้ใช้ ${email} สำเร็จ`)
+      setConfirmDelete(null)
+      loadUsers()
+    } catch (err) {
+      showToast("ลบไม่สำเร็จ: " + err.message, "error")
+    } finally {
+      setDeleting(false)
+    }
+  }
+
+  if (currentProfile?.role !== "admin") {
+    return (
+      <div className="flex flex-col items-center justify-center py-24 text-gray-400">
+        <Shield size={44} className="mb-3 text-gray-300"/>
+        <p className="font-semibold text-gray-500">ไม่มีสิทธิ์เข้าถึง</p>
+        <p className="text-sm mt-1">เฉพาะ Admin เท่านั้น</p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold text-gray-800">จัดการผู้ใช้งาน</h1>
+        <p className="text-sm text-gray-400">เพิ่ม ดู และลบผู้ใช้ในระบบ</p>
+      </div>
+
+      {toast && (
+        <div className={`fixed top-4 right-4 z-50 flex items-center gap-2 px-4 py-3 rounded-xl shadow-lg text-sm text-white
+          ${toast.type==="error" ? "bg-red-500" : "bg-green-500"}`}>
+          {toast.type==="error" ? <X size={14}/> : <CheckCircle size={14}/>}
+          {toast.msg}
+        </div>
+      )}
+
+      {/* Tabs */}
+      <div className="flex gap-2">
+        {[{id:"list",label:"รายชื่อผู้ใช้"},{id:"add",label:"เพิ่มผู้ใช้ใหม่"}].map(t => (
+          <button key={t.id} onClick={() => setTab(t.id)}
+            className={`px-4 py-2 rounded-xl text-sm font-medium transition-all
+              ${tab===t.id ? "bg-blue-600 text-white" : "bg-white border border-gray-200 text-gray-600 hover:bg-gray-50"}`}>
+            {t.id==="add" && <UserPlus size={14} className="inline mr-1.5"/>}
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {/* User list */}
+      {tab === "list" && (
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="font-semibold text-gray-700">ผู้ใช้ทั้งหมด</h2>
+            <button onClick={loadUsers} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-blue-500">
+              <RefreshCw size={14}/>
+            </button>
+          </div>
+          {loading ? (
+            <div className="flex justify-center py-10">
+              <Loader2 size={24} className="animate-spin text-blue-400"/>
+            </div>
+          ) : users.length === 0 ? (
+            <p className="text-sm text-gray-400 text-center py-8">ยังไม่มีผู้ใช้งาน</p>
+          ) : (
+            <div className="space-y-2">
+              {users.map(u => (
+                <div key={u.id} className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 border border-gray-100">
+                  <div className="w-9 h-9 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
+                    <span className="text-sm font-bold text-blue-600">
+                      {(u.display_name || u.email)[0].toUpperCase()}
+                    </span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-800">{u.display_name || "—"}</p>
+                    <p className="text-xs text-gray-400 truncate">{u.email}</p>
+                  </div>
+                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium flex-shrink-0
+                    ${u.role==="admin" ? "bg-purple-100 text-purple-600" : "bg-gray-100 text-gray-500"}`}>
+                    {u.role==="admin" ? "Admin" : "User"}
+                  </span>
+                  {u.id !== currentProfile?.id && (
+                    confirmDelete === u.id ? (
+                      <div className="flex gap-1 flex-shrink-0">
+                        <button onClick={() => setConfirmDelete(null)}
+                          className="px-2 py-1 text-xs rounded-lg border border-gray-200 text-gray-500 hover:bg-white">
+                          ยกเลิก
+                        </button>
+                        <button onClick={() => handleDelete(u.id, u.email)} disabled={deleting}
+                          className="px-2 py-1 text-xs rounded-lg bg-red-500 text-white hover:bg-red-600 disabled:opacity-50">
+                          {deleting ? "..." : "ลบ"}
+                        </button>
+                      </div>
+                    ) : (
+                      <button onClick={() => setConfirmDelete(u.id)}
+                        className="p-1.5 rounded-lg text-gray-300 hover:text-red-400 hover:bg-red-50 flex-shrink-0">
+                        <Trash2 size={14}/>
+                      </button>
+                    )
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Add user form */}
+      {tab === "add" && (
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+          <form onSubmit={handleAdd} className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">อีเมล <span className="text-red-400">*</span></label>
+                <input type="email" value={form.email} onChange={e => setForm({...form,email:e.target.value})} required
+                  placeholder="user@example.com"
+                  className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"/>
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">ชื่อที่แสดง</label>
+                <input value={form.display_name} onChange={e => setForm({...form,display_name:e.target.value})}
+                  placeholder="ชื่อ-นามสกุล หรือ Nickname"
+                  className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"/>
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">รหัสผ่าน <span className="text-red-400">*</span></label>
+                <div className="relative">
+                  <input type={showPw ? "text" : "password"} value={form.password}
+                    onChange={e => setForm({...form,password:e.target.value})} required minLength={6}
+                    placeholder="อย่างน้อย 6 ตัวอักษร"
+                    className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 pr-9"/>
+                  <button type="button" onClick={() => setShowPw(!showPw)}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                    {showPw ? <EyeOff size={14}/> : <Eye size={14}/>}
+                  </button>
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">สิทธิ์การใช้งาน</label>
+                <select value={form.role} onChange={e => setForm({...form,role:e.target.value})}
+                  className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200">
+                  <option value="user">User — ใช้งานทั่วไป</option>
+                  <option value="admin">Admin — จัดการผู้ใช้ได้</option>
+                </select>
+              </div>
+            </div>
+            <button type="submit" disabled={saving}
+              className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white font-semibold py-2.5 rounded-xl text-sm flex items-center justify-center gap-2 transition-colors">
+              {saving ? <Loader2 size={16} className="animate-spin"/> : <UserPlus size={16}/>}
+              {saving ? "กำลังเพิ่ม..." : "เพิ่มผู้ใช้ใหม่"}
+            </button>
+          </form>
+        </div>
+      )}
     </div>
   )
 }
@@ -1739,13 +2031,14 @@ function PageAnalytics({ sales, skus }) {
 // ─────────────────────────────────────────────
 // NAV
 // ─────────────────────────────────────────────
-const NAV = [
+const NAV_BASE = [
   { id:"dashboard",  label:"ภาพรวม",       icon:Home          },
   { id:"stock",      label:"จัดการสต็อก",  icon:Package       },
   { id:"withdrawal", label:"เบิกเติมตู้",   icon:ArrowUpCircle },
   { id:"sales",      label:"ยอดขาย",       icon:ShoppingCart  },
   { id:"analytics",  label:"วิเคราะห์ SKU", icon:BarChart2     },
 ]
+const NAV_ADMIN = { id:"users", label:"จัดการผู้ใช้", icon:Users }
 
 // ─────────────────────────────────────────────
 // APP ROOT
@@ -1753,6 +2046,27 @@ const NAV = [
 export default function DivisionXApp() {
   const [page, setPage]         = useState("dashboard")
   const [sideOpen, setSideOpen] = useState(false)
+
+  // ── Auth State ──
+  const [session,     setSession]     = useState(null)
+  const [profile,     setProfile]     = useState(null)
+  const [authLoading, setAuthLoading] = useState(true)
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session)
+      if (session?.user) getProfile(session.user.id).then(setProfile)
+      setAuthLoading(false)
+    })
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session)
+      if (session?.user) getProfile(session.user.id).then(setProfile)
+      else { setProfile(null) }
+    })
+    return () => subscription.unsubscribe()
+  }, [])
+
+  const NAV = profile?.role === "admin" ? [...NAV_BASE, NAV_ADMIN] : NAV_BASE
 
   // ── Data State ──
   const [machines,      setMachines]      = useState([])
@@ -1847,9 +2161,11 @@ export default function DivisionXApp() {
   const balMap   = Object.fromEntries(stockBalance.map(r => [r.sku_id, parseFloat(r.balance) || 0]))
   const lowCount = skus.filter(s => (balMap[s.sku_id] || 0) < 24).length
 
-  // ── Loading / Error screens ──
-  if (loading)   return <LoadingScreen/>
-  if (dataError) return <ErrorScreen msg={dataError} onRetry={loadAll}/>
+  // ── Auth / Loading / Error screens ──
+  if (authLoading) return <LoadingScreen/>
+  if (!session)    return <LoginPage/>
+  if (loading)     return <LoadingScreen/>
+  if (dataError)   return <ErrorScreen msg={dataError} onRetry={loadAll}/>
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
@@ -1891,13 +2207,34 @@ export default function DivisionXApp() {
           })}
         </nav>
 
-        <div className="p-4 border-t border-gray-100">
-          <div className="flex items-center gap-2 text-xs text-gray-400">
-            <div className="w-2 h-2 rounded-full bg-green-500"/>
-            <span>เชื่อมต่อ Supabase</span>
-            <RefreshCw size={11} className="ml-auto cursor-pointer hover:text-blue-500" onClick={loadAll}/>
+        <div className="p-4 border-t border-gray-100 space-y-3">
+          {/* User info */}
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
+              <span className="text-xs font-bold text-blue-600">
+                {(profile?.display_name || session.user.email)[0].toUpperCase()}
+              </span>
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-semibold text-gray-700 truncate">
+                {profile?.display_name || session.user.email}
+              </p>
+              <p className="text-xs text-gray-400">
+                {profile?.role === "admin" ? "Admin" : "User"}
+              </p>
+            </div>
           </div>
-          <p className="text-xs text-gray-300 mt-1">v2.0 · Live Data</p>
+          {/* Connection + logout */}
+          <div className="flex items-center gap-2 text-xs text-gray-400">
+            <div className="w-1.5 h-1.5 rounded-full bg-green-500"/>
+            <span>Live Data</span>
+            <RefreshCw size={11} className="cursor-pointer hover:text-blue-500" onClick={loadAll}/>
+            <button onClick={() => authSignOut()}
+              className="ml-auto flex items-center gap-1 text-gray-400 hover:text-red-500 transition-colors">
+              <LogOut size={12}/>
+              <span>ออก</span>
+            </button>
+          </div>
         </div>
       </aside>
 
@@ -1921,6 +2258,7 @@ export default function DivisionXApp() {
           {page === "withdrawal" && <PageWithdrawal machines={machines} stockOut={stockOut} stockIn={stockIn} stockBalance={stockBalance} skus={skus} onAddStockOut={addStockOut} onDeleteStockOut={deleteStockOut}/>}
           {page === "sales"      && <PageSales     machines={machines} sales={sales} skus={skus}/>}
           {page === "analytics"  && <PageAnalytics sales={sales} skus={skus}/>}
+          {page === "users"      && <PageUsers     currentProfile={profile}/>}
         </main>
       </div>
     </div>

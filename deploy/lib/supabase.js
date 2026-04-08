@@ -5,6 +5,23 @@ const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
 export const supabase = createClient(supabaseUrl, supabaseKey)
 
+// ── Auth ──────────────────────────────────────────────────────
+export async function signIn(email, password) {
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+  if (error) throw error
+  return data
+}
+
+export async function signOut() {
+  const { error } = await supabase.auth.signOut()
+  if (error) throw error
+}
+
+export async function getProfile(userId) {
+  const { data } = await supabase.from("profiles").select("*").eq("id", userId).single()
+  return data
+}
+
 // ── Stock Balance (คลังสินค้า) ────────────────────────────────
 export async function getStockBalance() {
   const { data, error } = await supabase
