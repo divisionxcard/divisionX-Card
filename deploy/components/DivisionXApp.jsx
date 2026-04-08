@@ -483,10 +483,12 @@ function PageDashboard({ stockIn, stockOut, stockBalance, skus }) {
     arr.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
   )
 
+  const SERIES_ORDER = { OP: 0, EB: 1, PRB: 2 }
   const filtered = skus
     .filter(s => s.sku_id.toLowerCase().includes(search.toLowerCase()) ||
                  s.name.toLowerCase().includes(search.toLowerCase()))
     .filter(s => seriesSel === "ทั้งหมด" || s.series === seriesSel)
+    .sort((a, b) => (SERIES_ORDER[a.series] ?? 9) - (SERIES_ORDER[b.series] ?? 9) || a.sku_id.localeCompare(b.sku_id))
 
   return (
     <div className="space-y-6">
