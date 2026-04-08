@@ -124,6 +124,19 @@ function KpiCard({ icon: Icon, label, value, sub, color }) {
   )
 }
 
+function RealtimeClock() {
+  const [now, setNow] = useState(new Date())
+  useEffect(() => {
+    const t = setInterval(() => setNow(new Date()), 1000)
+    return () => clearInterval(t)
+  }, [])
+  const day = now.getDate()
+  const month = THAI_MONTHS[now.getMonth()]
+  const year = now.getFullYear()
+  const time = now.toTimeString().slice(0, 8)
+  return <span>{day} {month} {year} · {time}</span>
+}
+
 function LoadingScreen() {
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -2620,7 +2633,7 @@ export default function DivisionXApp() {
               : NAV.find(n => n.id === page)?.label}
           </span>
           <div className="ml-auto flex items-center gap-2 text-xs text-gray-400">
-            <Clock size={12}/> {today()}
+            <Clock size={12}/> <RealtimeClock/>
           </div>
         </header>
 

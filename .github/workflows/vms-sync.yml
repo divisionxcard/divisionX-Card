@@ -2,8 +2,10 @@ name: VMS Daily Sync
 
 on:
   schedule:
-    # รันทุกวัน เวลา 01:00 น. (เวลาไทย = UTC+7 → 18:00 UTC วันก่อน)
-    - cron: "0 18 * * *"
+    # รอบที่ 1: เที่ยงคืน เวลาไทย (00:00 ICT = 17:00 UTC วันก่อน)
+    - cron: "0 17 * * *"
+    # รอบที่ 2: 7 โมงเช้า เวลาไทย (07:00 ICT = 00:00 UTC)
+    - cron: "0 0 * * *"
   workflow_dispatch:  # กดรันมือได้จาก GitHub Actions
 
 jobs:
