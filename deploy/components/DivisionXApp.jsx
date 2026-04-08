@@ -2209,31 +2209,35 @@ export default function DivisionXApp() {
 
         <div className="p-4 border-t border-gray-100 space-y-3">
           {/* User info */}
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
-              <span className="text-xs font-bold text-blue-600">
-                {(profile?.display_name || session.user.email)[0].toUpperCase()}
-              </span>
+          {session && (
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
+                <span className="text-xs font-bold text-blue-600">
+                  {(profile?.display_name || session.user.email)[0].toUpperCase()}
+                </span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-semibold text-gray-700 truncate">
+                  {profile?.display_name || session.user.email}
+                </p>
+                <p className="text-xs text-gray-400">
+                  {profile?.role === "admin" ? "Admin" : "User"}
+                </p>
+              </div>
             </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-xs font-semibold text-gray-700 truncate">
-                {profile?.display_name || session.user.email}
-              </p>
-              <p className="text-xs text-gray-400">
-                {profile?.role === "admin" ? "Admin" : "User"}
-              </p>
-            </div>
-          </div>
+          )}
           {/* Connection + logout */}
           <div className="flex items-center gap-2 text-xs text-gray-400">
             <div className="w-1.5 h-1.5 rounded-full bg-green-500"/>
             <span>Live Data</span>
             <RefreshCw size={11} className="cursor-pointer hover:text-blue-500" onClick={loadAll}/>
-            <button onClick={() => authSignOut()}
-              className="ml-auto flex items-center gap-1 text-gray-400 hover:text-red-500 transition-colors">
-              <LogOut size={12}/>
-              <span>ออก</span>
-            </button>
+            {session && (
+              <button onClick={() => authSignOut()}
+                className="ml-auto flex items-center gap-1 text-gray-400 hover:text-red-500 transition-colors">
+                <LogOut size={12}/>
+                <span>ออก</span>
+              </button>
+            )}
           </div>
         </div>
       </aside>
