@@ -1945,9 +1945,29 @@ function SalesSkuByMachine({ sales, machines, skus }) {
 // ─────────────────────────────────────────────
 // PAGE 4: SALES
 // ─────────────────────────────────────────────
-function PageSales({ machines, sales, skus }) {
+function PageSales({ machines, sales, skus, onRefresh }) {
   const [viewMode, setViewMode]   = useState("daily")
   const [machineSel, setMachineSel] = useState("all")
+  const [syncing, setSyncing]     = useState(false)
+  const [syncMsg, setSyncMsg]     = useState(null)
+
+  const triggerSync = async () => {
+    setSyncing(true)
+    setSyncMsg(null)
+    try {
+      const res = await fetch("/api/vms-sync", { method: "POST" })
+      const data = await res.json()
+      if (data.success) {
+        setSyncMsg({ type:"success", text:"สั่งดึงข้อมูลสำเร็จ — รอประมาณ 2-3 นาที แล้วกด refresh" })
+      } else {
+        setSyncMsg({ type:"error", text: data.error || "เกิดข้อผิดพลาด" })
+      }
+    } catch (err) {
+      setSyncMsg({ type:"error", text: err.message })
+    } finally {
+      setSyncing(false)
+    }
+  }
 
   const filtered = machineSel === "all" ? sales : sales.filter(r => r.machine_id === machineSel)
 
@@ -1986,9 +2006,29 @@ function PageSales({ machines, sales, skus }) {
 
   return (
     <div className="space-y-6">
+      {/* Sync message */}
+      {syncMsg && (
+        <div className={`flex items-center gap-2 px-4 py-3 rounded-xl text-sm ${syncMsg.type==="success"?"bg-green-50 text-green-700 border border-green-200":"bg-red-50 text-red-700 border border-red-200"}`}>
+          {syncMsg.type==="success" ? <CheckCircle size={16}/> : <AlertTriangle size={16}/>}
+          <span className="flex-1">{syncMsg.text}</span>
+          {syncMsg.type==="success" && (
+            <button onClick={onRefresh} className="px-3 py-1 rounded-lg bg-green-600 text-white text-xs font-medium hover:bg-green-700 flex items-center gap-1">
+              <RefreshCw size={12}/> Refresh
+            </button>
+          )}
+          <button onClick={() => setSyncMsg(null)} className="text-gray-400 hover:text-gray-600"><X size={14}/></button>
+        </div>
+      )}
+
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-bold text-gray-800">ยอดขาย (30 วันล่าสุด)</h1>
-        <div className="flex gap-2 flex-wrap">
+        <div className="flex gap-2 flex-wrap items-center">
+          {/* ปุ่มดึงข้อมูล VMS */}
+          <button onClick={triggerSync} disabled={syncing}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-60 transition-colors">
+            {syncing ? <Loader2 size={14} className="animate-spin"/> : <RefreshCw size={14}/>}
+            {syncing ? "กำลังสั่ง..." : "ดึงข้อมูล VMS"}
+          </button>
           <select value={machineSel} onChange={e => setMachineSel(e.target.value)}
             className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none">
             <option value="all">ทุกตู้</option>
@@ -2641,7 +2681,7 @@ export default function DivisionXApp() {
           {page === "dashboard"  && <PageDashboard stockIn={stockIn} stockOut={stockOut} stockBalance={stockBalance} skus={skus}/>}
           {page === "stock"      && <PageStock     stockIn={stockIn} stockBalance={stockBalance} skus={skus} onAddStockIn={addStockIn} onUpdateStockIn={updateStockIn} onDeleteStockIn={deleteStockIn} onAddSku={addSku} onDeactivateSku={deactivateSku}/>}
           {page === "withdrawal" && <PageWithdrawal machines={machines} stockOut={stockOut} stockIn={stockIn} stockBalance={stockBalance} skus={skus} onAddStockOut={addStockOut} onDeleteStockOut={deleteStockOut}/>}
-          {page === "sales"      && <PageSales     machines={machines} sales={sales} skus={skus}/>}
+          {page === "sales"      && <PageSales     machines={machines} sales={sales} skus={skus} onRefresh={loadAll}/>}
           {page === "analytics"  && <PageAnalytics sales={sales} skus={skus}/>}
           {page === "users"      && <PageUsers     currentProfile={profile}/>}
           {page.startsWith("machine_") && (() => {
