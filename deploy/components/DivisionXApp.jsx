@@ -2571,29 +2571,62 @@ function PageMachineStockView({ machines, machineStock, skus }) {
                     </div>
                   </div>
                 ) : (
-                  /* Slot view */
+                  /* Slot view — VMS style */
                   <div className="p-5">
-                    <h3 className="text-sm font-semibold text-gray-600 mb-3">รายละเอียดตามช่อง</h3>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-7 xl:grid-cols-9 gap-3">
                       {slots.map(s => {
-                        const pctSlot = s.max_capacity > 0 ? (s.remain / s.max_capacity * 100) : 0
                         const isEmpty = !s.product_name
+                        const isZero = s.remain === 0 && !isEmpty
                         return (
-                          <div key={s.slot_number} className={`p-2.5 rounded-xl border text-center ${isEmpty ? "bg-gray-50 border-gray-100 opacity-50" : pctSlot === 0 ? "bg-red-50 border-red-200" : pctSlot < 30 ? "bg-amber-50 border-amber-200" : "bg-white border-gray-100"}`}>
-                            <p className="text-xs font-mono text-gray-400">{s.slot_number}</p>
+                          <div key={s.slot_number} className={`rounded-xl border overflow-hidden transition-all ${isEmpty ? "bg-gray-50 border-gray-200 opacity-40" : isZero ? "bg-red-50 border-red-200" : "bg-white border-blue-100 hover:border-blue-300 hover:shadow-sm"}`}>
+                            {/* Slot number */}
+                            <div className={`text-center py-1 text-xs font-mono font-bold ${isEmpty ? "text-gray-400" : "text-blue-500"}`}>
+                              {s.slot_number}
+                            </div>
+
                             {isEmpty ? (
-                              <p className="text-xs text-gray-300 mt-1">ว่าง</p>
-                            ) : (
-                              <>
-                                <p className="text-xs font-medium text-gray-700 mt-1 truncate" title={s.product_name}>{s.sku_id || s.product_name?.slice(0,12)}</p>
-                                <p className={`text-sm font-bold mt-0.5 ${s.remain === 0 ? "text-red-500" : s.remain <= 3 ? "text-amber-600" : "text-green-600"}`}>
-                                  {s.remain}/{s.max_capacity}
-                                </p>
-                                <div className="mt-1 w-full bg-gray-200 rounded-full h-1">
-                                  <div className={`h-1 rounded-full ${pctSlot === 0 ? "bg-red-400" : pctSlot < 30 ? "bg-amber-400" : "bg-green-400"}`}
-                                    style={{width:`${pctSlot}%`}}/>
+                              <div className="px-2 pb-3 text-center">
+                                <div className="w-full h-20 bg-gray-100 rounded-lg flex items-center justify-center mb-2">
+                                  <Package size={20} className="text-gray-300"/>
                                 </div>
-                              </>
+                                <p className="text-xs text-gray-400">ไม่มีสินค้า</p>
+                              </div>
+                            ) : (
+                              <div className="px-2 pb-2.5">
+                                {/* Product image */}
+                                {s.product_img ? (
+                                  <div className="w-full h-24 rounded-lg overflow-hidden bg-gray-50 mb-2 flex items-center justify-center">
+                                    <img src={s.product_img} alt={s.product_name}
+                                      className="h-full w-auto object-contain"
+                                      onError={e => { e.target.style.display="none"; e.target.nextSibling.style.display="flex" }}/>
+                                    <div className="hidden w-full h-full items-center justify-center">
+                                      <Package size={24} className="text-gray-300"/>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <div className="w-full h-24 rounded-lg bg-gradient-to-b from-blue-50 to-white flex items-center justify-center mb-2">
+                                    <Package size={24} className="text-blue-200"/>
+                                  </div>
+                                )}
+
+                                {/* Product name */}
+                                <p className="text-xs font-medium text-gray-700 truncate" title={s.product_name}>
+                                  {s.product_name}
+                                </p>
+
+                                {/* คงเหลือ */}
+                                <p className="text-xs text-gray-400 mt-1">คงเหลือ</p>
+                                <div className={`mt-1 flex items-center justify-center gap-0 rounded-lg border ${isZero ? "border-red-200 bg-red-50" : "border-gray-200"}`}>
+                                  <span className={`py-1.5 px-3 text-sm font-bold text-center w-full ${isZero ? "text-red-500" : s.remain <= 3 ? "text-amber-600" : "text-gray-800"}`}>
+                                    {s.remain}
+                                  </span>
+                                </div>
+
+                                {/* ความจุ */}
+                                <p className="text-center text-xs text-blue-500 mt-1.5">
+                                  ความจุ: {s.max_capacity}
+                                </p>
+                              </div>
                             )}
                           </div>
                         )
