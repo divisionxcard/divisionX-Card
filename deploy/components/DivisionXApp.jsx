@@ -9,7 +9,7 @@ import {
   PlusCircle, MinusCircle, BarChart2, Home, Menu, X,
   CheckCircle, Clock, Search, RefreshCw, ArrowUpCircle, Loader2,
   Pencil, Trash2, ChevronDown, ChevronUp, Layers,
-  LogOut, UserPlus, Users, Shield, Eye, EyeOff
+  LogOut, UserPlus, Users, Shield, Eye, EyeOff, Monitor
 } from "lucide-react"
 import {
   supabase,
@@ -21,6 +21,7 @@ import {
   getMachines, getSalesByMachine,
   getSkus, addSku as dbAddSku, deactivateSku as dbDeactivateSku,
   signIn as authSignIn, signOut as authSignOut, getProfile,
+  getMachineStock,
 } from "../lib/supabase"
 
 // ─────────────────────────────────────────────
@@ -2408,12 +2409,215 @@ function PageMachineHistory({ machine, stockOut, skus }) {
 }
 
 // ─────────────────────────────────────────────
+// PAGE: MACHINE STOCK (สต็อกหน้าตู้ จาก VMS)
+// ─────────────────────────────────────────────
+function PageMachineStockView({ machines, machineStock, skus }) {
+  const [selectedMachine, setSelectedMachine] = useState("all")
+  const [sortBy, setSortBy] = useState("slot") // slot, sku, remain
+
+  // Map VMS machine_id → machine name
+  const machineNames = {
+    chukes01: machines.find(m => m.machine_id === "chukes01") || { name: "chukes01", location: "" },
+    chukes02: machines.find(m => m.machine_id === "chukes02") || { name: "chukes02", location: "" },
+    chukes04: machines.find(m => m.machine_id === "chukes04") || { name: "chukes04", location: "" },
+  }
+
+  // จัดกลุ่มตามตู้
+  const grouped = {}
+  machineStock.forEach(s => {
+    if (!grouped[s.machine_id]) grouped[s.machine_id] = []
+    grouped[s.machine_id].push(s)
+  })
+
+  const machineIds = selectedMachine === "all"
+    ? Object.keys(grouped).sort()
+    : [selectedMachine].filter(id => grouped[id])
+
+  // สรุป SKU ต่อตู้
+  const summarizeBySku = (slots) => {
+    const map = {}
+    slots.forEach(s => {
+      const skuId = s.sku_id || s.product_name || "ไม่ระบุ"
+      if (!map[skuId]) map[skuId] = { sku_id: skuId, product_name: s.product_name, remain: 0, capacity: 0, slots: 0 }
+      map[skuId].remain += s.remain || 0
+      map[skuId].capacity += s.max_capacity || 0
+      map[skuId].slots += 1
+    })
+    return Object.values(map).sort((a, b) => sortBy === "remain" ? b.remain - a.remain : a.sku_id.localeCompare(b.sku_id))
+  }
+
+  // เวลาที่ sync ล่าสุด
+  const lastSync = machineStock.length > 0
+    ? machineStock.reduce((latest, s) => {
+        const t = s.synced_at || ""
+        return t > latest ? t : latest
+      }, "")
+    : null
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-800">สต็อกหน้าตู้ (VMS)</h1>
+          <p className="text-sm text-gray-400">
+            ข้อมูลคงเหลือจริงที่หน้าตู้ขาย ดึงจากระบบ VMS
+            {lastSync && <span className="ml-2">· อัปเดตล่าสุด: {lastSync.slice(0,10)} {lastSync.slice(11,16)}</span>}
+          </p>
+        </div>
+        <div className="flex gap-2 flex-wrap">
+          <select value={selectedMachine} onChange={e => setSelectedMachine(e.target.value)}
+            className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none">
+            <option value="all">ทุกตู้</option>
+            {Object.keys(grouped).sort().map(id => (
+              <option key={id} value={id}>{machineNames[id]?.name || id}</option>
+            ))}
+          </select>
+          <div className="flex gap-1 bg-gray-100 p-1 rounded-xl">
+            {[{v:"slot",l:"ตามช่อง"},{v:"sku",l:"ตาม SKU"},{v:"remain",l:"คงเหลือ"}].map(t => (
+              <button key={t.v} onClick={() => setSortBy(t.v)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${sortBy===t.v?"bg-white shadow text-blue-600":"text-gray-500"}`}>
+                {t.l}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {machineStock.length === 0 ? (
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-10 text-center">
+          <Monitor size={40} className="text-gray-300 mx-auto mb-3"/>
+          <p className="text-gray-500 font-medium">ยังไม่มีข้อมูลสต็อกหน้าตู้</p>
+          <p className="text-gray-400 text-sm mt-1">ข้อมูลจะปรากฏหลังเชื่อมต่อ VMS API และดึงข้อมูลครั้งแรก</p>
+          <div className="mt-4 p-4 bg-amber-50 rounded-xl text-left max-w-md mx-auto">
+            <p className="text-xs text-amber-700 font-medium mb-1">รอดำเนินการ:</p>
+            <p className="text-xs text-amber-600">ขออนุญาตใช้ API จาก VMS InboxCorp</p>
+          </div>
+        </div>
+      ) : (
+        <div className="space-y-6">
+          {machineIds.map((machId, mi) => {
+            const slots = grouped[machId] || []
+            const mInfo = machineNames[machId] || { name: machId, location: "" }
+            const totalRemain = slots.reduce((a, s) => a + (s.remain || 0), 0)
+            const totalCapacity = slots.reduce((a, s) => a + (s.max_capacity || 0), 0)
+            const pct = totalCapacity > 0 ? ((totalRemain / totalCapacity) * 100).toFixed(1) : 0
+            const skuSummary = summarizeBySku(slots)
+            const activeSlots = slots.filter(s => s.product_name && s.remain !== null)
+
+            return (
+              <div key={machId} className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                {/* Header */}
+                <div className="p-5 border-b border-gray-100">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-3 h-3 rounded-full" style={{backgroundColor: CHART_COLORS[mi % CHART_COLORS.length]}}/>
+                      <div>
+                        <p className="font-semibold text-gray-800">{mInfo.name || machId}</p>
+                        <p className="text-xs text-gray-400">{mInfo.location} · {activeSlots.length} ช่อง · {skuSummary.length} SKU</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-lg font-bold text-gray-800">{pct}%</p>
+                      <p className="text-xs text-gray-400">{fmt(totalRemain)}/{fmt(totalCapacity)}</p>
+                    </div>
+                  </div>
+                  {/* Progress bar */}
+                  <div className="mt-3 w-full bg-gray-100 rounded-full h-2.5">
+                    <div className={`h-2.5 rounded-full transition-all ${parseFloat(pct) < 30 ? "bg-red-400" : parseFloat(pct) < 60 ? "bg-amber-400" : "bg-green-400"}`}
+                      style={{width:`${pct}%`}}/>
+                  </div>
+                </div>
+
+                {/* SKU Summary */}
+                {sortBy !== "slot" ? (
+                  <div className="p-5">
+                    <h3 className="text-sm font-semibold text-gray-600 mb-3">สรุปตาม SKU</h3>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b border-gray-100">
+                            <th className="text-left py-2 text-xs text-gray-400 font-medium">SKU</th>
+                            <th className="text-left py-2 text-xs text-gray-400 font-medium">สินค้า</th>
+                            <th className="text-center py-2 text-xs text-gray-400 font-medium">ช่อง</th>
+                            <th className="text-right py-2 text-xs text-gray-400 font-medium">คงเหลือ</th>
+                            <th className="text-right py-2 text-xs text-gray-400 font-medium">ความจุ</th>
+                            <th className="py-2 px-2 text-xs text-gray-400 font-medium w-24">สัดส่วน</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {skuSummary.map(r => {
+                            const sku = skus.find(s => s.sku_id === r.sku_id)
+                            const skuPct = r.capacity > 0 ? (r.remain / r.capacity * 100) : 0
+                            return (
+                              <tr key={r.sku_id} className="border-b border-gray-50 hover:bg-gray-50">
+                                <td className="py-2 font-mono text-xs font-bold text-gray-700">{r.sku_id}</td>
+                                <td className="py-2 text-xs text-gray-500 truncate max-w-[150px]">{r.product_name}</td>
+                                <td className="py-2 text-center text-xs text-gray-500">{r.slots}</td>
+                                <td className={`py-2 text-right font-bold text-sm ${r.remain === 0 ? "text-red-500" : r.remain < 5 ? "text-amber-600" : "text-green-600"}`}>
+                                  {fmt(r.remain)}
+                                </td>
+                                <td className="py-2 text-right text-xs text-gray-400">{fmt(r.capacity)}</td>
+                                <td className="py-2 px-2">
+                                  <div className="w-full bg-gray-100 rounded-full h-1.5">
+                                    <div className={`h-1.5 rounded-full ${skuPct < 30 ? "bg-red-400" : skuPct < 60 ? "bg-amber-400" : "bg-green-400"}`}
+                                      style={{width:`${skuPct}%`}}/>
+                                  </div>
+                                </td>
+                              </tr>
+                            )
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                ) : (
+                  /* Slot view */
+                  <div className="p-5">
+                    <h3 className="text-sm font-semibold text-gray-600 mb-3">รายละเอียดตามช่อง</h3>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
+                      {slots.map(s => {
+                        const pctSlot = s.max_capacity > 0 ? (s.remain / s.max_capacity * 100) : 0
+                        const isEmpty = !s.product_name
+                        return (
+                          <div key={s.slot_number} className={`p-2.5 rounded-xl border text-center ${isEmpty ? "bg-gray-50 border-gray-100 opacity-50" : pctSlot === 0 ? "bg-red-50 border-red-200" : pctSlot < 30 ? "bg-amber-50 border-amber-200" : "bg-white border-gray-100"}`}>
+                            <p className="text-xs font-mono text-gray-400">{s.slot_number}</p>
+                            {isEmpty ? (
+                              <p className="text-xs text-gray-300 mt-1">ว่าง</p>
+                            ) : (
+                              <>
+                                <p className="text-xs font-medium text-gray-700 mt-1 truncate" title={s.product_name}>{s.sku_id || s.product_name?.slice(0,12)}</p>
+                                <p className={`text-sm font-bold mt-0.5 ${s.remain === 0 ? "text-red-500" : s.remain <= 3 ? "text-amber-600" : "text-green-600"}`}>
+                                  {s.remain}/{s.max_capacity}
+                                </p>
+                                <div className="mt-1 w-full bg-gray-200 rounded-full h-1">
+                                  <div className={`h-1 rounded-full ${pctSlot === 0 ? "bg-red-400" : pctSlot < 30 ? "bg-amber-400" : "bg-green-400"}`}
+                                    style={{width:`${pctSlot}%`}}/>
+                                </div>
+                              </>
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ─────────────────────────────────────────────
 // NAV
 // ─────────────────────────────────────────────
 const NAV_BASE = [
   { id:"dashboard",  label:"ภาพรวม",       icon:Home          },
   { id:"stock",      label:"จัดการสต็อก",  icon:Package       },
   { id:"withdrawal", label:"เบิกเติมตู้",   icon:ArrowUpCircle },
+  { id:"machstock",  label:"สต็อกหน้าตู้",  icon:Monitor       },
   { id:"sales",      label:"ยอดขาย",       icon:ShoppingCart  },
   { id:"analytics",  label:"วิเคราะห์ SKU", icon:BarChart2     },
 ]
@@ -2455,6 +2659,7 @@ export default function DivisionXApp() {
   const [stockOut,      setStockOut]      = useState([])
   const [stockBalance,  setStockBalance]  = useState([])
   const [sales,         setSales]         = useState([])
+  const [machineStock,  setMachineStock]  = useState([])
   const [loading,       setLoading]       = useState(true)
   const [dataError,     setDataError]     = useState(null)
 
@@ -2463,19 +2668,21 @@ export default function DivisionXApp() {
     try {
       setLoading(true)
       setDataError(null)
-      const [machData, skuData, siData, soData, sbData, salesData] = await Promise.all([
+      const [machData, skuData, siData, soData, sbData, salesData, msData] = await Promise.all([
         getMachines(),
         getSkus(),
         getStockIn(),
         getStockOut(),
         getStockBalance(),
         getSalesByMachine(30),
+        getMachineStock(),
       ])
       setMachines(machData)
       if (skuData?.length) setSkus(skuData)
       setStockIn(siData)
       setStockOut(soData)
       setStockBalance(sbData)
+      setMachineStock(msData || [])
       // Normalize sales: grand_total → revenue, sold_at timestamptz → date string
       setSales(salesData.map(r => ({
         ...r,
@@ -2681,6 +2888,7 @@ export default function DivisionXApp() {
           {page === "dashboard"  && <PageDashboard stockIn={stockIn} stockOut={stockOut} stockBalance={stockBalance} skus={skus}/>}
           {page === "stock"      && <PageStock     stockIn={stockIn} stockBalance={stockBalance} skus={skus} onAddStockIn={addStockIn} onUpdateStockIn={updateStockIn} onDeleteStockIn={deleteStockIn} onAddSku={addSku} onDeactivateSku={deactivateSku}/>}
           {page === "withdrawal" && <PageWithdrawal machines={machines} stockOut={stockOut} stockIn={stockIn} stockBalance={stockBalance} skus={skus} onAddStockOut={addStockOut} onDeleteStockOut={deleteStockOut}/>}
+          {page === "machstock"  && <PageMachineStockView machines={machines} machineStock={machineStock} skus={skus}/>}
           {page === "sales"      && <PageSales     machines={machines} sales={sales} skus={skus} onRefresh={loadAll}/>}
           {page === "analytics"  && <PageAnalytics sales={sales} skus={skus}/>}
           {page === "users"      && <PageUsers     currentProfile={profile}/>}

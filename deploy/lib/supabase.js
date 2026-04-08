@@ -183,3 +183,14 @@ export async function deactivateSku(skuId) {
     .eq("sku_id", skuId)
   if (error) throw error
 }
+
+// ── Machine Stock (สต็อกหน้าตู้ จาก VMS) ─────────────────────
+export async function getMachineStock() {
+  const { data, error } = await supabase
+    .from("machine_stock")
+    .select("*")
+    .order("machine_id")
+    .order("slot_number")
+  if (error) throw error
+  return data
+}
