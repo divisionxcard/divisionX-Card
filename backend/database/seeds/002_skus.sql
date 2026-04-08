@@ -1,7 +1,7 @@
 -- =============================================================
 -- Seed: ข้อมูล SKU ทั้งหมด 21 รายการ
 -- OP 01–15: packs_per_box = 24
--- PRB 01–02: packs_per_box = 20  ⚠️
+-- PRB 01–02: packs_per_box = 10  ⚠️
 -- EB 01–04:  packs_per_box = 24
 -- boxes_per_cotton = 12 ทุก SKU
 -- =============================================================
@@ -24,9 +24,9 @@ INSERT INTO skus (sku_id, name, series, packs_per_box, boxes_per_cotton, sell_pr
   ('OP 14',  'One Piece Card Game OP-14', 'OP', 24, 12, 0, 0),
   ('OP 15',  'One Piece Card Game OP-15', 'OP', 24, 12, 0, 0),
 
-  -- One Piece Premium Booster (packs_per_box = 20 ⚠️)
-  ('PRB 01', 'One Piece Premium Booster 01', 'PRB', 20, 12, 0, 0),
-  ('PRB 02', 'One Piece Premium Booster 02', 'PRB', 20, 12, 0, 0),
+  -- One Piece Premium Booster (packs_per_box = 10 ⚠️)
+  ('PRB 01', 'One Piece Premium Booster 01', 'PRB', 10, 12, 0, 0),
+  ('PRB 02', 'One Piece Premium Booster 02', 'PRB', 10, 12, 0, 0),
 
   -- One Piece Extra Booster
   ('EB 01',  'One Piece Extra Booster 01', 'EB', 24, 12, 0, 0),

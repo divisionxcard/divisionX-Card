@@ -39,8 +39,8 @@ const SKUS = [
   { sku_id:"OP 13",  name:"One Piece OP-13",    series:"OP",  packs_per_box:24, sell_price:75,  cost_price:52 },
   { sku_id:"OP 14",  name:"One Piece OP-14",    series:"OP",  packs_per_box:24, sell_price:80,  cost_price:55 },
   { sku_id:"OP 15",  name:"One Piece OP-15",    series:"OP",  packs_per_box:24, sell_price:80,  cost_price:55 },
-  { sku_id:"PRB 01", name:"Premium Booster 01", series:"PRB", packs_per_box:20, sell_price:150, cost_price:110 },
-  { sku_id:"PRB 02", name:"Premium Booster 02", series:"PRB", packs_per_box:20, sell_price:180, cost_price:130 },
+  { sku_id:"PRB 01", name:"Premium Booster 01", series:"PRB", packs_per_box:10, sell_price:150, cost_price:110 },
+  { sku_id:"PRB 02", name:"Premium Booster 02", series:"PRB", packs_per_box:10, sell_price:180, cost_price:130 },
   { sku_id:"EB 01",  name:"Extra Booster 01",   series:"EB",  packs_per_box:24, sell_price:120, cost_price:85  },
   { sku_id:"EB 02",  name:"Extra Booster 02",   series:"EB",  packs_per_box:24, sell_price:120, cost_price:85  },
   { sku_id:"EB 03",  name:"Extra Booster 03",   series:"EB",  packs_per_box:24, sell_price:130, cost_price:90  },
@@ -1047,7 +1047,7 @@ function SkuManager({ skus, onAddSku, onDeactivateSku, showToast }) {
               <label className="block text-xs text-gray-500 mb-1">ซอง/กล่อง</label>
               <input type="number" min="1" value={form.packs_per_box} onChange={e => setForm({...form, packs_per_box:e.target.value})}
                 className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"/>
-              <p className="text-xs text-gray-400 mt-0.5">OP/EB=24, PRB=20</p>
+              <p className="text-xs text-gray-400 mt-0.5">OP/EB=24, PRB=10</p>
             </div>
             <div>
               <label className="block text-xs text-gray-500 mb-1">กล่อง/Cotton</label>
