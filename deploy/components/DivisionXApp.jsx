@@ -1866,16 +1866,21 @@ function SalesSkuByMachine({ sales, machines, skus }) {
     ? sales.filter(r => r.sold_at === selectedDate)
     : sales
 
-  // สร้าง map: machine → sku → { qty, boxQty, rev }
+  // สร้าง map: machine → sku → { packQty, boxQty, rev }
+  // packQty = จำนวนซองจากการขายแบบซองเท่านั้น (ไม่รวมกล่อง)
+  // boxQty  = จำนวนกล่องจากการขายแบบกล่อง
   const machineSkuMap = {}
   machines.forEach(m => { machineSkuMap[m.machine_id] = {} })
   filteredSales.forEach(r => {
     if (!machineSkuMap[r.machine_id]) machineSkuMap[r.machine_id] = {}
-    if (!machineSkuMap[r.machine_id][r.sku_id]) machineSkuMap[r.machine_id][r.sku_id] = { qty:0, boxQty:0, rev:0 }
+    if (!machineSkuMap[r.machine_id][r.sku_id]) machineSkuMap[r.machine_id][r.sku_id] = { packQty:0, boxQty:0, rev:0 }
     const raw = (r.product_name_raw || "").toLowerCase()
     const isBox = raw.includes("(box)") || raw.split(/\s+/).includes("box")
-    machineSkuMap[r.machine_id][r.sku_id].qty += r.quantity_sold || 0
-    if (isBox) machineSkuMap[r.machine_id][r.sku_id].boxQty += 1
+    if (isBox) {
+      machineSkuMap[r.machine_id][r.sku_id].boxQty += 1
+    } else {
+      machineSkuMap[r.machine_id][r.sku_id].packQty += r.quantity_sold || 0
+    }
     machineSkuMap[r.machine_id][r.sku_id].rev += r.revenue || 0
   })
 
@@ -1922,7 +1927,8 @@ function SalesSkuByMachine({ sales, machines, skus }) {
             })
             .sort((a, b) => sortBy === "rev" ? b.rev - a.rev : b.qty - a.qty)
           const machineTotal = skuList.reduce((a, r) => a + r.rev, 0)
-          const machineTotalQty = skuList.reduce((a, r) => a + r.qty, 0)
+          const machineTotalPack = skuList.reduce((a, r) => a + r.packQty, 0)
+          const machineTotalBox = skuList.reduce((a, r) => a + r.boxQty, 0)
           const machineTxn = new Set(filteredSales.filter(r => r.machine_id === m.machine_id).map(r => r.transaction_id).filter(Boolean)).size
           const isExpanded = expandedMachine === m.machine_id
 
@@ -1941,7 +1947,7 @@ function SalesSkuByMachine({ sales, machines, skus }) {
                 <div className="flex items-center gap-4">
                   <div className="text-right">
                     <p className="text-sm font-bold text-green-600">{fmtB(machineTotal)}</p>
-                    <p className="text-xs text-gray-400">{fmt(machineTxn)} ธุรกรรม · {fmt(machineTotalQty)} ซอง</p>
+                    <p className="text-xs text-gray-400">{fmt(machineTxn)} ธุรกรรม · {machineTotalBox > 0 ? `${fmt(machineTotalBox)} กล่อง · ` : ""}{fmt(machineTotalPack)} ซอง</p>
                   </div>
                   {isExpanded ? <ChevronUp size={16} className="text-gray-400"/> : <ChevronDown size={16} className="text-gray-400"/>}
                 </div>
@@ -1961,7 +1967,7 @@ function SalesSkuByMachine({ sales, machines, skus }) {
                             <th className="text-left py-2 px-2 text-xs text-gray-400 font-medium">SKU</th>
                             <th className="text-left py-2 px-2 text-xs text-gray-400 font-medium">ชื่อสินค้า</th>
                             <th className="text-center py-2 px-2 text-xs text-gray-400 font-medium">Series</th>
-                            <th className="text-right py-2 px-2 text-xs text-red-400 font-medium">กล่อง</th>
+                            <th className="text-right py-2 px-2 text-xs text-red-400 font-medium">กล่องที่ขาย</th>
                             <th className="text-right py-2 px-2 text-xs text-gray-400 font-medium">ซองที่ขาย</th>
                             <th className="text-right py-2 px-2 text-xs text-gray-400 font-medium">ยอดขาย</th>
                             <th className="py-2 px-4 text-xs text-gray-400 font-medium w-24">สัดส่วน</th>
@@ -1980,7 +1986,7 @@ function SalesSkuByMachine({ sales, machines, skus }) {
                                 <td className="py-2 px-2 text-xs text-gray-500 truncate max-w-[120px]">{r.name}</td>
                                 <td className="py-2 px-2 text-center"><Badge series={r.series}/></td>
                                 <td className="py-2 px-2 text-right font-medium text-red-500">{r.boxQty > 0 ? fmt(r.boxQty) : "-"}</td>
-                                <td className="py-2 px-2 text-right font-medium text-blue-600">{fmt(r.qty)}</td>
+                                <td className="py-2 px-2 text-right font-medium text-blue-600">{r.packQty > 0 ? fmt(r.packQty) : "-"}</td>
                                 <td className="py-2 px-2 text-right font-semibold text-green-600">{fmtB(r.rev)}</td>
                                 <td className="py-2 px-4">
                                   <div className="w-full bg-gray-100 rounded-full h-1.5">
@@ -1994,8 +2000,8 @@ function SalesSkuByMachine({ sales, machines, skus }) {
                         <tfoot>
                           <tr className="bg-gray-50 font-semibold">
                             <td colSpan={4} className="py-2 px-4 text-xs text-gray-500">รวม {m.name}</td>
-                            <td className="py-2 px-2 text-right text-red-600 text-xs">{fmt(skuList.reduce((a,r) => a+r.boxQty, 0))} กล่อง</td>
-                            <td className="py-2 px-2 text-right text-blue-700 text-xs">{fmt(machineTotalQty)} ซอง</td>
+                            <td className="py-2 px-2 text-right text-red-600 text-xs">{fmt(machineTotalBox)} กล่อง</td>
+                            <td className="py-2 px-2 text-right text-blue-700 text-xs">{fmt(machineTotalPack)} ซอง</td>
                             <td className="py-2 px-2 text-right text-green-700 text-xs">{fmtB(machineTotal)}</td>
                             <td></td>
                           </tr>
