@@ -89,16 +89,25 @@ export async function getDailySales(days = 7) {
   return data
 }
 
-// ── Sales Summary by Machine ──────────────────────────────────
+// ── Sales Summary by Machine (pagination เพื่อดึงครบทุก record) ──
 export async function getSalesByMachine(days = 30) {
   const from = new Date()
   from.setDate(from.getDate() - days)
-  const { data, error } = await supabase
-    .from("sales")
-    .select("machine_id, sku_id, transaction_id, grand_total, quantity_sold, sold_at")
-    .gte("sold_at", from.toISOString())
-  if (error) throw error
-  return data
+  const all = []
+  let offset = 0
+  const pageSize = 1000
+  while (true) {
+    const { data, error } = await supabase
+      .from("sales")
+      .select("machine_id, sku_id, transaction_id, grand_total, quantity_sold, sold_at")
+      .gte("sold_at", from.toISOString())
+      .range(offset, offset + pageSize - 1)
+    if (error) throw error
+    all.push(...data)
+    if (data.length < pageSize) break
+    offset += pageSize
+  }
+  return all
 }
 
 // ── Top SKUs ──────────────────────────────────────────────────
