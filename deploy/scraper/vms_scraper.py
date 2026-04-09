@@ -18,6 +18,15 @@ VMS_PASS     = os.environ["VMS_PASSWORD"]
 SUPABASE_URL = os.environ["SUPABASE_URL"]
 SUPABASE_KEY = os.environ["SUPABASE_SERVICE_KEY"]
 
+# ── จำนวนซองต่อกล่อง (ใช้แปลง box → pack) ──────────────────
+PACKS_PER_BOX = {
+    "OP 01": 24, "OP 02": 24, "OP 03": 24, "OP 04": 24, "OP 05": 24,
+    "OP 06": 24, "OP 07": 24, "OP 08": 24, "OP 09": 24, "OP 10": 24,
+    "OP 11": 24, "OP 12": 24, "OP 13": 24, "OP 14": 24, "OP 15": 24,
+    "PRB 01": 10, "PRB 02": 10,
+    "EB 01": 24, "EB 02": 24, "EB 03": 24, "EB 04": 24,
+}
+
 # ── VMS Product Name → SKU ID Mapping ───────────────────────────
 SKU_MAP = {
     "one piece op - 01 pack": "OP 01",
@@ -207,6 +216,11 @@ def parse_xlsx(xlsx_path: Path) -> list[dict]:
         txn_counter[txn_id] = txn_counter.get(txn_id, -1) + 1
         sale_key = f"{txn_id}-{txn_counter[txn_id]}"
 
+        # ตรวจว่าขายแบบกล่องหรือซอง จาก product_name_raw
+        name_lower = normalize(product_raw)
+        is_box = "(box)" in name_lower or "box" in name_lower.split()
+        qty_packs = PACKS_PER_BOX.get(sku_id, 24) if is_box else 1
+
         # Parse วันที่
         sold_at_raw = str(row.get("Transaction Date", ""))
         try:
@@ -220,7 +234,7 @@ def parse_xlsx(xlsx_path: Path) -> list[dict]:
             "machine_id":       str(row.get("KioskID", "")),
             "sku_id":           sku_id,
             "product_name_raw": product_raw,
-            "quantity_sold":    1,
+            "quantity_sold":    qty_packs,
             "grand_total":      float(row.get("Grand Total", 0) or 0),
             "sold_at":          sold_at,
         })

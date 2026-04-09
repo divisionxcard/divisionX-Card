@@ -34,8 +34,8 @@ const SKUS = [
   { sku_id:"OP 13",  name:"One Piece OP-13",  series:"OP",  packs_per_box:12, sell_price:75,  cost_price:52 },
   { sku_id:"OP 14",  name:"One Piece OP-14",  series:"OP",  packs_per_box:12, sell_price:80,  cost_price:55 },
   { sku_id:"OP 15",  name:"One Piece OP-15",  series:"OP",  packs_per_box:12, sell_price:80,  cost_price:55 },
-  { sku_id:"PRB 01", name:"Premium Booster 01", series:"PRB", packs_per_box:10, sell_price:150, cost_price:110 },
-  { sku_id:"PRB 02", name:"Premium Booster 02", series:"PRB", packs_per_box:10, sell_price:180, cost_price:130 },
+  { sku_id:"PRB 01", name:"Premium Booster 01", series:"PRB", packs_per_box:10, boxes_per_cotton:10, sell_price:150, cost_price:110 },
+  { sku_id:"PRB 02", name:"Premium Booster 02", series:"PRB", packs_per_box:10, boxes_per_cotton:20, sell_price:180, cost_price:130 },
   { sku_id:"EB 01",  name:"Extra Booster 01",  series:"EB",  packs_per_box:12, sell_price:120, cost_price:85  },
   { sku_id:"EB 02",  name:"Extra Booster 02",  series:"EB",  packs_per_box:12, sell_price:120, cost_price:85  },
   { sku_id:"EB 03",  name:"Extra Booster 03",  series:"EB",  packs_per_box:12, sell_price:130, cost_price:90  },
@@ -109,7 +109,7 @@ function calcBalance(stockIn, stockOut) {
 function convertToPacks(qty, unit, sku) {
   if (unit === "pack")   return qty
   if (unit === "box")    return qty * sku.packs_per_box
-  if (unit === "cotton") return qty * 12 * sku.packs_per_box
+  if (unit === "cotton") return qty * (sku.boxes_per_cotton || 12) * sku.packs_per_box
   return qty
 }
 

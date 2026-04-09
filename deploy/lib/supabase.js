@@ -99,7 +99,7 @@ export async function getSalesByMachine(days = 30) {
   while (true) {
     const { data, error } = await supabase
       .from("sales")
-      .select("machine_id, sku_id, transaction_id, grand_total, quantity_sold, sold_at")
+      .select("machine_id, sku_id, transaction_id, product_name_raw, grand_total, quantity_sold, sold_at")
       .gte("sold_at", from.toISOString())
       .range(offset, offset + pageSize - 1)
     if (error) throw error
