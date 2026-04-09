@@ -643,54 +643,89 @@ function PageDashboard({ stockIn, stockOut, stockBalance, skus }) {
                   <div className="p-4 space-y-2">
                     {lots.length === 0 ? (
                       <p className="text-xs text-gray-400 text-center py-4">ยังไม่มีข้อมูลการรับสินค้า</p>
-                    ) : lots.map((lot, i) => {
-                      const cpp = (lot.quantity_packs || 0) > 0 ? (parseFloat(lot.total_cost) || 0) / lot.quantity_packs : 0
-                      const lotWithdrawn = stockOut.filter(r => r.lot_number === lot.lot_number).reduce((a, r) => a + (r.quantity_packs || 0), 0)
-                      const lotBalance = (lot.quantity_packs || 0) - lotWithdrawn
-                      const lotDepleted = lotBalance <= 0
+                    ) : (() => {
+                      const activeLots = []
+                      const depletedLots = []
+                      lots.forEach(lot => {
+                        const lotWithdrawn = stockOut.filter(r => r.lot_number === lot.lot_number).reduce((a, r) => a + (r.quantity_packs || 0), 0)
+                        const lotBalance = (lot.quantity_packs || 0) - lotWithdrawn
+                        const lotOuts = stockOut.filter(r => r.lot_number === lot.lot_number)
+                        const lastOut = lotOuts.length > 0 ? lotOuts.sort((a,b) => (b.withdrawn_at||"").localeCompare(a.withdrawn_at||""))[0] : null
+                        const entry = { lot, lotWithdrawn, lotBalance, lastOut }
+                        if (lotBalance <= 0) depletedLots.push(entry)
+                        else activeLots.push(entry)
+                      })
                       return (
-                        <div key={i} className={`p-3 rounded-xl border ${lotDepleted ? "bg-gray-50/50 border-gray-100 opacity-60" : "bg-gray-50 border-gray-100"}`}>
-                          <div className="flex items-start justify-between gap-2">
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <span className="font-mono text-xs font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded">{lot.lot_number || "ไม่ระบุ"}</span>
-                                <span className="text-xs text-gray-500">{lot.source}</span>
-                                {lotDepleted && <span className="text-xs bg-gray-200 text-gray-500 px-1.5 py-0.5 rounded">หมดแล้ว</span>}
+                        <>
+                          {/* Lot ที่ยังมีสต็อก */}
+                          {activeLots.map(({ lot, lotWithdrawn, lotBalance }, i) => {
+                            const cpp = (lot.quantity_packs || 0) > 0 ? (parseFloat(lot.total_cost) || 0) / lot.quantity_packs : 0
+                            return (
+                              <div key={i} className="p-3 rounded-xl border bg-gray-50 border-gray-100">
+                                <div className="flex items-start justify-between gap-2">
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                      <span className="font-mono text-xs font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded">{lot.lot_number || "ไม่ระบุ"}</span>
+                                      <span className="text-xs text-gray-500">{lot.source}</span>
+                                    </div>
+                                    <p className="text-xs text-gray-400 mt-1 flex items-center gap-1"><Clock size={10}/> {lot.purchased_at?.slice(0,10)}</p>
+                                  </div>
+                                  <div className="text-right flex-shrink-0">
+                                    <p className="text-sm font-bold text-green-600">{fmtBoxPack(lotBalance, s.packs_per_box)}</p>
+                                    <p className="text-xs text-gray-400">{fmt(lotBalance)} ซอง</p>
+                                  </div>
+                                </div>
+                                {lot.quantity_packs > 0 && (
+                                  <div className="mt-2 flex items-center gap-2">
+                                    <div className="flex-1 bg-gray-200 rounded-full h-1.5">
+                                      <div className="h-1.5 rounded-full bg-green-400 transition-all" style={{width:`${Math.max(0,(lotBalance/lot.quantity_packs)*100)}%`}}/>
+                                    </div>
+                                    <span className="text-xs text-gray-400">{fmt(lotWithdrawn)}/{fmt(lot.quantity_packs)}</span>
+                                  </div>
+                                )}
+                                <div className="mt-2 pt-2 border-t border-gray-100 grid grid-cols-3 gap-2 text-center">
+                                  <div>
+                                    <p className="text-xs text-gray-400">รับเข้า</p>
+                                    <p className="text-xs font-bold text-blue-600">+{fmt(lot.quantity)} {UNIT_LABEL[lot.unit] || lot.unit}</p>
+                                    <p className="text-xs text-blue-400">= {fmt(lot.quantity_packs)} ซอง</p>
+                                  </div>
+                                  <div>
+                                    <p className="text-xs text-gray-400">ต้นทุน/ซอง</p>
+                                    <p className="text-xs font-bold text-purple-600">{fmtB(cpp.toFixed(2))}</p>
+                                  </div>
+                                  <div>
+                                    <p className="text-xs text-gray-400">มูลค่า Lot</p>
+                                    <p className="text-xs font-bold text-gray-800">{fmtB(lot.total_cost)}</p>
+                                  </div>
+                                </div>
+                                {lot.note && <p className="text-xs text-gray-400 mt-1.5 italic">"{lot.note}"</p>}
                               </div>
-                              <p className="text-xs text-gray-400 mt-1 flex items-center gap-1"><Clock size={10}/> {lot.purchased_at?.slice(0,10)}</p>
-                            </div>
-                            <div className="text-right flex-shrink-0">
-                              <p className={`text-sm font-bold ${lotDepleted ? "text-gray-400" : "text-green-600"}`}>{lotBalance > 0 ? fmtBoxPack(lotBalance, s.packs_per_box) : "หมดแล้ว"}</p>
-                              {lotBalance > 0 && <p className="text-xs text-gray-400">{fmt(lotBalance)} ซอง</p>}
-                            </div>
-                          </div>
-                          {lot.quantity_packs > 0 && (
-                            <div className="mt-2 flex items-center gap-2">
-                              <div className="flex-1 bg-gray-200 rounded-full h-1.5">
-                                <div className="h-1.5 rounded-full bg-green-400 transition-all" style={{width:`${Math.max(0,(lotBalance/lot.quantity_packs)*100)}%`}}/>
+                            )
+                          })}
+
+                          {/* Lot ที่ใช้หมดแล้ว — ซ่อนรายละเอียด */}
+                          {depletedLots.length > 0 && (
+                            <div className="mt-2 pt-2 border-t border-gray-100">
+                              <p className="text-xs text-gray-400 mb-2">Lot ที่ใช้หมดแล้ว ({depletedLots.length})</p>
+                              <div className="space-y-1">
+                                {depletedLots.map(({ lot, lastOut }, i) => (
+                                  <div key={i} className="flex items-center justify-between px-3 py-2 rounded-lg bg-gray-50 text-xs text-gray-400">
+                                    <div className="flex items-center gap-2">
+                                      <span className="font-mono font-bold text-gray-500">{lot.lot_number || "ไม่ระบุ"}</span>
+                                      <span>{lot.source}</span>
+                                      <span>· {fmt(lot.quantity_packs)} ซอง</span>
+                                    </div>
+                                    <span>
+                                      ใช้หมด {lastOut?.withdrawn_at?.slice(0,10) || lot.purchased_at?.slice(0,10) || "—"}
+                                    </span>
+                                  </div>
+                                ))}
                               </div>
-                              <span className="text-xs text-gray-400">{fmt(lotWithdrawn)}/{fmt(lot.quantity_packs)}</span>
                             </div>
                           )}
-                          <div className="mt-2 pt-2 border-t border-gray-100 grid grid-cols-3 gap-2 text-center">
-                            <div>
-                              <p className="text-xs text-gray-400">รับเข้า</p>
-                              <p className="text-xs font-bold text-blue-600">+{fmt(lot.quantity)} {UNIT_LABEL[lot.unit] || lot.unit}</p>
-                              <p className="text-xs text-blue-400">= {fmt(lot.quantity_packs)} ซอง</p>
-                            </div>
-                            <div>
-                              <p className="text-xs text-gray-400">ต้นทุน/ซอง</p>
-                              <p className="text-xs font-bold text-purple-600">{fmtB(cpp.toFixed(2))}</p>
-                            </div>
-                            <div>
-                              <p className="text-xs text-gray-400">มูลค่า Lot</p>
-                              <p className="text-xs font-bold text-gray-800">{fmtB(lot.total_cost)}</p>
-                            </div>
-                          </div>
-                          {lot.note && <p className="text-xs text-gray-400 mt-1.5 italic">"{lot.note}"</p>}
-                        </div>
+                        </>
                       )
-                    })}
+                    })()}
                   </div>
                 </div>
               )}
