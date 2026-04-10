@@ -1,0 +1,32 @@
+name: VMS Stock Sync
+
+on:
+  schedule:
+    # รันทุก 30 นาที เวลา 8:00-22:00 น. ไทย (01:00-15:00 UTC)
+    - cron: "*/30 1-15 * * *"
+  workflow_dispatch:  # กดรันมือได้
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install requests supabase
+
+      - name: Sync Machine Stock
+        env:
+          VMS_USERNAME:         ${{ secrets.VMS_USERNAME }}
+          VMS_PASSWORD:         ${{ secrets.VMS_PASSWORD }}
+          SUPABASE_URL:         ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: python deploy/scraper/vms_stock_sync.py
