@@ -32,11 +32,9 @@ jobs:
           python-version: "3.11"
 
       - name: Install dependencies
-        run: |
-          pip install -r deploy/scraper/requirements.txt
-          playwright install --with-deps chromium
+        run: pip install requests supabase pandas
 
-      - name: Run VMS Scraper
+      - name: Run VMS Sales Sync (API first, fallback to Playwright)
         env:
           VMS_URL:              ${{ secrets.VMS_URL }}
           VMS_USERNAME:         ${{ secrets.VMS_USERNAME }}
@@ -50,7 +48,12 @@ jobs:
           elif [ -n "${{ inputs.days }}" ]; then
             ARGS="--days ${{ inputs.days }}"
           fi
-          python deploy/scraper/vms_scraper.py $ARGS
+          echo "🚀 ลอง API ก่อน..."
+          python deploy/scraper/vms_sales_api.py $ARGS || {
+            echo "⚠️ API ไม่สำเร็จ — fallback ไป Playwright..."
+            pip install playwright && playwright install --with-deps chromium
+            python deploy/scraper/vms_scraper.py $ARGS
+          }
 
       - name: Upload screenshots (debug)
         if: always()
