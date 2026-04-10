@@ -3106,10 +3106,10 @@ function PageMachineStockView({ machines, machineStock, skus, onRefresh }) {
                                   <div className="w-full h-24 rounded-lg overflow-hidden bg-gray-50 mb-2 flex items-center justify-center">
                                     <img src={s.product_img} alt={s.product_name}
                                       className="h-full w-auto object-contain"
-                                      onError={e => { e.target.style.display="none"; e.target.nextSibling.style.display="flex" }}/>
-                                    <div className="hidden w-full h-full items-center justify-center">
-                                      <Package size={24} className="text-gray-300"/>
-                                    </div>
+                                      referrerPolicy="no-referrer"
+                                      crossOrigin="anonymous"
+                                      loading="lazy"
+                                      onError={e => { e.target.onerror=null; e.target.parentElement.innerHTML='<div class="w-full h-full flex items-center justify-center"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg></div>' }}/>
                                   </div>
                                 ) : (
                                   <div className="w-full h-24 rounded-lg bg-gradient-to-b from-blue-50 to-white flex items-center justify-center mb-2">
