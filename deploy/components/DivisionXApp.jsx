@@ -1595,17 +1595,26 @@ function PageWithdrawal({ machines, stockOut, stockIn, stockBalance, onAddStockO
   const selectedSku = skus.find(s => s.sku_id === form.sku_id)
   const availBoxes  = selectedSku ? Math.floor(available / selectedSku.packs_per_box) : 0
 
-  // ── Lot options สำหรับ SKU ที่เลือก (filter ทั้ง sku_id + lot_number) ──
-  const skuLots = form.sku_id ? stockIn
-    .filter(r => r.sku_id === form.sku_id && r.lot_number)
-    .map(r => {
+  // ── Lot options สำหรับ SKU ที่เลือก (group by lot_number เพื่อไม่ให้ซ้ำ) ──
+  const skuLots = (() => {
+    if (!form.sku_id) return []
+    const lotMap = {}
+    stockIn
+      .filter(r => r.sku_id === form.sku_id && r.lot_number)
+      .forEach(r => {
+        if (!lotMap[r.lot_number]) {
+          lotMap[r.lot_number] = { ...r, quantity_packs: 0, total_cost: 0 }
+        }
+        lotMap[r.lot_number].quantity_packs += r.quantity_packs || 0
+        lotMap[r.lot_number].total_cost += parseFloat(r.total_cost) || 0
+      })
+    return Object.values(lotMap).map(r => {
       const withdrawn = stockOut
         .filter(so => so.lot_number === r.lot_number && so.sku_id === r.sku_id)
         .reduce((a, so) => a + (so.quantity_packs || 0), 0)
       return { ...r, lotBalance: r.quantity_packs - withdrawn }
-    })
-    .sort((a, b) => new Date(a.purchased_at) - new Date(b.purchased_at)) // FIFO
-    : []
+    }).sort((a, b) => new Date(a.purchased_at) - new Date(b.purchased_at))
+  })()
 
   const availableLots = skuLots.filter(r => r.lotBalance > 0)
   const selectedLot   = skuLots.find(r => r.lot_number === form.lot_number)
