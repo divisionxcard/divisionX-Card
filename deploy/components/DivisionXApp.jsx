@@ -3030,18 +3030,19 @@ function PageMachineStockView({ machines, machineStock, skus, onRefresh }) {
       {/* ── รายงานเติมสินค้า (inline) ── */}
       {showRefill && machineStock.length > 0 && (
         <div className="bg-white rounded-2xl border-2 border-orange-200 shadow-sm p-5 print:border-0 print:shadow-none print:p-0" id="refill-report">
-          <div className="flex items-center justify-between mb-2">
-            <div>
-              <h2 className="text-lg font-bold text-orange-700">รายงานเติมสินค้า</h2>
-              <p className="text-xs text-gray-400">{new Date().toLocaleDateString("th-TH", {year:"numeric",month:"long",day:"numeric"})} เวลา {new Date().toLocaleTimeString("th-TH", {hour:"2-digit",minute:"2-digit"})} น.</p>
-            </div>
+          <div className="flex items-center justify-between mb-4 print:hidden">
+            <h2 className="text-lg font-bold text-orange-700">รายงานเติมสินค้า</h2>
             <button onClick={() => window.print()}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-orange-500 text-white text-sm font-medium hover:bg-orange-600 print:hidden">
+              className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-orange-500 text-white text-sm font-medium hover:bg-orange-600">
               Print / Save PDF
             </button>
           </div>
           {getRefillData().map(({ machId, mInfo, list, totalBox, totalPack }) => (
             <div key={machId} className="mb-6 refill-machine">
+              <div className="hidden print:block text-center mb-2">
+                <p className="font-bold text-sm">DivisionX Card — รายงานเติมสินค้า</p>
+                <p className="text-xs">{new Date().toLocaleDateString("th-TH", {year:"numeric",month:"long",day:"numeric"})} เวลา {new Date().toLocaleTimeString("th-TH", {hour:"2-digit",minute:"2-digit"})} น.</p>
+              </div>
               <h3 className="font-bold text-gray-800 text-sm border-b-2 border-gray-800 pb-1 mb-2">
                 {mInfo.name || machId} — {mInfo.location || ""}
               </h3>
