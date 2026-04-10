@@ -1494,7 +1494,7 @@ function SkuManager({ skus, onAddSku, onDeactivateSku, showToast }) {
 function PageWithdrawal({ machines, stockOut, stockIn, stockBalance, onAddStockOut, onDeleteStockOut, skus }) {
   const nowDate = () => new Date().toISOString().slice(0,10)
   const nowTime = () => new Date().toTimeString().slice(0,5)
-  const [form, setForm]   = useState({ sku_id:"OP 01", lot_number:"", machine_id:"", unit:"box", quantity:"1", note:"", date: nowDate(), time: nowTime() })
+  const [form, setForm]   = useState({ sku_id:"", lot_number:"", machine_id:"", unit:"box", quantity:"1", note:"", date: nowDate(), time: nowTime() })
   const [toast, setToast] = useState(null)
   const [saving, setSaving] = useState(false)
 
@@ -1548,6 +1548,7 @@ function PageWithdrawal({ machines, stockOut, stockIn, stockBalance, onAddStockO
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+    if (!form.sku_id)  { showToast("กรุณาเลือกสินค้า","error"); return }
     if (!withdrawQty || withdrawQty <= 0) { showToast("กรุณาระบุจำนวนที่ถูกต้อง","error"); return }
     if (!machineId)    { showToast("กรุณาเลือกตู้ปลายทาง","error"); return }
     if (overStock)     { showToast(`สต็อกไม่เพียงพอ: คงเหลือ ${available} ซอง`, "error"); return }
@@ -1567,7 +1568,7 @@ function PageWithdrawal({ machines, stockOut, stockIn, stockBalance, onAddStockO
           : `[${form.unit === "box" ? withdrawQty+"กล่อง" : withdrawQty+"ซอง"}]`,
       })
       showToast(`เบิกสำเร็จ: ${form.sku_id}${form.lot_number ? ` (${form.lot_number})` : ""} → ${machine?.name ?? machineId} ${fmt(withdrawPacks)} ซอง`)
-      setForm(f => ({...f, quantity:"1", note:""}))
+      setForm(f => ({...f, sku_id:"", lot_number:"", quantity:"1", note:""}))
     } catch (err) {
       showToast("เกิดข้อผิดพลาด: " + err.message, "error")
     } finally {
@@ -1597,6 +1598,7 @@ function PageWithdrawal({ machines, stockOut, stockIn, stockBalance, onAddStockO
               <label className="block text-xs text-gray-500 mb-1">สินค้า (SKU)</label>
               <select value={form.sku_id} onChange={e => setForm({...form, sku_id:e.target.value, lot_number:""})}
                 className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-200">
+                <option value="" disabled>— เลือกสินค้า —</option>
                 {skus.map(s => <option key={s.sku_id} value={s.sku_id}>{s.sku_id} — {s.name}</option>)}
               </select>
             </div>
