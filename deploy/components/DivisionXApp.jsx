@@ -2889,6 +2889,7 @@ function PageMachineStockView({ machines, machineStock, skus, onRefresh }) {
   const [sortBy, setSortBy] = useState("slot") // slot, sku, remain
   const [syncing, setSyncing] = useState(false)
   const [syncMsg, setSyncMsg] = useState(null)
+  const [showSkuDetail, setShowSkuDetail] = useState(false)
 
   const triggerStockSync = async () => {
     try {
@@ -3016,18 +3017,55 @@ function PageMachineStockView({ machines, machineStock, skus, onRefresh }) {
             const grandCapacity = allSkuList.reduce((a, r) => a + r.capacity, 0)
             const allMachineIds = Object.keys(grouped).sort()
 
+            // คำนวณยอดกล่อง+ซองต่อตู้
+            const machTotals = {}
+            allMachineIds.forEach(id => {
+              const packs = Object.values(allSkuMap).reduce((a, r) => a + (r.perMachine[id] || 0), 0)
+              machTotals[id] = { packs }
+            })
+            // รวม grand ทั้งกล่องและซอง (ใช้ ppb เฉลี่ย 24 สำหรับ grand total หรือคำนวณจาก SKU)
+            const grandBoxesCalc = allSkuList.reduce((a, r) => {
+              const ppb = (skus.find(s => s.sku_id === r.sku_id)?.packs_per_box) || 24
+              return a + Math.floor(r.remain / ppb)
+            }, 0)
+            const grandLoosePacks = allSkuList.reduce((a, r) => {
+              const ppb = (skus.find(s => s.sku_id === r.sku_id)?.packs_per_box) || 24
+              return a + (r.remain % ppb)
+            }, 0)
+
             return (
               <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-                <div className="p-5 border-b border-gray-100 flex items-center justify-between">
-                  <div>
+                {/* Header — สรุปยอดรวม + ปุ่มแสดงรายละเอียด */}
+                <button onClick={() => setShowSkuDetail(v => !v)}
+                  className="w-full p-5 flex items-center justify-between hover:bg-gray-50 transition-colors">
+                  <div className="text-left">
                     <h2 className="font-semibold text-gray-700">สรุปยอดรวมทุกตู้</h2>
                     <p className="text-xs text-gray-400">{allSkuList.length} SKU · {fmt(grandRemain)} ซอง · {allMachineIds.length} ตู้</p>
                   </div>
-                  <div className="text-right">
-                    <p className="text-lg font-bold text-blue-600">{fmt(grandRemain)} <span className="text-sm font-normal text-gray-400">ซอง</span></p>
+                  <div className="flex items-center gap-4">
+                    {/* ยอดรวมแต่ละตู้ */}
+                    <div className="hidden sm:flex items-center gap-3">
+                      {allMachineIds.map((id, i) => (
+                        <div key={id} className="text-center">
+                          <p className="text-xs text-gray-400">{machineNames[id]?.name || id}</p>
+                          <div className="flex gap-1 justify-center mt-0.5">
+                            <span className="text-xs font-bold text-red-500 bg-red-50 px-1.5 py-0.5 rounded">{fmt(machTotals[id].packs)} กล่อง</span>
+                            <span className="text-xs font-bold text-blue-500 bg-blue-50 px-1.5 py-0.5 rounded">{fmt(machTotals[id].packs)} ซอง</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    {/* ยอดรวมทั้งหมด */}
+                    <div className="text-right border-l border-gray-200 pl-4">
+                      <p className="text-lg font-bold text-red-600">{fmt(grandRemain)} <span className="text-xs font-normal text-gray-400">ซอง</span></p>
+                    </div>
+                    {showSkuDetail ? <ChevronUp size={16} className="text-gray-400"/> : <ChevronDown size={16} className="text-gray-400"/>}
                   </div>
-                </div>
-                <div className="overflow-x-auto">
+                </button>
+
+                {/* ตาราง SKU — ซ่อน/แสดง */}
+                {showSkuDetail && (
+                <div className="border-t border-gray-100 overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="bg-gray-50">
@@ -3036,8 +3074,8 @@ function PageMachineStockView({ machines, machineStock, skus, onRefresh }) {
                         {allMachineIds.map(id => (
                           <th key={id} className="text-center py-2 px-2 text-xs text-gray-400 font-medium">{machineNames[id]?.name || id}</th>
                         ))}
-                        <th className="text-right py-2 px-2 text-xs text-blue-500 font-medium">รวม (ซอง)</th>
-                        <th className="text-right py-2 px-4 text-xs text-purple-500 font-medium">รวม (กล่อง)</th>
+                        <th className="text-right py-2 px-2 text-xs text-red-500 font-medium">รวม (ซอง)</th>
+                        <th className="text-right py-2 px-4 text-xs text-blue-500 font-medium">รวม (กล่อง)</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -3058,8 +3096,8 @@ function PageMachineStockView({ machines, machineStock, skus, onRefresh }) {
                                 </td>
                               )
                             })}
-                            <td className="py-2 px-2 text-right font-bold text-blue-600">{fmt(r.remain)}</td>
-                            <td className="py-2 px-4 text-right text-purple-600 text-xs">
+                            <td className="py-2 px-2 text-right font-bold text-red-600">{fmt(r.remain)}</td>
+                            <td className="py-2 px-4 text-right text-blue-600 text-xs font-medium">
                               {boxes > 0 ? `${fmt(boxes)} กล่อง` : ""}{boxes > 0 && loosePacks > 0 ? " " : ""}{loosePacks > 0 ? `${loosePacks} ซอง` : boxes === 0 ? "0" : ""}
                             </td>
                           </tr>
@@ -3068,17 +3106,18 @@ function PageMachineStockView({ machines, machineStock, skus, onRefresh }) {
                     </tbody>
                     <tfoot>
                       <tr className="bg-gray-50 font-semibold">
-                        <td colSpan={2} className="py-2 px-4 text-xs text-gray-500">รวมทั้งหมด</td>
+                        <td colSpan={2} className="py-2.5 px-4 text-xs text-gray-500">รวมทั้งหมด</td>
                         {allMachineIds.map(id => {
-                          const machTotal = Object.values(allSkuMap).reduce((a, r) => a + (r.perMachine[id] || 0), 0)
-                          return <td key={id} className="py-2 px-2 text-center text-xs font-bold text-gray-700">{fmt(machTotal)}</td>
+                          const machPacks = machTotals[id].packs
+                          return <td key={id} className="py-2.5 px-2 text-center text-xs font-bold text-gray-700">{fmt(machPacks)}</td>
                         })}
-                        <td className="py-2 px-2 text-right text-blue-700 text-xs">{fmt(grandRemain)} ซอง</td>
-                        <td className="py-2 px-4 text-right text-purple-700 text-xs">{fmt(grandCapacity)} ความจุ</td>
+                        <td className="py-2.5 px-2 text-right text-red-700 font-bold text-sm">{fmt(grandRemain)}</td>
+                        <td className="py-2.5 px-4 text-right text-blue-700 text-xs font-bold">{fmt(grandBoxesCalc)} กล่อง{grandLoosePacks > 0 ? ` ${grandLoosePacks} ซอง` : ""}</td>
                       </tr>
                     </tfoot>
                   </table>
                 </div>
+                )}
               </div>
             )
           })()}
