@@ -3050,7 +3050,7 @@ function PageMachineStockView({ machines, machineStock, skus, onRefresh }) {
                       <th className="border border-gray-300 px-2 py-1.5 text-left">SKU</th>
                       <th className="border border-gray-300 px-2 py-1.5 text-left">สินค้า</th>
                       <th className="border border-gray-300 px-2 py-1.5 text-center">ประเภท</th>
-                      <th className="border border-gray-300 px-2 py-1.5 text-left">ช่องที่ต้องเติม</th>
+                      <th className="border border-gray-300 px-2 py-1.5 text-center">ช่อง</th>
                       <th className="border border-gray-300 px-2 py-1.5 text-right">คงเหลือ</th>
                       <th className="border border-gray-300 px-2 py-1.5 text-right">ความจุ</th>
                       <th className="border border-gray-300 px-2 py-1.5 text-right font-bold text-red-600">ต้องเติม</th>
@@ -3064,9 +3064,7 @@ function PageMachineStockView({ machines, machineStock, skus, onRefresh }) {
                           <td className="border border-gray-300 px-2 py-1 font-mono font-bold">{r.sku_id}</td>
                           <td className="border border-gray-300 px-2 py-1">{r.name}</td>
                           <td className="border border-gray-300 px-2 py-1 text-center">{unit}</td>
-                          <td className="border border-gray-300 px-2 py-1 text-left font-mono text-xs">
-                            {r.slotNums.length > 0 ? r.slotNums.join(", ") : <span className="text-green-500">-</span>}
-                          </td>
+                          <td className="border border-gray-300 px-2 py-1 text-center">{r.slots}</td>
                           <td className="border border-gray-300 px-2 py-1 text-right">{r.remain}</td>
                           <td className="border border-gray-300 px-2 py-1 text-right">{r.capacity}</td>
                           <td className={`border border-gray-300 px-2 py-1 text-right font-bold ${r.refill > 0 ? "text-red-600" : "text-green-600"}`}>
