@@ -2800,16 +2800,35 @@ function PageMachineHistory({ machine, stockOut, skus }) {
 // ─────────────────────────────────────────────
 // PAGE: MACHINE STOCK (สต็อกหน้าตู้ จาก VMS)
 // ─────────────────────────────────────────────
-function PageMachineStockView({ machines, machineStock, skus }) {
+function PageMachineStockView({ machines, machineStock, skus, onRefresh }) {
   const [selectedMachine, setSelectedMachine] = useState("all")
   const [sortBy, setSortBy] = useState("slot") // slot, sku, remain
+  const [syncing, setSyncing] = useState(false)
+  const [syncMsg, setSyncMsg] = useState(null)
+
+  const triggerStockSync = async () => {
+    try {
+      setSyncing(true)
+      setSyncMsg(null)
+      const res = await fetch("/api/stock-sync", { method: "POST" })
+      const data = await res.json()
+      if (data.success) {
+        setSyncMsg({ type:"success", msg:"กำลังดึงข้อมูลสต็อกหน้าตู้... รอสักครู่แล้วกด Refresh" })
+        setTimeout(() => onRefresh?.(), 30000)
+      } else {
+        setSyncMsg({ type:"error", msg: data.error || "เกิดข้อผิดพลาด" })
+      }
+    } catch (err) { setSyncMsg({ type:"error", msg: err.message }) }
+    finally { setSyncing(false) }
+  }
 
   // Map VMS machine_id → machine name
-  const machineNames = {
-    chukes01: machines.find(m => m.machine_id === "chukes01") || { name: "chukes01", location: "" },
-    chukes02: machines.find(m => m.machine_id === "chukes02") || { name: "chukes02", location: "" },
-    chukes04: machines.find(m => m.machine_id === "chukes04") || { name: "chukes04", location: "" },
-  }
+  const machineNames = {}
+  machines.forEach(m => { machineNames[m.machine_id] = m })
+  // fallback สำหรับ machine_id ที่ไม่ได้อยู่ในตาราง machines
+  ;["chukes01","chukes02","chukes03","chukes04"].forEach(id => {
+    if (!machineNames[id]) machineNames[id] = { name: id, location: "" }
+  })
 
   // จัดกลุ่มตามตู้
   const grouped = {}
@@ -2853,7 +2872,12 @@ function PageMachineStockView({ machines, machineStock, skus }) {
             {lastSync && <span className="ml-2">· อัปเดตล่าสุด: {lastSync.slice(0,10)} {lastSync.slice(11,16)}</span>}
           </p>
         </div>
-        <div className="flex gap-2 flex-wrap">
+        <div className="flex gap-2 flex-wrap items-center">
+          <button onClick={triggerStockSync} disabled={syncing}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 disabled:opacity-50 transition-all">
+            <RefreshCw size={14} className={syncing ? "animate-spin" : ""}/>
+            {syncing ? "กำลังดึง..." : "ดึงข้อมูล VMS"}
+          </button>
           <select value={selectedMachine} onChange={e => setSelectedMachine(e.target.value)}
             className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none">
             <option value="all">ทุกตู้</option>
@@ -2872,6 +2896,14 @@ function PageMachineStockView({ machines, machineStock, skus }) {
         </div>
       </div>
 
+      {syncMsg && (
+        <div className={`flex items-center gap-2 px-4 py-3 rounded-xl text-sm ${syncMsg.type==="success"?"bg-green-50 text-green-700 border border-green-200":"bg-red-50 text-red-700 border border-red-200"}`}>
+          {syncMsg.type==="success" ? <CheckCircle size={16}/> : <AlertTriangle size={16}/>}
+          {syncMsg.msg}
+          {syncMsg.type==="success" && <button onClick={() => { onRefresh?.(); setSyncMsg(null) }} className="ml-auto text-xs bg-green-600 text-white px-3 py-1 rounded-lg hover:bg-green-700">Refresh</button>}
+        </div>
+      )}
+
       {machineStock.length === 0 ? (
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-10 text-center">
           <Monitor size={40} className="text-gray-300 mx-auto mb-3"/>
@@ -2884,6 +2916,89 @@ function PageMachineStockView({ machines, machineStock, skus }) {
         </div>
       ) : (
         <div className="space-y-6">
+          {/* ── สรุปยอดรวม SKU ทุกตู้ ── */}
+          {selectedMachine === "all" && (() => {
+            const allSkuMap = {}
+            machineStock.filter(s => s.product_name && s.is_occupied).forEach(s => {
+              const skuId = s.sku_id || s.product_name || "ไม่ระบุ"
+              if (!allSkuMap[skuId]) allSkuMap[skuId] = { sku_id: skuId, product_name: s.product_name, remain: 0, capacity: 0, perMachine: {} }
+              allSkuMap[skuId].remain += s.remain || 0
+              allSkuMap[skuId].capacity += s.max_capacity || 0
+              if (!allSkuMap[skuId].perMachine[s.machine_id]) allSkuMap[skuId].perMachine[s.machine_id] = 0
+              allSkuMap[skuId].perMachine[s.machine_id] += s.remain || 0
+            })
+            const allSkuList = Object.values(allSkuMap).sort((a, b) => b.remain - a.remain)
+            const grandRemain = allSkuList.reduce((a, r) => a + r.remain, 0)
+            const grandCapacity = allSkuList.reduce((a, r) => a + r.capacity, 0)
+            const allMachineIds = Object.keys(grouped).sort()
+
+            return (
+              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                <div className="p-5 border-b border-gray-100 flex items-center justify-between">
+                  <div>
+                    <h2 className="font-semibold text-gray-700">สรุปยอดรวมทุกตู้</h2>
+                    <p className="text-xs text-gray-400">{allSkuList.length} SKU · {fmt(grandRemain)} ซอง · {allMachineIds.length} ตู้</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-lg font-bold text-blue-600">{fmt(grandRemain)} <span className="text-sm font-normal text-gray-400">ซอง</span></p>
+                  </div>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="bg-gray-50">
+                        <th className="text-left py-2 px-4 text-xs text-gray-400 font-medium">SKU</th>
+                        <th className="text-left py-2 px-2 text-xs text-gray-400 font-medium">สินค้า</th>
+                        {allMachineIds.map(id => (
+                          <th key={id} className="text-center py-2 px-2 text-xs text-gray-400 font-medium">{machineNames[id]?.name || id}</th>
+                        ))}
+                        <th className="text-right py-2 px-2 text-xs text-blue-500 font-medium">รวม (ซอง)</th>
+                        <th className="text-right py-2 px-4 text-xs text-purple-500 font-medium">รวม (กล่อง)</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {allSkuList.map(r => {
+                        const sku = skus.find(s => s.sku_id === r.sku_id)
+                        const ppb = sku?.packs_per_box || 24
+                        const boxes = Math.floor(r.remain / ppb)
+                        const loosePacks = r.remain % ppb
+                        return (
+                          <tr key={r.sku_id} className="border-b border-gray-50 hover:bg-gray-50">
+                            <td className="py-2 px-4 font-mono text-xs font-bold text-gray-700">{r.sku_id}</td>
+                            <td className="py-2 px-2 text-xs text-gray-500 truncate max-w-[120px]">{r.product_name}</td>
+                            {allMachineIds.map(id => {
+                              const val = r.perMachine[id] || 0
+                              return (
+                                <td key={id} className={`py-2 px-2 text-center text-xs font-medium ${val === 0 ? "text-gray-300" : val < 5 ? "text-amber-600" : "text-gray-700"}`}>
+                                  {val > 0 ? fmt(val) : "-"}
+                                </td>
+                              )
+                            })}
+                            <td className="py-2 px-2 text-right font-bold text-blue-600">{fmt(r.remain)}</td>
+                            <td className="py-2 px-4 text-right text-purple-600 text-xs">
+                              {boxes > 0 ? `${fmt(boxes)} กล่อง` : ""}{boxes > 0 && loosePacks > 0 ? " " : ""}{loosePacks > 0 ? `${loosePacks} ซอง` : boxes === 0 ? "0" : ""}
+                            </td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                    <tfoot>
+                      <tr className="bg-gray-50 font-semibold">
+                        <td colSpan={2} className="py-2 px-4 text-xs text-gray-500">รวมทั้งหมด</td>
+                        {allMachineIds.map(id => {
+                          const machTotal = Object.values(allSkuMap).reduce((a, r) => a + (r.perMachine[id] || 0), 0)
+                          return <td key={id} className="py-2 px-2 text-center text-xs font-bold text-gray-700">{fmt(machTotal)}</td>
+                        })}
+                        <td className="py-2 px-2 text-right text-blue-700 text-xs">{fmt(grandRemain)} ซอง</td>
+                        <td className="py-2 px-4 text-right text-purple-700 text-xs">{fmt(grandCapacity)} ความจุ</td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+              </div>
+            )
+          })()}
+
           {machineIds.map((machId, mi) => {
             const slots = grouped[machId] || []
             const mInfo = machineNames[machId] || { name: machId, location: "" }
@@ -2928,7 +3043,8 @@ function PageMachineStockView({ machines, machineStock, skus }) {
                             <th className="text-left py-2 text-xs text-gray-400 font-medium">SKU</th>
                             <th className="text-left py-2 text-xs text-gray-400 font-medium">สินค้า</th>
                             <th className="text-center py-2 text-xs text-gray-400 font-medium">ช่อง</th>
-                            <th className="text-right py-2 text-xs text-gray-400 font-medium">คงเหลือ</th>
+                            <th className="text-right py-2 text-xs text-gray-400 font-medium">ซอง</th>
+                            <th className="text-right py-2 text-xs text-purple-400 font-medium">กล่อง</th>
                             <th className="text-right py-2 text-xs text-gray-400 font-medium">ความจุ</th>
                             <th className="py-2 px-2 text-xs text-gray-400 font-medium w-24">สัดส่วน</th>
                           </tr>
@@ -2944,6 +3060,9 @@ function PageMachineStockView({ machines, machineStock, skus }) {
                                 <td className="py-2 text-center text-xs text-gray-500">{r.slots}</td>
                                 <td className={`py-2 text-right font-bold text-sm ${r.remain === 0 ? "text-red-500" : r.remain < 5 ? "text-amber-600" : "text-green-600"}`}>
                                   {fmt(r.remain)}
+                                </td>
+                                <td className="py-2 text-right text-xs text-purple-600 font-medium">
+                                  {(() => { const ppb = (skus.find(s=>s.sku_id===r.sku_id)?.packs_per_box)||24; const b=Math.floor(r.remain/ppb); const p=r.remain%ppb; return b>0?`${b}${p>0?`+${p}ซอง`:""}`:r.remain>0?`${r.remain}ซอง`:"-" })()}
                                 </td>
                                 <td className="py-2 text-right text-xs text-gray-400">{fmt(r.capacity)}</td>
                                 <td className="py-2 px-2">
@@ -3367,7 +3486,7 @@ export default function DivisionXApp() {
           {page === "dashboard"  && <PageDashboard stockIn={stockIn} stockOut={stockOut} stockBalance={stockBalance} skus={skus}/>}
           {page === "stock"      && <PageStock     stockIn={stockIn} stockBalance={stockBalance} skus={skus} onAddStockIn={addStockIn} onUpdateStockIn={updateStockIn} onDeleteStockIn={deleteStockIn} onAddSku={addSku} onDeactivateSku={deactivateSku}/>}
           {page === "withdrawal" && <PageWithdrawal machines={machines} stockOut={stockOut} stockIn={stockIn} stockBalance={stockBalance} skus={skus} onAddStockOut={addStockOut} onDeleteStockOut={deleteStockOut}/>}
-          {page === "machstock"  && <PageMachineStockView machines={machines} machineStock={machineStock} skus={skus}/>}
+          {page === "machstock"  && <PageMachineStockView machines={machines} machineStock={machineStock} skus={skus} onRefresh={loadAll}/>}
           {page === "sales"      && <PageSales     machines={machines} sales={sales} skus={skus} claims={claims} onRefresh={loadAll}/>}
           {page === "claims"     && <PageClaims    machines={machines} skus={skus} claims={claims} onAddClaim={addClaim} onConfirmClaim={confirmClaim} onDeleteClaim={deleteClaim}/>}
           {page === "analytics"  && <PageAnalytics sales={sales} skus={skus}/>}
