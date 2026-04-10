@@ -202,6 +202,35 @@ export async function deactivateSku(skuId) {
   if (error) throw error
 }
 
+// ── Claims (เคลม/คืนเงิน) ────────────────────────────────────
+export async function getClaims() {
+  const { data, error } = await supabase
+    .from("claims")
+    .select("*")
+    .order("claimed_at", { ascending: false })
+    .limit(200)
+  if (error) throw error
+  return data
+}
+
+export async function addClaim(record) {
+  const { data, error } = await supabase
+    .from("claims")
+    .insert([record])
+    .select()
+    .single()
+  if (error) throw error
+  return data
+}
+
+export async function deleteClaim(id) {
+  const { error } = await supabase
+    .from("claims")
+    .delete()
+    .eq("id", id)
+  if (error) throw error
+}
+
 // ── Machine Stock (สต็อกหน้าตู้ จาก VMS) ─────────────────────
 export async function getMachineStock() {
   const { data, error } = await supabase

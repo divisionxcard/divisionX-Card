@@ -22,6 +22,7 @@ import {
   getSkus, addSku as dbAddSku, deactivateSku as dbDeactivateSku, updateSkuAvgCost,
   signIn as authSignIn, signOut as authSignOut, getProfile,
   getMachineStock,
+  getClaims, addClaim as dbAddClaim, deleteClaim as dbDeleteClaim,
 } from "../lib/supabase"
 
 // ─────────────────────────────────────────────
@@ -2022,7 +2023,7 @@ function SalesSkuByMachine({ sales, machines, skus }) {
 // ─────────────────────────────────────────────
 // PAGE 4: SALES
 // ─────────────────────────────────────────────
-function PageSales({ machines, sales, skus, onRefresh }) {
+function PageSales({ machines, sales, skus, claims, onRefresh }) {
   const [viewMode, setViewMode]   = useState("daily")
   const [machineSel, setMachineSel] = useState("all")
   const [syncing, setSyncing]     = useState(false)
@@ -2075,12 +2076,13 @@ function PageSales({ machines, sales, skus, onRefresh }) {
     .sort((a, b) => b[1].rev - a[1].rev).slice(0, 8)
     .map(([id, v]) => ({ sku_id: id, ...v }))
 
-  // Profit estimate
+  // Profit estimate (หักยอดคืนเงินจากเคลม)
+  const totalRefund = (claims || []).reduce((a, c) => a + (parseFloat(c.refund_amount) || 0), 0)
   const profit = filtered.reduce((a, r) => {
     const s = skus.find(sk => sk.sku_id === r.sku_id)
     const cost = (s?.avg_cost || s?.cost_price || 0) * (r.quantity_sold || 0)
     return a + (r.revenue || 0) - cost
-  }, 0)
+  }, 0) - totalRefund
 
   return (
     <div className="space-y-6">
@@ -2199,7 +2201,241 @@ function PageSales({ machines, sales, skus, onRefresh }) {
 }
 
 // ─────────────────────────────────────────────
-// PAGE 5: ANALYTICS
+// PAGE 5: CLAIMS (เคลม/คืนเงิน)
+// ─────────────────────────────────────────────
+function PageClaims({ machines, skus, claims, onAddClaim, onDeleteClaim }) {
+  const [form, setForm] = useState({
+    machine_id:"", sku_id:"", quantity:"1", refund_amount:"",
+    product_status:"returned", reason:"สินค้าไม่ตก", note:"",
+    claimed_at: new Date().toISOString().slice(0,10),
+  })
+  const [saving, setSaving] = useState(false)
+  const [toast, setToast] = useState(null)
+  const [deleteId, setDeleteId] = useState(null)
+
+  const showToast = (msg, type="success") => { setToast({msg,type}); setTimeout(() => setToast(null), 3000) }
+
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    if (!form.machine_id) { showToast("กรุณาเลือกตู้","error"); return }
+    if (!form.sku_id)     { showToast("กรุณาเลือกสินค้า","error"); return }
+    if (!form.refund_amount || parseFloat(form.refund_amount) <= 0) { showToast("กรุณาระบุยอดคืนเงิน","error"); return }
+    if (!form.claimed_at) { showToast("กรุณาระบุวันที่เคลม","error"); return }
+    try {
+      setSaving(true)
+      await onAddClaim({
+        machine_id:     form.machine_id,
+        sku_id:         form.sku_id,
+        quantity:       parseInt(form.quantity) || 1,
+        refund_amount:  parseFloat(form.refund_amount) || 0,
+        product_status: form.product_status,
+        reason:         form.reason || null,
+        note:           form.note || null,
+        claimed_at:     form.claimed_at,
+      })
+      showToast(`บันทึกเคลมสำเร็จ: ${form.sku_id} → ${form.product_status === "returned" ? "คืนสต็อก" : "ตัดชำรุด"}`)
+      setForm(f => ({...f, machine_id:"", sku_id:"", quantity:"1", refund_amount:"", note:"", claimed_at: new Date().toISOString().slice(0,10) }))
+    } catch (err) {
+      showToast("เกิดข้อผิดพลาด: " + err.message, "error")
+    } finally { setSaving(false) }
+  }
+
+  const handleDelete = async (id) => {
+    try {
+      await onDeleteClaim(id)
+      setDeleteId(null)
+      showToast("ลบรายการเคลมสำเร็จ")
+    } catch (err) { showToast("ลบไม่สำเร็จ: " + err.message, "error") }
+  }
+
+  // สรุป
+  const totalRefund  = claims.reduce((a, r) => a + (parseFloat(r.refund_amount) || 0), 0)
+  const totalReturned = claims.filter(r => r.product_status === "returned").length
+  const totalDamaged  = claims.filter(r => r.product_status === "damaged").length
+
+  return (
+    <div className="space-y-6">
+      <h1 className="text-2xl font-bold text-gray-800">เคลม / คืนเงิน</h1>
+
+      {toast && (
+        <div className={`flex items-center gap-2 px-4 py-3 rounded-xl text-sm ${toast.type==="success"?"bg-green-50 text-green-700 border border-green-200":"bg-red-50 text-red-700 border border-red-200"}`}>
+          {toast.type==="success" ? <CheckCircle size={16}/> : <AlertTriangle size={16}/>}
+          {toast.msg}
+        </div>
+      )}
+
+      {/* KPI */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="bg-white rounded-2xl border shadow-sm p-4">
+          <p className="text-xs text-gray-400">เคลมทั้งหมด</p>
+          <p className="text-xl font-bold text-red-600">{claims.length} รายการ</p>
+        </div>
+        <div className="bg-white rounded-2xl border shadow-sm p-4">
+          <p className="text-xs text-gray-400">ยอดคืนเงินรวม</p>
+          <p className="text-xl font-bold text-red-600">{fmtB(totalRefund)}</p>
+        </div>
+        <div className="bg-white rounded-2xl border shadow-sm p-4">
+          <p className="text-xs text-gray-400">สถานะสินค้า</p>
+          <p className="text-sm font-medium text-gray-700 mt-1">
+            <span className="text-green-600">{totalReturned} คืนสต็อก</span>
+            {" · "}
+            <span className="text-red-500">{totalDamaged} ชำรุด</span>
+          </p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* ฟอร์มบันทึกเคลม */}
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+          <h2 className="font-semibold text-gray-700 mb-4">บันทึกเคลม</h2>
+          <form onSubmit={handleSubmit} className="space-y-4">
+
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">วันที่เคลม</label>
+              <input type="date" value={form.claimed_at} onChange={e => setForm({...form, claimed_at:e.target.value})}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-200"/>
+            </div>
+
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">ตู้ที่เกิดปัญหา</label>
+              <select value={form.machine_id} onChange={e => setForm({...form, machine_id:e.target.value})}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-200">
+                <option value="" disabled>— เลือกตู้ —</option>
+                {machines.map(m => <option key={m.machine_id} value={m.machine_id}>{m.name} ({m.machine_id})</option>)}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">สินค้า (SKU)</label>
+              <select value={form.sku_id} onChange={e => setForm({...form, sku_id:e.target.value})}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-200">
+                <option value="" disabled>— เลือกสินค้า —</option>
+                {skus.map(s => <option key={s.sku_id} value={s.sku_id}>{s.sku_id} — {s.name}</option>)}
+              </select>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">จำนวน (ซอง)</label>
+                <input type="number" min="1" value={form.quantity} onChange={e => setForm({...form, quantity:e.target.value})}
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-200"/>
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">ยอดคืนเงิน (฿)</label>
+                <input type="number" min="0" step="0.01" value={form.refund_amount} onChange={e => setForm({...form, refund_amount:e.target.value})}
+                  placeholder="0.00"
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-200"/>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">สาเหตุ</label>
+              <select value={form.reason} onChange={e => setForm({...form, reason:e.target.value})}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-200">
+                <option value="สินค้าไม่ตก">สินค้าไม่ตก</option>
+                <option value="ตกผิดช่อง">ตกผิดช่อง</option>
+                <option value="เครื่องค้าง">เครื่องค้าง</option>
+                <option value="สินค้าชำรุด">สินค้าชำรุด</option>
+                <option value="อื่นๆ">อื่นๆ</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">สถานะสินค้า</label>
+              <div className="grid grid-cols-2 gap-2">
+                {[{v:"returned",l:"คืนสต็อก",desc:"สภาพดี นำกลับมาขายได้",color:"green"},{v:"damaged",l:"ชำรุด",desc:"เสียหาย ขายต่อไม่ได้",color:"red"}].map(opt => (
+                  <button key={opt.v} type="button" onClick={() => setForm({...form, product_status:opt.v})}
+                    className={`p-3 rounded-xl border-2 text-left transition-all ${form.product_status===opt.v ? `border-${opt.color}-400 bg-${opt.color}-50` : "border-gray-200 hover:border-gray-300"}`}>
+                    <p className={`text-sm font-semibold ${form.product_status===opt.v ? `text-${opt.color}-700` : "text-gray-700"}`}>{opt.l}</p>
+                    <p className="text-xs text-gray-400">{opt.desc}</p>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">หมายเหตุ</label>
+              <input type="text" value={form.note} onChange={e => setForm({...form, note:e.target.value})}
+                placeholder="รายละเอียดเพิ่มเติม (ไม่บังคับ)"
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-200"/>
+            </div>
+
+            <button type="submit" disabled={saving}
+              className="w-full py-2.5 rounded-xl bg-red-600 text-white font-semibold text-sm hover:bg-red-700 disabled:opacity-50 transition-all">
+              {saving ? "กำลังบันทึก..." : "บันทึกเคลม"}
+            </button>
+          </form>
+        </div>
+
+        {/* ประวัติเคลม */}
+        <div className="lg:col-span-2 bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+          <h2 className="font-semibold text-gray-700 mb-4">ประวัติเคลม ({claims.length} รายการ)</h2>
+          {claims.length === 0 ? (
+            <p className="text-sm text-gray-400 text-center py-10">ยังไม่มีรายการเคลม</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-gray-100">
+                    <th className="text-left py-2 text-xs text-gray-400">วันที่</th>
+                    <th className="text-left py-2 text-xs text-gray-400">ตู้</th>
+                    <th className="text-left py-2 text-xs text-gray-400">SKU</th>
+                    <th className="text-right py-2 text-xs text-gray-400">จำนวน</th>
+                    <th className="text-right py-2 text-xs text-gray-400">คืนเงิน</th>
+                    <th className="text-center py-2 text-xs text-gray-400">สาเหตุ</th>
+                    <th className="text-center py-2 text-xs text-gray-400">สถานะ</th>
+                    <th className="py-2 text-xs text-gray-400"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {claims.map(c => {
+                    const m = machines.find(m => m.machine_id === c.machine_id)
+                    return (
+                      <tr key={c.id} className="border-b border-gray-50 hover:bg-gray-50">
+                        <td className="py-2.5 text-xs text-gray-600">{c.claimed_at}</td>
+                        <td className="py-2.5 text-xs text-gray-700 font-medium">{m?.name || c.machine_id}</td>
+                        <td className="py-2.5">
+                          <span className="font-mono text-xs font-bold text-gray-700">{c.sku_id}</span>
+                        </td>
+                        <td className="py-2.5 text-right text-xs text-gray-700">{c.quantity} ซอง</td>
+                        <td className="py-2.5 text-right text-xs font-semibold text-red-600">{fmtB(c.refund_amount)}</td>
+                        <td className="py-2.5 text-center">
+                          <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">{c.reason}</span>
+                        </td>
+                        <td className="py-2.5 text-center">
+                          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                            c.product_status === "returned"
+                              ? "bg-green-100 text-green-700"
+                              : "bg-red-100 text-red-700"
+                          }`}>
+                            {c.product_status === "returned" ? "คืนสต็อก" : "ชำรุด"}
+                          </span>
+                        </td>
+                        <td className="py-2.5 text-right">
+                          {deleteId === c.id ? (
+                            <div className="flex gap-1 justify-end">
+                              <button onClick={() => handleDelete(c.id)} className="text-xs text-red-600 font-medium">ยืนยัน</button>
+                              <button onClick={() => setDeleteId(null)} className="text-xs text-gray-400">ยกเลิก</button>
+                            </div>
+                          ) : (
+                            <button onClick={() => setDeleteId(c.id)} className="text-gray-300 hover:text-red-400"><Trash2 size={14}/></button>
+                          )}
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─────────────────────────────────────────────
+// PAGE 6: ANALYTICS
 // ─────────────────────────────────────────────
 function PageAnalytics({ sales, skus }) {
   const [metric, setMetric] = useState("revenue")
@@ -2729,6 +2965,7 @@ const NAV_BASE = [
   { id:"withdrawal", label:"เบิกเติมตู้",   icon:ArrowUpCircle },
   { id:"machstock",  label:"สต็อกหน้าตู้",  icon:Monitor       },
   { id:"sales",      label:"ยอดขาย",       icon:ShoppingCart  },
+  { id:"claims",     label:"เคลม/คืนเงิน", icon:AlertTriangle },
   { id:"analytics",  label:"วิเคราะห์ SKU", icon:BarChart2     },
 ]
 const NAV_ADMIN = { id:"users", label:"จัดการผู้ใช้", icon:Users }
@@ -2770,6 +3007,7 @@ export default function DivisionXApp() {
   const [stockBalance,  setStockBalance]  = useState([])
   const [sales,         setSales]         = useState([])
   const [machineStock,  setMachineStock]  = useState([])
+  const [claims,        setClaims]        = useState([])
   const [loading,       setLoading]       = useState(true)
   const [dataError,     setDataError]     = useState(null)
 
@@ -2778,7 +3016,7 @@ export default function DivisionXApp() {
     try {
       setLoading(true)
       setDataError(null)
-      const [machData, skuData, siData, soData, sbData, salesData, msData] = await Promise.all([
+      const [machData, skuData, siData, soData, sbData, salesData, msData, claimsData] = await Promise.all([
         getMachines(),
         getSkus(),
         getStockIn(),
@@ -2786,6 +3024,7 @@ export default function DivisionXApp() {
         getStockBalance(),
         getSalesByMachine(30),
         getMachineStock(),
+        getClaims(),
       ])
       setMachines(machData)
       if (skuData?.length) setSkus(skuData)
@@ -2793,6 +3032,7 @@ export default function DivisionXApp() {
       setStockOut(soData)
       setStockBalance(sbData)
       setMachineStock(msData || [])
+      setClaims(claimsData || [])
       // Normalize sales: grand_total → revenue, sold_at timestamptz → date string
       // แปลง box → pack: ถ้า product_name_raw มีคำว่า "box" และ quantity_sold ยังเป็น 1 (ข้อมูลเก่า)
       setSales(salesData.map(r => {
@@ -2865,6 +3105,35 @@ export default function DivisionXApp() {
     const [newSO, newSB] = await Promise.all([getStockOut(), getStockBalance()])
     setStockOut(newSO)
     setStockBalance(newSB)
+  }
+
+  const addClaim = async (record) => {
+    await dbAddClaim(record)
+    // ถ้าสินค้าสภาพดี → คืนสต็อก (เพิ่ม stock_in)
+    if (record.product_status === "returned") {
+      const sku = skus.find(s => s.sku_id === record.sku_id)
+      await dbAddStockIn({
+        sku_id: record.sku_id,
+        source: `เคลมคืน (${record.machine_id})`,
+        unit: "pack",
+        quantity: record.quantity,
+        quantity_packs: record.quantity,
+        unit_cost: 0,
+        total_cost: 0,
+        lot_number: `CLAIM-${record.claimed_at}`,
+        purchased_at: record.claimed_at,
+        note: `คืนสต็อกจากเคลม: ${record.reason || ""}`,
+      })
+    }
+    const [newClaims, newSI, newSB] = await Promise.all([getClaims(), getStockIn(), getStockBalance()])
+    setClaims(newClaims)
+    setStockIn(newSI)
+    setStockBalance(newSB)
+  }
+
+  const deleteClaim = async (id) => {
+    await dbDeleteClaim(id)
+    setClaims(await getClaims())
   }
 
   const addSku = async (record) => {
@@ -3022,7 +3291,8 @@ export default function DivisionXApp() {
           {page === "stock"      && <PageStock     stockIn={stockIn} stockBalance={stockBalance} skus={skus} onAddStockIn={addStockIn} onUpdateStockIn={updateStockIn} onDeleteStockIn={deleteStockIn} onAddSku={addSku} onDeactivateSku={deactivateSku}/>}
           {page === "withdrawal" && <PageWithdrawal machines={machines} stockOut={stockOut} stockIn={stockIn} stockBalance={stockBalance} skus={skus} onAddStockOut={addStockOut} onDeleteStockOut={deleteStockOut}/>}
           {page === "machstock"  && <PageMachineStockView machines={machines} machineStock={machineStock} skus={skus}/>}
-          {page === "sales"      && <PageSales     machines={machines} sales={sales} skus={skus} onRefresh={loadAll}/>}
+          {page === "sales"      && <PageSales     machines={machines} sales={sales} skus={skus} claims={claims} onRefresh={loadAll}/>}
+          {page === "claims"     && <PageClaims    machines={machines} skus={skus} claims={claims} onAddClaim={addClaim} onDeleteClaim={deleteClaim}/>}
           {page === "analytics"  && <PageAnalytics sales={sales} skus={skus}/>}
           {page === "users"      && <PageUsers     currentProfile={profile}/>}
           {page.startsWith("machine_") && (() => {
