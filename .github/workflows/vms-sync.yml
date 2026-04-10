@@ -32,7 +32,7 @@ jobs:
           python-version: "3.11"
 
       - name: Install dependencies
-        run: pip install requests supabase pandas
+        run: pip install requests supabase pandas openpyxl
 
       - name: Run VMS Sales Sync (API first, fallback to Playwright)
         env:
