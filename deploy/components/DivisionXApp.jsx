@@ -3091,7 +3091,7 @@ function PageMachineStockView({ machines, machineStock, skus, onRefresh }) {
         </div>
       )}
 
-      {machineStock.length === 0 ? (
+      {showRefill ? null : machineStock.length === 0 ? (
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-10 text-center">
           <Monitor size={40} className="text-gray-300 mx-auto mb-3"/>
           <p className="text-gray-500 font-medium">ยังไม่มีข้อมูลสต็อกหน้าตู้</p>
@@ -3376,7 +3376,7 @@ function PageMachineStockView({ machines, machineStock, skus, onRefresh }) {
             )
           })}
         </div>
-      )}
+      ))}
     </div>
   )
 }
