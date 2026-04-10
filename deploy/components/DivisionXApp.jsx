@@ -3085,6 +3085,10 @@ function PageMachineStockView({ machines, machineStock, skus, onRefresh }) {
                       {slots.map(s => {
                         const isEmpty = !s.product_name
                         const isZero = s.remain === 0 && !isEmpty
+                        // หา SKU เพื่อใช้ image_url จากตาราง skus (เหมือนหน้าภาพรวม)
+                        const matchedSku = !isEmpty && skus.find(sk => s.product_name?.includes(sk.sku_id?.replace(" ","")))
+                          || skus.find(sk => s.sku_id === sk.sku_id)
+                        const imgUrl = matchedSku?.image_url || null
                         return (
                           <div key={s.slot_number} className={`rounded-xl border overflow-hidden transition-all ${isEmpty ? "bg-gray-50 border-gray-200 opacity-40" : isZero ? "bg-red-50 border-red-200" : "bg-white border-blue-100 hover:border-blue-300 hover:shadow-sm"}`}>
                             {/* Slot number */}
@@ -3101,13 +3105,13 @@ function PageMachineStockView({ machines, machineStock, skus, onRefresh }) {
                               </div>
                             ) : (
                               <div className="px-2 pb-2.5">
-                                {/* Product image */}
-                                {s.product_img ? (
+                                {/* Product image — ใช้รูปจาก skus table เหมือนหน้าภาพรวม */}
+                                {imgUrl ? (
                                   <div className="w-full h-24 rounded-lg overflow-hidden bg-gray-50 mb-2 flex items-center justify-center">
-                                    <img src={`/api/img?url=${encodeURIComponent(s.product_img)}`} alt={s.product_name}
-                                      className="h-full w-auto object-contain"
+                                    <img src={imgUrl} alt={s.product_name}
+                                      className="h-full w-auto object-contain p-1"
                                       loading="lazy"
-                                      onError={e => { e.target.onerror=null; e.target.parentElement.innerHTML='<div class="w-full h-full flex items-center justify-center"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg></div>' }}/>
+                                      onError={e => { e.target.onerror=null; e.target.style.display='none' }}/>
                                   </div>
                                 ) : (
                                   <div className="w-full h-24 rounded-lg bg-gradient-to-b from-blue-50 to-white flex items-center justify-center mb-2">
