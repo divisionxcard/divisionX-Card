@@ -22,6 +22,24 @@ KIOSKS = {
     "chukes04": 43,
 }
 
+# ── Map VMS product name → SKU ID ─────────────────────────────
+def map_product_to_sku(product_name: str) -> str | None:
+    """แปลงชื่อสินค้า VMS เป็น SKU ID เช่น 'One Piece OP - 01 Pack' → 'OP 01'"""
+    if not product_name:
+        return None
+    name = product_name.lower().strip()
+    # OP series: "one piece op - 01 pack" / "one piece op - 01 (box)"
+    import re
+    m = re.search(r'op\s*[-–]\s*(\d+)', name)
+    if m: return f"OP {m.group(1).zfill(2)}"
+    # PRB series: "prb - 01 (pack)"
+    m = re.search(r'prb\s*[-–]\s*(\d+)', name)
+    if m: return f"PRB {m.group(1).zfill(2)}"
+    # EB series: "one piece eb - 01 pack"
+    m = re.search(r'eb\s*[-–]\s*(\d+)', name)
+    if m: return f"EB {m.group(1).zfill(2)}"
+    return None
+
 def login() -> str:
     """Login VMS API → JWT Token"""
     print("🔐 Login VMS API...")
@@ -91,13 +109,15 @@ def main():
         print(f"  ✅ พบ {len(slots)} slots")
 
         for slot in slots:
+            product_name = slot.get("product_name") or None
             all_records.append({
                 "machine_id":      machine_id,
                 "kiosk_record_id": record_id,
                 "slot_number":     slot.get("slot_number") or "",
                 "product_id":      slot.get("product_id"),
-                "product_name":    slot.get("product_name") or None,
+                "product_name":    product_name,
                 "product_img":     slot.get("product_img") or None,
+                "sku_id":          map_product_to_sku(product_name),
                 "remain":          slot.get("remain") or 0,
                 "max_capacity":    slot.get("max_capacity") or 0,
                 "is_occupied":     bool(slot.get("is_occupied")),

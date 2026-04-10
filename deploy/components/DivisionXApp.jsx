@@ -3086,8 +3086,7 @@ function PageMachineStockView({ machines, machineStock, skus, onRefresh }) {
                         const isEmpty = !s.product_name
                         const isZero = s.remain === 0 && !isEmpty
                         // หา SKU เพื่อใช้ image_url จากตาราง skus (เหมือนหน้าภาพรวม)
-                        const matchedSku = !isEmpty && skus.find(sk => s.product_name?.includes(sk.sku_id?.replace(" ","")))
-                          || skus.find(sk => s.sku_id === sk.sku_id)
+                        const matchedSku = skus.find(sk => sk.sku_id === s.sku_id)
                         const imgUrl = matchedSku?.image_url || null
                         return (
                           <div key={s.slot_number} className={`rounded-xl border overflow-hidden transition-all ${isEmpty ? "bg-gray-50 border-gray-200 opacity-40" : isZero ? "bg-red-50 border-red-200" : "bg-white border-blue-100 hover:border-blue-300 hover:shadow-sm"}`}>
