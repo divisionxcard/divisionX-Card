@@ -2933,31 +2933,7 @@ function PageMachineStockView({ machines, machineStock, skus, onRefresh }) {
       if (mi > 0) html += `<div class="page-break"></div>`
       html += `<h2>${mInfo.name || machId} — ${mInfo.location || ""}</h2>`
 
-      // ── ตาราง 1: รายช่อง (คล้ายข้อมูลดิบ) ──
-      html += `<h3>รายละเอียดแต่ละช่อง</h3>`
-      html += `<table><thead><tr>
-        <th>ช่อง</th><th>SKU</th><th>สินค้า</th><th>ประเภท</th>
-        <th>คงเหลือ</th><th>ความจุ</th><th class="red">ต้องเติม</th>
-      </tr></thead><tbody>`
-      slots.forEach(s => {
-        const isEmpty = !s.product_name
-        const refill = (s.max_capacity || 0) - (s.remain || 0)
-        const isFull = refill <= 0 && !isEmpty
-        const isBox = (s.product_name || "").toLowerCase().includes("box")
-        const unit = isBox ? "กล่อง" : "ซอง"
-        html += `<tr class="${isFull ? "full" : ""}">
-          <td class="c b">${s.slot_number || ""}</td>
-          <td>${isEmpty ? "" : (s.sku_id || "")}</td>
-          <td>${isEmpty ? '<span class="gray">ว่าง</span>' : s.product_name}</td>
-          <td class="c">${isEmpty ? "" : unit}</td>
-          <td class="r">${isEmpty ? "" : s.remain}</td>
-          <td class="r">${isEmpty ? "" : s.max_capacity}</td>
-          <td class="r ${refill > 0 ? "red" : "green"}">${isEmpty ? "" : refill > 0 ? refill + " " + unit : "เต็ม"}</td>
-        </tr>`
-      })
-      html += `</tbody></table>`
-
-      // ── ตาราง 2: สรุปรวมตาม SKU ──
+      // รวมตาม SKU
       const skuRefill = {}
       slots.filter(s => s.product_name && s.is_occupied).forEach(s => {
         const name = s.product_name || ""
@@ -2970,12 +2946,11 @@ function PageMachineStockView({ machines, machineStock, skus, onRefresh }) {
         skuRefill[key].capacity += s.max_capacity || 0
         skuRefill[key].slots += 1
       })
-      const refillList = Object.values(skuRefill).sort((a, b) => b.refill - a.refill)
+      const refillList = Object.values(skuRefill).sort((a, b) => a.sku_id.localeCompare(b.sku_id))
       const totalBoxRefill = refillList.filter(r => r.isBox).reduce((a, r) => a + r.refill, 0)
       const totalPackRefill = refillList.filter(r => !r.isBox).reduce((a, r) => a + r.refill, 0)
 
-      html += `<h3>สรุปรวมตาม SKU</h3>`
-      html += `<table class="summary-table"><thead><tr>
+      html += `<table><thead><tr>
         <th>SKU</th><th>สินค้า</th><th>ประเภท</th><th>ช่อง</th>
         <th>คงเหลือ</th><th>ความจุ</th><th class="red">ต้องเติม</th>
       </tr></thead><tbody>`
@@ -2988,17 +2963,16 @@ function PageMachineStockView({ machines, machineStock, skus, onRefresh }) {
           <td class="c">${r.slots}</td>
           <td class="r">${r.remain}</td>
           <td class="r">${r.capacity}</td>
-          <td class="r red">${r.refill > 0 ? r.refill + " " + unit : '<span class="green">เต็ม</span>'}</td>
+          <td class="r ${r.refill > 0 ? "red" : "green"}">${r.refill > 0 ? r.refill + " " + unit : "เต็ม"}</td>
         </tr>`
       })
+      html += `<tr class="b" style="background:#f0f9ff;">
+        <td colspan="4" class="b">รวม</td>
+        <td class="r b">${refillList.reduce((a,r)=>a+r.remain,0)}</td>
+        <td class="r b">${refillList.reduce((a,r)=>a+r.capacity,0)}</td>
+        <td class="r red">${totalBoxRefill > 0 ? totalBoxRefill+" กล่อง" : ""}${totalBoxRefill>0&&totalPackRefill>0?" / ":""}${totalPackRefill > 0 ? totalPackRefill+" ซอง" : ""}${totalBoxRefill===0&&totalPackRefill===0?"เต็ม":""}</td>
+      </tr>`
       html += `</tbody></table>`
-
-      html += `<div class="summary"><strong>รวมต้องเติม ${mInfo.name || machId}:</strong> `
-      if (totalBoxRefill > 0) html += `<span class="red">${totalBoxRefill} กล่อง</span> `
-      if (totalBoxRefill > 0 && totalPackRefill > 0) html += ` / `
-      if (totalPackRefill > 0) html += `<span class="red">${totalPackRefill} ซอง</span>`
-      if (totalBoxRefill === 0 && totalPackRefill === 0) html += `<span class="green">สินค้าเต็มทุกช่อง</span>`
-      html += `</div>`
     })
 
     html += `</body></html>`
