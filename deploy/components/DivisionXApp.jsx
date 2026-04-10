@@ -872,7 +872,7 @@ function genLotNumber() {
   return `LOT-${ymd}-${hm}`
 }
 
-function PageStock({ stockIn, stockBalance, onAddStockIn, onUpdateStockIn, onDeleteStockIn, skus, onAddSku, onDeactivateSku }) {
+function PageStock({ stockIn, stockBalance, onAddStockIn, onUpdateStockIn, onDeleteStockIn, skus, onAddSku, onDeactivateSku, onRecalcAllAvgCost }) {
   const [tab, setTab]       = useState("balance")
   const [search, setSearch] = useState("")
   const [seriesSel, setSeriesSel] = useState("ทั้งหมด")
@@ -966,7 +966,17 @@ function PageStock({ stockIn, stockBalance, onAddStockIn, onUpdateStockIn, onDel
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-gray-800">จัดการสต็อกสินค้า</h1>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-2xl font-bold text-gray-800">จัดการสต็อกสินค้า</h1>
+        <button onClick={async () => {
+          if (!confirm("คำนวณต้นทุนเฉลี่ยใหม่ทุก SKU จาก stock_in ทั้งหมด?")) return
+          await onRecalcAllAvgCost()
+          alert("คำนวณต้นทุนเฉลี่ยใหม่เรียบร้อยแล้ว")
+        }}
+          className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-purple-200 text-purple-600 text-xs font-medium hover:bg-purple-50 transition-all">
+          <RefreshCw size={14}/> คำนวณต้นทุนใหม่
+        </button>
+      </div>
 
       {editRecord && (
         <EditStockInModal
@@ -3254,21 +3264,36 @@ export default function DivisionXApp() {
   useEffect(() => { loadAll() }, [loadAll])
 
   // ── Write Operations ──
+  // ── คำนวณ avg_cost ใหม่จาก stock_in ทั้งหมดของ SKU (ใช้ตอนแก้ไข/ลบ/เพิ่ม) ──
+  const recalcAvgCost = async (skuId, freshStockIn) => {
+    const siList = (freshStockIn || stockIn).filter(r => r.sku_id === skuId)
+    const totalPacks = siList.reduce((a, r) => a + (r.quantity_packs || 0), 0)
+    const totalCost  = siList.reduce((a, r) => a + (parseFloat(r.total_cost) || 0), 0)
+    const avg = totalPacks > 0 ? totalCost / totalPacks : 0
+    await updateSkuAvgCost(skuId, Math.round(avg * 100) / 100)
+  }
+
+  const recalcAllAvgCost = async (freshStockIn) => {
+    const allSkuIds = [...new Set((freshStockIn || stockIn).map(r => r.sku_id))]
+    for (const skuId of allSkuIds) {
+      await recalcAvgCost(skuId, freshStockIn)
+    }
+  }
+
   const addStockIn = async (record) => {
     await dbAddStockIn(record)
     // ── Moving Average Cost: คำนวณต้นทุนเฉลี่ยใหม่ ──
     const sku = skus.find(s => s.sku_id === record.sku_id)
     const bal = stockBalance.find(b => b.sku_id === record.sku_id)
-    const currentQty  = bal?.balance || 0           // ซองคงเหลือก่อนรับเข้า
-    const currentCost = sku?.avg_cost || 0          // ต้นทุนเฉลี่ยที่ตรึงไว้
-    const newPacks    = record.quantity_packs || 0  // ซองที่รับเข้าใหม่
+    const currentQty  = bal?.balance || 0
+    const currentCost = sku?.avg_cost || 0
+    const newPacks    = record.quantity_packs || 0
     const newCostPer  = newPacks > 0 ? (record.total_cost || 0) / newPacks : 0
     const totalQty    = currentQty + newPacks
     const newAvgCost  = totalQty > 0
       ? ((currentQty * currentCost) + (newPacks * newCostPer)) / totalQty
       : newCostPer
     await updateSkuAvgCost(record.sku_id, Math.round(newAvgCost * 100) / 100)
-    // ── Refresh data ──
     const [newSI, newSB, newSkus] = await Promise.all([getStockIn(), getStockBalance(), getSkus()])
     setStockIn(newSI)
     setStockBalance(newSB)
@@ -3283,17 +3308,28 @@ export default function DivisionXApp() {
   }
 
   const updateStockIn = async (id, record) => {
+    // หา SKU เดิมก่อนแก้ (อาจเปลี่ยน SKU)
+    const oldRecord = stockIn.find(r => r.id === id)
     await dbUpdateStockIn(id, record)
     const [newSI, newSB] = await Promise.all([getStockIn(), getStockBalance()])
+    // คำนวณ avg_cost ใหม่สำหรับ SKU ที่ได้รับผลกระทบ
+    await recalcAvgCost(record.sku_id, newSI)
+    if (oldRecord && oldRecord.sku_id !== record.sku_id) {
+      await recalcAvgCost(oldRecord.sku_id, newSI)  // SKU เดิมด้วย
+    }
     setStockIn(newSI)
     setStockBalance(newSB)
+    setSkus(await getSkus())
   }
 
   const deleteStockIn = async (id) => {
+    const deleted = stockIn.find(r => r.id === id)
     await dbDeleteStockIn(id)
     const [newSI, newSB] = await Promise.all([getStockIn(), getStockBalance()])
+    if (deleted) await recalcAvgCost(deleted.sku_id, newSI)
     setStockIn(newSI)
     setStockBalance(newSB)
+    setSkus(await getSkus())
   }
 
   const deleteStockOut = async (id) => {
@@ -3485,7 +3521,7 @@ export default function DivisionXApp() {
 
         <main className="flex-1 p-4 lg:p-6 overflow-y-auto">
           {page === "dashboard"  && <PageDashboard stockIn={stockIn} stockOut={stockOut} stockBalance={stockBalance} skus={skus}/>}
-          {page === "stock"      && <PageStock     stockIn={stockIn} stockBalance={stockBalance} skus={skus} onAddStockIn={addStockIn} onUpdateStockIn={updateStockIn} onDeleteStockIn={deleteStockIn} onAddSku={addSku} onDeactivateSku={deactivateSku}/>}
+          {page === "stock"      && <PageStock     stockIn={stockIn} stockBalance={stockBalance} skus={skus} onAddStockIn={addStockIn} onUpdateStockIn={updateStockIn} onDeleteStockIn={deleteStockIn} onAddSku={addSku} onDeactivateSku={deactivateSku} onRecalcAllAvgCost={async () => { await recalcAllAvgCost(); setSkus(await getSkus()) }}/>}
           {page === "withdrawal" && <PageWithdrawal machines={machines} stockOut={stockOut} stockIn={stockIn} stockBalance={stockBalance} skus={skus} onAddStockOut={addStockOut} onDeleteStockOut={deleteStockOut}/>}
           {page === "machstock"  && <PageMachineStockView machines={machines} machineStock={machineStock} skus={skus} onRefresh={loadAll}/>}
           {page === "sales"      && <PageSales     machines={machines} sales={sales} skus={skus} claims={claims} onRefresh={loadAll}/>}
