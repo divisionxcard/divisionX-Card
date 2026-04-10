@@ -1501,6 +1501,10 @@ function PageWithdrawal({ machines, stockOut, stockIn, stockBalance, onAddStockO
 
   const [deleteOutId, setDeleteOutId] = useState(null)
   const [deletingOut, setDeletingOut] = useState(false)
+  const [historyFilter, setHistoryFilter] = useState("all")
+  const [historyDate,   setHistoryDate]   = useState(nowDate())
+  const [historyMonth,  setHistoryMonth]  = useState(nowDate().slice(0,7))
+  const [historyYear,   setHistoryYear]   = useState(nowDate().slice(0,4))
 
   const handleDeleteOut = async (id) => {
     setDeletingOut(true)
@@ -1776,12 +1780,45 @@ function PageWithdrawal({ machines, stockOut, stockIn, stockBalance, onAddStockO
 
         {/* History */}
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-          <h2 className="font-semibold text-gray-700 mb-3">ประวัติการเบิกสินค้า</h2>
-          {stockOut.length === 0 ? (
-            <p className="text-gray-400 text-sm">ยังไม่มีประวัติการเบิก</p>
+          <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
+            <h2 className="font-semibold text-gray-700">ประวัติการเบิกสินค้า</h2>
+            <div className="flex gap-2 items-center">
+              <div className="flex gap-1 bg-gray-100 p-1 rounded-xl">
+                {[{v:"all",l:"ทั้งหมด"},{v:"day",l:"รายวัน"},{v:"month",l:"รายเดือน"},{v:"year",l:"รายปี"}].map(t => (
+                  <button key={t.v} onClick={() => setHistoryFilter(t.v)}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${historyFilter===t.v?"bg-white shadow text-orange-600":"text-gray-500"}`}>
+                    {t.l}
+                  </button>
+                ))}
+              </div>
+              {historyFilter === "day" && (
+                <input type="date" value={historyDate} onChange={e => setHistoryDate(e.target.value)}
+                  className="border border-gray-200 rounded-lg px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-orange-200"/>
+              )}
+              {historyFilter === "month" && (
+                <input type="month" value={historyMonth} onChange={e => setHistoryMonth(e.target.value)}
+                  className="border border-gray-200 rounded-lg px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-orange-200"/>
+              )}
+              {historyFilter === "year" && (
+                <select value={historyYear} onChange={e => setHistoryYear(e.target.value)}
+                  className="border border-gray-200 rounded-lg px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-orange-200">
+                  {[...new Set(stockOut.map(r => r.withdrawn_at?.slice(0,4)).filter(Boolean))].sort().reverse()
+                    .map(y => <option key={y} value={y}>{y}</option>)}
+                </select>
+              )}
+            </div>
+          </div>
+          {(() => {
+            const sorted = [...stockOut].sort((a, b) => (b.withdrawn_at || "").localeCompare(a.withdrawn_at || ""))
+            const filtered = historyFilter === "day" ? sorted.filter(r => r.withdrawn_at?.slice(0,10) === historyDate)
+              : historyFilter === "month" ? sorted.filter(r => r.withdrawn_at?.slice(0,7) === historyMonth)
+              : historyFilter === "year" ? sorted.filter(r => r.withdrawn_at?.slice(0,4) === historyYear)
+              : sorted
+            return filtered.length === 0 ? (
+            <p className="text-gray-400 text-sm">ยังไม่มีประวัติการเบิก{historyFilter !== "all" ? "ในช่วงที่เลือก" : ""}</p>
           ) : (
             <div className="space-y-2 max-h-[560px] overflow-y-auto pr-1">
-              {stockOut.map((r, i) => {
+              {filtered.map((r, i) => {
                 const sku     = skus.find(s => s.sku_id === r.sku_id)
                 const machine = machines.find(m => m.machine_id === r.machine_id)
                 const unitMatch = r.note?.match(/^\[(\d+)(กล่อง|ซอง)\]/)
@@ -1843,7 +1880,8 @@ function PageWithdrawal({ machines, stockOut, stockIn, stockBalance, onAddStockO
                 )
               })}
             </div>
-          )}
+          )
+          })()}
         </div>
       </div>
     </div>
