@@ -3109,26 +3109,8 @@ export default function DivisionXApp() {
 
   const addClaim = async (record) => {
     await dbAddClaim(record)
-    // ถ้าสินค้าสภาพดี → คืนสต็อก (เพิ่ม stock_in)
-    if (record.product_status === "returned") {
-      const sku = skus.find(s => s.sku_id === record.sku_id)
-      await dbAddStockIn({
-        sku_id: record.sku_id,
-        source: `เคลมคืน (${record.machine_id})`,
-        unit: "pack",
-        quantity: record.quantity,
-        quantity_packs: record.quantity,
-        unit_cost: 0,
-        total_cost: 0,
-        lot_number: `CLAIM-${record.claimed_at}`,
-        purchased_at: record.claimed_at,
-        note: `คืนสต็อกจากเคลม: ${record.reason || ""}`,
-      })
-    }
-    const [newClaims, newSI, newSB] = await Promise.all([getClaims(), getStockIn(), getStockBalance()])
-    setClaims(newClaims)
-    setStockIn(newSI)
-    setStockBalance(newSB)
+    // สินค้าคืนสต็อก → ผู้ใช้ต้องไปคีย์รับเข้าระบบใหม่เองที่หน้าจัดการสต็อก
+    setClaims(await getClaims())
   }
 
   const deleteClaim = async (id) => {
