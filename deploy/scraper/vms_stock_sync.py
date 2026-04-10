@@ -14,12 +14,13 @@ VMS_PASS     = os.environ["VMS_PASSWORD"]
 SUPABASE_URL = os.environ["SUPABASE_URL"]
 SUPABASE_KEY = os.environ["SUPABASE_SERVICE_KEY"]
 
-# ── Kiosk mapping: machine_id → kiosk_record_id ──────────────
+# ── Kiosk mapping: machine_id → { record_id, tabs } ──────────
+# tabs = จำนวน Tab ของตู้ (ตู้ 1-3 มี 1 Tab = 60 ช่อง, ตู้ 4 มี 2 Tab = 120 ช่อง)
 KIOSKS = {
-    "chukes01": 40,
-    "chukes02": 41,
-    "chukes03": 42,
-    "chukes04": 43,
+    "chukes01": { "record_id": 40, "tabs": 1 },
+    "chukes02": { "record_id": 41, "tabs": 1 },
+    "chukes03": { "record_id": 42, "tabs": 1 },
+    "chukes04": { "record_id": 43, "tabs": 2 },
 }
 
 # ── Map VMS product name → SKU ID ─────────────────────────────
@@ -54,12 +55,11 @@ def login() -> str:
     print("  ✅ Login สำเร็จ")
     return data["token"]
 
-def get_slots(token: str, kiosk_record_id: int) -> list[dict]:
+def get_slots(token: str, kiosk_record_id: int, num_tabs: int = 1) -> list[dict]:
     """ดึงข้อมูล slot ทั้งหมดของตู้"""
     headers = {"Authorization": f"Bearer {token}"}
     all_slots = []
-    # Tab 1 (slots 001-060) และ Tab 2 (slots 101-160)
-    for tab in [1, 2]:
+    for tab in range(1, num_tabs + 1):
         res = requests.get(
             f"{VMS_API_BASE}/slots/{tab}",
             params={"kiosk_record_id": kiosk_record_id},
@@ -103,9 +103,11 @@ def main():
     synced_at = datetime.utcnow().isoformat()
     all_records = []
 
-    for machine_id, record_id in KIOSKS.items():
-        print(f"\n📦 ดึงข้อมูล {machine_id} (record_id={record_id})...")
-        slots = get_slots(token, record_id)
+    for machine_id, cfg in KIOSKS.items():
+        record_id = cfg["record_id"]
+        num_tabs  = cfg["tabs"]
+        print(f"\n📦 ดึงข้อมูล {machine_id} (record_id={record_id}, tabs={num_tabs})...")
+        slots = get_slots(token, record_id, num_tabs)
         print(f"  ✅ พบ {len(slots)} slots")
 
         for slot in slots:
