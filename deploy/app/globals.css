@@ -7,3 +7,25 @@ html, body {
   margin: 0;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans Thai', sans-serif;
 }
+
+@media print {
+  /* ซ่อนทุกอย่างยกเว้น refill-report */
+  body * { visibility: hidden; }
+  #refill-report, #refill-report * { visibility: visible; }
+  #refill-report {
+    position: absolute;
+    left: 0; top: 0;
+    width: 100%;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+  /* แต่ละตู้ขึ้นหน้าใหม่ */
+  .refill-machine { page-break-before: auto; page-break-inside: avoid; }
+  .refill-machine:not(:first-child) { page-break-before: always; }
+  /* จัด A4 */
+  @page { size: A4 portrait; margin: 10mm; }
+  table { font-size: 9px !important; }
+  th, td { padding: 2px 4px !important; }
+}
