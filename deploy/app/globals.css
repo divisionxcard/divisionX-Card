@@ -9,7 +9,6 @@ html, body {
 }
 
 @media print {
-  /* ซ่อนทุกอย่างยกเว้น refill-report */
   body * { visibility: hidden; }
   #refill-report, #refill-report * { visibility: visible; }
   #refill-report {
@@ -21,11 +20,14 @@ html, body {
     padding: 0 !important;
     margin: 0 !important;
   }
-  /* แต่ละตู้ขึ้นหน้าใหม่ */
-  .refill-machine { page-break-before: auto; page-break-inside: avoid; }
-  .refill-machine:not(:first-child) { page-break-before: always; }
+  /* header ของรายงานไม่ขึ้นหน้าใหม่ */
+  #refill-report > div:first-child { margin-bottom: 4px !important; }
+  /* แต่ละตู้ขึ้นหน้าใหม่ (ยกเว้นตู้แรกอยู่หน้าเดียวกับ header) */
+  .refill-machine { page-break-inside: avoid; }
+  .refill-machine:not(:first-of-type) { page-break-before: always; }
   /* จัด A4 */
-  @page { size: A4 portrait; margin: 10mm; }
+  @page { size: A4 portrait; margin: 8mm; }
   table { font-size: 9px !important; }
   th, td { padding: 2px 4px !important; }
+  .refill-machine { margin-bottom: 0 !important; }
 }
