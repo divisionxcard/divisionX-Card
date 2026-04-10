@@ -2078,7 +2078,8 @@ function PageSales({ machines, sales, skus, onRefresh }) {
   // Profit estimate
   const profit = filtered.reduce((a, r) => {
     const s = skus.find(sk => sk.sku_id === r.sku_id)
-    return a + r.quantity_sold * (s ? s.sell_price - (s.avg_cost || s.cost_price || 0) : 0)
+    const cost = (s?.avg_cost || s?.cost_price || 0) * (r.quantity_sold || 0)
+    return a + (r.revenue || 0) - cost
   }, 0)
 
   return (
@@ -2214,7 +2215,7 @@ function PageAnalytics({ sales, skus }) {
     .map(([id, v]) => {
       const s = skus.find(sk => sk.sku_id === id)
       return { sku_id:id, series:s?.series||"OP", ...v,
-        profit: v.qty * ((s?.sell_price||0) - (s?.avg_cost || s?.cost_price || 0)) }
+        profit: v.rev - v.qty * (s?.avg_cost || s?.cost_price || 0) }
     })
     .sort((a, b) => metric==="revenue" ? b.rev-a.rev : metric==="qty" ? b.qty-a.qty : b.profit-a.profit)
 
