@@ -3378,7 +3378,7 @@ function PageMachineStockView({ machines, machineStock, skus, onRefresh }) {
             )
           })}
         </div>
-      ))}
+      )}
     </div>
   )
 }
