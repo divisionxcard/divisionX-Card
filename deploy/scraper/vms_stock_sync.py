@@ -94,14 +94,14 @@ def main():
             all_records.append({
                 "machine_id":      machine_id,
                 "kiosk_record_id": record_id,
-                "slot_number":     slot.get("slot_number", ""),
+                "slot_number":     slot.get("slot_number") or "",
                 "product_id":      slot.get("product_id"),
-                "product_name":    slot.get("product_name"),
-                "product_img":     slot.get("product_img"),
-                "remain":          slot.get("remain", 0),
-                "max_capacity":    slot.get("max_capacity", 0),
-                "is_occupied":     slot.get("is_occupied", False),
-                "status":          slot.get("status", "active"),
+                "product_name":    slot.get("product_name") or None,
+                "product_img":     slot.get("product_img") or None,
+                "remain":          slot.get("remain") or 0,
+                "max_capacity":    slot.get("max_capacity") or 0,
+                "is_occupied":     bool(slot.get("is_occupied")),
+                "status":          slot.get("status") or "inactive",
                 "synced_at":       synced_at,
             })
 
