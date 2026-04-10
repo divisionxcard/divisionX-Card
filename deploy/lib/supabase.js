@@ -184,6 +184,15 @@ export async function addSku(record) {
   return data
 }
 
+// ── อัปเดตต้นทุนเฉลี่ยเคลื่อนที่ (Moving Average Cost) ────────
+export async function updateSkuAvgCost(skuId, avgCost) {
+  const { error } = await supabase
+    .from("skus")
+    .update({ avg_cost: avgCost })
+    .eq("sku_id", skuId)
+  if (error) throw error
+}
+
 // ── ปิดใช้งาน SKU (soft delete) ──────────────────────────────
 export async function deactivateSku(skuId) {
   const { error } = await supabase

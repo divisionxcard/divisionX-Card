@@ -19,7 +19,7 @@ import {
   deleteStockIn as dbDeleteStockIn,
   deleteStockOut as dbDeleteStockOut,
   getMachines, getSalesByMachine,
-  getSkus, addSku as dbAddSku, deactivateSku as dbDeactivateSku,
+  getSkus, addSku as dbAddSku, deactivateSku as dbDeactivateSku, updateSkuAvgCost,
   signIn as authSignIn, signOut as authSignOut, getProfile,
   getMachineStock,
 } from "../lib/supabase"
@@ -530,10 +530,8 @@ function PageDashboard({ stockIn, stockOut, stockBalance, skus }) {
           const lots       = lotsMap[s.sku_id] || []
           const isExpanded = expandedSku === s.sku_id
 
-          // Weighted avg cost per pack from all lots
-          const totalLotPacks = lots.reduce((a, r) => a + (r.quantity_packs || 0), 0)
-          const totalLotCost  = lots.reduce((a, r) => a + (parseFloat(r.total_cost) || 0), 0)
-          const avgCpp        = totalLotPacks > 0 ? totalLotCost / totalLotPacks : 0
+          // Moving Average Cost (ต้นทุนเฉลี่ยเคลื่อนที่ — ตรึงไว้จนกว่าจะรับของใหม่)
+          const avgCpp = s.avg_cost || 0
 
           // แปลงหน่วยแสดงผล
           const balCotton = Math.floor(b.balance / (12 * s.packs_per_box))
@@ -2078,7 +2076,7 @@ function PageSales({ machines, sales, skus, onRefresh }) {
   // Profit estimate
   const profit = filtered.reduce((a, r) => {
     const s = skus.find(sk => sk.sku_id === r.sku_id)
-    return a + r.quantity_sold * (s ? s.sell_price - s.cost_price : 0)
+    return a + r.quantity_sold * (s ? s.sell_price - (s.avg_cost || s.cost_price || 0) : 0)
   }, 0)
 
   return (
@@ -2214,7 +2212,7 @@ function PageAnalytics({ sales, skus }) {
     .map(([id, v]) => {
       const s = skus.find(sk => sk.sku_id === id)
       return { sku_id:id, series:s?.series||"OP", ...v,
-        profit: v.qty * ((s?.sell_price||0) - (s?.cost_price||0)) }
+        profit: v.qty * ((s?.sell_price||0) - (s?.avg_cost || s?.cost_price || 0)) }
     })
     .sort((a, b) => metric==="revenue" ? b.rev-a.rev : metric==="qty" ? b.qty-a.qty : b.profit-a.profit)
 
@@ -2819,9 +2817,23 @@ export default function DivisionXApp() {
   // ── Write Operations ──
   const addStockIn = async (record) => {
     await dbAddStockIn(record)
-    const [newSI, newSB] = await Promise.all([getStockIn(), getStockBalance()])
+    // ── Moving Average Cost: คำนวณต้นทุนเฉลี่ยใหม่ ──
+    const sku = skus.find(s => s.sku_id === record.sku_id)
+    const bal = stockBalance.find(b => b.sku_id === record.sku_id)
+    const currentQty  = bal?.balance || 0           // ซองคงเหลือก่อนรับเข้า
+    const currentCost = sku?.avg_cost || 0          // ต้นทุนเฉลี่ยที่ตรึงไว้
+    const newPacks    = record.quantity_packs || 0  // ซองที่รับเข้าใหม่
+    const newCostPer  = newPacks > 0 ? (record.total_cost || 0) / newPacks : 0
+    const totalQty    = currentQty + newPacks
+    const newAvgCost  = totalQty > 0
+      ? ((currentQty * currentCost) + (newPacks * newCostPer)) / totalQty
+      : newCostPer
+    await updateSkuAvgCost(record.sku_id, Math.round(newAvgCost * 100) / 100)
+    // ── Refresh data ──
+    const [newSI, newSB, newSkus] = await Promise.all([getStockIn(), getStockBalance(), getSkus()])
     setStockIn(newSI)
     setStockBalance(newSB)
+    if (newSkus?.length) setSkus(newSkus)
   }
 
   const addStockOut = async (record) => {
