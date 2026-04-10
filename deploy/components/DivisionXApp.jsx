@@ -2890,50 +2890,17 @@ function PageMachineStockView({ machines, machineStock, skus, onRefresh }) {
   const [syncing, setSyncing] = useState(false)
   const [syncMsg, setSyncMsg] = useState(null)
   const [showSkuDetail, setShowSkuDetail] = useState(false)
+  const [showRefill, setShowRefill] = useState(false)
 
   // ── Export รายงานเติมสินค้า ──
-  const exportRefillReport = () => {
-    const now = new Date()
-    const dateStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}-${String(now.getDate()).padStart(2,"0")}`
-    const timeStr = `${String(now.getHours()).padStart(2,"0")}:${String(now.getMinutes()).padStart(2,"0")}`
-
+  // สร้างข้อมูลรายงานเติมสินค้า (ใช้แสดง inline)
+  const getRefillData = () => {
     const machIds = selectedMachine === "all"
       ? Object.keys(grouped).sort()
       : [selectedMachine].filter(id => grouped[id])
-
-    let html = `<html><head><meta charset="utf-8"><title>รายงานเติมสินค้า ${dateStr}</title>
-      <style>
-        body { font-family: sans-serif; font-size: 11px; padding: 15px; }
-        h1 { font-size: 16px; margin-bottom: 2px; }
-        h2 { font-size: 13px; margin-top: 18px; border-bottom: 2px solid #333; padding-bottom: 3px; }
-        h3 { font-size: 12px; margin-top: 12px; color: #555; }
-        table { width: 100%; border-collapse: collapse; margin-top: 6px; }
-        th, td { border: 1px solid #ccc; padding: 3px 6px; font-size: 10px; }
-        th { background: #f5f5f5; font-weight: bold; text-align: center; }
-        .r { text-align: right; }
-        .c { text-align: center; }
-        .b { font-weight: bold; }
-        .red { color: #dc2626; font-weight: bold; }
-        .green { color: #16a34a; }
-        .gray { color: #999; }
-        .full { background: #f0fdf4; }
-        .summary { margin-top: 8px; padding: 6px 10px; background: #fef3c7; border: 1px solid #fbbf24; border-radius: 4px; font-size: 11px; }
-        .summary-table { margin-top: 10px; }
-        .summary-table th { background: #dbeafe; }
-        .page-break { page-break-before: always; }
-        @media print { body { padding: 5px; } }
-      </style></head><body>`
-    html += `<h1>รายงานเติมสินค้า</h1>`
-    html += `<p>วันที่: ${dateStr} เวลา: ${timeStr} น.</p>`
-
-    machIds.forEach((machId, mi) => {
-      const slots = (grouped[machId] || []).sort((a,b) => (a.slot_number||"").localeCompare(b.slot_number||""))
+    return machIds.map(machId => {
+      const slots = grouped[machId] || []
       const mInfo = machineNames[machId] || { name: machId, location: "" }
-
-      if (mi > 0) html += `<div class="page-break"></div>`
-      html += `<h2>${mInfo.name || machId} — ${mInfo.location || ""}</h2>`
-
-      // รวมตาม SKU
       const skuRefill = {}
       slots.filter(s => s.product_name && s.is_occupied).forEach(s => {
         const name = s.product_name || ""
@@ -2946,40 +2913,12 @@ function PageMachineStockView({ machines, machineStock, skus, onRefresh }) {
         skuRefill[key].capacity += s.max_capacity || 0
         skuRefill[key].slots += 1
       })
-      const refillList = Object.values(skuRefill).sort((a, b) => a.sku_id.localeCompare(b.sku_id))
-      const totalBoxRefill = refillList.filter(r => r.isBox).reduce((a, r) => a + r.refill, 0)
-      const totalPackRefill = refillList.filter(r => !r.isBox).reduce((a, r) => a + r.refill, 0)
-
-      html += `<table><thead><tr>
-        <th>SKU</th><th>สินค้า</th><th>ประเภท</th><th>ช่อง</th>
-        <th>คงเหลือ</th><th>ความจุ</th><th class="red">ต้องเติม</th>
-      </tr></thead><tbody>`
-      refillList.forEach(r => {
-        const unit = r.isBox ? "กล่อง" : "ซอง"
-        html += `<tr>
-          <td class="b">${r.sku_id}</td>
-          <td>${r.name}</td>
-          <td class="c">${unit}</td>
-          <td class="c">${r.slots}</td>
-          <td class="r">${r.remain}</td>
-          <td class="r">${r.capacity}</td>
-          <td class="r ${r.refill > 0 ? "red" : "green"}">${r.refill > 0 ? r.refill + " " + unit : "เต็ม"}</td>
-        </tr>`
-      })
-      html += `<tr class="b" style="background:#f0f9ff;">
-        <td colspan="4" class="b">รวม</td>
-        <td class="r b">${refillList.reduce((a,r)=>a+r.remain,0)}</td>
-        <td class="r b">${refillList.reduce((a,r)=>a+r.capacity,0)}</td>
-        <td class="r red">${totalBoxRefill > 0 ? totalBoxRefill+" กล่อง" : ""}${totalBoxRefill>0&&totalPackRefill>0?" / ":""}${totalPackRefill > 0 ? totalPackRefill+" ซอง" : ""}${totalBoxRefill===0&&totalPackRefill===0?"เต็ม":""}</td>
-      </tr>`
-      html += `</tbody></table>`
+      const list = Object.values(skuRefill).sort((a, b) => a.sku_id.localeCompare(b.sku_id))
+      return { machId, mInfo, list,
+        totalBox: list.filter(r => r.isBox).reduce((a, r) => a + r.refill, 0),
+        totalPack: list.filter(r => !r.isBox).reduce((a, r) => a + r.refill, 0),
+      }
     })
-
-    html += `</body></html>`
-    const w = window.open("", "_blank")
-    w.document.write(html)
-    w.document.close()
-    w.print()
   }
 
   const triggerStockSync = async () => {
@@ -3055,10 +2994,10 @@ function PageMachineStockView({ machines, machineStock, skus, onRefresh }) {
             {syncing ? "กำลังดึง..." : "ดึงข้อมูล VMS"}
           </button>
           {machineStock.length > 0 && (
-            <button onClick={exportRefillReport}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-orange-500 text-white text-sm font-medium hover:bg-orange-600 transition-all">
+            <button onClick={() => setShowRefill(v => !v)}
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-all ${showRefill ? "bg-orange-600 text-white" : "bg-orange-500 text-white hover:bg-orange-600"}`}>
               <ArrowUpCircle size={14}/>
-              รายงานเติมสินค้า
+              {showRefill ? "ปิดรายงาน" : "รายงานเติมสินค้า"}
             </button>
           )}
           <select value={selectedMachine} onChange={e => setSelectedMachine(e.target.value)}
@@ -3084,6 +3023,70 @@ function PageMachineStockView({ machines, machineStock, skus, onRefresh }) {
           {syncMsg.type==="success" ? <CheckCircle size={16}/> : <AlertTriangle size={16}/>}
           {syncMsg.msg}
           {syncMsg.type==="success" && <button onClick={() => { onRefresh?.(); setSyncMsg(null) }} className="ml-auto text-xs bg-green-600 text-white px-3 py-1 rounded-lg hover:bg-green-700">Refresh</button>}
+        </div>
+      )}
+
+      {/* ── รายงานเติมสินค้า (inline) ── */}
+      {showRefill && machineStock.length > 0 && (
+        <div className="bg-white rounded-2xl border-2 border-orange-200 shadow-sm p-5 print:border-0 print:shadow-none print:p-0" id="refill-report">
+          <div className="flex items-center justify-between mb-4 print:hidden">
+            <h2 className="text-lg font-bold text-orange-700">รายงานเติมสินค้า</h2>
+            <button onClick={() => window.print()}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-orange-500 text-white text-sm font-medium hover:bg-orange-600">
+              Print / Save PDF
+            </button>
+          </div>
+          <p className="text-xs text-gray-400 mb-4">{new Date().toLocaleDateString("th-TH", {year:"numeric",month:"long",day:"numeric"})} เวลา {new Date().toLocaleTimeString("th-TH", {hour:"2-digit",minute:"2-digit"})} น.</p>
+          {getRefillData().map(({ machId, mInfo, list, totalBox, totalPack }) => (
+            <div key={machId} className="mb-6">
+              <h3 className="font-bold text-gray-800 text-sm border-b-2 border-gray-800 pb-1 mb-2">
+                {mInfo.name || machId} — {mInfo.location || ""}
+              </h3>
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs border-collapse">
+                  <thead>
+                    <tr className="bg-gray-100">
+                      <th className="border border-gray-300 px-2 py-1.5 text-left">SKU</th>
+                      <th className="border border-gray-300 px-2 py-1.5 text-left">สินค้า</th>
+                      <th className="border border-gray-300 px-2 py-1.5 text-center">ประเภท</th>
+                      <th className="border border-gray-300 px-2 py-1.5 text-center">ช่อง</th>
+                      <th className="border border-gray-300 px-2 py-1.5 text-right">คงเหลือ</th>
+                      <th className="border border-gray-300 px-2 py-1.5 text-right">ความจุ</th>
+                      <th className="border border-gray-300 px-2 py-1.5 text-right font-bold text-red-600">ต้องเติม</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {list.map(r => {
+                      const unit = r.isBox ? "กล่อง" : "ซอง"
+                      return (
+                        <tr key={r.sku_id + (r.isBox?"b":"p")} className={r.refill === 0 ? "bg-green-50" : ""}>
+                          <td className="border border-gray-300 px-2 py-1 font-mono font-bold">{r.sku_id}</td>
+                          <td className="border border-gray-300 px-2 py-1">{r.name}</td>
+                          <td className="border border-gray-300 px-2 py-1 text-center">{unit}</td>
+                          <td className="border border-gray-300 px-2 py-1 text-center">{r.slots}</td>
+                          <td className="border border-gray-300 px-2 py-1 text-right">{r.remain}</td>
+                          <td className="border border-gray-300 px-2 py-1 text-right">{r.capacity}</td>
+                          <td className={`border border-gray-300 px-2 py-1 text-right font-bold ${r.refill > 0 ? "text-red-600" : "text-green-600"}`}>
+                            {r.refill > 0 ? `${r.refill} ${unit}` : "เต็ม"}
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                  <tfoot>
+                    <tr className="bg-blue-50 font-bold">
+                      <td colSpan={4} className="border border-gray-300 px-2 py-1.5">รวมต้องเติม</td>
+                      <td className="border border-gray-300 px-2 py-1.5 text-right">{list.reduce((a,r)=>a+r.remain,0)}</td>
+                      <td className="border border-gray-300 px-2 py-1.5 text-right">{list.reduce((a,r)=>a+r.capacity,0)}</td>
+                      <td className="border border-gray-300 px-2 py-1.5 text-right text-red-600">
+                        {totalBox > 0 ? `${totalBox} กล่อง` : ""}{totalBox>0&&totalPack>0?" / ":""}{totalPack > 0 ? `${totalPack} ซอง` : ""}{totalBox===0&&totalPack===0?"เต็ม":""}
+                      </td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            </div>
+          ))}
         </div>
       )}
 
