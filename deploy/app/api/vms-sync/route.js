@@ -6,6 +6,10 @@ export async function POST() {
     return NextResponse.json({ error: "GH_PAT not configured" }, { status: 500 })
   }
 
+  // คำนวณวันที่ปัจจุบัน (เวลาไทย UTC+7)
+  const nowBkk = new Date(Date.now() + 7 * 60 * 60 * 1000)
+  const today = nowBkk.toISOString().slice(0, 10)
+
   try {
     const res = await fetch(
       "https://api.github.com/repos/divisionxcard/divisionX-Card/actions/workflows/vms-sync.yml/dispatches",
@@ -15,12 +19,19 @@ export async function POST() {
           Authorization: `Bearer ${token}`,
           Accept: "application/vnd.github.v3+json",
         },
-        body: JSON.stringify({ ref: "main" }),
+        body: JSON.stringify({
+          ref: "main",
+          inputs: {
+            days: "0",
+            from_date: today,
+            to_date: today,
+          },
+        }),
       }
     )
 
     if (res.status === 204) {
-      return NextResponse.json({ success: true, message: "VMS Sync triggered successfully" })
+      return NextResponse.json({ success: true, message: `VMS Sync triggered for ${today}` })
     }
 
     const data = await res.text()

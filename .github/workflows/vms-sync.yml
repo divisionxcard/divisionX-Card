@@ -2,8 +2,8 @@ name: VMS Daily Sync
 
 on:
   schedule:
-    # รันทุกวัน เวลา 00:15 น. เวลาไทย (UTC+7 → 17:15 UTC วันก่อน)
-    - cron: "15 17 * * *"
+    # รันทุกวัน เวลา 00:00 น. เวลาไทย (UTC+7 → 17:00 UTC วันก่อน)
+    - cron: "0 17 * * *"
   workflow_dispatch:  # กดรันมือได้จาก GitHub Actions
     inputs:
       days:
@@ -47,7 +47,7 @@ jobs:
           ARGS=""
           if [ -n "${{ inputs.from_date }}" ] && [ -n "${{ inputs.to_date }}" ]; then
             ARGS="--from-date ${{ inputs.from_date }} --to-date ${{ inputs.to_date }}"
-          elif [ "${{ inputs.days }}" != "" ] && [ "${{ inputs.days }}" != "1" ]; then
+          elif [ -n "${{ inputs.days }}" ]; then
             ARGS="--days ${{ inputs.days }}"
           fi
           python deploy/scraper/vms_scraper.py $ARGS

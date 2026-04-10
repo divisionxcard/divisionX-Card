@@ -2,8 +2,8 @@ name: VMS Daily Sync
 
 on:
   schedule:
-    # รันทุกวัน เวลา 00:15 น. เวลาไทย (UTC+7 → 17:15 UTC วันก่อน)
-    - cron: "15 17 * * *"
+    # รันทุกวัน เวลา 00:00 น. เวลาไทย (UTC+7 → 17:00 UTC วันก่อน)
+    - cron: "0 17 * * *"
   workflow_dispatch:  # กดรันมือได้จาก GitHub Actions
     inputs:
       days:
@@ -19,7 +19,7 @@ on:
 
 jobs:
   sync:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     timeout-minutes: 15
 
     steps:
@@ -33,9 +33,8 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install -r scraper/requirements.txt
-          playwright install chromium
-          playwright install-deps chromium
+          pip install -r deploy/scraper/requirements.txt
+          playwright install --with-deps chromium
 
       - name: Run VMS Scraper
         env:
@@ -51,4 +50,12 @@ jobs:
           elif [ -n "${{ inputs.days }}" ]; then
             ARGS="--days ${{ inputs.days }}"
           fi
-          python scraper/vms_scraper.py $ARGS
+          python deploy/scraper/vms_scraper.py $ARGS
+
+      - name: Upload screenshots (debug)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: debug-screenshots
+          path: /tmp/*.png
+          if-no-files-found: ignore

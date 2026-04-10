@@ -282,6 +282,10 @@ def main():
         # Backfill mode: ระบุช่วงวันเอง
         date_from = args.from_date
         date_to   = args.to_date
+    elif args.days == 0:
+        # Live mode: ดึงข้อมูลวันนี้ (กดปุ่มดึงมือจาก DVX)
+        date_from = now_bkk.strftime("%Y-%m-%d")
+        date_to   = now_bkk.strftime("%Y-%m-%d")
     else:
         # Daily mode: ดึงเฉพาะ N วันย้อนหลัง (default = เมื่อวาน 1 วัน)
         date_to   = (now_bkk - timedelta(days=1)).strftime("%Y-%m-%d")
