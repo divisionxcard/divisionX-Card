@@ -2,11 +2,20 @@ name: VMS Daily Sync
 
 on:
   schedule:
-    # รอบที่ 1: เที่ยงคืน เวลาไทย (00:00 ICT = 17:00 UTC วันก่อน)
-    - cron: "0 17 * * *"
-    # รอบที่ 2: 7 โมงเช้า เวลาไทย (07:00 ICT = 00:00 UTC)
-    - cron: "0 0 * * *"
+    # รันทุกวัน เวลา 00:15 น. เวลาไทย (UTC+7 → 17:15 UTC วันก่อน)
+    - cron: "15 17 * * *"
   workflow_dispatch:  # กดรันมือได้จาก GitHub Actions
+    inputs:
+      days:
+        description: "จำนวนวันย้อนหลัง (default: 1 = เมื่อวาน)"
+        required: false
+        default: "1"
+      from_date:
+        description: "วันเริ่มต้น (YYYY-MM-DD) สำหรับ backfill"
+        required: false
+      to_date:
+        description: "วันสิ้นสุด (YYYY-MM-DD) สำหรับ backfill"
+        required: false
 
 jobs:
   sync:
@@ -34,7 +43,14 @@ jobs:
           VMS_PASSWORD:         ${{ secrets.VMS_PASSWORD }}
           SUPABASE_URL:         ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
-        run: python deploy/scraper/vms_scraper.py
+        run: |
+          ARGS=""
+          if [ -n "${{ inputs.from_date }}" ] && [ -n "${{ inputs.to_date }}" ]; then
+            ARGS="--from-date ${{ inputs.from_date }} --to-date ${{ inputs.to_date }}"
+          elif [ "${{ inputs.days }}" != "" ] && [ "${{ inputs.days }}" != "1" ]; then
+            ARGS="--days ${{ inputs.days }}"
+          fi
+          python deploy/scraper/vms_scraper.py $ARGS
 
       - name: Upload screenshots (debug)
         if: always()
