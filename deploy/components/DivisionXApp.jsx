@@ -872,11 +872,12 @@ function genLotNumber() {
   return `LOT-${ymd}-${hm}`
 }
 
-function PageStock({ stockIn, stockBalance, onAddStockIn, onUpdateStockIn, onDeleteStockIn, skus, onAddSku, onDeactivateSku, onRecalcAllAvgCost }) {
+function PageStock({ stockIn, stockBalance, onAddStockIn, onUpdateStockIn, onDeleteStockIn, skus, onAddSku, onDeactivateSku, onRecalcAvgCost }) {
   const [tab, setTab]       = useState("balance")
   const [search, setSearch] = useState("")
   const [seriesSel, setSeriesSel] = useState("ทั้งหมด")
   const [saving, setSaving] = useState(false)
+  const [recalcSku, setRecalcSku] = useState("")
   const [form, setForm]     = useState({
     lot_number:   genLotNumber(),
     sku_id:       "OP 01",
@@ -968,14 +969,24 @@ function PageStock({ stockIn, stockBalance, onAddStockIn, onUpdateStockIn, onDel
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-bold text-gray-800">จัดการสต็อกสินค้า</h1>
-        <button onClick={async () => {
-          if (!confirm("คำนวณต้นทุนเฉลี่ยใหม่ทุก SKU จาก stock_in ทั้งหมด?")) return
-          await onRecalcAllAvgCost()
-          alert("คำนวณต้นทุนเฉลี่ยใหม่เรียบร้อยแล้ว")
-        }}
-          className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-purple-200 text-purple-600 text-xs font-medium hover:bg-purple-50 transition-all">
-          <RefreshCw size={14}/> คำนวณต้นทุนใหม่
-        </button>
+        <div className="flex items-center gap-2">
+          <select value={recalcSku} onChange={e => setRecalcSku(e.target.value)}
+            className="border border-purple-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-purple-200">
+            <option value="">— เลือก SKU —</option>
+            {skus.map(s => <option key={s.sku_id} value={s.sku_id}>{s.sku_id} — {s.name}</option>)}
+          </select>
+          <button onClick={async () => {
+            if (!recalcSku) { alert("กรุณาเลือก SKU ก่อน"); return }
+            if (!confirm(`คำนวณต้นทุนเฉลี่ยใหม่สำหรับ ${recalcSku}?`)) return
+            await onRecalcAvgCost(recalcSku)
+            alert(`คำนวณต้นทุน ${recalcSku} ใหม่เรียบร้อยแล้ว`)
+            setRecalcSku("")
+          }}
+            disabled={!recalcSku}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-purple-200 text-purple-600 text-xs font-medium hover:bg-purple-50 disabled:opacity-40 transition-all">
+            <RefreshCw size={14}/> คำนวณต้นทุนใหม่
+          </button>
+        </div>
       </div>
 
       {editRecord && (
@@ -3521,7 +3532,7 @@ export default function DivisionXApp() {
 
         <main className="flex-1 p-4 lg:p-6 overflow-y-auto">
           {page === "dashboard"  && <PageDashboard stockIn={stockIn} stockOut={stockOut} stockBalance={stockBalance} skus={skus}/>}
-          {page === "stock"      && <PageStock     stockIn={stockIn} stockBalance={stockBalance} skus={skus} onAddStockIn={addStockIn} onUpdateStockIn={updateStockIn} onDeleteStockIn={deleteStockIn} onAddSku={addSku} onDeactivateSku={deactivateSku} onRecalcAllAvgCost={async () => { await recalcAllAvgCost(); setSkus(await getSkus()) }}/>}
+          {page === "stock"      && <PageStock     stockIn={stockIn} stockBalance={stockBalance} skus={skus} onAddStockIn={addStockIn} onUpdateStockIn={updateStockIn} onDeleteStockIn={deleteStockIn} onAddSku={addSku} onDeactivateSku={deactivateSku} onRecalcAvgCost={async (skuId) => { await recalcAvgCost(skuId); setSkus(await getSkus()) }}/>}
           {page === "withdrawal" && <PageWithdrawal machines={machines} stockOut={stockOut} stockIn={stockIn} stockBalance={stockBalance} skus={skus} onAddStockOut={addStockOut} onDeleteStockOut={deleteStockOut}/>}
           {page === "machstock"  && <PageMachineStockView machines={machines} machineStock={machineStock} skus={skus} onRefresh={loadAll}/>}
           {page === "sales"      && <PageSales     machines={machines} sales={sales} skus={skus} claims={claims} onRefresh={loadAll}/>}
