@@ -1,0 +1,54 @@
+name: VMS Daily Sync
+
+on:
+  schedule:
+    # รันทุกวัน เวลา 00:15 น. เวลาไทย (UTC+7 → 17:15 UTC วันก่อน)
+    - cron: "15 17 * * *"
+  workflow_dispatch:  # กดรันมือได้จาก GitHub Actions
+    inputs:
+      days:
+        description: "จำนวนวันย้อนหลัง (default: 1 = เมื่อวาน)"
+        required: false
+        default: "1"
+      from_date:
+        description: "วันเริ่มต้น (YYYY-MM-DD) สำหรับ backfill"
+        required: false
+      to_date:
+        description: "วันสิ้นสุด (YYYY-MM-DD) สำหรับ backfill"
+        required: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          pip install -r scraper/requirements.txt
+          playwright install chromium
+          playwright install-deps chromium
+
+      - name: Run VMS Scraper
+        env:
+          VMS_URL:              ${{ secrets.VMS_URL }}
+          VMS_USERNAME:         ${{ secrets.VMS_USERNAME }}
+          VMS_PASSWORD:         ${{ secrets.VMS_PASSWORD }}
+          SUPABASE_URL:         ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: |
+          ARGS=""
+          if [ -n "${{ inputs.from_date }}" ] && [ -n "${{ inputs.to_date }}" ]; then
+            ARGS="--from-date ${{ inputs.from_date }} --to-date ${{ inputs.to_date }}"
+          elif [ -n "${{ inputs.days }}" ]; then
+            ARGS="--days ${{ inputs.days }}"
+          fi
+          python scraper/vms_scraper.py $ARGS

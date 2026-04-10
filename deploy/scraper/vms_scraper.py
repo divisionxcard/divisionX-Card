@@ -265,12 +265,32 @@ def save_to_supabase(records: list[dict]):
     print(f"🎉 บันทึกทั้งหมด {saved} รายการ")
 
 def main():
-    # ดึงข้อมูลย้อนหลัง 7 วัน
-    date_to   = datetime.now().strftime("%Y-%m-%d")
-    date_from = (datetime.now() - timedelta(days=7)).strftime("%Y-%m-%d")
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--days", type=int, default=1,
+                        help="จำนวนวันย้อนหลังที่จะดึง (default: 1 = เมื่อวาน)")
+    parser.add_argument("--from-date", type=str, default=None,
+                        help="วันเริ่มต้น (YYYY-MM-DD) สำหรับ backfill")
+    parser.add_argument("--to-date", type=str, default=None,
+                        help="วันสิ้นสุด (YYYY-MM-DD) สำหรับ backfill")
+    args = parser.parse_args()
+
+    # คำนวณวันที่ตามเวลาไทย (UTC+7)
+    now_bkk = datetime.utcnow() + timedelta(hours=7)
+
+    if args.from_date and args.to_date:
+        # Backfill mode: ระบุช่วงวันเอง
+        date_from = args.from_date
+        date_to   = args.to_date
+    else:
+        # Daily mode: ดึงเฉพาะ N วันย้อนหลัง (default = เมื่อวาน 1 วัน)
+        date_to   = (now_bkk - timedelta(days=1)).strftime("%Y-%m-%d")
+        date_from = (now_bkk - timedelta(days=args.days)).strftime("%Y-%m-%d")
+
     print(f"\n{'='*50}")
     print(f"DivisionX Card — VMS Scraper")
-    print(f"ช่วงเวลา: {date_from} → {date_to}")
+    print(f"เวลาไทย: {now_bkk.strftime('%Y-%m-%d %H:%M')}")
+    print(f"ดึงข้อมูล: {date_from} → {date_to}")
     print(f"{'='*50}\n")
 
     with sync_playwright() as p:
