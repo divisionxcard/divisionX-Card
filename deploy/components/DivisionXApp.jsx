@@ -2897,69 +2897,108 @@ function PageMachineStockView({ machines, machineStock, skus, onRefresh }) {
     const dateStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}-${String(now.getDate()).padStart(2,"0")}`
     const timeStr = `${String(now.getHours()).padStart(2,"0")}:${String(now.getMinutes()).padStart(2,"0")}`
 
-    const machineIds = selectedMachine === "all"
+    const machIds = selectedMachine === "all"
       ? Object.keys(grouped).sort()
       : [selectedMachine].filter(id => grouped[id])
 
     let html = `<html><head><meta charset="utf-8"><title>รายงานเติมสินค้า ${dateStr}</title>
       <style>
-        body { font-family: sans-serif; font-size: 12px; padding: 20px; }
-        h1 { font-size: 18px; margin-bottom: 4px; }
-        h2 { font-size: 14px; margin-top: 20px; border-bottom: 2px solid #333; padding-bottom: 4px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 8px; }
-        th, td { border: 1px solid #ccc; padding: 4px 8px; text-align: left; font-size: 11px; }
-        th { background: #f5f5f5; font-weight: bold; }
-        .right { text-align: right; }
-        .bold { font-weight: bold; }
-        .red { color: #dc2626; }
-        .summary { margin-top: 8px; padding: 8px; background: #f0f9ff; border-radius: 4px; }
-        @media print { body { padding: 0; } }
+        body { font-family: sans-serif; font-size: 11px; padding: 15px; }
+        h1 { font-size: 16px; margin-bottom: 2px; }
+        h2 { font-size: 13px; margin-top: 18px; border-bottom: 2px solid #333; padding-bottom: 3px; }
+        h3 { font-size: 12px; margin-top: 12px; color: #555; }
+        table { width: 100%; border-collapse: collapse; margin-top: 6px; }
+        th, td { border: 1px solid #ccc; padding: 3px 6px; font-size: 10px; }
+        th { background: #f5f5f5; font-weight: bold; text-align: center; }
+        .r { text-align: right; }
+        .c { text-align: center; }
+        .b { font-weight: bold; }
+        .red { color: #dc2626; font-weight: bold; }
+        .green { color: #16a34a; }
+        .gray { color: #999; }
+        .full { background: #f0fdf4; }
+        .summary { margin-top: 8px; padding: 6px 10px; background: #fef3c7; border: 1px solid #fbbf24; border-radius: 4px; font-size: 11px; }
+        .summary-table { margin-top: 10px; }
+        .summary-table th { background: #dbeafe; }
+        .page-break { page-break-before: always; }
+        @media print { body { padding: 5px; } }
       </style></head><body>`
-    html += `<h1>📋 รายงานเติมสินค้า</h1>`
+    html += `<h1>รายงานเติมสินค้า</h1>`
     html += `<p>วันที่: ${dateStr} เวลา: ${timeStr} น.</p>`
 
-    machineIds.forEach(machId => {
-      const slots = grouped[machId] || []
+    machIds.forEach((machId, mi) => {
+      const slots = (grouped[machId] || []).sort((a,b) => (a.slot_number||"").localeCompare(b.slot_number||""))
       const mInfo = machineNames[machId] || { name: machId, location: "" }
 
-      // รวมตาม SKU + ประเภท (box/pack)
+      if (mi > 0) html += `<div class="page-break"></div>`
+      html += `<h2>${mInfo.name || machId} — ${mInfo.location || ""}</h2>`
+
+      // ── ตาราง 1: รายช่อง (คล้ายข้อมูลดิบ) ──
+      html += `<h3>รายละเอียดแต่ละช่อง</h3>`
+      html += `<table><thead><tr>
+        <th>ช่อง</th><th>SKU</th><th>สินค้า</th><th>ประเภท</th>
+        <th>คงเหลือ</th><th>ความจุ</th><th class="red">ต้องเติม</th>
+      </tr></thead><tbody>`
+      slots.forEach(s => {
+        const isEmpty = !s.product_name
+        const refill = (s.max_capacity || 0) - (s.remain || 0)
+        const isFull = refill <= 0 && !isEmpty
+        const isBox = (s.product_name || "").toLowerCase().includes("box")
+        const unit = isBox ? "กล่อง" : "ซอง"
+        html += `<tr class="${isFull ? "full" : ""}">
+          <td class="c b">${s.slot_number || ""}</td>
+          <td>${isEmpty ? "" : (s.sku_id || "")}</td>
+          <td>${isEmpty ? '<span class="gray">ว่าง</span>' : s.product_name}</td>
+          <td class="c">${isEmpty ? "" : unit}</td>
+          <td class="r">${isEmpty ? "" : s.remain}</td>
+          <td class="r">${isEmpty ? "" : s.max_capacity}</td>
+          <td class="r ${refill > 0 ? "red" : "green"}">${isEmpty ? "" : refill > 0 ? refill + " " + unit : "เต็ม"}</td>
+        </tr>`
+      })
+      html += `</tbody></table>`
+
+      // ── ตาราง 2: สรุปรวมตาม SKU ──
       const skuRefill = {}
-      slots.filter(s => s.product_name && s.is_occupied && s.remain < s.max_capacity).forEach(s => {
+      slots.filter(s => s.product_name && s.is_occupied).forEach(s => {
         const name = s.product_name || ""
         const isBox = name.toLowerCase().includes("box")
         const key = (s.sku_id || name) + (isBox ? "_box" : "_pack")
-        const refill = (s.max_capacity || 0) - (s.remain || 0)
-        if (refill <= 0) return
-        if (!skuRefill[key]) skuRefill[key] = { sku_id: s.sku_id || "", name, isBox, refill: 0, slots: 0 }
+        const refill = Math.max(0, (s.max_capacity || 0) - (s.remain || 0))
+        if (!skuRefill[key]) skuRefill[key] = { sku_id: s.sku_id || "", name, isBox, refill: 0, remain: 0, capacity: 0, slots: 0 }
         skuRefill[key].refill += refill
+        skuRefill[key].remain += s.remain || 0
+        skuRefill[key].capacity += s.max_capacity || 0
         skuRefill[key].slots += 1
       })
       const refillList = Object.values(skuRefill).sort((a, b) => b.refill - a.refill)
       const totalBoxRefill = refillList.filter(r => r.isBox).reduce((a, r) => a + r.refill, 0)
       const totalPackRefill = refillList.filter(r => !r.isBox).reduce((a, r) => a + r.refill, 0)
 
-      html += `<h2>${mInfo.name || machId} — ${mInfo.location || ""}</h2>`
-      if (refillList.length === 0) {
-        html += `<p>สินค้าเต็มทุกช่อง ไม่ต้องเติม</p>`
-      } else {
-        html += `<table><thead><tr>
-          <th>SKU</th><th>สินค้า</th><th>ประเภท</th><th class="right">ช่อง</th><th class="right bold red">ต้องเติม</th>
-        </tr></thead><tbody>`
-        refillList.forEach(r => {
-          html += `<tr>
-            <td>${r.sku_id}</td>
-            <td>${r.name}</td>
-            <td>${r.isBox ? "กล่อง" : "ซอง"}</td>
-            <td class="right">${r.slots} ช่อง</td>
-            <td class="right bold red">${r.refill} ${r.isBox ? "กล่อง" : "ซอง"}</td>
-          </tr>`
-        })
-        html += `</tbody></table>`
-        html += `<div class="summary"><strong>รวมต้องเติม:</strong> `
-        if (totalBoxRefill > 0) html += `<span class="bold red">${totalBoxRefill} กล่อง</span> `
-        if (totalPackRefill > 0) html += `<span class="bold red">${totalPackRefill} ซอง</span>`
-        html += `</div>`
-      }
+      html += `<h3>สรุปรวมตาม SKU</h3>`
+      html += `<table class="summary-table"><thead><tr>
+        <th>SKU</th><th>สินค้า</th><th>ประเภท</th><th>ช่อง</th>
+        <th>คงเหลือ</th><th>ความจุ</th><th class="red">ต้องเติม</th>
+      </tr></thead><tbody>`
+      refillList.forEach(r => {
+        const unit = r.isBox ? "กล่อง" : "ซอง"
+        html += `<tr>
+          <td class="b">${r.sku_id}</td>
+          <td>${r.name}</td>
+          <td class="c">${unit}</td>
+          <td class="c">${r.slots}</td>
+          <td class="r">${r.remain}</td>
+          <td class="r">${r.capacity}</td>
+          <td class="r red">${r.refill > 0 ? r.refill + " " + unit : '<span class="green">เต็ม</span>'}</td>
+        </tr>`
+      })
+      html += `</tbody></table>`
+
+      html += `<div class="summary"><strong>รวมต้องเติม ${mInfo.name || machId}:</strong> `
+      if (totalBoxRefill > 0) html += `<span class="red">${totalBoxRefill} กล่อง</span> `
+      if (totalBoxRefill > 0 && totalPackRefill > 0) html += ` / `
+      if (totalPackRefill > 0) html += `<span class="red">${totalPackRefill} ซอง</span>`
+      if (totalBoxRefill === 0 && totalPackRefill === 0) html += `<span class="green">สินค้าเต็มทุกช่อง</span>`
+      html += `</div>`
     })
 
     html += `</body></html>`
