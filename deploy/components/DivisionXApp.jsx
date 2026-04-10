@@ -2907,11 +2907,12 @@ function PageMachineStockView({ machines, machineStock, skus, onRefresh }) {
         const isBox = name.toLowerCase().includes("box")
         const key = (s.sku_id || name) + (isBox ? "_box" : "_pack")
         const refill = Math.max(0, (s.max_capacity || 0) - (s.remain || 0))
-        if (!skuRefill[key]) skuRefill[key] = { sku_id: s.sku_id || "", name, isBox, refill: 0, remain: 0, capacity: 0, slots: 0 }
+        if (!skuRefill[key]) skuRefill[key] = { sku_id: s.sku_id || "", name, isBox, refill: 0, remain: 0, capacity: 0, slots: 0, slotNums: [] }
         skuRefill[key].refill += refill
         skuRefill[key].remain += s.remain || 0
         skuRefill[key].capacity += s.max_capacity || 0
         skuRefill[key].slots += 1
+        if (refill > 0) skuRefill[key].slotNums.push(s.slot_number)
       })
       const list = Object.values(skuRefill).sort((a, b) => a.sku_id.localeCompare(b.sku_id))
       return { machId, mInfo, list,
@@ -3049,7 +3050,7 @@ function PageMachineStockView({ machines, machineStock, skus, onRefresh }) {
                       <th className="border border-gray-300 px-2 py-1.5 text-left">SKU</th>
                       <th className="border border-gray-300 px-2 py-1.5 text-left">สินค้า</th>
                       <th className="border border-gray-300 px-2 py-1.5 text-center">ประเภท</th>
-                      <th className="border border-gray-300 px-2 py-1.5 text-center">ช่อง</th>
+                      <th className="border border-gray-300 px-2 py-1.5 text-left">ช่องที่ต้องเติม</th>
                       <th className="border border-gray-300 px-2 py-1.5 text-right">คงเหลือ</th>
                       <th className="border border-gray-300 px-2 py-1.5 text-right">ความจุ</th>
                       <th className="border border-gray-300 px-2 py-1.5 text-right font-bold text-red-600">ต้องเติม</th>
@@ -3063,7 +3064,9 @@ function PageMachineStockView({ machines, machineStock, skus, onRefresh }) {
                           <td className="border border-gray-300 px-2 py-1 font-mono font-bold">{r.sku_id}</td>
                           <td className="border border-gray-300 px-2 py-1">{r.name}</td>
                           <td className="border border-gray-300 px-2 py-1 text-center">{unit}</td>
-                          <td className="border border-gray-300 px-2 py-1 text-center">{r.slots}</td>
+                          <td className="border border-gray-300 px-2 py-1 text-left font-mono text-xs">
+                            {r.slotNums.length > 0 ? r.slotNums.join(", ") : <span className="text-green-500">-</span>}
+                          </td>
                           <td className="border border-gray-300 px-2 py-1 text-right">{r.remain}</td>
                           <td className="border border-gray-300 px-2 py-1 text-right">{r.capacity}</td>
                           <td className={`border border-gray-300 px-2 py-1 text-right font-bold ${r.refill > 0 ? "text-red-600" : "text-green-600"}`}>
