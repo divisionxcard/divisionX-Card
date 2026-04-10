@@ -878,6 +878,47 @@ function PageStock({ stockIn, stockBalance, onAddStockIn, onUpdateStockIn, onDel
   const [seriesSel, setSeriesSel] = useState("ทั้งหมด")
   const [saving, setSaving] = useState(false)
   const [recalcSku, setRecalcSku] = useState("")
+  const nowDate = () => new Date().toISOString().slice(0,10)
+  const [lotFilter,   setLotFilter]   = useState("all")
+  const [lotDate,     setLotDate]     = useState(nowDate())
+  const [lotMonth,    setLotMonth]    = useState(nowDate().slice(0,7))
+  const [lotYear,     setLotYear]     = useState(nowDate().slice(0,4))
+
+  const filterLots = (list) => {
+    const sorted = [...list].sort((a, b) => (b.purchased_at || b.created_at || "").localeCompare(a.purchased_at || a.created_at || ""))
+    if (lotFilter === "day")   return sorted.filter(r => (r.purchased_at || r.created_at || "").slice(0,10) === lotDate)
+    if (lotFilter === "month") return sorted.filter(r => (r.purchased_at || r.created_at || "").slice(0,7) === lotMonth)
+    if (lotFilter === "year")  return sorted.filter(r => (r.purchased_at || r.created_at || "").slice(0,4) === lotYear)
+    return sorted
+  }
+
+  const LotFilterBar = () => (
+    <div className="flex flex-wrap gap-2 items-center">
+      <div className="flex gap-1 bg-gray-100 p-1 rounded-xl">
+        {[{v:"all",l:"ทั้งหมด"},{v:"day",l:"รายวัน"},{v:"month",l:"รายเดือน"},{v:"year",l:"รายปี"}].map(t => (
+          <button key={t.v} onClick={() => setLotFilter(t.v)}
+            className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${lotFilter===t.v?"bg-white shadow text-blue-600":"text-gray-500"}`}>
+            {t.l}
+          </button>
+        ))}
+      </div>
+      {lotFilter === "day" && (
+        <input type="date" value={lotDate} onChange={e => setLotDate(e.target.value)}
+          className="border border-gray-200 rounded-lg px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-blue-200"/>
+      )}
+      {lotFilter === "month" && (
+        <input type="month" value={lotMonth} onChange={e => setLotMonth(e.target.value)}
+          className="border border-gray-200 rounded-lg px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-blue-200"/>
+      )}
+      {lotFilter === "year" && (
+        <select value={lotYear} onChange={e => setLotYear(e.target.value)}
+          className="border border-gray-200 rounded-lg px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-blue-200">
+          {[...new Set(stockIn.map(r => (r.purchased_at || r.created_at || "").slice(0,4)).filter(Boolean))].sort().reverse()
+            .map(y => <option key={y} value={y}>{y}</option>)}
+        </select>
+      )}
+    </div>
+  )
   const [form, setForm]     = useState({
     lot_number:   genLotNumber(),
     sku_id:       "OP 01",
@@ -1201,12 +1242,15 @@ function PageStock({ stockIn, stockBalance, onAddStockIn, onUpdateStockIn, onDel
 
           {/* Lot Cost Summary */}
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-            <h2 className="font-semibold text-gray-700 mb-3">ประวัติ Lot ล่าสุด</h2>
-            {stockIn.length === 0 ? (
-              <p className="text-gray-400 text-sm">ยังไม่มีประวัติการรับสินค้า</p>
+            <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
+              <h2 className="font-semibold text-gray-700">ประวัติ Lot ล่าสุด</h2>
+              <LotFilterBar/>
+            </div>
+            {(() => { const filteredLots = filterLots(stockIn); return filteredLots.length === 0 ? (
+              <p className="text-gray-400 text-sm">ยังไม่มีประวัติการรับสินค้า{lotFilter !== "all" ? "ในช่วงที่เลือก" : ""}</p>
             ) : (
               <div className="space-y-3 max-h-[520px] overflow-y-auto pr-1">
-                {[...stockIn].slice(0, 15).map((r, i) => {
+                {filteredLots.map((r, i) => {
                   const s   = skus.find(sk => sk.sku_id === r.sku_id)
                   const cpp = r.quantity_packs > 0 ? r.total_cost / r.quantity_packs : 0
                   const isConfirmingDelete = deleteId === r.id
@@ -1267,7 +1311,8 @@ function PageStock({ stockIn, stockBalance, onAddStockIn, onUpdateStockIn, onDel
                   )
                 })}
               </div>
-            )}
+            )
+            })()}
           </div>
         </div>
       )}
@@ -1275,14 +1320,17 @@ function PageStock({ stockIn, stockBalance, onAddStockIn, onUpdateStockIn, onDel
       {/* ── Tab: History ── */}
       {tab === "history" && (
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-          <h2 className="font-semibold text-gray-700 mb-3">ประวัติรับซื้อสินค้า (100 รายการล่าสุด)</h2>
-          {stockIn.length === 0 ? (
-            <p className="text-gray-400 text-sm">ยังไม่มีประวัติการรับสินค้า</p>
+          <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
+            <h2 className="font-semibold text-gray-700">ประวัติรับซื้อสินค้า</h2>
+            <LotFilterBar/>
+          </div>
+          {(() => { const filteredHistory = filterLots(stockIn); return filteredHistory.length === 0 ? (
+            <p className="text-gray-400 text-sm">ยังไม่มีประวัติการรับสินค้า{lotFilter !== "all" ? "ในช่วงที่เลือก" : ""}</p>
           ) : (
             <>
               {/* Mobile cards */}
               <div className="sm:hidden space-y-3">
-                {stockIn.map((r, i) => {
+                {filteredHistory.map((r, i) => {
                   const cpp = r.quantity_packs > 0 ? r.total_cost / r.quantity_packs : 0
                   return (
                     <div key={i} className="p-3 rounded-xl bg-gray-50">
@@ -1314,7 +1362,7 @@ function PageStock({ stockIn, stockBalance, onAddStockIn, onUpdateStockIn, onDel
                     </tr>
                   </thead>
                   <tbody>
-                    {stockIn.map((r, i) => {
+                    {filteredHistory.map((r, i) => {
                       const cpp = r.quantity_packs > 0 ? r.total_cost / r.quantity_packs : 0
                       return (
                         <tr key={i} className="border-b border-gray-50 hover:bg-gray-50">
@@ -1336,7 +1384,8 @@ function PageStock({ stockIn, stockBalance, onAddStockIn, onUpdateStockIn, onDel
                 </table>
               </div>
             </>
-          )}
+          )
+          })()}
         </div>
       )}
 
