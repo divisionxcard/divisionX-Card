@@ -1595,16 +1595,17 @@ function PageWithdrawal({ machines, stockOut, stockIn, stockBalance, onAddStockO
   const selectedSku = skus.find(s => s.sku_id === form.sku_id)
   const availBoxes  = selectedSku ? Math.floor(available / selectedSku.packs_per_box) : 0
 
-  // ── Lot options สำหรับ SKU ที่เลือก ──
-  const skuLots = stockIn
+  // ── Lot options สำหรับ SKU ที่เลือก (filter ทั้ง sku_id + lot_number) ──
+  const skuLots = form.sku_id ? stockIn
     .filter(r => r.sku_id === form.sku_id && r.lot_number)
     .map(r => {
       const withdrawn = stockOut
-        .filter(so => so.lot_number === r.lot_number)
+        .filter(so => so.lot_number === r.lot_number && so.sku_id === r.sku_id)
         .reduce((a, so) => a + (so.quantity_packs || 0), 0)
       return { ...r, lotBalance: r.quantity_packs - withdrawn }
     })
     .sort((a, b) => new Date(a.purchased_at) - new Date(b.purchased_at)) // FIFO
+    : []
 
   const availableLots = skuLots.filter(r => r.lotBalance > 0)
   const selectedLot   = skuLots.find(r => r.lot_number === form.lot_number)
@@ -1697,6 +1698,10 @@ function PageWithdrawal({ machines, stockOut, stockIn, stockBalance, onAddStockO
                         onClick={() => setForm({...form, lot_number: isSelected ? "" : lot.lot_number})}
                         className={`w-full p-3 rounded-xl border-2 text-left transition-all disabled:opacity-40 disabled:cursor-not-allowed
                           ${isSelected ? "border-orange-400 bg-orange-50" : depleted ? "border-gray-200 bg-gray-50" : "border-gray-200 hover:border-orange-300"}`}>
+                        {/* แจ้งเตือนถ้า lot_number ไม่ตรงกับ SKU ที่เลือก */}
+                        {lot.lot_number && !lot.lot_number.toUpperCase().includes(form.sku_id.replace(" ","")) && (
+                          <p className="text-xs text-red-500 font-medium mb-1">⚠ Lot นี้อาจบันทึกผิด SKU — ชื่อ Lot ไม่ตรงกับ {form.sku_id}</p>
+                        )}
                         <div className="flex items-center justify-between gap-2">
                           <div>
                             <span className={`font-mono text-xs font-bold px-1.5 py-0.5 rounded ${isSelected ? "bg-orange-100 text-orange-700" : "bg-blue-50 text-blue-700"}`}>
