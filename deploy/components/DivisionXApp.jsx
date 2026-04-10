@@ -22,7 +22,7 @@ import {
   getSkus, addSku as dbAddSku, deactivateSku as dbDeactivateSku, updateSkuAvgCost,
   signIn as authSignIn, signOut as authSignOut, getProfile,
   getMachineStock,
-  getClaims, addClaim as dbAddClaim, deleteClaim as dbDeleteClaim,
+  getClaims, addClaim as dbAddClaim, updateClaim as dbUpdateClaim, deleteClaim as dbDeleteClaim,
 } from "../lib/supabase"
 
 // ─────────────────────────────────────────────
@@ -2203,7 +2203,7 @@ function PageSales({ machines, sales, skus, claims, onRefresh }) {
 // ─────────────────────────────────────────────
 // PAGE 5: CLAIMS (เคลม/คืนเงิน)
 // ─────────────────────────────────────────────
-function PageClaims({ machines, skus, claims, onAddClaim, onDeleteClaim }) {
+function PageClaims({ machines, skus, claims, onAddClaim, onConfirmClaim, onDeleteClaim }) {
   const [form, setForm] = useState({
     machine_id:"", sku_id:"", quantity:"1", refund_amount:"",
     product_status:"returned", reason:"สินค้าไม่ตก", note:"",
@@ -2212,6 +2212,8 @@ function PageClaims({ machines, skus, claims, onAddClaim, onDeleteClaim }) {
   const [saving, setSaving] = useState(false)
   const [toast, setToast] = useState(null)
   const [deleteId, setDeleteId] = useState(null)
+  const [confirmId, setConfirmId] = useState(null)
+  const [confirming, setConfirming] = useState(false)
 
   const showToast = (msg, type="success") => { setToast({msg,type}); setTimeout(() => setToast(null), 3000) }
 
@@ -2246,6 +2248,16 @@ function PageClaims({ machines, skus, claims, onAddClaim, onDeleteClaim }) {
       setDeleteId(null)
       showToast("ลบรายการเคลมสำเร็จ")
     } catch (err) { showToast("ลบไม่สำเร็จ: " + err.message, "error") }
+  }
+
+  const handleConfirm = async (claim) => {
+    try {
+      setConfirming(true)
+      await onConfirmClaim(claim)
+      setConfirmId(null)
+      showToast(`ยืนยันเคลมสำเร็จ: ${claim.sku_id} ตัด ${claim.quantity} ซองออกจากสต็อก`)
+    } catch (err) { showToast("ยืนยันไม่สำเร็จ: " + err.message, "error") }
+    finally { setConfirming(false) }
   }
 
   // สรุป
@@ -2387,6 +2399,7 @@ function PageClaims({ machines, skus, claims, onAddClaim, onDeleteClaim }) {
                     <th className="text-right py-2 text-xs text-gray-400">คืนเงิน</th>
                     <th className="text-center py-2 text-xs text-gray-400">สาเหตุ</th>
                     <th className="text-center py-2 text-xs text-gray-400">สถานะ</th>
+                    <th className="text-center py-2 text-xs text-gray-400">ยืนยัน</th>
                     <th className="py-2 text-xs text-gray-400"></th>
                   </tr>
                 </thead>
@@ -2414,10 +2427,32 @@ function PageClaims({ machines, skus, claims, onAddClaim, onDeleteClaim }) {
                             {c.product_status === "returned" ? "คืนสต็อก" : c.product_status === "lost" ? "สูญหาย" : "ชำรุด"}
                           </span>
                         </td>
+                        <td className="py-2.5 text-center">
+                          {c.confirm_status === "confirmed" ? (
+                            <span className="text-xs text-green-600 font-medium">ตัดสต็อกแล้ว</span>
+                          ) : c.confirm_status === "pending" ? (
+                            confirmId === c.id ? (
+                              <div className="flex gap-1 justify-center">
+                                <button onClick={() => handleConfirm(c)} disabled={confirming}
+                                  className="text-xs bg-red-600 text-white px-2 py-1 rounded-lg font-medium hover:bg-red-700 disabled:opacity-50">
+                                  {confirming ? "..." : "ยืนยันตัดสต็อก"}
+                                </button>
+                                <button onClick={() => setConfirmId(null)} className="text-xs text-gray-400 px-1">ยกเลิก</button>
+                              </div>
+                            ) : (
+                              <button onClick={() => setConfirmId(c.id)}
+                                className="text-xs bg-amber-100 text-amber-700 px-2.5 py-1 rounded-lg font-medium hover:bg-amber-200">
+                                รอยืนยัน
+                              </button>
+                            )
+                          ) : (
+                            <span className="text-xs text-gray-400">—</span>
+                          )}
+                        </td>
                         <td className="py-2.5 text-right">
                           {deleteId === c.id ? (
                             <div className="flex gap-1 justify-end">
-                              <button onClick={() => handleDelete(c.id)} className="text-xs text-red-600 font-medium">ยืนยัน</button>
+                              <button onClick={() => handleDelete(c.id)} className="text-xs text-red-600 font-medium">ลบ</button>
                               <button onClick={() => setDeleteId(null)} className="text-xs text-gray-400">ยกเลิก</button>
                             </div>
                           ) : (
@@ -3111,9 +3146,28 @@ export default function DivisionXApp() {
   }
 
   const addClaim = async (record) => {
-    await dbAddClaim(record)
-    // สินค้าคืนสต็อก → ผู้ใช้ต้องไปคีย์รับเข้าระบบใหม่เองที่หน้าจัดการสต็อก
+    // สูญหาย/ชำรุด → สถานะเริ่มต้น "pending" (รอยืนยัน)
+    // คืนสต็อก → บันทึกเลย ผู้ใช้ไปคีย์รับเข้าเอง
+    const status = (record.product_status === "lost" || record.product_status === "damaged")
+      ? "pending" : record.product_status
+    await dbAddClaim({ ...record, confirm_status: status })
     setClaims(await getClaims())
+  }
+
+  const confirmClaim = async (claim) => {
+    // ยืนยันเคลม → ตัด stock อัตโนมัติ
+    await dbUpdateClaim(claim.id, { confirm_status: "confirmed" })
+    await dbAddStockOut({
+      sku_id:         claim.sku_id,
+      machine_id:     claim.machine_id,
+      quantity_packs: claim.quantity,
+      withdrawn_at:   claim.claimed_at,
+      note:           `[เคลม] ${claim.reason || ""} (${claim.product_status === "lost" ? "สูญหาย" : "ชำรุด"})`,
+    })
+    const [newClaims, newSO, newSB] = await Promise.all([getClaims(), getStockOut(), getStockBalance()])
+    setClaims(newClaims)
+    setStockOut(newSO)
+    setStockBalance(newSB)
   }
 
   const deleteClaim = async (id) => {
@@ -3277,7 +3331,7 @@ export default function DivisionXApp() {
           {page === "withdrawal" && <PageWithdrawal machines={machines} stockOut={stockOut} stockIn={stockIn} stockBalance={stockBalance} skus={skus} onAddStockOut={addStockOut} onDeleteStockOut={deleteStockOut}/>}
           {page === "machstock"  && <PageMachineStockView machines={machines} machineStock={machineStock} skus={skus}/>}
           {page === "sales"      && <PageSales     machines={machines} sales={sales} skus={skus} claims={claims} onRefresh={loadAll}/>}
-          {page === "claims"     && <PageClaims    machines={machines} skus={skus} claims={claims} onAddClaim={addClaim} onDeleteClaim={deleteClaim}/>}
+          {page === "claims"     && <PageClaims    machines={machines} skus={skus} claims={claims} onAddClaim={addClaim} onConfirmClaim={confirmClaim} onDeleteClaim={deleteClaim}/>}
           {page === "analytics"  && <PageAnalytics sales={sales} skus={skus}/>}
           {page === "users"      && <PageUsers     currentProfile={profile}/>}
           {page.startsWith("machine_") && (() => {

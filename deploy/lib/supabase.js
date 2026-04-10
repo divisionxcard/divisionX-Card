@@ -223,6 +223,17 @@ export async function addClaim(record) {
   return data
 }
 
+export async function updateClaim(id, updates) {
+  const { data, error } = await supabase
+    .from("claims")
+    .update(updates)
+    .eq("id", id)
+    .select()
+    .single()
+  if (error) throw error
+  return data
+}
+
 export async function deleteClaim(id) {
   const { error } = await supabase
     .from("claims")
