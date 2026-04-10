@@ -3037,7 +3037,7 @@ function PageMachineStockView({ machines, machineStock, skus, onRefresh }) {
               Print / Save PDF
             </button>
           </div>
-          {getRefillData().map(({ machId, mInfo, list, totalBox, totalPack }) => (
+          {getRefillData().filter(d => d.list.length > 0).map(({ machId, mInfo, list, totalBox, totalPack }) => (
             <div key={machId} className="mb-6 refill-machine">
               <div className="hidden print:block text-center mb-2">
                 <p className="font-bold text-sm">DivisionX Card — รายงานเติมสินค้า</p>
