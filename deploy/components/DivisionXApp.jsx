@@ -2219,7 +2219,7 @@ function PageClaims({ machines, skus, claims, onAddClaim, onDeleteClaim }) {
     e.preventDefault()
     if (!form.machine_id) { showToast("กรุณาเลือกตู้","error"); return }
     if (!form.sku_id)     { showToast("กรุณาเลือกสินค้า","error"); return }
-    if (!form.refund_amount || parseFloat(form.refund_amount) <= 0) { showToast("กรุณาระบุยอดคืนเงิน","error"); return }
+    if (form.product_status !== "lost" && (!form.refund_amount || parseFloat(form.refund_amount) <= 0)) { showToast("กรุณาระบุยอดคืนเงิน","error"); return }
     if (!form.claimed_at) { showToast("กรุณาระบุวันที่เคลม","error"); return }
     try {
       setSaving(true)
@@ -2252,6 +2252,7 @@ function PageClaims({ machines, skus, claims, onAddClaim, onDeleteClaim }) {
   const totalRefund  = claims.reduce((a, r) => a + (parseFloat(r.refund_amount) || 0), 0)
   const totalReturned = claims.filter(r => r.product_status === "returned").length
   const totalDamaged  = claims.filter(r => r.product_status === "damaged").length
+  const totalLost     = claims.filter(r => r.product_status === "lost").length
 
   return (
     <div className="space-y-6">
@@ -2280,6 +2281,7 @@ function PageClaims({ machines, skus, claims, onAddClaim, onDeleteClaim }) {
             <span className="text-green-600">{totalReturned} คืนสต็อก</span>
             {" · "}
             <span className="text-red-500">{totalDamaged} ชำรุด</span>
+            {totalLost > 0 && <>{" · "}<span className="text-orange-500">{totalLost} สูญหาย</span></>}
           </p>
         </div>
       </div>
@@ -2334,6 +2336,7 @@ function PageClaims({ machines, skus, claims, onAddClaim, onDeleteClaim }) {
                 className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-200">
                 <option value="สินค้าไม่ตก">สินค้าไม่ตก</option>
                 <option value="ตกผิดช่อง">ตกผิดช่อง</option>
+                <option value="ตู้ปล่อยเกิน">ตู้ปล่อยเกิน (สินค้าตกเกินจำนวน)</option>
                 <option value="เครื่องค้าง">เครื่องค้าง</option>
                 <option value="สินค้าชำรุด">สินค้าชำรุด</option>
                 <option value="อื่นๆ">อื่นๆ</option>
@@ -2343,7 +2346,7 @@ function PageClaims({ machines, skus, claims, onAddClaim, onDeleteClaim }) {
             <div>
               <label className="block text-xs text-gray-500 mb-1">สถานะสินค้า</label>
               <div className="grid grid-cols-2 gap-2">
-                {[{v:"returned",l:"คืนสต็อก",desc:"สภาพดี นำกลับมาขายได้",color:"green"},{v:"damaged",l:"ชำรุด",desc:"เสียหาย ขายต่อไม่ได้",color:"red"}].map(opt => (
+                {[{v:"returned",l:"คืนสต็อก",desc:"สภาพดี นำกลับมาขายได้",color:"green"},{v:"damaged",l:"ชำรุด",desc:"เสียหาย ขายต่อไม่ได้",color:"red"},{v:"lost",l:"สูญหาย",desc:"ตู้ปล่อยเกิน ไม่ได้คืน",color:"orange"}].map(opt => (
                   <button key={opt.v} type="button" onClick={() => setForm({...form, product_status:opt.v})}
                     className={`p-3 rounded-xl border-2 text-left transition-all ${form.product_status===opt.v ? `border-${opt.color}-400 bg-${opt.color}-50` : "border-gray-200 hover:border-gray-300"}`}>
                     <p className={`text-sm font-semibold ${form.product_status===opt.v ? `text-${opt.color}-700` : "text-gray-700"}`}>{opt.l}</p>
@@ -2404,11 +2407,11 @@ function PageClaims({ machines, skus, claims, onAddClaim, onDeleteClaim }) {
                         </td>
                         <td className="py-2.5 text-center">
                           <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                            c.product_status === "returned"
-                              ? "bg-green-100 text-green-700"
-                              : "bg-red-100 text-red-700"
+                            c.product_status === "returned" ? "bg-green-100 text-green-700"
+                            : c.product_status === "lost" ? "bg-orange-100 text-orange-700"
+                            : "bg-red-100 text-red-700"
                           }`}>
-                            {c.product_status === "returned" ? "คืนสต็อก" : "ชำรุด"}
+                            {c.product_status === "returned" ? "คืนสต็อก" : c.product_status === "lost" ? "สูญหาย" : "ชำรุด"}
                           </span>
                         </td>
                         <td className="py-2.5 text-right">
