@@ -20,7 +20,7 @@ KIOSKS = {
     "chukes01": { "record_id": 40, "tabs": 1 },
     "chukes02": { "record_id": 41, "tabs": 1 },
     "chukes03": { "record_id": 42, "tabs": 1 },
-    "chukes04": { "record_id": 43, "tabs": 2 },
+    "chukes04": { "record_id": 43, "tabs": 1 },
 }
 
 # ── Map VMS product name → SKU ID ─────────────────────────────
