@@ -2891,6 +2891,84 @@ function PageMachineStockView({ machines, machineStock, skus, onRefresh }) {
   const [syncMsg, setSyncMsg] = useState(null)
   const [showSkuDetail, setShowSkuDetail] = useState(false)
 
+  // ── Export รายงานเติมสินค้า ──
+  const exportRefillReport = () => {
+    const now = new Date()
+    const dateStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}-${String(now.getDate()).padStart(2,"0")}`
+    const timeStr = `${String(now.getHours()).padStart(2,"0")}:${String(now.getMinutes()).padStart(2,"0")}`
+
+    const machineIds = selectedMachine === "all"
+      ? Object.keys(grouped).sort()
+      : [selectedMachine].filter(id => grouped[id])
+
+    let html = `<html><head><meta charset="utf-8"><title>รายงานเติมสินค้า ${dateStr}</title>
+      <style>
+        body { font-family: sans-serif; font-size: 12px; padding: 20px; }
+        h1 { font-size: 18px; margin-bottom: 4px; }
+        h2 { font-size: 14px; margin-top: 20px; border-bottom: 2px solid #333; padding-bottom: 4px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+        th, td { border: 1px solid #ccc; padding: 4px 8px; text-align: left; font-size: 11px; }
+        th { background: #f5f5f5; font-weight: bold; }
+        .right { text-align: right; }
+        .bold { font-weight: bold; }
+        .red { color: #dc2626; }
+        .summary { margin-top: 8px; padding: 8px; background: #f0f9ff; border-radius: 4px; }
+        @media print { body { padding: 0; } }
+      </style></head><body>`
+    html += `<h1>📋 รายงานเติมสินค้า</h1>`
+    html += `<p>วันที่: ${dateStr} เวลา: ${timeStr} น.</p>`
+
+    machineIds.forEach(machId => {
+      const slots = grouped[machId] || []
+      const mInfo = machineNames[machId] || { name: machId, location: "" }
+
+      // รวมตาม SKU + ประเภท (box/pack)
+      const skuRefill = {}
+      slots.filter(s => s.product_name && s.is_occupied && s.remain < s.max_capacity).forEach(s => {
+        const name = s.product_name || ""
+        const isBox = name.toLowerCase().includes("box")
+        const key = (s.sku_id || name) + (isBox ? "_box" : "_pack")
+        const refill = (s.max_capacity || 0) - (s.remain || 0)
+        if (refill <= 0) return
+        if (!skuRefill[key]) skuRefill[key] = { sku_id: s.sku_id || "", name, isBox, refill: 0, slots: 0 }
+        skuRefill[key].refill += refill
+        skuRefill[key].slots += 1
+      })
+      const refillList = Object.values(skuRefill).sort((a, b) => b.refill - a.refill)
+      const totalBoxRefill = refillList.filter(r => r.isBox).reduce((a, r) => a + r.refill, 0)
+      const totalPackRefill = refillList.filter(r => !r.isBox).reduce((a, r) => a + r.refill, 0)
+
+      html += `<h2>${mInfo.name || machId} — ${mInfo.location || ""}</h2>`
+      if (refillList.length === 0) {
+        html += `<p>สินค้าเต็มทุกช่อง ไม่ต้องเติม</p>`
+      } else {
+        html += `<table><thead><tr>
+          <th>SKU</th><th>สินค้า</th><th>ประเภท</th><th class="right">ช่อง</th><th class="right bold red">ต้องเติม</th>
+        </tr></thead><tbody>`
+        refillList.forEach(r => {
+          html += `<tr>
+            <td>${r.sku_id}</td>
+            <td>${r.name}</td>
+            <td>${r.isBox ? "กล่อง" : "ซอง"}</td>
+            <td class="right">${r.slots} ช่อง</td>
+            <td class="right bold red">${r.refill} ${r.isBox ? "กล่อง" : "ซอง"}</td>
+          </tr>`
+        })
+        html += `</tbody></table>`
+        html += `<div class="summary"><strong>รวมต้องเติม:</strong> `
+        if (totalBoxRefill > 0) html += `<span class="bold red">${totalBoxRefill} กล่อง</span> `
+        if (totalPackRefill > 0) html += `<span class="bold red">${totalPackRefill} ซอง</span>`
+        html += `</div>`
+      }
+    })
+
+    html += `</body></html>`
+    const w = window.open("", "_blank")
+    w.document.write(html)
+    w.document.close()
+    w.print()
+  }
+
   const triggerStockSync = async () => {
     try {
       setSyncing(true)
@@ -2963,6 +3041,13 @@ function PageMachineStockView({ machines, machineStock, skus, onRefresh }) {
             <RefreshCw size={14} className={syncing ? "animate-spin" : ""}/>
             {syncing ? "กำลังดึง..." : "ดึงข้อมูล VMS"}
           </button>
+          {machineStock.length > 0 && (
+            <button onClick={exportRefillReport}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-orange-500 text-white text-sm font-medium hover:bg-orange-600 transition-all">
+              <ArrowUpCircle size={14}/>
+              รายงานเติมสินค้า
+            </button>
+          )}
           <select value={selectedMachine} onChange={e => setSelectedMachine(e.target.value)}
             className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none">
             <option value="all">ทุกตู้</option>
