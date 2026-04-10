@@ -3017,21 +3017,22 @@ function PageMachineStockView({ machines, machineStock, skus, onRefresh }) {
             const grandCapacity = allSkuList.reduce((a, r) => a + r.capacity, 0)
             const allMachineIds = Object.keys(grouped).sort()
 
-            // คำนวณยอดกล่อง+ซองต่อตู้
+            // คำนวณยอดกล่อง+ซองต่อตู้ (แยกตาม SKU เพราะ packs_per_box ต่างกัน)
             const machTotals = {}
             allMachineIds.forEach(id => {
-              const packs = Object.values(allSkuMap).reduce((a, r) => a + (r.perMachine[id] || 0), 0)
-              machTotals[id] = { packs }
+              let totalPacks = 0, totalBoxes = 0, totalLoose = 0
+              Object.values(allSkuMap).forEach(r => {
+                const val = r.perMachine[id] || 0
+                const ppb = (skus.find(s => s.sku_id === r.sku_id)?.packs_per_box) || 24
+                totalPacks += val
+                totalBoxes += Math.floor(val / ppb)
+                totalLoose += val % ppb
+              })
+              machTotals[id] = { packs: totalPacks, boxes: totalBoxes, loose: totalLoose }
             })
-            // รวม grand ทั้งกล่องและซอง (ใช้ ppb เฉลี่ย 24 สำหรับ grand total หรือคำนวณจาก SKU)
-            const grandBoxesCalc = allSkuList.reduce((a, r) => {
-              const ppb = (skus.find(s => s.sku_id === r.sku_id)?.packs_per_box) || 24
-              return a + Math.floor(r.remain / ppb)
-            }, 0)
-            const grandLoosePacks = allSkuList.reduce((a, r) => {
-              const ppb = (skus.find(s => s.sku_id === r.sku_id)?.packs_per_box) || 24
-              return a + (r.remain % ppb)
-            }, 0)
+            // รวม grand total
+            const grandBoxes = Object.values(machTotals).reduce((a, t) => a + t.boxes, 0)
+            const grandLoose = Object.values(machTotals).reduce((a, t) => a + t.loose, 0)
 
             return (
               <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
@@ -3049,7 +3050,7 @@ function PageMachineStockView({ machines, machineStock, skus, onRefresh }) {
                         <div key={id} className="text-center">
                           <p className="text-xs text-gray-400">{machineNames[id]?.name || id}</p>
                           <div className="flex gap-1 justify-center mt-0.5">
-                            <span className="text-xs font-bold text-red-500 bg-red-50 px-1.5 py-0.5 rounded">{fmt(machTotals[id].packs)} กล่อง</span>
+                            <span className="text-xs font-bold text-red-500 bg-red-50 px-1.5 py-0.5 rounded">{fmt(machTotals[id].boxes)} กล่อง</span>
                             <span className="text-xs font-bold text-blue-500 bg-blue-50 px-1.5 py-0.5 rounded">{fmt(machTotals[id].packs)} ซอง</span>
                           </div>
                         </div>
@@ -3107,12 +3108,11 @@ function PageMachineStockView({ machines, machineStock, skus, onRefresh }) {
                     <tfoot>
                       <tr className="bg-gray-50 font-semibold">
                         <td colSpan={2} className="py-2.5 px-4 text-xs text-gray-500">รวมทั้งหมด</td>
-                        {allMachineIds.map(id => {
-                          const machPacks = machTotals[id].packs
-                          return <td key={id} className="py-2.5 px-2 text-center text-xs font-bold text-gray-700">{fmt(machPacks)}</td>
-                        })}
+                        {allMachineIds.map(id => (
+                          <td key={id} className="py-2.5 px-2 text-center text-xs font-bold text-gray-700">{fmt(machTotals[id].packs)}</td>
+                        ))}
                         <td className="py-2.5 px-2 text-right text-red-700 font-bold text-sm">{fmt(grandRemain)}</td>
-                        <td className="py-2.5 px-4 text-right text-blue-700 text-xs font-bold">{fmt(grandBoxesCalc)} กล่อง{grandLoosePacks > 0 ? ` ${grandLoosePacks} ซอง` : ""}</td>
+                        <td className="py-2.5 px-4 text-right text-blue-700 text-xs font-bold">{fmt(grandBoxes)} กล่อง{grandLoose > 0 ? ` ${grandLoose} ซอง` : ""}</td>
                       </tr>
                     </tfoot>
                   </table>
