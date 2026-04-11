@@ -20,7 +20,7 @@ import {
   deleteStockOut as dbDeleteStockOut,
   getMachines, getSalesByMachine,
   getSkus, addSku as dbAddSku, deactivateSku as dbDeactivateSku, updateSkuAvgCost,
-  signIn as authSignIn, signOut as authSignOut, getProfile, resetPassword,
+  signIn as authSignIn, signOut as authSignOut, getProfile, resetPassword, updatePassword,
   getMachineStock,
   getClaims, addClaim as dbAddClaim, updateClaim as dbUpdateClaim, deleteClaim as dbDeleteClaim,
   logLoginEvent,
@@ -273,6 +273,84 @@ function LoginPage() {
             <button type="button" onClick={() => { setMode("login"); setError(""); setSuccess("") }}
               className="w-full text-xs text-gray-400 hover:text-blue-500 transition-colors mt-2">
               กลับไปหน้าเข้าสู่ระบบ
+            </button>
+          </form>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ─────────────────────────────────────────────
+// PAGE: RESET PASSWORD (ตั้งรหัสผ่านใหม่)
+// ─────────────────────────────────────────────
+function ResetPasswordPage({ onDone }) {
+  const [newPw,    setNewPw]    = useState("")
+  const [confirmPw, setConfirmPw] = useState("")
+  const [showPw,   setShowPw]   = useState(false)
+  const [loading,  setLoading]  = useState(false)
+  const [error,    setError]    = useState("")
+  const [success,  setSuccess]  = useState(false)
+
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    setError("")
+    if (newPw.length < 6) { setError("รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร"); return }
+    if (newPw !== confirmPw) { setError("รหัสผ่านไม่ตรงกัน"); return }
+    setLoading(true)
+    try {
+      await updatePassword(newPw)
+      setSuccess(true)
+      setTimeout(() => onDone(), 2000)
+    } catch {
+      setError("ไม่สามารถเปลี่ยนรหัสผ่านได้ กรุณาลองใหม่")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 to-gray-800 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-8">
+        <div className="flex flex-col items-center mb-8">
+          <img src="/logo.png" alt="DivisionX Card" className="w-24 h-24 object-cover rounded-full mb-3"/>
+          <h1 className="text-xl font-bold text-gray-800">ตั้งรหัสผ่านใหม่</h1>
+          <p className="text-sm text-gray-400 mt-1">กรุณากรอกรหัสผ่านใหม่</p>
+        </div>
+
+        {success ? (
+          <div className="text-center">
+            <CheckCircle size={40} className="text-green-500 mx-auto mb-3"/>
+            <p className="text-sm text-green-600 font-medium">เปลี่ยนรหัสผ่านสำเร็จ!</p>
+            <p className="text-xs text-gray-400 mt-1">กำลังเข้าสู่ระบบ...</p>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="block text-xs text-gray-500 mb-1.5 font-medium">รหัสผ่านใหม่</label>
+              <div className="relative">
+                <input type={showPw ? "text" : "password"} value={newPw} onChange={e => setNewPw(e.target.value)}
+                  placeholder="••••••••" required autoFocus
+                  className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 pr-10"/>
+                <button type="button" onClick={() => setShowPw(!showPw)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                  {showPw ? <EyeOff size={16}/> : <Eye size={16}/>}
+                </button>
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs text-gray-500 mb-1.5 font-medium">ยืนยันรหัสผ่านใหม่</label>
+              <input type={showPw ? "text" : "password"} value={confirmPw} onChange={e => setConfirmPw(e.target.value)}
+                placeholder="••••••••" required
+                className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"/>
+            </div>
+            {error && (
+              <p className="text-xs text-red-600 bg-red-50 border border-red-100 px-3 py-2 rounded-lg">{error}</p>
+            )}
+            <button type="submit" disabled={loading}
+              className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white font-semibold py-2.5 rounded-xl text-sm flex items-center justify-center gap-2 transition-colors">
+              {loading && <Loader2 size={16} className="animate-spin"/>}
+              {loading ? "กำลังบันทึก..." : "บันทึกรหัสผ่านใหม่"}
             </button>
           </form>
         )}
@@ -3461,6 +3539,7 @@ export default function DivisionXApp() {
   const [session,     setSession]     = useState(null)
   const [profile,     setProfile]     = useState(null)
   const [authLoading, setAuthLoading] = useState(true)
+  const [resetMode,   setResetMode]   = useState(false)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -3476,6 +3555,9 @@ export default function DivisionXApp() {
           return null
         })
         setProfile(null)
+      } else if (_event === "PASSWORD_RECOVERY") {
+        setSession(session)
+        setResetMode(true)
       } else {
         setSession(session)
         if (session?.user) {
@@ -3678,6 +3760,7 @@ export default function DivisionXApp() {
 
   // ── Auth / Loading / Error screens ──
   if (authLoading) return <LoadingScreen/>
+  if (resetMode)   return <ResetPasswordPage onDone={() => setResetMode(false)}/>
   if (!session)    return <LoginPage/>
   if (loading)     return <LoadingScreen/>
   if (dataError)   return <ErrorScreen msg={dataError} onRetry={loadAll}/>
