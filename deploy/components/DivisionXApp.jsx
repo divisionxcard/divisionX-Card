@@ -213,7 +213,7 @@ function LoginPage() {
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-8">
         {/* Logo */}
         <div className="flex flex-col items-center mb-8">
-          <img src="/logo.png" alt="DivisionX Card" className="w-24 h-24 object-cover rounded-full mb-3"/>
+          <img src="/logo.png" alt="DivisionX Card" className="w-24 h-24 object-contain rounded-2xl mb-3"/>
           <h1 className="text-xl font-bold text-gray-800">DivisionX Card</h1>
           <p className="text-sm text-gray-400 mt-1">{mode === "login" ? "ระบบจัดการสต็อก" : "รีเซ็ตรหัสผ่าน"}</p>
         </div>
@@ -313,7 +313,7 @@ function ResetPasswordPage({ onDone }) {
     <div className="min-h-screen bg-gradient-to-br from-gray-900 to-gray-800 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-8">
         <div className="flex flex-col items-center mb-8">
-          <img src="/logo.png" alt="DivisionX Card" className="w-24 h-24 object-cover rounded-full mb-3"/>
+          <img src="/logo.png" alt="DivisionX Card" className="w-24 h-24 object-contain rounded-2xl mb-3"/>
           <h1 className="text-xl font-bold text-gray-800">ตั้งรหัสผ่านใหม่</h1>
           <p className="text-sm text-gray-400 mt-1">กรุณากรอกรหัสผ่านใหม่</p>
         </div>
@@ -3775,7 +3775,7 @@ export default function DivisionXApp() {
         ${sideOpen ? "translate-x-0" : "-translate-x-full"} lg:translate-x-0 lg:static lg:z-auto`}>
         <div className="p-5 border-b border-gray-100">
           <div className="flex items-center gap-3">
-            <img src="/logo.png" alt="DivisionX Card" className="w-9 h-9 object-cover rounded-full"/>
+            <img src="/logo.png" alt="DivisionX Card" className="w-9 h-9 object-contain rounded-lg"/>
             <div>
               <p className="font-bold text-gray-800 text-sm">DivisionX Card</p>
               <p className="text-xs text-gray-400">ระบบจัดการสต็อก</p>
