@@ -20,7 +20,7 @@ import {
   deleteStockOut as dbDeleteStockOut,
   getMachines, getSalesByMachine,
   getSkus, addSku as dbAddSku, deactivateSku as dbDeactivateSku, updateSkuAvgCost,
-  signIn as authSignIn, signOut as authSignOut, getProfile,
+  signIn as authSignIn, signOut as authSignOut, getProfile, resetPassword,
   getMachineStock,
   getClaims, addClaim as dbAddClaim, updateClaim as dbUpdateClaim, deleteClaim as dbDeleteClaim,
   logLoginEvent,
@@ -176,6 +176,8 @@ function LoginPage() {
   const [showPw,   setShowPw]   = useState(false)
   const [loading,  setLoading]  = useState(false)
   const [error,    setError]    = useState("")
+  const [mode,     setMode]     = useState("login") // "login" | "forgot"
+  const [success,  setSuccess]  = useState("")
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -183,9 +185,24 @@ function LoginPage() {
     setLoading(true)
     try {
       await authSignIn(email, password)
-      // onAuthStateChange จัดการ session ให้อัตโนมัติ
     } catch {
       setError("อีเมลหรือรหัสผ่านไม่ถูกต้อง")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleForgot = async (e) => {
+    e.preventDefault()
+    setError("")
+    setSuccess("")
+    if (!email) { setError("กรุณากรอกอีเมล"); return }
+    setLoading(true)
+    try {
+      await resetPassword(email)
+      setSuccess("ส่งลิงก์รีเซ็ตรหัสผ่านไปที่อีเมลแล้ว กรุณาตรวจสอบกล่องจดหมาย")
+    } catch {
+      setError("ไม่สามารถส่งอีเมลได้ กรุณาตรวจสอบอีเมลอีกครั้ง")
     } finally {
       setLoading(false)
     }
@@ -198,37 +215,67 @@ function LoginPage() {
         <div className="flex flex-col items-center mb-8">
           <img src="/logo.png" alt="DivisionX Card" className="w-24 h-24 object-cover rounded-full mb-3"/>
           <h1 className="text-xl font-bold text-gray-800">DivisionX Card</h1>
-          <p className="text-sm text-gray-400 mt-1">ระบบจัดการสต็อก</p>
+          <p className="text-sm text-gray-400 mt-1">{mode === "login" ? "ระบบจัดการสต็อก" : "รีเซ็ตรหัสผ่าน"}</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-xs text-gray-500 mb-1.5 font-medium">อีเมล</label>
-            <input type="email" value={email} onChange={e => setEmail(e.target.value)}
-              placeholder="example@email.com" required autoFocus
-              className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"/>
-          </div>
-          <div>
-            <label className="block text-xs text-gray-500 mb-1.5 font-medium">รหัสผ่าน</label>
-            <div className="relative">
-              <input type={showPw ? "text" : "password"} value={password} onChange={e => setPassword(e.target.value)}
-                placeholder="••••••••" required
-                className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 pr-10"/>
-              <button type="button" onClick={() => setShowPw(!showPw)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
-                {showPw ? <EyeOff size={16}/> : <Eye size={16}/>}
-              </button>
+        {mode === "login" ? (
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="block text-xs text-gray-500 mb-1.5 font-medium">อีเมล</label>
+              <input type="email" value={email} onChange={e => setEmail(e.target.value)}
+                placeholder="example@email.com" required autoFocus
+                className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"/>
             </div>
-          </div>
-          {error && (
-            <p className="text-xs text-red-600 bg-red-50 border border-red-100 px-3 py-2 rounded-lg">{error}</p>
-          )}
-          <button type="submit" disabled={loading}
-            className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white font-semibold py-2.5 rounded-xl text-sm flex items-center justify-center gap-2 transition-colors">
-            {loading && <Loader2 size={16} className="animate-spin"/>}
-            {loading ? "กำลังเข้าสู่ระบบ..." : "เข้าสู่ระบบ"}
-          </button>
-        </form>
+            <div>
+              <label className="block text-xs text-gray-500 mb-1.5 font-medium">รหัสผ่าน</label>
+              <div className="relative">
+                <input type={showPw ? "text" : "password"} value={password} onChange={e => setPassword(e.target.value)}
+                  placeholder="••••••••" required
+                  className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 pr-10"/>
+                <button type="button" onClick={() => setShowPw(!showPw)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                  {showPw ? <EyeOff size={16}/> : <Eye size={16}/>}
+                </button>
+              </div>
+            </div>
+            {error && (
+              <p className="text-xs text-red-600 bg-red-50 border border-red-100 px-3 py-2 rounded-lg">{error}</p>
+            )}
+            <button type="submit" disabled={loading}
+              className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white font-semibold py-2.5 rounded-xl text-sm flex items-center justify-center gap-2 transition-colors">
+              {loading && <Loader2 size={16} className="animate-spin"/>}
+              {loading ? "กำลังเข้าสู่ระบบ..." : "เข้าสู่ระบบ"}
+            </button>
+            <button type="button" onClick={() => { setMode("forgot"); setError(""); setSuccess("") }}
+              className="w-full text-xs text-gray-400 hover:text-blue-500 transition-colors mt-2">
+              ลืมรหัสผ่าน?
+            </button>
+          </form>
+        ) : (
+          <form onSubmit={handleForgot} className="space-y-4">
+            <div>
+              <label className="block text-xs text-gray-500 mb-1.5 font-medium">อีเมลที่ลงทะเบียน</label>
+              <input type="email" value={email} onChange={e => setEmail(e.target.value)}
+                placeholder="example@email.com" required autoFocus
+                className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"/>
+            </div>
+            {error && (
+              <p className="text-xs text-red-600 bg-red-50 border border-red-100 px-3 py-2 rounded-lg">{error}</p>
+            )}
+            {success && (
+              <p className="text-xs text-green-600 bg-green-50 border border-green-100 px-3 py-2 rounded-lg">{success}</p>
+            )}
+            <button type="submit" disabled={loading}
+              className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white font-semibold py-2.5 rounded-xl text-sm flex items-center justify-center gap-2 transition-colors">
+              {loading && <Loader2 size={16} className="animate-spin"/>}
+              {loading ? "กำลังส่ง..." : "ส่งลิงก์รีเซ็ตรหัสผ่าน"}
+            </button>
+            <button type="button" onClick={() => { setMode("login"); setError(""); setSuccess("") }}
+              className="w-full text-xs text-gray-400 hover:text-blue-500 transition-colors mt-2">
+              กลับไปหน้าเข้าสู่ระบบ
+            </button>
+          </form>
+        )}
       </div>
     </div>
   )
