@@ -65,8 +65,8 @@ const fmt   = (n) => (n ?? 0).toLocaleString("th-TH")
 const fmtB  = (n) => `฿${(n ?? 0).toLocaleString("th-TH")}`
 const today = () => new Date().toISOString().slice(0, 10)
 
-// ลำดับ Series: OP → PRB → EB
-const SKU_SERIES_ORDER = { OP: 0, PRB: 1, EB: 2 }
+// ลำดับ Series: OP → EB → PRB
+const SKU_SERIES_ORDER = { OP: 0, EB: 1, PRB: 2 }
 const getSkuSeries = (skuId) => {
   if (!skuId) return "ZZ"
   if (skuId.startsWith("OP"))  return "OP"
@@ -74,6 +74,12 @@ const getSkuSeries = (skuId) => {
   if (skuId.startsWith("EB"))  return "EB"
   return "ZZ"
 }
+const sortSkus = (list) => [...list].sort((a, b) => {
+  const sa = SKU_SERIES_ORDER[getSkuSeries(a.sku_id)] ?? 9
+  const sb = SKU_SERIES_ORDER[getSkuSeries(b.sku_id)] ?? 9
+  if (sa !== sb) return sa - sb
+  return (a.sku_id || "").localeCompare(b.sku_id || "")
+})
 // เรียง: วันที่ล่าสุดก่อน → แล้วตาม Series (OP→PRB→EB) → แล้วตาม SKU ID
 const sortByDateThenSku = (a, b, dateField) => {
   const dateA = a[dateField] || a.created_at || ""
@@ -958,7 +964,7 @@ function EditStockInModal({ record, onSave, onClose, skus }) {
             <label className="block text-xs text-gray-500 mb-1">สินค้า (SKU)</label>
             <select value={form.sku_id} onChange={e => setForm({...form, sku_id:e.target.value})}
               className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200">
-              {skus.map(s => <option key={s.sku_id} value={s.sku_id}>{s.sku_id} — {s.name}</option>)}
+              {sortSkus(skus).map(s => <option key={s.sku_id} value={s.sku_id}>{s.sku_id} — {s.name}</option>)}
             </select>
           </div>
           <div className="grid grid-cols-2 gap-3">
@@ -1159,7 +1165,7 @@ function PageStock({ stockIn, stockBalance, onAddStockIn, onUpdateStockIn, onDel
           <select value={recalcSku} onChange={e => setRecalcSku(e.target.value)}
             className="border border-purple-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-purple-200">
             <option value="">— เลือก SKU —</option>
-            {skus.map(s => <option key={s.sku_id} value={s.sku_id}>{s.sku_id} — {s.name}</option>)}
+            {sortSkus(skus).map(s => <option key={s.sku_id} value={s.sku_id}>{s.sku_id} — {s.name}</option>)}
           </select>
           <button onClick={async () => {
             if (!recalcSku) { alert("กรุณาเลือก SKU ก่อน"); return }
@@ -1321,7 +1327,7 @@ function PageStock({ stockIn, stockBalance, onAddStockIn, onUpdateStockIn, onDel
                 <label className="block text-xs text-gray-500 mb-1">สินค้า (SKU) <span className="text-red-400">*</span></label>
                 <select value={form.sku_id} onChange={e => setForm({...form, sku_id:e.target.value})}
                   className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200">
-                  {skus.map(s => <option key={s.sku_id} value={s.sku_id}>{s.sku_id} — {s.name}</option>)}
+                  {sortSkus(skus).map(s => <option key={s.sku_id} value={s.sku_id}>{s.sku_id} — {s.name}</option>)}
                 </select>
               </div>
 
@@ -1831,7 +1837,7 @@ function PageWithdrawal({ machines, stockOut, stockIn, stockBalance, onAddStockO
               <select value={form.sku_id} onChange={e => setForm({...form, sku_id:e.target.value, lot_number:""})}
                 className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-200">
                 <option value="" disabled>— เลือกสินค้า —</option>
-                {skus.map(s => <option key={s.sku_id} value={s.sku_id}>{s.sku_id} — {s.name}</option>)}
+                {sortSkus(skus).map(s => <option key={s.sku_id} value={s.sku_id}>{s.sku_id} — {s.name}</option>)}
               </select>
             </div>
 
@@ -2594,7 +2600,7 @@ function PageClaims({ machines, skus, claims, onAddClaim, onConfirmClaim, onDele
               <select value={form.sku_id} onChange={e => setForm({...form, sku_id:e.target.value})}
                 className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-200">
                 <option value="" disabled>— เลือกสินค้า —</option>
-                {skus.map(s => <option key={s.sku_id} value={s.sku_id}>{s.sku_id} — {s.name}</option>)}
+                {sortSkus(skus).map(s => <option key={s.sku_id} value={s.sku_id}>{s.sku_id} — {s.name}</option>)}
               </select>
             </div>
 
