@@ -65,6 +65,27 @@ const fmt   = (n) => (n ?? 0).toLocaleString("th-TH")
 const fmtB  = (n) => `฿${(n ?? 0).toLocaleString("th-TH")}`
 const today = () => new Date().toISOString().slice(0, 10)
 
+// ลำดับ Series: OP → PRB → EB
+const SKU_SERIES_ORDER = { OP: 0, PRB: 1, EB: 2 }
+const getSkuSeries = (skuId) => {
+  if (!skuId) return "ZZ"
+  if (skuId.startsWith("OP"))  return "OP"
+  if (skuId.startsWith("PRB")) return "PRB"
+  if (skuId.startsWith("EB"))  return "EB"
+  return "ZZ"
+}
+// เรียง: วันที่ล่าสุดก่อน → แล้วตาม Series (OP→PRB→EB) → แล้วตาม SKU ID
+const sortByDateThenSku = (a, b, dateField) => {
+  const dateA = a[dateField] || a.created_at || ""
+  const dateB = b[dateField] || b.created_at || ""
+  const dateCmp = dateB.localeCompare(dateA)
+  if (dateCmp !== 0) return dateCmp
+  const seriesA = SKU_SERIES_ORDER[getSkuSeries(a.sku_id)] ?? 9
+  const seriesB = SKU_SERIES_ORDER[getSkuSeries(b.sku_id)] ?? 9
+  if (seriesA !== seriesB) return seriesA - seriesB
+  return (a.sku_id || "").localeCompare(b.sku_id || "")
+}
+
 // แสดงจำนวนเป็น "X กล่อง Y ซอง" (ซ่อน 0 กล่อง / 0 ซอง)
 const fmtBoxPack = (packs, ppb) => {
   if (!packs || packs === 0) return "0 ซอง"
@@ -1009,7 +1030,7 @@ function PageStock({ stockIn, stockBalance, onAddStockIn, onUpdateStockIn, onDel
   const [lotYear,     setLotYear]     = useState(nowDate().slice(0,4))
 
   const filterLots = (list) => {
-    const sorted = [...list].sort((a, b) => (b.purchased_at || b.created_at || "").localeCompare(a.purchased_at || a.created_at || ""))
+    const sorted = [...list].sort((a, b) => sortByDateThenSku(a, b, "purchased_at"))
     if (lotFilter === "day")   return sorted.filter(r => (r.purchased_at || r.created_at || "").slice(0,10) === lotDate)
     if (lotFilter === "month") return sorted.filter(r => (r.purchased_at || r.created_at || "").slice(0,7) === lotMonth)
     if (lotFilter === "year")  return sorted.filter(r => (r.purchased_at || r.created_at || "").slice(0,4) === lotYear)
@@ -2019,7 +2040,7 @@ function PageWithdrawal({ machines, stockOut, stockIn, stockBalance, onAddStockO
             </div>
           </div>
           {(() => {
-            const sorted = [...stockOut].sort((a, b) => (b.withdrawn_at || "").localeCompare(a.withdrawn_at || ""))
+            const sorted = [...stockOut].sort((a, b) => sortByDateThenSku(a, b, "withdrawn_at"))
             const filtered = historyFilter === "day" ? sorted.filter(r => r.withdrawn_at?.slice(0,10) === historyDate)
               : historyFilter === "month" ? sorted.filter(r => r.withdrawn_at?.slice(0,7) === historyMonth)
               : historyFilter === "year" ? sorted.filter(r => r.withdrawn_at?.slice(0,4) === historyYear)
@@ -2885,7 +2906,7 @@ function PageMachineHistory({ machine, stockOut, skus }) {
     if (filterMode === "monthly") return d.slice(0,7) === filterMonth
     if (filterMode === "yearly")  return d.slice(0,4) === filterYear
     return true
-  })
+  }).sort((a, b) => sortByDateThenSku(a, b, "withdrawn_at"))
 
   // สรุปยอด
   const totalPacks = filtered.reduce((a,r) => a + (r.quantity_packs || 0), 0)
