@@ -22,6 +22,30 @@ export async function getProfile(userId) {
   return data
 }
 
+// ── Login History (ประวัติเข้า-ออกระบบ) ─────────────────────────
+export async function logLoginEvent(userId, email, displayName, action = "login") {
+  const { error } = await supabase
+    .from("login_history")
+    .insert([{
+      user_id:      userId,
+      email:        email,
+      display_name: displayName || null,
+      action:       action,
+      user_agent:   typeof navigator !== "undefined" ? navigator.userAgent : null,
+    }])
+  if (error) console.error("Failed to log login event:", error)
+}
+
+export async function getLoginHistory(limit = 50) {
+  const { data, error } = await supabase
+    .from("login_history")
+    .select("*")
+    .order("created_at", { ascending: false })
+    .limit(limit)
+  if (error) throw error
+  return data
+}
+
 // ── Stock Balance (คลังสินค้า) ────────────────────────────────
 export async function getStockBalance() {
   const { data, error } = await supabase

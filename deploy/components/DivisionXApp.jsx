@@ -23,6 +23,7 @@ import {
   signIn as authSignIn, signOut as authSignOut, getProfile,
   getMachineStock,
   getClaims, addClaim as dbAddClaim, updateClaim as dbUpdateClaim, deleteClaim as dbDeleteClaim,
+  logLoginEvent,
 } from "../lib/supabase"
 
 // ─────────────────────────────────────────────
@@ -191,13 +192,11 @@ function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 to-gray-800 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-8">
         {/* Logo */}
         <div className="flex flex-col items-center mb-8">
-          <div className="w-14 h-14 bg-blue-600 rounded-2xl flex items-center justify-center mb-3 shadow-md">
-            <span className="text-white font-black text-xl">DX</span>
-          </div>
+          <img src="/logo.png" alt="DivisionX Card" className="w-24 h-24 object-cover rounded-full mb-3"/>
           <h1 className="text-xl font-bold text-gray-800">DivisionX Card</h1>
           <p className="text-sm text-gray-400 mt-1">ระบบจัดการสต็อก</p>
         </div>
@@ -1347,6 +1346,7 @@ function PageStock({ stockIn, stockBalance, onAddStockIn, onUpdateStockIn, onDel
                         <span className="font-bold text-gray-800">{fmtB(r.total_cost)}</span>
                       </div>
                       <div className="text-xs text-purple-600 mt-0.5">ต้นทุน/ซอง: {fmtB(cpp.toFixed(2))}</div>
+                      {r.created_by && <p className="text-xs text-gray-400 mt-0.5">โดย: {r.created_by}</p>}
                     </div>
                   )
                 })}
@@ -1356,7 +1356,7 @@ function PageStock({ stockIn, stockBalance, onAddStockIn, onUpdateStockIn, onDel
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-gray-100">
-                      {["วันที่","เลขที่ Lot","SKU","Supplier","หน่วย","จำนวน","ซอง","ต้นทุน/หน่วย","ต้นทุน/ซอง","มูลค่า Lot","หมายเหตุ"].map(h => (
+                      {["วันที่","เลขที่ Lot","SKU","Supplier","หน่วย","จำนวน","ซอง","ต้นทุน/หน่วย","ต้นทุน/ซอง","มูลค่า Lot","หมายเหตุ","ผู้บันทึก"].map(h => (
                         <th key={h} className="text-left py-2 text-xs text-gray-400 font-medium pr-3 whitespace-nowrap">{h}</th>
                       ))}
                     </tr>
@@ -1376,7 +1376,8 @@ function PageStock({ stockIn, stockBalance, onAddStockIn, onUpdateStockIn, onDel
                           <td className="py-2 pr-3 text-right text-gray-600">{fmtB(r.unit_cost)}</td>
                           <td className="py-2 pr-3 text-right text-purple-600 font-medium">{fmtB(cpp.toFixed(2))}</td>
                           <td className="py-2 pr-3 text-right font-semibold">{fmtB(r.total_cost)}</td>
-                          <td className="py-2 text-gray-400 text-xs">{r.note || "—"}</td>
+                          <td className="py-2 pr-3 text-gray-400 text-xs">{r.note || "—"}</td>
+                          <td className="py-2 text-gray-500 text-xs whitespace-nowrap">{r.created_by || "—"}</td>
                         </tr>
                       )
                     })}
@@ -1933,6 +1934,7 @@ function PageWithdrawal({ machines, stockOut, stockIn, stockBalance, onAddStockO
                           <Clock size={10}/> {r.withdrawn_at?.slice(0,10)} {r.withdrawn_at?.slice(11,16) || ""}
                         </p>
                         {cleanNote && <p className="text-xs text-gray-400 mt-0.5 italic">"{cleanNote}"</p>}
+                        {r.created_by && <p className="text-xs text-gray-400 mt-0.5">โดย: {r.created_by}</p>}
                       </div>
                       <div className="flex-shrink-0 ml-2 text-right">
                         <span className="text-orange-500 font-bold text-sm block">
@@ -2522,6 +2524,7 @@ function PageClaims({ machines, skus, claims, onAddClaim, onConfirmClaim, onDele
                     <th className="text-center py-2 text-xs text-gray-400">สาเหตุ</th>
                     <th className="text-center py-2 text-xs text-gray-400">สถานะ</th>
                     <th className="text-center py-2 text-xs text-gray-400">ยืนยัน</th>
+                    <th className="text-left py-2 text-xs text-gray-400">ผู้บันทึก</th>
                     <th className="py-2 text-xs text-gray-400"></th>
                   </tr>
                 </thead>
@@ -2571,6 +2574,7 @@ function PageClaims({ machines, skus, claims, onAddClaim, onConfirmClaim, onDele
                             <span className="text-xs text-gray-400">—</span>
                           )}
                         </td>
+                        <td className="py-2.5 text-xs text-gray-500 whitespace-nowrap">{c.created_by || "—"}</td>
                         <td className="py-2.5 text-right">
                           {deleteId === c.id ? (
                             <div className="flex gap-1 justify-end">
@@ -3418,9 +3422,24 @@ export default function DivisionXApp() {
       setAuthLoading(false)
     })
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session)
-      if (session?.user) getProfile(session.user.id).then(setProfile)
-      else { setProfile(null) }
+      if (_event === "SIGNED_OUT") {
+        // บันทึก logout ก่อน clear state (ใช้ state ก่อนหน้า)
+        setSession(prev => {
+          if (prev?.user) logLoginEvent(prev.user.id, prev.user.email, null, "logout")
+          return null
+        })
+        setProfile(null)
+      } else {
+        setSession(session)
+        if (session?.user) {
+          getProfile(session.user.id).then((p) => {
+            setProfile(p)
+            if (_event === "SIGNED_IN") {
+              logLoginEvent(session.user.id, session.user.email, p?.display_name, "login")
+            }
+          })
+        } else { setProfile(null) }
+      }
     })
     return () => subscription.unsubscribe()
   }, [])
@@ -3503,7 +3522,8 @@ export default function DivisionXApp() {
   }
 
   const addStockIn = async (record) => {
-    await dbAddStockIn(record)
+    const createdBy = profile?.display_name || session?.user?.email || null
+    await dbAddStockIn({ ...record, created_by: createdBy })
     // ── Moving Average Cost: คำนวณต้นทุนเฉลี่ยใหม่ ──
     const sku = skus.find(s => s.sku_id === record.sku_id)
     const bal = stockBalance.find(b => b.sku_id === record.sku_id)
@@ -3523,7 +3543,8 @@ export default function DivisionXApp() {
   }
 
   const addStockOut = async (record) => {
-    await dbAddStockOut(record)
+    const createdBy = profile?.display_name || session?.user?.email || null
+    await dbAddStockOut({ ...record, created_by: createdBy })
     const [newSO, newSB] = await Promise.all([getStockOut(), getStockBalance()])
     setStockOut(newSO)
     setStockBalance(newSB)
@@ -3566,12 +3587,14 @@ export default function DivisionXApp() {
     // คืนสต็อก → บันทึกเลย ผู้ใช้ไปคีย์รับเข้าเอง
     const status = (record.product_status === "lost" || record.product_status === "damaged")
       ? "pending" : record.product_status
-    await dbAddClaim({ ...record, confirm_status: status })
+    const createdBy = profile?.display_name || session?.user?.email || null
+    await dbAddClaim({ ...record, confirm_status: status, created_by: createdBy })
     setClaims(await getClaims())
   }
 
   const confirmClaim = async (claim) => {
     // ยืนยันเคลม → ตัด stock อัตโนมัติ
+    const createdBy = profile?.display_name || session?.user?.email || null
     await dbUpdateClaim(claim.id, { confirm_status: "confirmed" })
     await dbAddStockOut({
       sku_id:         claim.sku_id,
@@ -3579,6 +3602,7 @@ export default function DivisionXApp() {
       quantity_packs: claim.quantity,
       withdrawn_at:   claim.claimed_at,
       note:           `[เคลม] ${claim.reason || ""} (${claim.product_status === "lost" ? "สูญหาย" : "ชำรุด"})`,
+      created_by:     createdBy,
     })
     const [newClaims, newSO, newSB] = await Promise.all([getClaims(), getStockOut(), getStockBalance()])
     setClaims(newClaims)
@@ -3606,8 +3630,8 @@ export default function DivisionXApp() {
   const lowCount = skus.filter(s => (balMap[s.sku_id] || 0) < 24).length
 
   // ── Auth / Loading / Error screens ──
-  // if (authLoading) return <LoadingScreen/>
-  // if (!session)    return <LoginPage/>   ← ซ่อน Login ชั่วคราว
+  if (authLoading) return <LoadingScreen/>
+  if (!session)    return <LoginPage/>
   if (loading)     return <LoadingScreen/>
   if (dataError)   return <ErrorScreen msg={dataError} onRetry={loadAll}/>
 
