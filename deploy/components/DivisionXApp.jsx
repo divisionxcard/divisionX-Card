@@ -3775,9 +3775,7 @@ export default function DivisionXApp() {
         ${sideOpen ? "translate-x-0" : "-translate-x-full"} lg:translate-x-0 lg:static lg:z-auto`}>
         <div className="p-5 border-b border-gray-100">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 bg-blue-600 rounded-xl flex items-center justify-center">
-              <span className="text-white font-black text-sm">DX</span>
-            </div>
+            <img src="/logo.png" alt="DivisionX Card" className="w-9 h-9 object-cover rounded-full"/>
             <div>
               <p className="font-bold text-gray-800 text-sm">DivisionX Card</p>
               <p className="text-xs text-gray-400">ระบบจัดการสต็อก</p>
