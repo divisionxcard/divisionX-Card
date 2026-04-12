@@ -74,7 +74,6 @@ export async function getStockIn() {
     .from("stock_in")
     .select("*")
     .order("created_at", { ascending: false })
-    .limit(100)
   if (error) throw error
   return data
 }
@@ -85,7 +84,6 @@ export async function getStockOut() {
     .from("stock_out")
     .select("*")
     .order("withdrawn_at", { ascending: false })
-    .limit(100)
   if (error) throw error
   return data
 }
@@ -244,7 +242,6 @@ export async function getClaims() {
     .from("claims")
     .select("*")
     .order("claimed_at", { ascending: false })
-    .limit(200)
   if (error) throw error
   return data
 }
