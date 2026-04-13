@@ -3083,6 +3083,7 @@ function PageMachineHistory({ machine, stockOut, skus }) {
                     </div>
                     <p className="text-xs text-gray-400 flex items-center gap-1 mt-1">
                       <Clock size={10}/> {r.withdrawn_at?.slice(0,10)} {r.withdrawn_at?.slice(11,16) || ""}
+                      {r.created_by && <span className="ml-1">· โดย {r.created_by}</span>}
                     </p>
                     {cleanNote && <p className="text-xs text-gray-400 mt-0.5 italic">"{cleanNote}"</p>}
                   </div>
