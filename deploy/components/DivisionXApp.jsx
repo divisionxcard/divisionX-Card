@@ -864,26 +864,6 @@ function PageDashboard({ stockIn, stockOut, stockBalance, skus }) {
                             )
                           })}
 
-                          {/* Lot ที่ใช้หมดแล้ว — ซ่อนรายละเอียด */}
-                          {depletedLots.length > 0 && (
-                            <div className="mt-2 pt-2 border-t border-gray-100">
-                              <p className="text-xs text-gray-400 mb-2">Lot ที่ใช้หมดแล้ว ({depletedLots.length})</p>
-                              <div className="space-y-1">
-                                {depletedLots.map(({ lot, lastOut }, i) => (
-                                  <div key={i} className="flex items-center justify-between px-3 py-2 rounded-lg bg-gray-50 text-xs text-gray-400">
-                                    <div className="flex items-center gap-2">
-                                      <span className="font-mono font-bold text-gray-500">{lot.lot_number || "ไม่ระบุ"}</span>
-                                      <span>{lot.source}</span>
-                                      <span>· {fmt(lot.quantity_packs)} ซอง</span>
-                                    </div>
-                                    <span>
-                                      ใช้หมด {lastOut?.withdrawn_at?.slice(0,10) || lot.purchased_at?.slice(0,10) || "—"}
-                                    </span>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          )}
                         </>
                       )
                     })()}
@@ -1211,7 +1191,7 @@ function PageStock({ stockIn, stockBalance, onAddStockIn, onUpdateStockIn, onDel
 
       {/* Tabs */}
       <div className="flex flex-wrap gap-1 bg-gray-100 p-1 rounded-xl w-fit">
-        {[{key:"balance",label:"สต็อกคงเหลือ"},{key:"addin",label:"รับสินค้าเข้า"},{key:"history",label:"ประวัติการรับ"},{key:"skus",label:"จัดการ SKU"}].map(t => (
+        {[{key:"balance",label:"สต็อกคงเหลือ"},{key:"addin",label:"รับสินค้าเข้า"},{key:"history",label:"ประวัติการรับ"},{key:"lothistory",label:"ประวัติ Lot"},{key:"skus",label:"จัดการ SKU"}].map(t => (
           <button key={t.key} onClick={() => setTab(t.key)}
             className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${tab===t.key?"bg-white shadow text-blue-600":"text-gray-500 hover:text-gray-700"}`}>
             {t.label}
@@ -1582,6 +1562,109 @@ function PageStock({ stockIn, stockBalance, onAddStockIn, onUpdateStockIn, onDel
       )}
 
       {/* ── Tab: Manage SKUs ── */}
+      {tab === "lothistory" && (() => {
+        // คำนวณ FIFO balance ต่อ lot โดยใช้ total_out จาก stockBalance
+        const skuTotalOutMap = Object.fromEntries(stockBalance.map(b => [b.sku_id, parseFloat(b.total_out) || 0]))
+        const stockInBySku = {}
+        stockIn.forEach(r => {
+          if (!stockInBySku[r.sku_id]) stockInBySku[r.sku_id] = []
+          stockInBySku[r.sku_id].push(r)
+        })
+        const depletedLots = []
+        Object.entries(stockInBySku).forEach(([skuId, lots]) => {
+          const sorted = [...lots].sort((a,b) => (a.purchased_at||"").localeCompare(b.purchased_at||"") || (a.id||0)-(b.id||0))
+          let remainOut = skuTotalOutMap[skuId] || 0
+          sorted.forEach(lot => {
+            const used = Math.min(lot.quantity_packs || 0, remainOut)
+            remainOut -= used
+            if ((lot.quantity_packs || 0) - used <= 0) depletedLots.push(lot)
+          })
+        })
+        depletedLots.sort((a,b) => (b.purchased_at||"").localeCompare(a.purchased_at||""))
+        const filtered = depletedLots.filter(lot => {
+          const sku = skus.find(s => s.sku_id === lot.sku_id)
+          if (seriesSel !== "ทั้งหมด" && sku?.series !== seriesSel) return false
+          if (search && !lot.sku_id.toLowerCase().includes(search.toLowerCase()) && !(lot.lot_number||"").toLowerCase().includes(search.toLowerCase())) return false
+          return true
+        })
+        const totalValue = filtered.reduce((a,r) => a + (parseFloat(r.total_cost)||0), 0)
+        const totalPacks  = filtered.reduce((a,r) => a + (r.quantity_packs||0), 0)
+        return (
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+            <div className="flex flex-wrap gap-3 mb-4 items-center justify-between">
+              <div>
+                <h2 className="font-semibold text-gray-700">ประวัติ Lot ที่ใช้หมดแล้ว</h2>
+                <p className="text-xs text-gray-400 mt-0.5">{filtered.length} Lot · มูลค่ารวม {fmtB(totalValue)}</p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <div className="relative">
+                  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"/>
+                  <input value={search} onChange={e => setSearch(e.target.value)} placeholder="ค้นหา Lot / SKU..."
+                    className="pl-9 pr-3 py-1.5 text-xs border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-200"/>
+                </div>
+                <div className="flex gap-1">
+                  {["ทั้งหมด","OP","PRB","EB"].map(s => (
+                    <button key={s} onClick={() => setSeriesSel(s)}
+                      className={`px-2.5 py-1.5 text-xs rounded-lg font-medium transition-all ${seriesSel===s?"bg-blue-600 text-white":"bg-gray-100 text-gray-600 hover:bg-gray-200"}`}>
+                      {s}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+            {filtered.length === 0 ? (
+              <p className="text-sm text-gray-400 text-center py-10">ยังไม่มี Lot ที่ใช้หมด</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-gray-100">
+                      <th className="text-left py-2 text-xs text-gray-400 font-medium">Lot</th>
+                      <th className="text-left py-2 text-xs text-gray-400 font-medium">SKU</th>
+                      <th className="text-left py-2 text-xs text-gray-400 font-medium">วันที่รับ</th>
+                      <th className="text-left py-2 text-xs text-gray-400 font-medium">แหล่งที่มา</th>
+                      <th className="text-right py-2 text-xs text-gray-400 font-medium">จำนวน</th>
+                      <th className="text-right py-2 text-xs text-gray-400 font-medium">ต้นทุน/ซอง</th>
+                      <th className="text-right py-2 text-xs text-gray-400 font-medium">มูลค่า Lot</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filtered.map((lot, i) => {
+                      const cpp = (lot.quantity_packs||0) > 0 ? (parseFloat(lot.total_cost)||0) / lot.quantity_packs : 0
+                      const sku = skus.find(s => s.sku_id === lot.sku_id)
+                      const seriesColor = sku?.series==="OP" ? "bg-blue-100 text-blue-700" : sku?.series==="PRB" ? "bg-purple-100 text-purple-700" : "bg-emerald-100 text-emerald-700"
+                      return (
+                        <tr key={i} className="border-b border-gray-50 hover:bg-gray-50">
+                          <td className="py-2.5">
+                            <span className="font-mono text-xs font-bold text-gray-500 bg-gray-100 px-2 py-0.5 rounded">{lot.lot_number || "—"}</span>
+                          </td>
+                          <td className="py-2.5">
+                            <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${seriesColor}`}>{lot.sku_id}</span>
+                          </td>
+                          <td className="py-2.5 text-xs text-gray-600">{lot.purchased_at?.slice(0,10) || "—"}</td>
+                          <td className="py-2.5 text-xs text-gray-500 max-w-[160px] truncate">{lot.source || "—"}</td>
+                          <td className="py-2.5 text-right text-xs text-gray-700">{fmt(lot.quantity_packs)} ซอง</td>
+                          <td className="py-2.5 text-right text-xs font-medium text-purple-600">{fmtB(cpp.toFixed(2))}</td>
+                          <td className="py-2.5 text-right text-xs font-semibold text-gray-800">{fmtB(lot.total_cost)}</td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                  <tfoot>
+                    <tr className="border-t-2 border-gray-200 bg-gray-50">
+                      <td colSpan={4} className="py-2.5 px-1 text-xs font-semibold text-gray-600">รวม {filtered.length} Lot</td>
+                      <td className="py-2.5 text-right text-xs font-semibold text-gray-700">{fmt(totalPacks)} ซอง</td>
+                      <td></td>
+                      <td className="py-2.5 text-right text-xs font-bold text-gray-800">{fmtB(totalValue)}</td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            )}
+          </div>
+        )
+      })()}
+
       {tab === "skus" && (
         <SkuManager skus={skus} onAddSku={onAddSku} onDeactivateSku={onDeactivateSku} showToast={showToast}/>
       )}
