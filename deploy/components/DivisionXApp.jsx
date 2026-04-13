@@ -1034,6 +1034,7 @@ function PageStock({ stockIn, stockBalance, onAddStockIn, onUpdateStockIn, onDel
   const [lotDate,     setLotDate]     = useState(nowDate())
   const [lotMonth,    setLotMonth]    = useState(nowDate().slice(0,7))
   const [lotYear,     setLotYear]     = useState(nowDate().slice(0,4))
+  const [historySkuIn, setHistorySkuIn] = useState("")
 
   const filterLots = (list) => {
     const sorted = [...list].sort((a, b) => sortByDateThenSku(a, b, "purchased_at"))
@@ -1473,9 +1474,22 @@ function PageStock({ stockIn, stockBalance, onAddStockIn, onUpdateStockIn, onDel
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
           <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
             <h2 className="font-semibold text-gray-700">ประวัติรับซื้อสินค้า</h2>
-            <LotFilterBar/>
+            <div className="flex flex-wrap gap-2 items-center">
+              <select value={historySkuIn} onChange={e => setHistorySkuIn(e.target.value)}
+                className="border border-gray-200 rounded-lg px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-blue-200">
+                <option value="">ทุก SKU</option>
+                {skus.filter(s => s.is_active !== false).sort((a,b) => {
+                  const order = {OP:1, EB:2, PRB:3}
+                  return (order[a.series]||9) - (order[b.series]||9) || a.sku_id.localeCompare(b.sku_id)
+                }).map(s => <option key={s.sku_id} value={s.sku_id}>{s.sku_id}</option>)}
+              </select>
+              <LotFilterBar/>
+            </div>
           </div>
-          {(() => { const filteredHistory = filterLots(stockIn); return filteredHistory.length === 0 ? (
+          {(() => {
+            const byDate = filterLots(stockIn)
+            const filteredHistory = historySkuIn ? byDate.filter(r => r.sku_id === historySkuIn) : byDate
+            return filteredHistory.length === 0 ? (
             <p className="text-gray-400 text-sm">ยังไม่มีประวัติการรับสินค้า{lotFilter !== "all" ? "ในช่วงที่เลือก" : ""}</p>
           ) : (
             <>
