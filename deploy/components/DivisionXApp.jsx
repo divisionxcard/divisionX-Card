@@ -1728,6 +1728,7 @@ function PageWithdrawal({ machines, stockOut, stockIn, stockBalance, onAddStockO
   const [historyDate,   setHistoryDate]   = useState(nowDate())
   const [historyMonth,  setHistoryMonth]  = useState(nowDate().slice(0,7))
   const [historyYear,   setHistoryYear]   = useState(nowDate().slice(0,4))
+  const [historySku,    setHistorySku]    = useState("")
 
   const handleDeleteOut = async (id) => {
     setDeletingOut(true)
@@ -2019,7 +2020,15 @@ function PageWithdrawal({ machines, stockOut, stockIn, stockBalance, onAddStockO
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
           <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
             <h2 className="font-semibold text-gray-700">ประวัติการเบิกสินค้า</h2>
-            <div className="flex gap-2 items-center">
+            <div className="flex flex-wrap gap-2 items-center">
+              <select value={historySku} onChange={e => setHistorySku(e.target.value)}
+                className="border border-gray-200 rounded-lg px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-orange-200">
+                <option value="">ทุก SKU</option>
+                {skus.filter(s => s.is_active !== false).sort((a,b) => {
+                  const order = {OP:1, EB:2, PRB:3}
+                  return (order[a.series]||9) - (order[b.series]||9) || a.sku_id.localeCompare(b.sku_id)
+                }).map(s => <option key={s.sku_id} value={s.sku_id}>{s.sku_id}</option>)}
+              </select>
               <div className="flex gap-1 bg-gray-100 p-1 rounded-xl">
                 {[{v:"all",l:"ทั้งหมด"},{v:"day",l:"รายวัน"},{v:"month",l:"รายเดือน"},{v:"year",l:"รายปี"}].map(t => (
                   <button key={t.v} onClick={() => setHistoryFilter(t.v)}
@@ -2046,7 +2055,8 @@ function PageWithdrawal({ machines, stockOut, stockIn, stockBalance, onAddStockO
             </div>
           </div>
           {(() => {
-            const sorted = [...stockOut].sort((a, b) => sortByDateThenSku(a, b, "withdrawn_at"))
+            const skuFiltered = historySku ? stockOut.filter(r => r.sku_id === historySku) : stockOut
+            const sorted = [...skuFiltered].sort((a, b) => sortByDateThenSku(a, b, "withdrawn_at"))
             const filtered = historyFilter === "day" ? sorted.filter(r => r.withdrawn_at?.slice(0,10) === historyDate)
               : historyFilter === "month" ? sorted.filter(r => r.withdrawn_at?.slice(0,7) === historyMonth)
               : historyFilter === "year" ? sorted.filter(r => r.withdrawn_at?.slice(0,4) === historyYear)
@@ -2901,12 +2911,14 @@ function PageMachineHistory({ machine, stockOut, skus }) {
   const [filterDate, setFilterDate] = useState(today())
   const [filterMonth, setFilterMonth] = useState(today().slice(0,7))
   const [filterYear, setFilterYear] = useState(today().slice(0,4))
+  const [filterSku, setFilterSku] = useState("")
 
   // กรองเฉพาะตู้นี้
   const machineOut = stockOut.filter(r => r.machine_id === machine.machine_id)
 
-  // กรองตามช่วงเวลา
+  // กรองตาม SKU และช่วงเวลา
   const filtered = machineOut.filter(r => {
+    if (filterSku && r.sku_id !== filterSku) return false
     const d = r.withdrawn_at?.slice(0,10) || ""
     if (filterMode === "daily")   return d === filterDate
     if (filterMode === "monthly") return d.slice(0,7) === filterMonth
@@ -2935,7 +2947,15 @@ function PageMachineHistory({ machine, stockOut, skus }) {
 
       {/* ตัวกรอง */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
-        <div className="flex flex-wrap gap-2 mb-3">
+        <div className="flex flex-wrap gap-2 items-center mb-3">
+          <select value={filterSku} onChange={e => setFilterSku(e.target.value)}
+            className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-200">
+            <option value="">ทุก SKU</option>
+            {skus.filter(s => s.is_active !== false).sort((a,b) => {
+              const order = {OP:1, EB:2, PRB:3}
+              return (order[a.series]||9) - (order[b.series]||9) || a.sku_id.localeCompare(b.sku_id)
+            }).map(s => <option key={s.sku_id} value={s.sku_id}>{s.sku_id}</option>)}
+          </select>
           {[{v:"all",l:"ทั้งหมด"},{v:"daily",l:"รายวัน"},{v:"monthly",l:"รายเดือน"},{v:"yearly",l:"รายปี"}].map(t => (
             <button key={t.v} onClick={() => setFilterMode(t.v)}
               className={`px-4 py-2 rounded-xl text-sm font-medium transition-all
@@ -2944,21 +2964,23 @@ function PageMachineHistory({ machine, stockOut, skus }) {
             </button>
           ))}
         </div>
-        {filterMode === "daily" && (
-          <input type="date" value={filterDate} onChange={e => setFilterDate(e.target.value)}
-            className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-200"/>
-        )}
-        {filterMode === "monthly" && (
-          <input type="month" value={filterMonth} onChange={e => setFilterMonth(e.target.value)}
-            className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-200"/>
-        )}
-        {filterMode === "yearly" && (
-          <select value={filterYear} onChange={e => setFilterYear(e.target.value)}
-            className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-200">
-            {years.length > 0 ? years.map(y => <option key={y} value={y}>{y}</option>)
-              : <option value={filterYear}>{filterYear}</option>}
-          </select>
-        )}
+        <div className="flex flex-wrap gap-2">
+          {filterMode === "daily" && (
+            <input type="date" value={filterDate} onChange={e => setFilterDate(e.target.value)}
+              className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-200"/>
+          )}
+          {filterMode === "monthly" && (
+            <input type="month" value={filterMonth} onChange={e => setFilterMonth(e.target.value)}
+              className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-200"/>
+          )}
+          {filterMode === "yearly" && (
+            <select value={filterYear} onChange={e => setFilterYear(e.target.value)}
+              className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-200">
+              {years.length > 0 ? years.map(y => <option key={y} value={y}>{y}</option>)
+                : <option value={filterYear}>{filterYear}</option>}
+            </select>
+          )}
+        </div>
       </div>
 
       {/* สรุปยอด */}
