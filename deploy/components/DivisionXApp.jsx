@@ -2312,7 +2312,7 @@ function PageSales({ machines, sales, skus, claims, onRefresh }) {
       const res = await fetch("/api/vms-sync", { method: "POST" })
       const data = await res.json()
       if (data.success) {
-        setSyncMsg({ type:"success", text:"สั่งดึงข้อมูลสำเร็จ — รอประมาณ 2-3 นาที แล้วกด refresh" })
+        setSyncMsg({ type:"success", text:"สั่งดึงข้อมูลย้อนหลัง 3 วันสำเร็จ — รอประมาณ 2-3 นาที แล้วกด refresh" })
       } else {
         setSyncMsg({ type:"error", text: data.error || "เกิดข้อผิดพลาด" })
       }

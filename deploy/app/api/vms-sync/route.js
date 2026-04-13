@@ -9,6 +9,10 @@ export async function POST() {
   // คำนวณวันที่ปัจจุบัน (เวลาไทย UTC+7)
   const nowBkk = new Date(Date.now() + 7 * 60 * 60 * 1000)
   const today = nowBkk.toISOString().slice(0, 10)
+  // ดึงย้อนหลัง 3 วัน เพื่อเติมข้อมูลที่อาจหายจาก auto sync ที่ fail
+  const from = new Date(nowBkk)
+  from.setDate(from.getDate() - 3)
+  const fromDate = from.toISOString().slice(0, 10)
 
   try {
     const res = await fetch(
@@ -23,7 +27,7 @@ export async function POST() {
           ref: "main",
           inputs: {
             days: "0",
-            from_date: today,
+            from_date: fromDate,
             to_date: today,
           },
         }),
@@ -31,7 +35,7 @@ export async function POST() {
     )
 
     if (res.status === 204) {
-      return NextResponse.json({ success: true, message: `VMS Sync triggered for ${today}` })
+      return NextResponse.json({ success: true, message: `VMS Sync triggered for ${fromDate} → ${today}` })
     }
 
     const data = await res.text()
