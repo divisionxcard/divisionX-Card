@@ -2531,7 +2531,7 @@ function PageClaims({ machines, skus, claims, onAddClaim, onConfirmClaim, onDele
       setConfirming(true)
       await onConfirmClaim(claim)
       setConfirmId(null)
-      showToast(`ยืนยันเคลมสำเร็จ: ${claim.sku_id} ตัด ${claim.quantity} ซองออกจากสต็อก`)
+      showToast(`ยืนยันเคลมสำเร็จ: ${claim.sku_id} ${claim.quantity} ซอง`)
     } catch (err) { showToast("ยืนยันไม่สำเร็จ: " + err.message, "error") }
     finally { setConfirming(false) }
   }
@@ -3749,21 +3749,9 @@ export default function DivisionXApp() {
   }
 
   const confirmClaim = async (claim) => {
-    // ยืนยันเคลม → ตัด stock อัตโนมัติ
-    const createdBy = profile?.display_name || session?.user?.email || null
+    // ยืนยันเคลม → เปลี่ยนสถานะเท่านั้น ไม่ตัด stock (ของออกจากคลังไปแล้วตอนเบิกเติมตู้)
     await dbUpdateClaim(claim.id, { confirm_status: "confirmed" })
-    await dbAddStockOut({
-      sku_id:         claim.sku_id,
-      machine_id:     claim.machine_id,
-      quantity_packs: claim.quantity,
-      withdrawn_at:   claim.claimed_at,
-      note:           `[เคลม] ${claim.reason || ""} (${claim.product_status === "lost" ? "สูญหาย" : "ชำรุด"})`,
-      created_by:     createdBy,
-    })
-    const [newClaims, newSO, newSB] = await Promise.all([getClaims(), getStockOut(), getStockBalance()])
-    setClaims(newClaims)
-    setStockOut(newSO)
-    setStockBalance(newSB)
+    setClaims(await getClaims())
   }
 
   const deleteClaim = async (id) => {
