@@ -1725,7 +1725,8 @@ function PageWithdrawal({ machines, stockOut, stockIn, stockBalance, onAddStockO
   const [deleteOutId, setDeleteOutId] = useState(null)
   const [deletingOut, setDeletingOut] = useState(false)
   const [historyFilter, setHistoryFilter] = useState("all")
-  const [historyDate,   setHistoryDate]   = useState(nowDate())
+  const [historyDateFrom, setHistoryDateFrom] = useState(nowDate())
+  const [historyDateTo,   setHistoryDateTo]   = useState(nowDate())
   const [historyMonth,  setHistoryMonth]  = useState(nowDate().slice(0,7))
   const [historyYear,   setHistoryYear]   = useState(nowDate().slice(0,4))
   const [historySku,    setHistorySku]    = useState("")
@@ -2038,8 +2039,13 @@ function PageWithdrawal({ machines, stockOut, stockIn, stockBalance, onAddStockO
                 ))}
               </div>
               {historyFilter === "day" && (
-                <input type="date" value={historyDate} onChange={e => setHistoryDate(e.target.value)}
-                  className="border border-gray-200 rounded-lg px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-orange-200"/>
+                <div className="flex items-center gap-1">
+                  <input type="date" value={historyDateFrom} onChange={e => { setHistoryDateFrom(e.target.value); if (e.target.value > historyDateTo) setHistoryDateTo(e.target.value) }}
+                    className="border border-gray-200 rounded-lg px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-orange-200"/>
+                  <span className="text-xs text-gray-400">ถึง</span>
+                  <input type="date" value={historyDateTo} min={historyDateFrom} onChange={e => setHistoryDateTo(e.target.value)}
+                    className="border border-gray-200 rounded-lg px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-orange-200"/>
+                </div>
               )}
               {historyFilter === "month" && (
                 <input type="month" value={historyMonth} onChange={e => setHistoryMonth(e.target.value)}
@@ -2057,7 +2063,7 @@ function PageWithdrawal({ machines, stockOut, stockIn, stockBalance, onAddStockO
           {(() => {
             const skuFiltered = historySku ? stockOut.filter(r => r.sku_id === historySku) : stockOut
             const sorted = [...skuFiltered].sort((a, b) => sortByDateThenSku(a, b, "withdrawn_at"))
-            const filtered = historyFilter === "day" ? sorted.filter(r => r.withdrawn_at?.slice(0,10) === historyDate)
+            const filtered = historyFilter === "day" ? sorted.filter(r => { const d = r.withdrawn_at?.slice(0,10) || ""; return d >= historyDateFrom && d <= historyDateTo })
               : historyFilter === "month" ? sorted.filter(r => r.withdrawn_at?.slice(0,7) === historyMonth)
               : historyFilter === "year" ? sorted.filter(r => r.withdrawn_at?.slice(0,4) === historyYear)
               : sorted
@@ -2908,7 +2914,8 @@ function PageAnalytics({ sales, skus }) {
 // ─────────────────────────────────────────────
 function PageMachineHistory({ machine, stockOut, skus }) {
   const [filterMode, setFilterMode] = useState("all") // all, daily, monthly, yearly
-  const [filterDate, setFilterDate] = useState(today())
+  const [filterDateFrom, setFilterDateFrom] = useState(today())
+  const [filterDateTo, setFilterDateTo] = useState(today())
   const [filterMonth, setFilterMonth] = useState(today().slice(0,7))
   const [filterYear, setFilterYear] = useState(today().slice(0,4))
   const [filterSku, setFilterSku] = useState("")
@@ -2920,7 +2927,7 @@ function PageMachineHistory({ machine, stockOut, skus }) {
   const filtered = machineOut.filter(r => {
     if (filterSku && r.sku_id !== filterSku) return false
     const d = r.withdrawn_at?.slice(0,10) || ""
-    if (filterMode === "daily")   return d === filterDate
+    if (filterMode === "daily")   return d >= filterDateFrom && d <= filterDateTo
     if (filterMode === "monthly") return d.slice(0,7) === filterMonth
     if (filterMode === "yearly")  return d.slice(0,4) === filterYear
     return true
@@ -2966,8 +2973,13 @@ function PageMachineHistory({ machine, stockOut, skus }) {
         </div>
         <div className="flex flex-wrap gap-2">
           {filterMode === "daily" && (
-            <input type="date" value={filterDate} onChange={e => setFilterDate(e.target.value)}
-              className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-200"/>
+            <div className="flex items-center gap-2">
+              <input type="date" value={filterDateFrom} onChange={e => { setFilterDateFrom(e.target.value); if (e.target.value > filterDateTo) setFilterDateTo(e.target.value) }}
+                className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-200"/>
+              <span className="text-sm text-gray-400">ถึง</span>
+              <input type="date" value={filterDateTo} min={filterDateFrom} onChange={e => setFilterDateTo(e.target.value)}
+                className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-200"/>
+            </div>
           )}
           {filterMode === "monthly" && (
             <input type="month" value={filterMonth} onChange={e => setFilterMonth(e.target.value)}
