@@ -796,9 +796,20 @@ function PageDashboard({ stockIn, stockOut, stockBalance, skus }) {
                     ) : (() => {
                       const activeLots = []
                       const depletedLots = []
+                      // FIFO: กระจาย stock_out ทั้งหมดของ SKU ลง lot เรียงจากเก่าสุด
+                      const skuTotalOut = stockOut.filter(r => r.sku_id === s.sku_id).reduce((a, r) => a + (r.quantity_packs || 0), 0)
+                      const lotsForFifo = [...lots].sort((a, b) => (a.purchased_at || "").localeCompare(b.purchased_at || "") || (a.id || 0) - (b.id || 0))
+                      let remainOut = skuTotalOut
+                      const fifoBalMap = new Map()
+                      lotsForFifo.forEach(lot => {
+                        const usedFromLot = Math.min(lot.quantity_packs || 0, remainOut)
+                        remainOut -= usedFromLot
+                        fifoBalMap.set(lot.id, { lotWithdrawn: usedFromLot, lotBalance: (lot.quantity_packs || 0) - usedFromLot })
+                      })
                       lots.forEach(lot => {
-                        const lotWithdrawn = stockOut.filter(r => r.lot_number === lot.lot_number).reduce((a, r) => a + (r.quantity_packs || 0), 0)
-                        const lotBalance = (lot.quantity_packs || 0) - lotWithdrawn
+                        const fifo = fifoBalMap.get(lot.id) || { lotWithdrawn: 0, lotBalance: lot.quantity_packs || 0 }
+                        const lotWithdrawn = fifo.lotWithdrawn
+                        const lotBalance = fifo.lotBalance
                         const lotOuts = stockOut.filter(r => r.lot_number === lot.lot_number)
                         const lastOut = lotOuts.length > 0 ? lotOuts.sort((a,b) => (b.withdrawn_at||"").localeCompare(a.withdrawn_at||""))[0] : null
                         const entry = { lot, lotWithdrawn, lotBalance, lastOut }
@@ -1791,12 +1802,15 @@ function PageWithdrawal({ machines, stockOut, stockIn, stockBalance, onAddStockO
         lotMap[r.lot_number].quantity_packs += r.quantity_packs || 0
         lotMap[r.lot_number].total_cost += parseFloat(r.total_cost) || 0
       })
-    return Object.values(lotMap).map(r => {
-      const withdrawn = stockOut
-        .filter(so => so.lot_number === r.lot_number && so.sku_id === r.sku_id)
-        .reduce((a, so) => a + (so.quantity_packs || 0), 0)
-      return { ...r, lotBalance: r.quantity_packs - withdrawn }
-    }).sort((a, b) => new Date(a.purchased_at) - new Date(b.purchased_at))
+    const lotsArr = Object.values(lotMap).sort((a, b) => new Date(a.purchased_at) - new Date(b.purchased_at))
+    // FIFO: กระจาย total out ลง lot เรียงจากเก่าสุด
+    const skuTotalOut = stockOut.filter(so => so.sku_id === form.sku_id).reduce((a, so) => a + (so.quantity_packs || 0), 0)
+    let remainOut = skuTotalOut
+    return lotsArr.map(r => {
+      const usedFromLot = Math.min(r.quantity_packs || 0, remainOut)
+      remainOut -= usedFromLot
+      return { ...r, lotBalance: (r.quantity_packs || 0) - usedFromLot }
+    })
   })()
 
   const availableLots = skuLots.filter(r => r.lotBalance > 0)
