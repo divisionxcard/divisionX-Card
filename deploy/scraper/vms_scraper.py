@@ -55,6 +55,9 @@ SKU_MAP = {
     "one piece op - 12 (box)": "OP 12",
     "one piece op - 13 pack": "OP 13",
     "one piece op - 13 (box)": "OP 13",
+    "pro one piece op-13 pack": "OP 13",
+    "pro one piece op-13 box": "OP 13",
+    "pro one piece op-13 (box)": "OP 13",
     "one piece op - 14 pack": "OP 14",
     "one piece op - 14 (box)": "OP 14",
     "one piece op - 15 pack": "OP 15",
@@ -85,6 +88,11 @@ def normalize(text: str) -> str:
     text = " ".join(text.split())
     return text
 
+def collapse_dashes(text: str) -> str:
+    """ลบช่องว่างรอบ - เพื่อเปรียบเทียบ: 'op - 13' == 'op-13'"""
+    import re
+    return re.sub(r'\s*-\s*', '-', text)
+
 def map_sku(product_name: str) -> str | None:
     """แปลงชื่อสินค้าจาก VMS เป็น SKU ID"""
     key = normalize(product_name)
@@ -94,6 +102,11 @@ def map_sku(product_name: str) -> str | None:
     # ลอง normalized match กับทุก key ใน map
     for vms_name, sku_id in SKU_MAP.items():
         if normalize(vms_name) == key:
+            return sku_id
+    # ลอง match หลัง collapse dashes (op - 13 == op-13)
+    key_collapsed = collapse_dashes(key)
+    for vms_name, sku_id in SKU_MAP.items():
+        if collapse_dashes(normalize(vms_name)) == key_collapsed:
             return sku_id
     # ลอง partial match
     for vms_name, sku_id in SKU_MAP.items():
