@@ -1,5 +1,5 @@
 "use client"
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, Fragment } from "react"
 import {
   BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid,
   Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell
@@ -145,6 +145,8 @@ function KpiCard({ icon: Icon, label, value, sub, color }) {
     green:  "bg-green-50 text-green-600",
     purple: "bg-purple-50 text-purple-600",
     amber:  "bg-amber-50 text-amber-600",
+    red:    "bg-red-50 text-red-600",
+    orange: "bg-orange-50 text-orange-600",
   }
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 flex gap-4 items-start">
@@ -4455,21 +4457,30 @@ function PageMyStock({ transfers, stockOut, skus, profile, session, profiles, ma
 // ─────────────────────────────────────────────
 // PAGE: เตรียมของเติมตู้ (คำนวณจาก VMS)
 // ─────────────────────────────────────────────
-function PageRefillPrep({ machines, machineStock, machineAssignments, transfers, stockOut, skus, profile, session }) {
+function PageRefillPrep({ machines, machineStock, machineAssignments, transfers, stockOut, skus, profile, session, profiles, onAddStockOut }) {
   const userId = session?.user?.id
+  const isAdmin = profile?.role === "admin"
 
-  // ตู้ที่ฉัน assign
-  const myMachineIds = machineAssignments.filter(a => a.user_id === userId && a.is_active).map(a => a.machine_id)
+  // Admin เลือก user ที่จะดู — ถ้าตัวเองไม่มี assignment ให้ default เป็นคนที่มี
+  const usersWithAssignments = [...new Set((machineAssignments || []).filter(a => a.is_active).map(a => a.user_id))]
+  const viewableUsers = (profiles || []).filter(p => usersWithAssignments.includes(p.id))
+  const [viewUserId, setViewUserId] = useState("")
+  const defaultUserId = usersWithAssignments.includes(userId) ? userId : (viewableUsers[0]?.id || userId)
+  const activeUserId = isAdmin ? (viewUserId || defaultUserId) : userId
+  const activeProfile = (profiles || []).find(p => p.id === activeUserId)
+
+  // ตู้ที่ active user รับผิดชอบ
+  const myMachineIds = (machineAssignments || []).filter(a => a.user_id === activeUserId && a.is_active).map(a => a.machine_id)
   const myMachines = machines.filter(m => myMachineIds.includes(m.machine_id))
 
-  // สต็อกของฉัน (per SKU)
-  const myTransfers = transfers.filter(t => t.to_user_id === userId)
-  const myStockOut = stockOut.filter(so => so.withdrawn_by_user_id === userId)
+  // สต็อกของ active user (per SKU)
+  const myTransfers = transfers.filter(t => t.to_user_id === activeUserId)
+  const myStockOut = stockOut.filter(so => so.withdrawn_by_user_id === activeUserId)
   const myBalMap = {}
   myTransfers.forEach(t => { myBalMap[t.sku_id] = (myBalMap[t.sku_id] || 0) + (t.quantity_packs || 0) })
   myStockOut.forEach(so => { myBalMap[so.sku_id] = (myBalMap[so.sku_id] || 0) - (so.quantity_packs || 0) })
 
-  // สร้างรายการเติมตู้จากข้อมูล VMS (ต้องเติมเท่าไหร่)
+  // สร้างรายการเติมตู้จากข้อมูล VMS
   const refillItems = []
   myMachineIds.forEach(machId => {
     const slots = machineStock.filter(s => s.machine_id === machId && s.product_name && s.is_occupied)
@@ -4489,7 +4500,12 @@ function PageRefillPrep({ machines, machineStock, machineAssignments, transfers,
     Object.values(skuRefill).forEach(r => refillItems.push(r))
   })
 
-  // group by SKU (รวมทุกตู้)
+  // Tab เลือกตู้ — "all" หรือ machine_id
+  const [activeTab, setActiveTab] = useState("all")
+  // Reset tab เมื่อสลับ user (กัน tab ชี้ไปตู้ที่ user ใหม่ไม่มี)
+  useEffect(() => { setActiveTab("all") }, [activeUserId])
+
+  // group by SKU (สรุปรวม)
   const skuSummary = {}
   refillItems.forEach(r => {
     const key = `${r.sku_id}_${r.isBox ? "box" : "pack"}`
@@ -4499,7 +4515,6 @@ function PageRefillPrep({ machines, machineStock, machineAssignments, transfers,
   })
   const summaryList = Object.values(skuSummary).sort((a, b) => (a.sku_id || "").localeCompare(b.sku_id || ""))
 
-  // VMS last sync
   const lastSync = machineStock.length > 0
     ? machineStock.reduce((latest, s) => { const t = s.synced_at || ""; return t > latest ? t : latest }, "")
     : null
@@ -4507,129 +4522,429 @@ function PageRefillPrep({ machines, machineStock, machineAssignments, transfers,
   const machineNameMap = {}
   machines.forEach(m => { machineNameMap[m.machine_id] = m.name || m.machine_id })
 
-  if (myMachineIds.length === 0) {
+  // Helper: นับ refill ต่อตู้ (จำนวน SKU + รวมซอง)
+  const machineStats = {}
+  myMachineIds.forEach(machId => {
+    const items = refillItems.filter(r => r.machine_id === machId)
+    const totalPacks = items.reduce((a, r) => {
+      const sku = skus.find(s => s.sku_id === r.sku_id)
+      return a + (r.isBox ? r.refill * (sku?.packs_per_box || 24) : r.refill)
+    }, 0)
+    machineStats[machId] = { skuCount: items.length, totalPacks }
+  })
+
+  // ── Refill action: FIFO lot balance ต่อ SKU ของ active user ──
+  const getSubLots = (skuId) => {
+    const lotMap = {}
+    myTransfers.filter(t => t.sku_id === skuId && t.lot_number).forEach(t => {
+      if (!lotMap[t.lot_number]) lotMap[t.lot_number] = { lot_number: t.lot_number, quantity_packs: 0, transferred_at: t.transferred_at }
+      lotMap[t.lot_number].quantity_packs += t.quantity_packs || 0
+    })
+    const lotsArr = Object.values(lotMap).sort((a, b) => new Date(a.transferred_at) - new Date(b.transferred_at))
+    const totalOut = myStockOut.filter(so => so.sku_id === skuId).reduce((a, so) => a + (so.quantity_packs || 0), 0)
+    let remainOut = totalOut
+    return lotsArr.map(r => {
+      const used = Math.min(r.quantity_packs, remainOut)
+      remainOut -= used
+      return { ...r, lotBalance: r.quantity_packs - used }
+    })
+  }
+
+  const [expandedId,  setExpandedId]  = useState(null)
+  const [refillForm,  setRefillForm]  = useState({ lot_number: "", quantity: "" })
+  const [submitting,  setSubmitting]  = useState(false)
+  const [toast,       setToast]       = useState(null)
+  const showToast = (msg, type="success") => { setToast({msg,type}); setTimeout(() => setToast(null), 3500) }
+
+  // ห้าม admin เบิกแทน user คนอื่น — เบิกได้เฉพาะตัวเอง
+  const canRefill = activeUserId === userId
+
+  const itemKey = (item) => `${item.machine_id}_${item.sku_id}_${item.isBox?"b":"p"}`
+
+  const openRefill = (item) => {
+    const lots = getSubLots(item.sku_id)
+    const firstAvail = lots.find(l => l.lotBalance > 0)
+    setExpandedId(itemKey(item))
+    setRefillForm({
+      lot_number: firstAvail?.lot_number || "",
+      quantity:   String(item.refill),
+    })
+  }
+
+  const handleRefillSubmit = async (item) => {
+    const qty = parseInt(refillForm.quantity) || 0
+    if (!qty || qty <= 0) { showToast("กรุณาระบุจำนวน","error"); return }
+    const sku = skus.find(s => s.sku_id === item.sku_id)
+    const packs = item.isBox ? qty * (sku?.packs_per_box || 24) : qty
+    // เช็ค lot balance
+    if (refillForm.lot_number) {
+      const lot = getSubLots(item.sku_id).find(l => l.lot_number === refillForm.lot_number)
+      if (lot && packs > lot.lotBalance) {
+        showToast(`เกินสต็อก Lot: คงเหลือ ${fmt(lot.lotBalance)} ซอง`, "error"); return
+      }
+    }
+    const now = new Date().toISOString()
+    try {
+      setSubmitting(true)
+      await onAddStockOut({
+        sku_id:        item.sku_id,
+        lot_number:    refillForm.lot_number || null,
+        machine_id:    item.machine_id,
+        unit:          item.isBox ? "box" : "pack",
+        quantity:      qty,
+        quantity_packs: packs,
+        withdrawn_at:  now,
+        note:          `เบิกจากหน้าเตรียมของเติมตู้`,
+      })
+      showToast(`เบิก ${fmt(qty)} ${item.isBox?"กล่อง":"ซอง"} → ${machineNameMap[item.machine_id]} สำเร็จ`)
+      setExpandedId(null)
+    } catch (err) {
+      showToast("เกิดข้อผิดพลาด: " + err.message, "error")
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  // Empty state: ไม่มี user ไหนมี assignment เลย
+  if (viewableUsers.length === 0 && !usersWithAssignments.includes(userId)) {
     return (
       <div className="space-y-6">
         <h1 className="text-2xl font-bold text-gray-800">เตรียมของเติมตู้</h1>
         <div className="bg-amber-50 border border-amber-200 rounded-2xl p-6 text-center">
           <AlertTriangle size={32} className="text-amber-400 mx-auto mb-2"/>
-          <p className="text-sm text-amber-700">คุณยังไม่ได้ถูก assign ตู้ กรุณาติดต่อแอดมินเพื่อกำหนดตู้ที่รับผิดชอบ</p>
+          <p className="text-sm text-amber-700">ยังไม่มีการกำหนดตู้ให้ผู้ใช้คนใด กรุณาไปที่ "จัดการผู้ใช้ → กำหนดตู้"</p>
         </div>
       </div>
     )
   }
 
-  return (
-    <div className="space-y-6">
-      <div>
+  if (myMachineIds.length === 0) {
+    return (
+      <div className="space-y-6">
         <h1 className="text-2xl font-bold text-gray-800">เตรียมของเติมตู้</h1>
-        <p className="text-sm text-gray-400">
-          คำนวณจำนวนที่ต้องเติมจากข้อมูล VMS เทียบกับสต็อกของคุณ
-          {lastSync && <span className="ml-2">· VMS อัปเดต: {lastSync.slice(0,10)} {lastSync.slice(11,16)}</span>}
-        </p>
+        {/* Admin switcher */}
+        {isAdmin && viewableUsers.length > 0 && (
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-xs text-gray-400">ดูของ:</span>
+            <div className="flex flex-wrap gap-1 bg-gray-100 p-1 rounded-xl">
+              {viewableUsers.map(p => (
+                <button key={p.id} onClick={() => setViewUserId(p.id)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${activeUserId === p.id ? "bg-white shadow text-blue-600" : "text-gray-500 hover:text-gray-700"}`}>
+                  {p.display_name || p.email}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-6 text-center">
+          <AlertTriangle size={32} className="text-amber-400 mx-auto mb-2"/>
+          <p className="text-sm text-amber-700">
+            {isAdmin && activeUserId !== userId
+              ? `${activeProfile?.display_name || "?"} ยังไม่ได้ถูก assign ตู้`
+              : "คุณยังไม่ได้ถูก assign ตู้ กรุณาติดต่อแอดมินเพื่อกำหนดตู้ที่รับผิดชอบ"}
+          </p>
+        </div>
       </div>
+    )
+  }
 
-      {/* ตู้ที่รับผิดชอบ */}
-      <div className="flex flex-wrap gap-2">
-        {myMachines.map(m => (
-          <span key={m.machine_id} className="px-3 py-1.5 bg-blue-50 text-blue-700 rounded-full text-sm font-medium">
-            {m.name} ({m.location})
-          </span>
-        ))}
-      </div>
+  // Active items ตาม tab
+  const activeItems = activeTab === "all" ? refillItems : refillItems.filter(r => r.machine_id === activeTab)
+  const activeMachine = activeTab !== "all" ? machines.find(m => m.machine_id === activeTab) : null
 
-      {/* สรุปต้องเตรียม (ตาม SKU รวมทุกตู้) */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-        <h2 className="font-semibold text-gray-700 mb-4">สรุปสินค้าที่ต้องเตรียม</h2>
-        {summaryList.length === 0 ? (
-          <p className="text-sm text-gray-400 text-center py-6">ตู้ทุกช่องเต็มแล้ว หรือยังไม่มีข้อมูล VMS</p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b-2 border-gray-200">
-                  <th className="text-left py-2 text-xs text-gray-400">SKU</th>
-                  <th className="text-left py-2 text-xs text-gray-400">สินค้า</th>
-                  <th className="text-center py-2 text-xs text-gray-400">ประเภท</th>
-                  <th className="text-right py-2 text-xs text-gray-400">ต้องเติม (รวม)</th>
-                  <th className="text-right py-2 text-xs text-gray-400">สต็อกของฉัน</th>
-                  <th className="text-center py-2 text-xs text-gray-400">สถานะ</th>
-                  <th className="text-left py-2 text-xs text-gray-400">ตู้</th>
-                </tr>
-              </thead>
-              <tbody>
-                {summaryList.map(r => {
-                  const myBal = myBalMap[r.sku_id] || 0
-                  // ถ้าเป็นกล่อง ต้องแปลง refill เป็นซองเพื่อเทียบ
-                  const sku = skus.find(s => s.sku_id === r.sku_id)
-                  const refillPacks = r.isBox ? r.totalRefill * (sku?.packs_per_box || 24) : r.totalRefill
-                  const enough = myBal >= refillPacks
-                  const unit = r.isBox ? "กล่อง" : "ซอง"
-                  return (
-                    <tr key={r.sku_id + (r.isBox?"b":"p")} className="border-b border-gray-50 hover:bg-gray-50">
-                      <td className="py-2.5"><span className="font-mono text-xs font-bold text-gray-700">{r.sku_id}</span></td>
-                      <td className="py-2.5 text-xs text-gray-600">{r.product_name}</td>
-                      <td className="py-2.5 text-center text-xs">{unit}</td>
-                      <td className="py-2.5 text-right text-sm font-bold text-red-600">{fmt(r.totalRefill)} {unit}</td>
-                      <td className="py-2.5 text-right text-sm">
-                        <span className={`font-bold ${enough ? "text-green-600" : "text-amber-600"}`}>{fmt(myBal)} ซอง</span>
-                      </td>
-                      <td className="py-2.5 text-center">
-                        {enough
-                          ? <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">พร้อม</span>
-                          : <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-medium">ไม่พอ</span>
-                        }
-                      </td>
-                      <td className="py-2.5 text-xs text-gray-500">
-                        {r.machines.map(m => `${machineNameMap[m.machine_id] || m.machine_id}(${m.refill})`).join(", ")}
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
+  return (
+    <div className="space-y-5">
+      {toast && (
+        <div className={`fixed top-4 left-4 right-4 sm:left-auto sm:right-4 sm:max-w-sm z-50 px-4 py-3 rounded-xl shadow-lg text-white text-sm flex items-center gap-2 ${toast.type==="error"?"bg-red-500":"bg-green-500"}`}>
+          {toast.type==="error"?<X size={16}/>:<CheckCircle size={16}/>} {toast.msg}
+        </div>
+      )}
+      {/* Header */}
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-800">
+            เตรียมของเติมตู้
+            {isAdmin && activeUserId !== userId && (
+              <span className="ml-2 text-base font-normal text-gray-500">· {activeProfile?.display_name || "?"}</span>
+            )}
+          </h1>
+          <p className="text-sm text-gray-400">
+            คำนวณจาก VMS เทียบกับสต็อก
+            {lastSync && <span className="ml-2">· VMS: {lastSync.slice(0,10)} {lastSync.slice(11,16)}</span>}
+          </p>
+        </div>
+        {/* Admin switcher */}
+        {isAdmin && viewableUsers.length > 0 && (
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-xs text-gray-400">ดูของ:</span>
+            <div className="flex flex-wrap gap-1 bg-gray-100 p-1 rounded-xl">
+              {viewableUsers.map(p => (
+                <button key={p.id} onClick={() => setViewUserId(p.id)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${activeUserId === p.id ? "bg-white shadow text-blue-600" : "text-gray-500 hover:text-gray-700"}`}>
+                  {p.display_name || p.email}
+                </button>
+              ))}
+            </div>
           </div>
         )}
       </div>
 
-      {/* แยกตามตู้ */}
-      {myMachineIds.map(machId => {
-        const items = refillItems.filter(r => r.machine_id === machId)
-        if (items.length === 0) return null
-        return (
-          <div key={machId} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-            <h3 className="font-semibold text-gray-700 mb-3">{machineNameMap[machId] || machId}</h3>
-            <div className="overflow-x-auto">
-              <table className="w-full text-xs">
-                <thead>
-                  <tr className="border-b border-gray-200">
-                    <th className="text-left py-2 text-gray-400">SKU</th>
-                    <th className="text-left py-2 text-gray-400">สินค้า</th>
-                    <th className="text-center py-2 text-gray-400">ประเภท</th>
-                    <th className="text-right py-2 text-gray-400">คงเหลือ</th>
-                    <th className="text-right py-2 text-gray-400">ความจุ</th>
-                    <th className="text-right py-2 text-gray-400 font-bold text-red-500">ต้องเติม</th>
-                    <th className="text-left py-2 text-gray-400">ช่อง</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {items.sort((a,b) => (a.sku_id||"").localeCompare(b.sku_id||"")).map(r => (
-                    <tr key={r.sku_id + (r.isBox?"b":"p")} className="border-b border-gray-50">
-                      <td className="py-2 font-mono font-bold">{r.sku_id}</td>
-                      <td className="py-2 text-gray-600">{r.product_name}</td>
-                      <td className="py-2 text-center">{r.isBox ? "กล่อง" : "ซอง"}</td>
-                      <td className="py-2 text-right">{r.remain}</td>
-                      <td className="py-2 text-right">{r.capacity}</td>
-                      <td className="py-2 text-right font-bold text-red-600">{r.refill}</td>
-                      <td className="py-2 text-gray-400">{r.slotNums.join(", ")}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+      {/* Tab เลือกตู้ */}
+      <div className="flex flex-wrap gap-2">
+        <button onClick={() => setActiveTab("all")}
+          className={`px-4 py-2 rounded-xl text-sm font-medium border-2 transition-all ${activeTab === "all" ? "border-blue-500 bg-blue-50 text-blue-700" : "border-gray-200 bg-white text-gray-600 hover:border-gray-300"}`}>
+          <span className="flex items-center gap-1.5">
+            <ClipboardList size={14}/>
+            สรุปรวม
+            <span className="text-xs text-gray-400">({refillItems.length})</span>
+          </span>
+        </button>
+        {myMachines.map(m => {
+          const stat = machineStats[m.machine_id] || { skuCount: 0, totalPacks: 0 }
+          const isActive = activeTab === m.machine_id
+          const empty = stat.skuCount === 0
+          return (
+            <button key={m.machine_id} onClick={() => setActiveTab(m.machine_id)} disabled={empty}
+              className={`px-4 py-2 rounded-xl text-sm font-medium border-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed
+                ${isActive ? "border-orange-500 bg-orange-50 text-orange-700" : "border-gray-200 bg-white text-gray-600 hover:border-gray-300"}`}>
+              <span className="flex items-center gap-1.5">
+                <Monitor size={14}/>
+                {m.name}
+                {empty
+                  ? <span className="text-xs text-green-600">✓</span>
+                  : <span className={`text-xs ${isActive ? "text-orange-500" : "text-gray-400"}`}>({stat.skuCount})</span>
+                }
+              </span>
+            </button>
+          )
+        })}
+      </div>
+
+      {/* Content */}
+      {activeTab === "all" ? (
+        /* ── สรุปรวมทุกตู้ ── */
+        <>
+          {/* KPI รวม */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            <KpiCard icon={AlertTriangle} label="ต้องเติม (SKU)" value={summaryList.length} color="red"/>
+            <KpiCard icon={Package} label="ตู้รับผิดชอบ" value={`${myMachines.length} ตู้`} color="blue"/>
+            <KpiCard icon={Boxes} label="SKU ที่ฉันมี" value={`${Object.values(myBalMap).filter(v => v > 0).length} SKU`} color="purple"/>
           </div>
-        )
-      })}
+
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+            <h2 className="font-semibold text-gray-700 mb-3 text-sm">สรุปสินค้าที่ต้องเตรียมทั้งหมด</h2>
+            {summaryList.length === 0 ? (
+              <p className="text-sm text-gray-400 text-center py-10">✓ ตู้ทุกช่องเต็มแล้ว</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b-2 border-gray-200">
+                      <th className="text-left py-2 text-xs text-gray-400">SKU</th>
+                      <th className="text-left py-2 text-xs text-gray-400">สินค้า</th>
+                      <th className="text-right py-2 text-xs text-gray-400">ต้องเติม</th>
+                      <th className="text-right py-2 text-xs text-gray-400">สต็อกของฉัน</th>
+                      <th className="text-center py-2 text-xs text-gray-400">สถานะ</th>
+                      <th className="text-left py-2 text-xs text-gray-400 pl-4">ตู้</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {summaryList.map(r => {
+                      const myBal = myBalMap[r.sku_id] || 0
+                      const sku = skus.find(s => s.sku_id === r.sku_id)
+                      const refillPacks = r.isBox ? r.totalRefill * (sku?.packs_per_box || 24) : r.totalRefill
+                      const enough = myBal >= refillPacks
+                      const unit = r.isBox ? "กล่อง" : "ซอง"
+                      return (
+                        <tr key={r.sku_id + (r.isBox?"b":"p")} className="border-b border-gray-50 hover:bg-gray-50">
+                          <td className="py-2.5"><span className="font-mono text-xs font-bold text-gray-700">{r.sku_id}</span></td>
+                          <td className="py-2.5 text-xs text-gray-600">{r.product_name}</td>
+                          <td className="py-2.5 text-right text-sm font-bold text-red-600">{fmt(r.totalRefill)} {unit}</td>
+                          <td className="py-2.5 text-right text-sm">
+                            <span className={`font-bold ${enough ? "text-green-600" : "text-amber-600"}`}>{fmt(myBal)} ซอง</span>
+                          </td>
+                          <td className="py-2.5 text-center">
+                            {enough
+                              ? <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">พร้อม</span>
+                              : <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-medium">ไม่พอ</span>}
+                          </td>
+                          <td className="py-2.5 text-xs text-gray-500 pl-4">
+                            {r.machines.map(m => (
+                              <span key={m.machine_id} className="inline-block mr-1.5 mb-0.5 px-1.5 py-0.5 bg-gray-100 rounded">
+                                {machineNameMap[m.machine_id]}({m.refill})
+                              </span>
+                            ))}
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </>
+      ) : (
+        /* ── ตู้เดียว ── */
+        <>
+          {/* KPI ของตู้นี้ */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <KpiCard icon={Monitor} label="ตู้" value={activeMachine?.name || activeTab}
+              sub={activeMachine?.location || ""} color="orange"/>
+            <KpiCard icon={AlertTriangle} label="ช่องที่ต้องเติม" value={`${activeItems.length} SKU`} color="red"/>
+            <KpiCard icon={Package} label="รวม (ซอง)" value={fmt(machineStats[activeTab]?.totalPacks || 0)} color="blue"/>
+            <KpiCard icon={Boxes} label="สต็อกของฉัน"
+              value={fmt(Object.values(myBalMap).reduce((a,v) => a + Math.max(0,v), 0))}
+              sub="ซอง รวมทุก SKU" color="green"/>
+          </div>
+
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="font-semibold text-gray-700 text-sm">
+                รายการเติม — {activeMachine?.name}
+              </h2>
+              {activeMachine?.location && <span className="text-xs text-gray-400">{activeMachine.location}</span>}
+            </div>
+            {activeItems.length === 0 ? (
+              <p className="text-sm text-gray-400 text-center py-10">✓ ตู้นี้ทุกช่องเต็มแล้ว</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b-2 border-gray-200">
+                      <th className="text-left py-2 text-xs text-gray-400">SKU</th>
+                      <th className="text-left py-2 text-xs text-gray-400">สินค้า</th>
+                      <th className="text-left py-2 text-xs text-gray-400">ช่อง</th>
+                      <th className="text-right py-2 text-xs text-gray-400">คงเหลือ/ความจุ</th>
+                      <th className="text-right py-2 text-xs text-gray-400 font-bold text-red-500">ต้องเติม</th>
+                      <th className="text-right py-2 text-xs text-gray-400">สต็อกฉัน</th>
+                      <th className="text-center py-2 text-xs text-gray-400">สถานะ</th>
+                      {canRefill && <th className="text-center py-2 text-xs text-gray-400">เบิก</th>}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {activeItems.sort((a,b) => (a.sku_id||"").localeCompare(b.sku_id||"")).map(r => {
+                      const myBal = myBalMap[r.sku_id] || 0
+                      const sku = skus.find(s => s.sku_id === r.sku_id)
+                      const refillPacks = r.isBox ? r.refill * (sku?.packs_per_box || 24) : r.refill
+                      const enough = myBal >= refillPacks
+                      const unit = r.isBox ? "กล่อง" : "ซอง"
+                      const key = itemKey(r)
+                      const isExpanded = expandedId === key
+                      const lots = canRefill && isExpanded ? getSubLots(r.sku_id) : []
+                      const availLots = lots.filter(l => l.lotBalance > 0)
+                      const currentLot = availLots.find(l => l.lot_number === refillForm.lot_number)
+                      const inputQty = parseInt(refillForm.quantity) || 0
+                      const inputPacks = r.isBox ? inputQty * (sku?.packs_per_box || 24) : inputQty
+                      const overLot = currentLot && inputPacks > currentLot.lotBalance
+
+                      return (
+                        <Fragment key={key}>
+                          <tr className={`border-b border-gray-50 ${isExpanded ? "bg-blue-50/30" : "hover:bg-gray-50"}`}>
+                            <td className="py-2.5"><span className="font-mono text-xs font-bold">{r.sku_id}</span></td>
+                            <td className="py-2.5 text-xs text-gray-600">{r.product_name}</td>
+                            <td className="py-2.5 text-xs text-gray-500">{r.slotNums.join(", ")}</td>
+                            <td className="py-2.5 text-right text-xs text-gray-600">{r.remain} / {r.capacity}</td>
+                            <td className="py-2.5 text-right text-sm font-bold text-red-600">{fmt(r.refill)} {unit}</td>
+                            <td className="py-2.5 text-right text-sm">
+                              <span className={`font-bold ${enough ? "text-green-600" : "text-amber-600"}`}>{fmt(myBal)}</span>
+                            </td>
+                            <td className="py-2.5 text-center">
+                              {enough
+                                ? <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">พร้อม</span>
+                                : <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-medium">ไม่พอ</span>}
+                            </td>
+                            {canRefill && (
+                              <td className="py-2.5 text-center">
+                                {myBal <= 0 ? (
+                                  <span className="text-xs text-gray-300">—</span>
+                                ) : isExpanded ? (
+                                  <button onClick={() => setExpandedId(null)}
+                                    className="text-xs px-2 py-1 rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200">ปิด</button>
+                                ) : (
+                                  <button onClick={() => openRefill(r)}
+                                    className="text-xs px-2.5 py-1 rounded-lg bg-orange-500 text-white hover:bg-orange-600 font-medium">
+                                    เบิก
+                                  </button>
+                                )}
+                              </td>
+                            )}
+                          </tr>
+                          {canRefill && isExpanded && (
+                            <tr className="bg-blue-50/30 border-b border-blue-100">
+                              <td colSpan={8} className="p-4">
+                                <div className="bg-white rounded-xl border border-blue-200 p-4 space-y-3">
+                                  <div className="flex items-center gap-2 text-xs text-gray-500">
+                                    <ArrowUpCircle size={14} className="text-orange-500"/>
+                                    <span>เบิก <b>{r.sku_id}</b> → <b>{machineNameMap[r.machine_id]}</b> (ช่อง {r.slotNums.join(", ")})</span>
+                                  </div>
+
+                                  {availLots.length === 0 ? (
+                                    <p className="text-xs text-amber-600">ไม่มี Lot ที่มีสต็อกในสต็อกของคุณ</p>
+                                  ) : (
+                                    <>
+                                      {/* เลือก Lot */}
+                                      <div>
+                                        <label className="block text-xs text-gray-500 mb-1.5">
+                                          เลือก Lot <span className="text-gray-400">(FIFO — แนะนำเก่าสุด)</span>
+                                        </label>
+                                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+                                          {availLots.map(lot => {
+                                            const sel = refillForm.lot_number === lot.lot_number
+                                            return (
+                                              <button type="button" key={lot.lot_number}
+                                                onClick={() => setRefillForm({...refillForm, lot_number: lot.lot_number})}
+                                                className={`p-2 rounded-lg border-2 text-left transition-all text-xs
+                                                  ${sel ? "border-blue-400 bg-blue-50" : "border-gray-200 hover:border-blue-300"}`}>
+                                                <div className="font-mono font-bold text-gray-700">{lot.lot_number}</div>
+                                                <div className={`font-bold ${sel ? "text-blue-700" : "text-green-600"}`}>{fmt(lot.lotBalance)} ซอง</div>
+                                              </button>
+                                            )
+                                          })}
+                                        </div>
+                                      </div>
+
+                                      {/* จำนวน */}
+                                      <div className="flex items-end gap-2">
+                                        <div className="flex-1">
+                                          <label className="block text-xs text-gray-500 mb-1">จำนวน ({unit})</label>
+                                          <input type="number" min="1" value={refillForm.quantity}
+                                            onChange={e => setRefillForm({...refillForm, quantity: e.target.value})}
+                                            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"/>
+                                        </div>
+                                        <div className="text-xs text-gray-500 pb-2.5">
+                                          = <b>{fmt(inputPacks)}</b> ซอง
+                                          {overLot && <span className="text-red-500 ml-2">(เกินสต็อก Lot!)</span>}
+                                        </div>
+                                      </div>
+
+                                      <div className="flex items-center justify-end gap-2 pt-1">
+                                        <button onClick={() => setExpandedId(null)} disabled={submitting}
+                                          className="px-3 py-1.5 text-xs rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50">
+                                          ยกเลิก
+                                        </button>
+                                        <button onClick={() => handleRefillSubmit(r)} disabled={submitting || overLot || !refillForm.lot_number}
+                                          className="px-4 py-1.5 text-xs rounded-lg bg-orange-500 text-white hover:bg-orange-600 disabled:opacity-50 font-semibold flex items-center gap-1.5">
+                                          {submitting ? <Loader2 size={12} className="animate-spin"/> : <CheckCircle size={12}/>}
+                                          {submitting ? "กำลังบันทึก..." : "ยืนยันเบิก"}
+                                        </button>
+                                      </div>
+                                    </>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          )}
+                        </Fragment>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </>
+      )}
     </div>
   )
 }
@@ -5048,7 +5363,7 @@ export default function DivisionXApp() {
           {page === "withdrawal" && <PageWithdrawal machines={machines} stockOut={stockOut} stockIn={stockIn} stockBalance={stockBalance} skus={skus} onAddStockOut={addStockOut} onDeleteStockOut={deleteStockOut} transfers={transfers} machineAssignments={machineAssignments} session={session} profile={profile}/>}
           {page === "transfer"   && <PageTransfer  stockIn={stockIn} stockOut={stockOut} stockBalance={stockBalance} skus={skus} transfers={transfers} profiles={allProfiles} onAddTransfer={addTransfer} onDeleteTransfer={deleteTransfer}/>}
           {page === "mystock"    && <PageMyStock   transfers={transfers} stockOut={stockOut} skus={skus} profile={profile} session={session} profiles={allProfiles} machines={machines} machineAssignments={machineAssignments}/>}
-          {page === "refillprep" && <PageRefillPrep machines={machines} machineStock={machineStock} machineAssignments={machineAssignments} transfers={transfers} stockOut={stockOut} skus={skus} profile={profile} session={session}/>}
+          {page === "refillprep" && <PageRefillPrep machines={machines} machineStock={machineStock} machineAssignments={machineAssignments} transfers={transfers} stockOut={stockOut} skus={skus} profile={profile} session={session} profiles={allProfiles} onAddStockOut={addStockOut}/>}
           {page === "machstock"  && <PageMachineStockView machines={machines} machineStock={machineStock} skus={skus} onRefresh={loadAll}/>}
           {page === "sales"      && <PageSales     machines={machines} sales={sales} skus={skus} claims={claims} onRefresh={loadAll}/>}
           {page === "claims"     && <PageClaims    machines={machines} skus={skus} claims={claims} onAddClaim={addClaim} onConfirmClaim={confirmClaim} onDeleteClaim={deleteClaim} machineAssignments={machineAssignments} session={session}/>}
