@@ -9,7 +9,8 @@ import {
   PlusCircle, MinusCircle, BarChart2, Home, Menu, X,
   CheckCircle, Clock, Search, RefreshCw, ArrowUpCircle, Loader2,
   Pencil, Trash2, ChevronDown, ChevronUp, Layers,
-  LogOut, UserPlus, Users, Shield, Eye, EyeOff, Monitor
+  LogOut, UserPlus, Users, Shield, Eye, EyeOff, Monitor,
+  Send, ClipboardList, Boxes
 } from "lucide-react"
 import {
   supabase,
@@ -24,6 +25,9 @@ import {
   getMachineStock,
   getClaims, addClaim as dbAddClaim, updateClaim as dbUpdateClaim, deleteClaim as dbDeleteClaim,
   logLoginEvent,
+  getMachineAssignments, addMachineAssignment as dbAddMachineAssignment, deleteMachineAssignment as dbDeleteMachineAssignment,
+  getStockTransfers, addStockTransfer as dbAddStockTransfer, deleteStockTransfer as dbDeleteStockTransfer,
+  getAllProfiles,
 } from "../lib/supabase"
 
 // ─────────────────────────────────────────────
@@ -389,7 +393,7 @@ function ResetPasswordPage({ onDone }) {
 // ─────────────────────────────────────────────
 // PAGE: USER MANAGEMENT (Admin only)
 // ─────────────────────────────────────────────
-function PageUsers({ currentProfile }) {
+function PageUsers({ currentProfile, machines, machineAssignments, allProfiles, onAddAssignment, onRemoveAssignment }) {
   const [users,   setUsers]   = useState([])
   const [loading, setLoading] = useState(true)
   const [tab,     setTab]     = useState("list")
@@ -399,6 +403,8 @@ function PageUsers({ currentProfile }) {
   const [toast,   setToast]   = useState(null)
   const [confirmDelete, setConfirmDelete] = useState(null)
   const [deleting, setDeleting] = useState(false)
+  const [editingUser, setEditingUser] = useState(null) // { id, display_name, role }
+  const [savingEdit, setSavingEdit] = useState(false)
 
   const showToast = (msg, type="success") => { setToast({msg,type}); setTimeout(()=>setToast(null),3500) }
 
@@ -437,6 +443,36 @@ function PageUsers({ currentProfile }) {
       showToast("เพิ่มไม่สำเร็จ: " + err.message, "error")
     } finally {
       setSaving(false)
+    }
+  }
+
+  const handleSaveEdit = async () => {
+    if (!editingUser) return
+    // กันไม่ให้ admin หลักลดสิทธิ์ตัวเอง (จะถูก lockout)
+    if (editingUser.id === currentProfile?.id && editingUser.role !== "admin") {
+      showToast("ไม่สามารถลดสิทธิ์ตัวเองได้", "error")
+      return
+    }
+    setSavingEdit(true)
+    try {
+      const res  = await fetch("/api/admin/users", {
+        method:  "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({
+          userId:       editingUser.id,
+          role:         editingUser.role,
+          display_name: editingUser.display_name,
+        }),
+      })
+      const data = await res.json()
+      if (data.error) throw new Error(data.error)
+      showToast("บันทึกสำเร็จ")
+      setEditingUser(null)
+      loadUsers()
+    } catch (err) {
+      showToast("บันทึกไม่สำเร็จ: " + err.message, "error")
+    } finally {
+      setSavingEdit(false)
     }
   }
 
@@ -486,8 +522,8 @@ function PageUsers({ currentProfile }) {
       )}
 
       {/* Tabs */}
-      <div className="flex gap-2">
-        {[{id:"list",label:"รายชื่อผู้ใช้"},{id:"add",label:"เพิ่มผู้ใช้ใหม่"}].map(t => (
+      <div className="flex gap-2 flex-wrap">
+        {[{id:"list",label:"รายชื่อผู้ใช้"},{id:"add",label:"เพิ่มผู้ใช้ใหม่"},{id:"assign",label:"กำหนดตู้"}].map(t => (
           <button key={t.id} onClick={() => setTab(t.id)}
             className={`px-4 py-2 rounded-xl text-sm font-medium transition-all
               ${tab===t.id ? "bg-blue-600 text-white" : "bg-white border border-gray-200 text-gray-600 hover:bg-gray-50"}`}>
@@ -514,42 +550,97 @@ function PageUsers({ currentProfile }) {
             <p className="text-sm text-gray-400 text-center py-8">ยังไม่มีผู้ใช้งาน</p>
           ) : (
             <div className="space-y-2">
-              {users.map(u => (
-                <div key={u.id} className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 border border-gray-100">
-                  <div className="w-9 h-9 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
-                    <span className="text-sm font-bold text-blue-600">
-                      {(u.display_name || u.email)[0].toUpperCase()}
-                    </span>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-800">{u.display_name || "—"}</p>
-                    <p className="text-xs text-gray-400 truncate">{u.email}</p>
-                  </div>
-                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium flex-shrink-0
-                    ${u.role==="admin" ? "bg-purple-100 text-purple-600" : "bg-gray-100 text-gray-500"}`}>
-                    {u.role==="admin" ? "Admin" : "User"}
-                  </span>
-                  {u.id !== currentProfile?.id && (
-                    confirmDelete === u.id ? (
-                      <div className="flex gap-1 flex-shrink-0">
-                        <button onClick={() => setConfirmDelete(null)}
-                          className="px-2 py-1 text-xs rounded-lg border border-gray-200 text-gray-500 hover:bg-white">
-                          ยกเลิก
-                        </button>
-                        <button onClick={() => handleDelete(u.id, u.email)} disabled={deleting}
-                          className="px-2 py-1 text-xs rounded-lg bg-red-500 text-white hover:bg-red-600 disabled:opacity-50">
-                          {deleting ? "..." : "ลบ"}
-                        </button>
+              {users.map(u => {
+                const isEditing = editingUser?.id === u.id
+                const isSelf    = u.id === currentProfile?.id
+                return (
+                  <div key={u.id} className="p-3 rounded-xl bg-gray-50 border border-gray-100">
+                    {isEditing ? (
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-3">
+                          <div className="w-9 h-9 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
+                            <span className="text-sm font-bold text-blue-600">
+                              {(editingUser.display_name || u.email)[0].toUpperCase()}
+                            </span>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs text-gray-400 truncate mb-1">{u.email}</p>
+                            <input
+                              value={editingUser.display_name}
+                              onChange={e => setEditingUser({...editingUser, display_name: e.target.value})}
+                              placeholder="ชื่อที่แสดง"
+                              className="w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"/>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <label className="text-xs text-gray-500 flex-shrink-0">สิทธิ์:</label>
+                          <select
+                            value={editingUser.role}
+                            onChange={e => setEditingUser({...editingUser, role: e.target.value})}
+                            disabled={isSelf}
+                            className="flex-1 border border-gray-200 rounded-lg px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 disabled:bg-gray-100 disabled:text-gray-400">
+                            <option value="user">User — ใช้งานทั่วไป</option>
+                            <option value="admin">Admin — จัดการผู้ใช้ได้</option>
+                          </select>
+                        </div>
+                        {isSelf && (
+                          <p className="text-xs text-amber-600">ไม่สามารถลดสิทธิ์ตัวเองได้ (ป้องกัน lockout)</p>
+                        )}
+                        <div className="flex gap-2 justify-end">
+                          <button onClick={() => setEditingUser(null)} disabled={savingEdit}
+                            className="px-3 py-1.5 text-xs rounded-lg border border-gray-200 text-gray-500 hover:bg-white">
+                            ยกเลิก
+                          </button>
+                          <button onClick={handleSaveEdit} disabled={savingEdit}
+                            className="px-3 py-1.5 text-xs rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 flex items-center gap-1">
+                            {savingEdit ? <Loader2 size={12} className="animate-spin"/> : <CheckCircle size={12}/>}
+                            {savingEdit ? "กำลังบันทึก..." : "บันทึก"}
+                          </button>
+                        </div>
                       </div>
                     ) : (
-                      <button onClick={() => setConfirmDelete(u.id)}
-                        className="p-1.5 rounded-lg text-gray-300 hover:text-red-400 hover:bg-red-50 flex-shrink-0">
-                        <Trash2 size={14}/>
-                      </button>
-                    )
-                  )}
-                </div>
-              ))}
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
+                          <span className="text-sm font-bold text-blue-600">
+                            {(u.display_name || u.email)[0].toUpperCase()}
+                          </span>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-gray-800">{u.display_name || "—"}</p>
+                          <p className="text-xs text-gray-400 truncate">{u.email}</p>
+                        </div>
+                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium flex-shrink-0
+                          ${u.role==="admin" ? "bg-purple-100 text-purple-600" : "bg-gray-100 text-gray-500"}`}>
+                          {u.role==="admin" ? "Admin" : "User"}
+                        </span>
+                        <button onClick={() => setEditingUser({ id: u.id, display_name: u.display_name || "", role: u.role || "user" })}
+                          className="p-1.5 rounded-lg text-gray-300 hover:text-blue-500 hover:bg-blue-50 flex-shrink-0">
+                          <Pencil size={14}/>
+                        </button>
+                        {!isSelf && (
+                          confirmDelete === u.id ? (
+                            <div className="flex gap-1 flex-shrink-0">
+                              <button onClick={() => setConfirmDelete(null)}
+                                className="px-2 py-1 text-xs rounded-lg border border-gray-200 text-gray-500 hover:bg-white">
+                                ยกเลิก
+                              </button>
+                              <button onClick={() => handleDelete(u.id, u.email)} disabled={deleting}
+                                className="px-2 py-1 text-xs rounded-lg bg-red-500 text-white hover:bg-red-600 disabled:opacity-50">
+                                {deleting ? "..." : "ลบ"}
+                              </button>
+                            </div>
+                          ) : (
+                            <button onClick={() => setConfirmDelete(u.id)}
+                              className="p-1.5 rounded-lg text-gray-300 hover:text-red-400 hover:bg-red-50 flex-shrink-0">
+                              <Trash2 size={14}/>
+                            </button>
+                          )
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
             </div>
           )}
         </div>
@@ -600,6 +691,76 @@ function PageUsers({ currentProfile }) {
               {saving ? "กำลังเพิ่ม..." : "เพิ่มผู้ใช้ใหม่"}
             </button>
           </form>
+        </div>
+      )}
+
+      {/* Machine Assignments */}
+      {tab === "assign" && (
+        <div className="space-y-4">
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+            <h2 className="font-semibold text-gray-700 mb-4">กำหนดตู้ให้แอดมิน</h2>
+            <p className="text-xs text-gray-400 mb-4">ระบุว่าแอดมินคนไหนรับผิดชอบตู้ไหน เพื่อกรองข้อมูลในหน้าเบิกเติมตู้และเคลม</p>
+
+            {/* แสดงตามตู้ */}
+            <div className="space-y-4">
+              {(machines || []).map(m => {
+                const assigned = (machineAssignments || []).filter(a => a.machine_id === m.machine_id)
+                const assignedUserIds = assigned.map(a => a.user_id)
+                const availableUsers = (allProfiles || []).filter(p => !assignedUserIds.includes(p.id))
+
+                return (
+                  <div key={m.machine_id} className="p-4 rounded-xl border border-gray-200">
+                    <div className="flex items-center gap-2 mb-3">
+                      <StatusDot status={m.status}/>
+                      <span className="font-semibold text-gray-800 text-sm">{m.name}</span>
+                      <span className="text-xs text-gray-400">({m.machine_id})</span>
+                      {m.location && <span className="text-xs text-gray-400 ml-1">· {m.location}</span>}
+                    </div>
+
+                    {/* แอดมินที่ assign แล้ว */}
+                    {assigned.length > 0 ? (
+                      <div className="flex flex-wrap gap-2 mb-2">
+                        {assigned.map(a => {
+                          const prof = (allProfiles || []).find(p => p.id === a.user_id)
+                          return (
+                            <div key={a.id} className="flex items-center gap-1.5 bg-blue-50 border border-blue-200 rounded-lg px-3 py-1.5">
+                              <span className="text-xs font-medium text-blue-700">{prof?.display_name || prof?.email || "?"}</span>
+                              <button onClick={() => onRemoveAssignment(a.id)}
+                                className="text-blue-400 hover:text-red-500">
+                                <X size={12}/>
+                              </button>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-gray-400 mb-2">ยังไม่มีแอดมินรับผิดชอบ</p>
+                    )}
+
+                    {/* เพิ่มแอดมิน */}
+                    {availableUsers.length > 0 && (
+                      <select
+                        className="border border-gray-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-200"
+                        value=""
+                        onChange={async (e) => {
+                          if (e.target.value) {
+                            try {
+                              await onAddAssignment({ machine_id: m.machine_id, user_id: e.target.value })
+                              showToast(`กำหนดตู้ ${m.name} สำเร็จ`)
+                            } catch (err) { showToast("เกิดข้อผิดพลาด: " + err.message, "error") }
+                          }
+                        }}>
+                        <option value="">+ เพิ่มแอดมิน</option>
+                        {availableUsers.map(p => (
+                          <option key={p.id} value={p.id}>{p.display_name || p.email}</option>
+                        ))}
+                      </select>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          </div>
         </div>
       )}
     </div>
@@ -1837,12 +1998,23 @@ function SkuManager({ skus, onAddSku, onDeactivateSku, showToast }) {
 // ─────────────────────────────────────────────
 // PAGE 3: WITHDRAWAL
 // ─────────────────────────────────────────────
-function PageWithdrawal({ machines, stockOut, stockIn, stockBalance, onAddStockOut, onDeleteStockOut, skus }) {
+function PageWithdrawal({ machines, stockOut, stockIn, stockBalance, onAddStockOut, onDeleteStockOut, skus, transfers, machineAssignments, session, profile }) {
   const nowDate = () => new Date().toISOString().slice(0,10)
   const nowTime = () => new Date().toTimeString().slice(0,5)
   const [form, setForm]   = useState({ sku_id:"", lot_number:"", machine_id:"", unit:"box", quantity:"1", note:"", date: nowDate(), time: nowTime() })
   const [toast, setToast] = useState(null)
   const [saving, setSaving] = useState(false)
+
+  // กรองตู้: ถ้ามี assignment → แสดงเฉพาะตู้ที่ assign ให้ / ถ้าไม่มี → แสดงทั้งหมด (backward compat)
+  const userId = session?.user?.id
+  const myAssignments = (machineAssignments || []).filter(a => a.user_id === userId && a.is_active)
+  const hasAssignment = myAssignments.length > 0
+  const myMachines = hasAssignment ? machines.filter(m => myAssignments.some(a => a.machine_id === m.machine_id)) : machines
+
+  // สต็อกย่อย: ถ้ามี assignment → ใช้สต็อกจาก transfers / ถ้าไม่มี → ใช้สต็อกหลัก (backward compat)
+  const myTransfers = (transfers || []).filter(t => t.to_user_id === userId)
+  const myStockOutForBalance = hasAssignment ? stockOut.filter(so => so.withdrawn_by_user_id === userId) : []
+  const useSubStock = hasAssignment && myTransfers.length > 0
 
   const [deleteOutId, setDeleteOutId] = useState(null)
   const [deletingOut, setDeletingOut] = useState(false)
@@ -1866,34 +2038,56 @@ function PageWithdrawal({ machines, stockOut, stockIn, stockBalance, onAddStockO
     }
   }
 
-  const machineId   = form.machine_id || machines[0]?.machine_id || ""
-  const balMap      = Object.fromEntries(stockBalance.map(r => [r.sku_id, parseFloat(r.balance) || 0]))
-  const available   = balMap[form.sku_id] || 0
+  const machineId   = form.machine_id || myMachines[0]?.machine_id || ""
   const selectedSku = skus.find(s => s.sku_id === form.sku_id)
+
+  // คำนวณสต็อกคงเหลือ: ใช้สต็อกย่อย(ถ้ามี assignment) หรือสต็อกหลัก
+  const available = (() => {
+    if (!form.sku_id) return 0
+    if (useSubStock) {
+      const received = myTransfers.filter(t => t.sku_id === form.sku_id).reduce((a, t) => a + (t.quantity_packs || 0), 0)
+      const used = myStockOutForBalance.filter(so => so.sku_id === form.sku_id).reduce((a, so) => a + (so.quantity_packs || 0), 0)
+      return received - used
+    }
+    const balMap = Object.fromEntries(stockBalance.map(r => [r.sku_id, parseFloat(r.balance) || 0]))
+    return balMap[form.sku_id] || 0
+  })()
   const availBoxes  = selectedSku ? Math.floor(available / selectedSku.packs_per_box) : 0
 
-  // ── Lot options สำหรับ SKU ที่เลือก (group by lot_number เพื่อไม่ให้ซ้ำ) ──
+  // ── Lot options (FIFO) — ใช้ transfers ถ้ามี sub-stock / stockIn ถ้าสต็อกหลัก ──
   const skuLots = (() => {
     if (!form.sku_id) return []
     const lotMap = {}
-    stockIn
-      .filter(r => r.sku_id === form.sku_id && r.lot_number)
-      .forEach(r => {
-        if (!lotMap[r.lot_number]) {
-          lotMap[r.lot_number] = { ...r, quantity_packs: 0, total_cost: 0 }
-        }
+    if (useSubStock) {
+      // Lot จาก transfers ที่ได้รับมา
+      myTransfers.filter(t => t.sku_id === form.sku_id && t.lot_number).forEach(t => {
+        if (!lotMap[t.lot_number]) lotMap[t.lot_number] = { lot_number: t.lot_number, quantity_packs: 0, purchased_at: t.transferred_at }
+        lotMap[t.lot_number].quantity_packs += t.quantity_packs || 0
+      })
+      const lotsArr = Object.values(lotMap).sort((a, b) => new Date(a.purchased_at) - new Date(b.purchased_at))
+      const skuTotalOut = myStockOutForBalance.filter(so => so.sku_id === form.sku_id).reduce((a, so) => a + (so.quantity_packs || 0), 0)
+      let remainOut = skuTotalOut
+      return lotsArr.map(r => {
+        const used = Math.min(r.quantity_packs || 0, remainOut)
+        remainOut -= used
+        return { ...r, lotBalance: r.quantity_packs - used }
+      })
+    } else {
+      // สต็อกหลัก (เดิม)
+      stockIn.filter(r => r.sku_id === form.sku_id && r.lot_number).forEach(r => {
+        if (!lotMap[r.lot_number]) lotMap[r.lot_number] = { ...r, quantity_packs: 0, total_cost: 0 }
         lotMap[r.lot_number].quantity_packs += r.quantity_packs || 0
         lotMap[r.lot_number].total_cost += parseFloat(r.total_cost) || 0
       })
-    const lotsArr = Object.values(lotMap).sort((a, b) => new Date(a.purchased_at) - new Date(b.purchased_at))
-    // FIFO: กระจาย total out ลง lot เรียงจากเก่าสุด
-    const skuTotalOut = stockOut.filter(so => so.sku_id === form.sku_id).reduce((a, so) => a + (so.quantity_packs || 0), 0)
-    let remainOut = skuTotalOut
-    return lotsArr.map(r => {
-      const usedFromLot = Math.min(r.quantity_packs || 0, remainOut)
-      remainOut -= usedFromLot
-      return { ...r, lotBalance: (r.quantity_packs || 0) - usedFromLot }
-    })
+      const lotsArr = Object.values(lotMap).sort((a, b) => new Date(a.purchased_at) - new Date(b.purchased_at))
+      const skuTotalOut = stockOut.filter(so => so.sku_id === form.sku_id).reduce((a, so) => a + (so.quantity_packs || 0), 0)
+      let remainOut = skuTotalOut
+      return lotsArr.map(r => {
+        const usedFromLot = Math.min(r.quantity_packs || 0, remainOut)
+        remainOut -= usedFromLot
+        return { ...r, lotBalance: (r.quantity_packs || 0) - usedFromLot }
+      })
+    }
   })()
 
   const availableLots = skuLots.filter(r => r.lotBalance > 0)
@@ -2029,7 +2223,7 @@ function PageWithdrawal({ machines, stockOut, stockIn, stockBalance, onAddStockO
             <div className={`p-3 rounded-xl text-sm grid grid-cols-2 gap-2 ${available < 24 ? "bg-amber-50":"bg-green-50"}`}>
               <div className="text-center">
                 <p className={`text-xs ${available < 24 ? "text-amber-500":"text-green-500"}`}>
-                  {selectedLot ? `Lot นี้คงเหลือ` : "คงเหลือรวม (ซอง)"}
+                  {selectedLot ? `Lot นี้คงเหลือ` : useSubStock ? "สต็อกของฉัน (ซอง)" : "คงเหลือรวม (ซอง)"}
                 </p>
                 <p className={`text-lg font-bold ${available < 24 ? "text-amber-700":"text-green-700"}`}>
                   {fmt(selectedLot ? selectedLot.lotBalance : available)}
@@ -2113,9 +2307,11 @@ function PageWithdrawal({ machines, stockOut, stockIn, stockBalance, onAddStockO
 
             {/* ตู้ปลายทาง */}
             <div>
-              <label className="block text-xs text-gray-500 mb-1">ตู้ปลายทาง</label>
-              <div className={`grid gap-2 ${machines.length <= 2 ? "grid-cols-2" : "grid-cols-2"}`}>
-                {machines.map(m => (
+              <label className="block text-xs text-gray-500 mb-1">
+                ตู้ปลายทาง {hasAssignment && <span className="text-blue-500">(ตู้ที่คุณรับผิดชอบ)</span>}
+              </label>
+              <div className={`grid gap-2 ${myMachines.length <= 2 ? "grid-cols-2" : "grid-cols-2"}`}>
+                {myMachines.map(m => (
                   <button type="button" key={m.machine_id}
                     onClick={() => setForm({...form, machine_id:m.machine_id})}
                     className={`py-3 px-2 rounded-xl text-sm font-medium border-2 transition-all ${(form.machine_id||machineId)===m.machine_id?"border-orange-400 bg-orange-50 text-orange-700":"border-gray-200 text-gray-600 hover:border-gray-300"}`}>
@@ -2620,7 +2816,13 @@ function PageSales({ machines, sales, skus, claims, onRefresh }) {
 // ─────────────────────────────────────────────
 // PAGE 5: CLAIMS (เคลม/คืนเงิน)
 // ─────────────────────────────────────────────
-function PageClaims({ machines, skus, claims, onAddClaim, onConfirmClaim, onDeleteClaim }) {
+function PageClaims({ machines, skus, claims, onAddClaim, onConfirmClaim, onDeleteClaim, machineAssignments, session }) {
+  // กรองตู้ตาม assignment (ถ้ามี)
+  const userId = session?.user?.id
+  const myAssignments = (machineAssignments || []).filter(a => a.user_id === userId && a.is_active)
+  const hasAssignment = myAssignments.length > 0
+  const myMachines = hasAssignment ? machines.filter(m => myAssignments.some(a => a.machine_id === m.machine_id)) : machines
+  const myClaims = hasAssignment ? claims.filter(c => myAssignments.some(a => a.machine_id === c.machine_id)) : claims
   const [form, setForm] = useState({
     machine_id:"", sku_id:"", quantity:"1", refund_amount:"",
     product_status:"returned", reason:"สินค้าไม่ตก", note:"",
@@ -2677,11 +2879,11 @@ function PageClaims({ machines, skus, claims, onAddClaim, onConfirmClaim, onDele
     finally { setConfirming(false) }
   }
 
-  // สรุป
-  const totalRefund  = claims.reduce((a, r) => a + (parseFloat(r.refund_amount) || 0), 0)
-  const totalReturned = claims.filter(r => r.product_status === "returned").length
-  const totalDamaged  = claims.filter(r => r.product_status === "damaged").length
-  const totalLost     = claims.filter(r => r.product_status === "lost").length
+  // สรุป (ใช้ myClaims ที่กรองตามตู้ที่ assign แล้ว)
+  const totalRefund  = myClaims.reduce((a, r) => a + (parseFloat(r.refund_amount) || 0), 0)
+  const totalReturned = myClaims.filter(r => r.product_status === "returned").length
+  const totalDamaged  = myClaims.filter(r => r.product_status === "damaged").length
+  const totalLost     = myClaims.filter(r => r.product_status === "lost").length
 
   return (
     <div className="space-y-6">
@@ -2698,7 +2900,7 @@ function PageClaims({ machines, skus, claims, onAddClaim, onConfirmClaim, onDele
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="bg-white rounded-2xl border shadow-sm p-4">
           <p className="text-xs text-gray-400">เคลมทั้งหมด</p>
-          <p className="text-xl font-bold text-red-600">{claims.length} รายการ</p>
+          <p className="text-xl font-bold text-red-600">{myClaims.length} รายการ</p>
         </div>
         <div className="bg-white rounded-2xl border shadow-sm p-4">
           <p className="text-xs text-gray-400">ยอดคืนเงินรวม</p>
@@ -2732,7 +2934,7 @@ function PageClaims({ machines, skus, claims, onAddClaim, onConfirmClaim, onDele
               <select value={form.machine_id} onChange={e => setForm({...form, machine_id:e.target.value})}
                 className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-200">
                 <option value="" disabled>— เลือกตู้ —</option>
-                {machines.map(m => <option key={m.machine_id} value={m.machine_id}>{m.name} ({m.machine_id})</option>)}
+                {myMachines.map(m => <option key={m.machine_id} value={m.machine_id}>{m.name} ({m.machine_id})</option>)}
               </select>
             </div>
 
@@ -2801,8 +3003,8 @@ function PageClaims({ machines, skus, claims, onAddClaim, onConfirmClaim, onDele
 
         {/* ประวัติเคลม */}
         <div className="lg:col-span-2 bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-          <h2 className="font-semibold text-gray-700 mb-4">ประวัติเคลม ({claims.length} รายการ)</h2>
-          {claims.length === 0 ? (
+          <h2 className="font-semibold text-gray-700 mb-4">ประวัติเคลม ({myClaims.length} รายการ)</h2>
+          {myClaims.length === 0 ? (
             <p className="text-sm text-gray-400 text-center py-10">ยังไม่มีรายการเคลม</p>
           ) : (
             <div className="overflow-x-auto">
@@ -2822,7 +3024,7 @@ function PageClaims({ machines, skus, claims, onAddClaim, onConfirmClaim, onDele
                   </tr>
                 </thead>
                 <tbody>
-                  {claims.map(c => {
+                  {myClaims.map(c => {
                     const m = machines.find(m => m.machine_id === c.machine_id)
                     return (
                       <tr key={c.id} className="border-b border-gray-50 hover:bg-gray-50">
@@ -3701,18 +3903,755 @@ function PageMachineStockView({ machines, machineStock, skus, onRefresh }) {
 }
 
 // ─────────────────────────────────────────────
+// PAGE: แจกจ่ายสินค้า (ตู๋ → M/Off)
+// ─────────────────────────────────────────────
+function PageTransfer({ stockIn, stockOut, stockBalance, skus, transfers, profiles, onAddTransfer, onDeleteTransfer }) {
+  const nowDate = () => new Date().toISOString().slice(0,10)
+  const nowTime = () => new Date().toTimeString().slice(0,5)
+  const [form, setForm] = useState({ sku_id:"", lot_number:"", to_user_id:"", unit:"box", quantity:"1", note:"", date: nowDate(), time: nowTime() })
+  const [toast, setToast] = useState(null)
+  const [saving, setSaving] = useState(false)
+  const [deleteId, setDeleteId] = useState(null)
+  const [historyFilter, setHistoryFilter] = useState("all")
+  const [historyDateFrom, setHistoryDateFrom] = useState(nowDate())
+  const [historyDateTo,   setHistoryDateTo]   = useState(nowDate())
+
+  const showToast = (msg, type="success") => { setToast({msg,type}); setTimeout(() => setToast(null), 3500) }
+
+  // สต็อกหลัก = stock_in - transfers ออก (ไม่นับ stock_out เก่าที่ยังไม่มี withdrawn_by_user_id)
+  const mainBalMap = {}
+  stockIn.forEach(r => { mainBalMap[r.sku_id] = (mainBalMap[r.sku_id] || 0) + (r.quantity_packs || 0) })
+  transfers.forEach(r => { mainBalMap[r.sku_id] = (mainBalMap[r.sku_id] || 0) - (r.quantity_packs || 0) })
+  // หักข้อมูลเก่า (stock_out ที่ไม่มี withdrawn_by_user_id = เบิกจากสต็อกหลักโดยตรง)
+  stockOut.filter(r => !r.withdrawn_by_user_id).forEach(r => { mainBalMap[r.sku_id] = (mainBalMap[r.sku_id] || 0) - (r.quantity_packs || 0) })
+
+  const available = mainBalMap[form.sku_id] || 0
+  const selectedSku = skus.find(s => s.sku_id === form.sku_id)
+
+  // Lot options (FIFO)
+  const skuLots = (() => {
+    if (!form.sku_id) return []
+    const lotMap = {}
+    stockIn.filter(r => r.sku_id === form.sku_id && r.lot_number).forEach(r => {
+      if (!lotMap[r.lot_number]) lotMap[r.lot_number] = { ...r, quantity_packs: 0 }
+      lotMap[r.lot_number].quantity_packs += r.quantity_packs || 0
+    })
+    const lotsArr = Object.values(lotMap).sort((a, b) => new Date(a.purchased_at) - new Date(b.purchased_at))
+    // FIFO: หักทั้ง transfers + stock_out(เก่า) ออก
+    const totalUsed = (transfers.filter(t => t.sku_id === form.sku_id).reduce((a, t) => a + (t.quantity_packs || 0), 0))
+      + (stockOut.filter(so => so.sku_id === form.sku_id && !so.withdrawn_by_user_id).reduce((a, so) => a + (so.quantity_packs || 0), 0))
+    let remainOut = totalUsed
+    return lotsArr.map(r => {
+      const used = Math.min(r.quantity_packs || 0, remainOut)
+      remainOut -= used
+      return { ...r, lotBalance: (r.quantity_packs || 0) - used }
+    })
+  })()
+
+  const availableLots = skuLots.filter(r => r.lotBalance > 0)
+  const selectedLot = skuLots.find(r => r.lot_number === form.lot_number)
+  const withdrawQty = parseInt(form.quantity) || 0
+  const withdrawPacks = form.unit === "box" ? withdrawQty * (selectedSku?.packs_per_box || 24) : withdrawQty
+  const overStock = withdrawPacks > available
+  const overLot = selectedLot && withdrawPacks > selectedLot.lotBalance
+
+  const adminProfiles = profiles.filter(p => p.role === "admin" || p.role === "user")
+
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    if (!form.sku_id) { showToast("กรุณาเลือกสินค้า","error"); return }
+    if (!form.to_user_id) { showToast("กรุณาเลือกแอดมินปลายทาง","error"); return }
+    if (!withdrawQty || withdrawQty <= 0) { showToast("กรุณาระบุจำนวน","error"); return }
+    if (overStock) { showToast(`สต็อกหลักไม่เพียงพอ: คงเหลือ ${fmt(available)} ซอง`, "error"); return }
+    if (overLot) { showToast(`เกินสต็อก Lot: คงเหลือ ${fmt(selectedLot.lotBalance)} ซอง`, "error"); return }
+    if (availableLots.length > 0 && !form.lot_number) { showToast("กรุณาเลือก Lot","error"); return }
+    try {
+      setSaving(true)
+      const toAdmin = adminProfiles.find(p => p.id === form.to_user_id)
+      await onAddTransfer({
+        sku_id: form.sku_id,
+        lot_number: form.lot_number || null,
+        to_user_id: form.to_user_id,
+        unit: form.unit,
+        quantity: withdrawQty,
+        quantity_packs: withdrawPacks,
+        transferred_at: `${form.date}T${form.time}:00`,
+        note: form.note
+          ? `[${form.unit === "box" ? withdrawQty+"กล่อง" : withdrawQty+"ซอง"}] ${form.note}`
+          : `[${form.unit === "box" ? withdrawQty+"กล่อง" : withdrawQty+"ซอง"}]`,
+      })
+      showToast(`แจกจ่ายสำเร็จ: ${form.sku_id} → ${toAdmin?.display_name || "?"} ${fmt(withdrawPacks)} ซอง`)
+      setForm(f => ({...f, sku_id:"", lot_number:"", quantity:"1", note:""}))
+    } catch (err) { showToast("เกิดข้อผิดพลาด: " + err.message, "error") }
+    finally { setSaving(false) }
+  }
+
+  // ประวัติการแจกจ่าย (กรองวัน)
+  const filteredTransfers = transfers.filter(t => {
+    const d = (t.transferred_at || t.created_at || "").slice(0,10)
+    if (historyFilter === "date") return d >= historyDateFrom && d <= historyDateTo
+    return true
+  }).sort((a,b) => (b.transferred_at||"").localeCompare(a.transferred_at||""))
+
+  return (
+    <div className="space-y-6">
+      <h1 className="text-2xl font-bold text-gray-800">แจกจ่ายสินค้า</h1>
+      <p className="text-sm text-gray-400">เบิกจากสต็อกหลัก แจกจ่ายให้แอดมินแต่ละคนเพื่อนำไปเติมตู้</p>
+
+      {toast && (
+        <div className={`fixed top-4 left-4 right-4 sm:left-auto sm:right-4 sm:max-w-sm z-50 px-4 py-3 rounded-xl shadow-lg text-white text-sm flex items-center gap-2 ${toast.type==="error"?"bg-red-500":"bg-green-500"}`}>
+          {toast.type==="error"?<X size={16}/>:<CheckCircle size={16}/>} {toast.msg}
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* ฟอร์มแจกจ่าย */}
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+          <h2 className="font-semibold text-gray-700 mb-1">บันทึกการแจกจ่าย</h2>
+          <p className="text-xs text-gray-400 mb-4">เลือกสินค้าจากสต็อกหลัก แจกจ่ายให้แอดมินที่รับผิดชอบ</p>
+          <form onSubmit={handleSubmit} className="space-y-4">
+
+            {/* SKU */}
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">สินค้า (SKU)</label>
+              <select value={form.sku_id} onChange={e => setForm({...form, sku_id:e.target.value, lot_number:""})}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200">
+                <option value="" disabled>-- เลือกสินค้า --</option>
+                {sortSkus(skus).map(s => <option key={s.sku_id} value={s.sku_id}>{s.sku_id} -- {s.name}</option>)}
+              </select>
+            </div>
+
+            {/* Lot selection */}
+            {skuLots.length > 0 && (
+              <div>
+                <label className="block text-xs text-gray-500 mb-2">
+                  เลือก Lot <span className="text-red-400">*</span>
+                  <span className="ml-1 text-gray-400">({availableLots.length}/{skuLots.length} Lot มีสต็อก)</span>
+                </label>
+                <div className="space-y-2 max-h-48 overflow-y-auto">
+                  {skuLots.map(lot => {
+                    const isSelected = form.lot_number === lot.lot_number
+                    const depleted = lot.lotBalance <= 0
+                    return (
+                      <button type="button" key={lot.lot_number} disabled={depleted}
+                        onClick={() => setForm({...form, lot_number: isSelected ? "" : lot.lot_number})}
+                        className={`w-full p-3 rounded-xl border-2 text-left transition-all disabled:opacity-40 disabled:cursor-not-allowed
+                          ${isSelected ? "border-blue-400 bg-blue-50" : depleted ? "border-gray-200 bg-gray-50" : "border-gray-200 hover:border-blue-300"}`}>
+                        <div className="flex items-center justify-between gap-2">
+                          <span className={`font-mono text-xs font-bold px-1.5 py-0.5 rounded ${isSelected ? "bg-blue-100 text-blue-700" : "bg-gray-100 text-gray-700"}`}>
+                            {lot.lot_number}
+                          </span>
+                          <span className={`text-sm font-bold ${depleted ? "text-gray-400" : "text-green-600"}`}>
+                            {fmt(lot.lotBalance)} ซอง
+                          </span>
+                        </div>
+                        {lot.quantity_packs > 0 && (
+                          <div className="mt-1.5 flex items-center gap-2">
+                            <div className="flex-1 bg-gray-200 rounded-full h-1">
+                              <div className={`h-1 rounded-full ${isSelected?"bg-blue-400":"bg-green-400"}`}
+                                style={{width:`${Math.max(0,(lot.lotBalance/lot.quantity_packs)*100)}%`}}/>
+                            </div>
+                            <span className="text-xs text-gray-400">{fmt(lot.lotBalance)}/{fmt(lot.quantity_packs)}</span>
+                          </div>
+                        )}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* สต็อกคงเหลือ */}
+            {form.sku_id && (
+              <div className={`p-3 rounded-xl text-sm ${available < 24 ? "bg-amber-50" : "bg-green-50"}`}>
+                <p className={`text-xs ${available < 24 ? "text-amber-500" : "text-green-500"}`}>สต็อกหลักคงเหลือ</p>
+                <p className={`text-lg font-bold ${available < 24 ? "text-amber-700" : "text-green-700"}`}>{fmt(available)} ซอง</p>
+              </div>
+            )}
+
+            {/* แอดมินปลายทาง */}
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">แจกจ่ายให้</label>
+              <select value={form.to_user_id} onChange={e => setForm({...form, to_user_id:e.target.value})}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200">
+                <option value="" disabled>-- เลือกแอดมิน --</option>
+                {adminProfiles.map(p => (
+                  <option key={p.id} value={p.id}>{p.display_name || p.email}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* หน่วย + จำนวน */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">หน่วย</label>
+                <div className="flex gap-1 bg-gray-100 p-1 rounded-xl">
+                  {[{v:"box",l:"กล่อง"},{v:"pack",l:"ซอง"}].map(u => (
+                    <button key={u.v} type="button" onClick={() => setForm({...form, unit:u.v})}
+                      className={`flex-1 py-1.5 rounded-lg text-xs font-medium transition-all ${form.unit===u.v?"bg-white shadow text-blue-600":"text-gray-500"}`}>
+                      {u.l}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">จำนวน</label>
+                <input type="number" min="1" value={form.quantity} onChange={e => setForm({...form, quantity:e.target.value})}
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"/>
+              </div>
+            </div>
+
+            {withdrawPacks > 0 && (
+              <p className={`text-xs ${overStock || overLot ? "text-red-500 font-semibold" : "text-gray-400"}`}>
+                = {fmt(withdrawPacks)} ซอง {overStock ? "(เกินสต็อกหลัก!)" : overLot ? "(เกินสต็อก Lot!)" : ""}
+              </p>
+            )}
+
+            {/* วัน/เวลา */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">วันที่</label>
+                <input type="date" value={form.date} onChange={e => setForm({...form, date:e.target.value})}
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"/>
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">เวลา</label>
+                <input type="time" value={form.time} onChange={e => setForm({...form, time:e.target.value})}
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"/>
+              </div>
+            </div>
+
+            {/* หมายเหตุ */}
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">หมายเหตุ</label>
+              <input type="text" value={form.note} onChange={e => setForm({...form, note:e.target.value})}
+                placeholder="ไม่บังคับ" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"/>
+            </div>
+
+            <button type="submit" disabled={saving}
+              className="w-full py-2.5 rounded-xl bg-blue-600 text-white font-semibold text-sm hover:bg-blue-700 disabled:opacity-50 flex items-center justify-center gap-2">
+              <Send size={16}/> {saving ? "กำลังบันทึก..." : "แจกจ่ายสินค้า"}
+            </button>
+          </form>
+        </div>
+
+        {/* ประวัติแจกจ่าย */}
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="font-semibold text-gray-700">ประวัติแจกจ่าย ({filteredTransfers.length})</h2>
+            <div className="flex gap-1 bg-gray-100 p-1 rounded-xl">
+              {[{v:"all",l:"ทั้งหมด"},{v:"date",l:"เลือกวัน"}].map(f => (
+                <button key={f.v} onClick={() => setHistoryFilter(f.v)}
+                  className={`px-3 py-1 rounded-lg text-xs font-medium ${historyFilter===f.v?"bg-white shadow text-blue-600":"text-gray-500"}`}>
+                  {f.l}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {historyFilter === "date" && (
+            <div className="flex gap-2 mb-3">
+              <input type="date" value={historyDateFrom} onChange={e => setHistoryDateFrom(e.target.value)}
+                className="flex-1 border border-gray-200 rounded-lg px-2 py-1.5 text-xs"/>
+              <span className="text-xs text-gray-400 self-center">ถึง</span>
+              <input type="date" value={historyDateTo} onChange={e => setHistoryDateTo(e.target.value)}
+                className="flex-1 border border-gray-200 rounded-lg px-2 py-1.5 text-xs"/>
+            </div>
+          )}
+
+          {filteredTransfers.length === 0 ? (
+            <p className="text-sm text-gray-400 text-center py-10">ยังไม่มีประวัติแจกจ่าย</p>
+          ) : (
+            <div className="space-y-2 max-h-[600px] overflow-y-auto">
+              {filteredTransfers.map(t => {
+                const toAdmin = profiles.find(p => p.id === t.to_user_id)
+                return (
+                  <div key={t.id} className="p-3 rounded-xl border border-gray-100 hover:bg-gray-50">
+                    <div className="flex items-center justify-between gap-2">
+                      <div>
+                        <span className="font-mono text-xs font-bold text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded">{t.sku_id}</span>
+                        {t.lot_number && <span className="text-xs text-gray-400 ml-2">{t.lot_number}</span>}
+                      </div>
+                      <div className="text-right">
+                        <span className="text-sm font-bold text-gray-700">{fmt(t.quantity_packs)} ซอง</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between mt-1">
+                      <span className="text-xs text-gray-500">
+                        → <span className="font-semibold text-purple-600">{toAdmin?.display_name || "?"}</span>
+                        <span className="ml-2 text-gray-400">{(t.transferred_at || t.created_at || "").slice(0,10)}</span>
+                      </span>
+                      {deleteId === t.id ? (
+                        <div className="flex gap-1">
+                          <button onClick={async () => { await onDeleteTransfer(t.id); setDeleteId(null); showToast("ลบสำเร็จ") }}
+                            className="text-xs text-red-600 font-medium">ลบ</button>
+                          <button onClick={() => setDeleteId(null)} className="text-xs text-gray-400">ยกเลิก</button>
+                        </div>
+                      ) : (
+                        <button onClick={() => setDeleteId(t.id)} className="text-gray-300 hover:text-red-400"><Trash2 size={14}/></button>
+                      )}
+                    </div>
+                    {t.note && <p className="text-xs text-gray-400 mt-1">{t.note}</p>}
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─────────────────────────────────────────────
+// PAGE: สต็อกของฉัน (แอดมินแต่ละคน)
+// ─────────────────────────────────────────────
+function PageMyStock({ transfers, stockOut, skus, profile, session, profiles, machines, machineAssignments }) {
+  const [tab, setTab] = useState("balance") // balance, history_in, history_out
+  const isAdmin = profile?.role === "admin"
+  const userId = session?.user?.id
+
+  // Admin สามารถเลือกดูสต็อกของคนอื่นได้
+  const usersWithTransfers = [...new Set(transfers.map(t => t.to_user_id))]
+  const viewableUsers = (profiles || []).filter(p => usersWithTransfers.includes(p.id))
+  const [viewUserId, setViewUserId] = useState("")
+  // ถ้ายังไม่ได้เลือก → ใช้ตัวเอง (ถ้ามี transfers) หรือคนแรกที่มี
+  const defaultUserId = usersWithTransfers.includes(userId) ? userId : (viewableUsers[0]?.id || userId)
+  const activeUserId = isAdmin ? (viewUserId || defaultUserId) : userId
+  const activeProfile = (profiles || []).find(p => p.id === activeUserId)
+
+  // ตู้ที่ activeUser รับผิดชอบ
+  const userAssignments = (machineAssignments || []).filter(a => a.user_id === activeUserId && a.is_active)
+  const userMachines = (machines || []).filter(m => userAssignments.some(a => a.machine_id === m.machine_id))
+
+  // สต็อกของ activeUser: transfers ที่ได้รับ - stock_out ที่เบิกออก
+  const myTransfers = transfers.filter(t => t.to_user_id === activeUserId)
+  const myStockOut = stockOut.filter(so => so.withdrawn_by_user_id === activeUserId)
+
+  // คำนวณยอดคงเหลือต่อ SKU
+  const balanceMap = {}
+  myTransfers.forEach(t => {
+    if (!balanceMap[t.sku_id]) balanceMap[t.sku_id] = { received: 0, withdrawn: 0 }
+    balanceMap[t.sku_id].received += t.quantity_packs || 0
+  })
+  myStockOut.forEach(so => {
+    if (!balanceMap[so.sku_id]) balanceMap[so.sku_id] = { received: 0, withdrawn: 0 }
+    balanceMap[so.sku_id].withdrawn += so.quantity_packs || 0
+  })
+
+  const balanceList = sortSkus(
+    Object.entries(balanceMap).map(([sku_id, v]) => ({
+      sku_id,
+      name: skus.find(s => s.sku_id === sku_id)?.name || sku_id,
+      series: getSkuSeries(sku_id),
+      received: v.received,
+      withdrawn: v.withdrawn,
+      balance: v.received - v.withdrawn,
+      packs_per_box: skus.find(s => s.sku_id === sku_id)?.packs_per_box || 24,
+    }))
+  ).filter(r => r.received > 0 || r.withdrawn > 0)
+
+  const totalBalance = balanceList.reduce((a, r) => a + r.balance, 0)
+  const totalReceived = balanceList.reduce((a, r) => a + r.received, 0)
+
+  // Lot balance (FIFO)
+  const getMyLotBalance = (skuId) => {
+    const lotMap = {}
+    myTransfers.filter(t => t.sku_id === skuId && t.lot_number).forEach(t => {
+      if (!lotMap[t.lot_number]) lotMap[t.lot_number] = { lot_number: t.lot_number, quantity_packs: 0, transferred_at: t.transferred_at }
+      lotMap[t.lot_number].quantity_packs += t.quantity_packs || 0
+    })
+    const lotsArr = Object.values(lotMap).sort((a, b) => new Date(a.transferred_at) - new Date(b.transferred_at))
+    const totalOut = myStockOut.filter(so => so.sku_id === skuId).reduce((a, so) => a + (so.quantity_packs || 0), 0)
+    let remainOut = totalOut
+    return lotsArr.map(r => {
+      const used = Math.min(r.quantity_packs, remainOut)
+      remainOut -= used
+      return { ...r, lotBalance: r.quantity_packs - used }
+    })
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-800">
+            {isAdmin && activeUserId !== userId ? `สต็อกของ ${activeProfile?.display_name || "?"}` : "สต็อกของฉัน"}
+          </h1>
+          <p className="text-sm text-gray-400">สินค้าที่ได้รับแจกจ่ายมา และประวัติการเบิกออก</p>
+        </div>
+        {/* Admin: เลือกดูสต็อกของแต่ละคน */}
+        {isAdmin && viewableUsers.length > 0 && (
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-gray-400">ดูสต็อกของ:</span>
+            <div className="flex gap-1 bg-gray-100 p-1 rounded-xl">
+              {viewableUsers.map(p => (
+                <button key={p.id} onClick={() => setViewUserId(p.id)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${activeUserId === p.id ? "bg-white shadow text-blue-600" : "text-gray-500 hover:text-gray-700"}`}>
+                  {p.display_name || p.email}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* ตู้ที่รับผิดชอบ */}
+      {userMachines.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          <span className="text-xs text-gray-400 self-center">ตู้ที่รับผิดชอบ:</span>
+          {userMachines.map(m => (
+            <span key={m.machine_id} className="px-2.5 py-1 bg-blue-50 text-blue-700 rounded-full text-xs font-medium">
+              {m.name}
+            </span>
+          ))}
+        </div>
+      )}
+
+      {/* KPI */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <KpiCard icon={Package} label="สต็อกคงเหลือ (ซอง)" value={fmt(totalBalance)} color="blue"/>
+        <KpiCard icon={PlusCircle} label="รับเข้าทั้งหมด (ซอง)" value={fmt(totalReceived)} color="green"/>
+        <KpiCard icon={MinusCircle} label="SKU ที่ถือ" value={`${balanceList.filter(r => r.balance > 0).length} รายการ`} color="purple"/>
+      </div>
+
+      {/* Tabs */}
+      <div className="flex gap-1 bg-gray-100 p-1 rounded-xl w-fit">
+        {[{v:"balance",l:"ยอดคงเหลือ"},{v:"history_in",l:"ประวัติรับเข้า"},{v:"history_out",l:"ประวัติเบิกออก"}].map(t => (
+          <button key={t.v} onClick={() => setTab(t.v)}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${tab===t.v?"bg-white shadow text-blue-600":"text-gray-500"}`}>
+            {t.l}
+          </button>
+        ))}
+      </div>
+
+      {/* Tab: ยอดคงเหลือ */}
+      {tab === "balance" && (
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+          {balanceList.length === 0 ? (
+            <p className="text-sm text-gray-400 text-center py-10">ยังไม่มีสินค้าในสต็อก</p>
+          ) : (
+            <div className="space-y-3">
+              {balanceList.map(r => {
+                const lots = getMyLotBalance(r.sku_id)
+                const pct = r.received > 0 ? (r.balance / r.received * 100) : 0
+                return (
+                  <div key={r.sku_id} className="p-4 rounded-xl border border-gray-100 hover:shadow-sm transition-all">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-2">
+                        <Badge series={r.series}/>
+                        <span className="font-mono text-sm font-bold text-gray-800">{r.sku_id}</span>
+                        <span className="text-xs text-gray-400">{r.name}</span>
+                      </div>
+                      <div className="text-right">
+                        <p className={`text-lg font-bold ${r.balance < 24 ? "text-amber-600" : "text-green-600"}`}>
+                          {fmt(r.balance)} <span className="text-xs font-normal">ซอง</span>
+                        </p>
+                        <p className="text-xs text-gray-400">{fmtBoxPack(r.balance, r.packs_per_box)}</p>
+                      </div>
+                    </div>
+                    <div className="mt-2 flex items-center gap-2">
+                      <div className="flex-1 bg-gray-200 rounded-full h-1.5">
+                        <div className={`h-1.5 rounded-full ${r.balance < 24 ? "bg-amber-400" : "bg-green-400"}`}
+                          style={{width:`${Math.min(100, pct)}%`}}/>
+                      </div>
+                      <span className="text-xs text-gray-400">{fmt(r.balance)}/{fmt(r.received)}</span>
+                    </div>
+                    {/* Lot breakdown */}
+                    {lots.filter(l => l.lotBalance > 0).length > 0 && (
+                      <div className="mt-2 flex flex-wrap gap-1">
+                        {lots.filter(l => l.lotBalance > 0).map(l => (
+                          <span key={l.lot_number} className="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full font-mono">
+                            {l.lot_number}: {fmt(l.lotBalance)}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Tab: ประวัติรับเข้า */}
+      {tab === "history_in" && (
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+          <h2 className="font-semibold text-gray-700 mb-4">ประวัติรับสินค้าจากสต็อกหลัก ({myTransfers.length})</h2>
+          {myTransfers.length === 0 ? (
+            <p className="text-sm text-gray-400 text-center py-10">ยังไม่มีประวัติ</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-gray-100">
+                    <th className="text-left py-2 text-xs text-gray-400">วันที่</th>
+                    <th className="text-left py-2 text-xs text-gray-400">SKU</th>
+                    <th className="text-left py-2 text-xs text-gray-400">Lot</th>
+                    <th className="text-right py-2 text-xs text-gray-400">จำนวน</th>
+                    <th className="text-left py-2 text-xs text-gray-400">ผู้แจกจ่าย</th>
+                    <th className="text-left py-2 text-xs text-gray-400">หมายเหตุ</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {[...myTransfers].sort((a,b) => (b.transferred_at||"").localeCompare(a.transferred_at||"")).map(t => (
+                    <tr key={t.id} className="border-b border-gray-50 hover:bg-gray-50">
+                      <td className="py-2 text-xs text-gray-600">{(t.transferred_at||"").slice(0,10)}</td>
+                      <td className="py-2"><span className="font-mono text-xs font-bold">{t.sku_id}</span></td>
+                      <td className="py-2 text-xs text-gray-500">{t.lot_number || "-"}</td>
+                      <td className="py-2 text-right text-xs font-semibold text-green-600">+{fmt(t.quantity_packs)} ซอง</td>
+                      <td className="py-2 text-xs text-gray-500">{t.created_by || "-"}</td>
+                      <td className="py-2 text-xs text-gray-400">{t.note || "-"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Tab: ประวัติเบิกออก */}
+      {tab === "history_out" && (
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+          <h2 className="font-semibold text-gray-700 mb-4">ประวัติเบิกไปเติมตู้ ({myStockOut.length})</h2>
+          {myStockOut.length === 0 ? (
+            <p className="text-sm text-gray-400 text-center py-10">ยังไม่มีประวัติ</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-gray-100">
+                    <th className="text-left py-2 text-xs text-gray-400">วันที่</th>
+                    <th className="text-left py-2 text-xs text-gray-400">SKU</th>
+                    <th className="text-left py-2 text-xs text-gray-400">Lot</th>
+                    <th className="text-left py-2 text-xs text-gray-400">ตู้ปลายทาง</th>
+                    <th className="text-right py-2 text-xs text-gray-400">จำนวน</th>
+                    <th className="text-left py-2 text-xs text-gray-400">หมายเหตุ</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {[...myStockOut].sort((a,b) => (b.withdrawn_at||"").localeCompare(a.withdrawn_at||"")).map(so => (
+                    <tr key={so.id} className="border-b border-gray-50 hover:bg-gray-50">
+                      <td className="py-2 text-xs text-gray-600">{(so.withdrawn_at||"").slice(0,10)}</td>
+                      <td className="py-2"><span className="font-mono text-xs font-bold">{so.sku_id}</span></td>
+                      <td className="py-2 text-xs text-gray-500">{so.lot_number || "-"}</td>
+                      <td className="py-2 text-xs text-gray-700">{so.machine_id}</td>
+                      <td className="py-2 text-right text-xs font-semibold text-red-600">-{fmt(so.quantity_packs)} ซอง</td>
+                      <td className="py-2 text-xs text-gray-400">{so.note || "-"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ─────────────────────────────────────────────
+// PAGE: เตรียมของเติมตู้ (คำนวณจาก VMS)
+// ─────────────────────────────────────────────
+function PageRefillPrep({ machines, machineStock, machineAssignments, transfers, stockOut, skus, profile, session }) {
+  const userId = session?.user?.id
+
+  // ตู้ที่ฉัน assign
+  const myMachineIds = machineAssignments.filter(a => a.user_id === userId && a.is_active).map(a => a.machine_id)
+  const myMachines = machines.filter(m => myMachineIds.includes(m.machine_id))
+
+  // สต็อกของฉัน (per SKU)
+  const myTransfers = transfers.filter(t => t.to_user_id === userId)
+  const myStockOut = stockOut.filter(so => so.withdrawn_by_user_id === userId)
+  const myBalMap = {}
+  myTransfers.forEach(t => { myBalMap[t.sku_id] = (myBalMap[t.sku_id] || 0) + (t.quantity_packs || 0) })
+  myStockOut.forEach(so => { myBalMap[so.sku_id] = (myBalMap[so.sku_id] || 0) - (so.quantity_packs || 0) })
+
+  // สร้างรายการเติมตู้จากข้อมูล VMS (ต้องเติมเท่าไหร่)
+  const refillItems = []
+  myMachineIds.forEach(machId => {
+    const slots = machineStock.filter(s => s.machine_id === machId && s.product_name && s.is_occupied)
+    const skuRefill = {}
+    slots.forEach(s => {
+      const refill = Math.max(0, (s.max_capacity || 0) - (s.remain || 0))
+      if (refill === 0) return
+      const name = s.product_name || ""
+      const isBox = name.toLowerCase().includes("box")
+      const key = `${machId}_${s.sku_id || name}_${isBox ? "box" : "pack"}`
+      if (!skuRefill[key]) skuRefill[key] = { machine_id: machId, sku_id: s.sku_id || "", product_name: name, isBox, refill: 0, remain: 0, capacity: 0, slotNums: [] }
+      skuRefill[key].refill += refill
+      skuRefill[key].remain += s.remain || 0
+      skuRefill[key].capacity += s.max_capacity || 0
+      skuRefill[key].slotNums.push(s.slot_number)
+    })
+    Object.values(skuRefill).forEach(r => refillItems.push(r))
+  })
+
+  // group by SKU (รวมทุกตู้)
+  const skuSummary = {}
+  refillItems.forEach(r => {
+    const key = `${r.sku_id}_${r.isBox ? "box" : "pack"}`
+    if (!skuSummary[key]) skuSummary[key] = { sku_id: r.sku_id, product_name: r.product_name, isBox: r.isBox, totalRefill: 0, machines: [] }
+    skuSummary[key].totalRefill += r.refill
+    skuSummary[key].machines.push({ machine_id: r.machine_id, refill: r.refill })
+  })
+  const summaryList = Object.values(skuSummary).sort((a, b) => (a.sku_id || "").localeCompare(b.sku_id || ""))
+
+  // VMS last sync
+  const lastSync = machineStock.length > 0
+    ? machineStock.reduce((latest, s) => { const t = s.synced_at || ""; return t > latest ? t : latest }, "")
+    : null
+
+  const machineNameMap = {}
+  machines.forEach(m => { machineNameMap[m.machine_id] = m.name || m.machine_id })
+
+  if (myMachineIds.length === 0) {
+    return (
+      <div className="space-y-6">
+        <h1 className="text-2xl font-bold text-gray-800">เตรียมของเติมตู้</h1>
+        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-6 text-center">
+          <AlertTriangle size={32} className="text-amber-400 mx-auto mb-2"/>
+          <p className="text-sm text-amber-700">คุณยังไม่ได้ถูก assign ตู้ กรุณาติดต่อแอดมินเพื่อกำหนดตู้ที่รับผิดชอบ</p>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold text-gray-800">เตรียมของเติมตู้</h1>
+        <p className="text-sm text-gray-400">
+          คำนวณจำนวนที่ต้องเติมจากข้อมูล VMS เทียบกับสต็อกของคุณ
+          {lastSync && <span className="ml-2">· VMS อัปเดต: {lastSync.slice(0,10)} {lastSync.slice(11,16)}</span>}
+        </p>
+      </div>
+
+      {/* ตู้ที่รับผิดชอบ */}
+      <div className="flex flex-wrap gap-2">
+        {myMachines.map(m => (
+          <span key={m.machine_id} className="px-3 py-1.5 bg-blue-50 text-blue-700 rounded-full text-sm font-medium">
+            {m.name} ({m.location})
+          </span>
+        ))}
+      </div>
+
+      {/* สรุปต้องเตรียม (ตาม SKU รวมทุกตู้) */}
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+        <h2 className="font-semibold text-gray-700 mb-4">สรุปสินค้าที่ต้องเตรียม</h2>
+        {summaryList.length === 0 ? (
+          <p className="text-sm text-gray-400 text-center py-6">ตู้ทุกช่องเต็มแล้ว หรือยังไม่มีข้อมูล VMS</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b-2 border-gray-200">
+                  <th className="text-left py-2 text-xs text-gray-400">SKU</th>
+                  <th className="text-left py-2 text-xs text-gray-400">สินค้า</th>
+                  <th className="text-center py-2 text-xs text-gray-400">ประเภท</th>
+                  <th className="text-right py-2 text-xs text-gray-400">ต้องเติม (รวม)</th>
+                  <th className="text-right py-2 text-xs text-gray-400">สต็อกของฉัน</th>
+                  <th className="text-center py-2 text-xs text-gray-400">สถานะ</th>
+                  <th className="text-left py-2 text-xs text-gray-400">ตู้</th>
+                </tr>
+              </thead>
+              <tbody>
+                {summaryList.map(r => {
+                  const myBal = myBalMap[r.sku_id] || 0
+                  // ถ้าเป็นกล่อง ต้องแปลง refill เป็นซองเพื่อเทียบ
+                  const sku = skus.find(s => s.sku_id === r.sku_id)
+                  const refillPacks = r.isBox ? r.totalRefill * (sku?.packs_per_box || 24) : r.totalRefill
+                  const enough = myBal >= refillPacks
+                  const unit = r.isBox ? "กล่อง" : "ซอง"
+                  return (
+                    <tr key={r.sku_id + (r.isBox?"b":"p")} className="border-b border-gray-50 hover:bg-gray-50">
+                      <td className="py-2.5"><span className="font-mono text-xs font-bold text-gray-700">{r.sku_id}</span></td>
+                      <td className="py-2.5 text-xs text-gray-600">{r.product_name}</td>
+                      <td className="py-2.5 text-center text-xs">{unit}</td>
+                      <td className="py-2.5 text-right text-sm font-bold text-red-600">{fmt(r.totalRefill)} {unit}</td>
+                      <td className="py-2.5 text-right text-sm">
+                        <span className={`font-bold ${enough ? "text-green-600" : "text-amber-600"}`}>{fmt(myBal)} ซอง</span>
+                      </td>
+                      <td className="py-2.5 text-center">
+                        {enough
+                          ? <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">พร้อม</span>
+                          : <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-medium">ไม่พอ</span>
+                        }
+                      </td>
+                      <td className="py-2.5 text-xs text-gray-500">
+                        {r.machines.map(m => `${machineNameMap[m.machine_id] || m.machine_id}(${m.refill})`).join(", ")}
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* แยกตามตู้ */}
+      {myMachineIds.map(machId => {
+        const items = refillItems.filter(r => r.machine_id === machId)
+        if (items.length === 0) return null
+        return (
+          <div key={machId} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+            <h3 className="font-semibold text-gray-700 mb-3">{machineNameMap[machId] || machId}</h3>
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="border-b border-gray-200">
+                    <th className="text-left py-2 text-gray-400">SKU</th>
+                    <th className="text-left py-2 text-gray-400">สินค้า</th>
+                    <th className="text-center py-2 text-gray-400">ประเภท</th>
+                    <th className="text-right py-2 text-gray-400">คงเหลือ</th>
+                    <th className="text-right py-2 text-gray-400">ความจุ</th>
+                    <th className="text-right py-2 text-gray-400 font-bold text-red-500">ต้องเติม</th>
+                    <th className="text-left py-2 text-gray-400">ช่อง</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {items.sort((a,b) => (a.sku_id||"").localeCompare(b.sku_id||"")).map(r => (
+                    <tr key={r.sku_id + (r.isBox?"b":"p")} className="border-b border-gray-50">
+                      <td className="py-2 font-mono font-bold">{r.sku_id}</td>
+                      <td className="py-2 text-gray-600">{r.product_name}</td>
+                      <td className="py-2 text-center">{r.isBox ? "กล่อง" : "ซอง"}</td>
+                      <td className="py-2 text-right">{r.remain}</td>
+                      <td className="py-2 text-right">{r.capacity}</td>
+                      <td className="py-2 text-right font-bold text-red-600">{r.refill}</td>
+                      <td className="py-2 text-gray-400">{r.slotNums.join(", ")}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+// ─────────────────────────────────────────────
 // NAV
 // ─────────────────────────────────────────────
 const NAV_BASE = [
-  { id:"dashboard",  label:"ภาพรวม",       icon:Home          },
-  { id:"stock",      label:"จัดการสต็อก",  icon:Package       },
-  { id:"withdrawal", label:"เบิกเติมตู้",   icon:ArrowUpCircle },
-  { id:"machstock",  label:"สต็อกหน้าตู้",  icon:Monitor       },
-  { id:"sales",      label:"ยอดขาย",       icon:ShoppingCart  },
-  { id:"claims",     label:"เคลม/คืนเงิน", icon:AlertTriangle },
-  { id:"analytics",  label:"วิเคราะห์ SKU", icon:BarChart2     },
+  { id:"dashboard",  label:"ภาพรวม",         icon:Home          },
+  { id:"stock",      label:"จัดการสต็อก",    icon:Package       },
+  { id:"withdrawal", label:"เบิกเติมตู้",     icon:ArrowUpCircle },
+  { id:"transfer",   label:"แจกจ่ายสินค้า",  icon:Send,  adminOnly:true },
+  { id:"mystock",    label:"สต็อกของฉัน",    icon:Boxes         },
+  { id:"refillprep", label:"เตรียมของเติมตู้", icon:ClipboardList },
+  { id:"machstock",  label:"สต็อกหน้าตู้",   icon:Monitor       },
+  { id:"sales",      label:"ยอดขาย",         icon:ShoppingCart  },
+  { id:"claims",     label:"เคลม/คืนเงิน",  icon:AlertTriangle },
+  { id:"analytics",  label:"วิเคราะห์ SKU",  icon:BarChart2     },
 ]
-const NAV_ADMIN = { id:"users", label:"จัดการผู้ใช้", icon:Users }
+const NAV_ADMIN_ITEMS = [
+  { id:"users",     label:"จัดการผู้ใช้",  icon:Users },
+]
 
 // ─────────────────────────────────────────────
 // APP ROOT
@@ -3760,18 +4699,22 @@ export default function DivisionXApp() {
     return () => subscription.unsubscribe()
   }, [])
 
-  const NAV = profile?.role === "admin" ? [...NAV_BASE, NAV_ADMIN] : NAV_BASE
+  const isAdmin = profile?.role === "admin"
+  const NAV = isAdmin ? [...NAV_BASE, ...NAV_ADMIN_ITEMS] : NAV_BASE.filter(n => !n.adminOnly)
 
   // ── Data State ──
-  const [machines,      setMachines]      = useState([])
-  const [skus,          setSkus]          = useState(SKUS)
-  const [stockIn,       setStockIn]       = useState([])
-  const [stockOut,      setStockOut]      = useState([])
-  const [stockBalance,  setStockBalance]  = useState([])
-  const [sales,         setSales]         = useState([])
-  const [machineStock,  setMachineStock]  = useState([])
-  const [claims,        setClaims]        = useState([])
-  const [loading,       setLoading]       = useState(true)
+  const [machines,            setMachines]            = useState([])
+  const [skus,                setSkus]                = useState(SKUS)
+  const [stockIn,             setStockIn]             = useState([])
+  const [stockOut,            setStockOut]             = useState([])
+  const [stockBalance,        setStockBalance]        = useState([])
+  const [sales,               setSales]               = useState([])
+  const [machineStock,        setMachineStock]        = useState([])
+  const [claims,              setClaims]              = useState([])
+  const [transfers,           setTransfers]           = useState([])
+  const [machineAssignments,  setMachineAssignments]  = useState([])
+  const [allProfiles,         setAllProfiles]         = useState([])
+  const [loading,             setLoading]             = useState(true)
   const [dataError,     setDataError]     = useState(null)
 
   // ── Load All Data from Supabase ──
@@ -3779,7 +4722,7 @@ export default function DivisionXApp() {
     try {
       setLoading(true)
       setDataError(null)
-      const [machData, skuData, siData, soData, sbData, salesData, msData, claimsData] = await Promise.all([
+      const [machData, skuData, siData, soData, sbData, salesData, msData, claimsData, tfData, maData, profData] = await Promise.all([
         getMachines(),
         getSkus(),
         getStockIn(),
@@ -3788,6 +4731,9 @@ export default function DivisionXApp() {
         getSalesByMachine(30),
         getMachineStock(),
         getClaims(),
+        getStockTransfers().catch(() => []),
+        getMachineAssignments().catch(() => []),
+        getAllProfiles().catch(() => []),
       ])
       setMachines(machData)
       if (skuData?.length) setSkus(skuData)
@@ -3796,6 +4742,9 @@ export default function DivisionXApp() {
       setStockBalance(sbData)
       setMachineStock(msData || [])
       setClaims(claimsData || [])
+      setTransfers(tfData || [])
+      setMachineAssignments(maData || [])
+      setAllProfiles(profData || [])
       // Normalize sales: grand_total → revenue, sold_at timestamptz → date string
       // แปลง box → pack: ถ้า product_name_raw มีคำว่า "box" และ quantity_sold ยังเป็น 1 (ข้อมูลเก่า)
       setSales(salesData.map(r => {
@@ -3860,7 +4809,8 @@ export default function DivisionXApp() {
 
   const addStockOut = async (record) => {
     const createdBy = profile?.display_name || session?.user?.email || null
-    await dbAddStockOut({ ...record, created_by: createdBy })
+    const userId = session?.user?.id || null
+    await dbAddStockOut({ ...record, created_by: createdBy, withdrawn_by_user_id: userId })
     const [newSO, newSB] = await Promise.all([getStockOut(), getStockBalance()])
     setStockOut(newSO)
     setStockBalance(newSB)
@@ -3904,7 +4854,8 @@ export default function DivisionXApp() {
     const status = (record.product_status === "lost" || record.product_status === "damaged")
       ? "pending" : record.product_status
     const createdBy = profile?.display_name || session?.user?.email || null
-    await dbAddClaim({ ...record, confirm_status: status, created_by: createdBy })
+    const userId = session?.user?.id || null
+    await dbAddClaim({ ...record, confirm_status: status, created_by: createdBy, managed_by_user_id: userId })
     setClaims(await getClaims())
   }
 
@@ -3917,6 +4868,29 @@ export default function DivisionXApp() {
   const deleteClaim = async (id) => {
     await dbDeleteClaim(id)
     setClaims(await getClaims())
+  }
+
+  // ── Transfer Operations ──
+  const addTransfer = async (record) => {
+    const createdBy = profile?.display_name || session?.user?.email || null
+    await dbAddStockTransfer({ ...record, created_by: createdBy })
+    setTransfers(await getStockTransfers())
+  }
+
+  const deleteTransfer = async (id) => {
+    await dbDeleteStockTransfer(id)
+    setTransfers(await getStockTransfers())
+  }
+
+  // ── Machine Assignment Operations ──
+  const addAssignment = async (record) => {
+    await dbAddMachineAssignment(record)
+    setMachineAssignments(await getMachineAssignments())
+  }
+
+  const removeAssignment = async (id) => {
+    await dbDeleteMachineAssignment(id)
+    setMachineAssignments(await getMachineAssignments())
   }
 
   const addSku = async (record) => {
@@ -4071,12 +5045,15 @@ export default function DivisionXApp() {
         <main className="flex-1 p-4 lg:p-6 overflow-y-auto">
           {page === "dashboard"  && <PageDashboard stockIn={stockIn} stockOut={stockOut} stockBalance={stockBalance} skus={skus}/>}
           {page === "stock"      && <PageStock     stockIn={stockIn} stockBalance={stockBalance} skus={skus} onAddStockIn={addStockIn} onUpdateStockIn={updateStockIn} onDeleteStockIn={deleteStockIn} onAddSku={addSku} onDeactivateSku={deactivateSku} onRecalcAvgCost={async (skuId) => { await recalcAvgCost(skuId); setSkus(await getSkus()) }}/>}
-          {page === "withdrawal" && <PageWithdrawal machines={machines} stockOut={stockOut} stockIn={stockIn} stockBalance={stockBalance} skus={skus} onAddStockOut={addStockOut} onDeleteStockOut={deleteStockOut}/>}
+          {page === "withdrawal" && <PageWithdrawal machines={machines} stockOut={stockOut} stockIn={stockIn} stockBalance={stockBalance} skus={skus} onAddStockOut={addStockOut} onDeleteStockOut={deleteStockOut} transfers={transfers} machineAssignments={machineAssignments} session={session} profile={profile}/>}
+          {page === "transfer"   && <PageTransfer  stockIn={stockIn} stockOut={stockOut} stockBalance={stockBalance} skus={skus} transfers={transfers} profiles={allProfiles} onAddTransfer={addTransfer} onDeleteTransfer={deleteTransfer}/>}
+          {page === "mystock"    && <PageMyStock   transfers={transfers} stockOut={stockOut} skus={skus} profile={profile} session={session} profiles={allProfiles} machines={machines} machineAssignments={machineAssignments}/>}
+          {page === "refillprep" && <PageRefillPrep machines={machines} machineStock={machineStock} machineAssignments={machineAssignments} transfers={transfers} stockOut={stockOut} skus={skus} profile={profile} session={session}/>}
           {page === "machstock"  && <PageMachineStockView machines={machines} machineStock={machineStock} skus={skus} onRefresh={loadAll}/>}
           {page === "sales"      && <PageSales     machines={machines} sales={sales} skus={skus} claims={claims} onRefresh={loadAll}/>}
-          {page === "claims"     && <PageClaims    machines={machines} skus={skus} claims={claims} onAddClaim={addClaim} onConfirmClaim={confirmClaim} onDeleteClaim={deleteClaim}/>}
+          {page === "claims"     && <PageClaims    machines={machines} skus={skus} claims={claims} onAddClaim={addClaim} onConfirmClaim={confirmClaim} onDeleteClaim={deleteClaim} machineAssignments={machineAssignments} session={session}/>}
           {page === "analytics"  && <PageAnalytics sales={sales} skus={skus}/>}
-          {page === "users"      && <PageUsers     currentProfile={profile}/>}
+          {page === "users"      && <PageUsers     currentProfile={profile} machines={machines} machineAssignments={machineAssignments} allProfiles={allProfiles} onAddAssignment={addAssignment} onRemoveAssignment={removeAssignment}/>}
           {page.startsWith("machine_") && (() => {
             const m = machines.find(mc => `machine_${mc.machine_id}` === page)
             return m ? <PageMachineHistory machine={m} stockOut={stockOut} skus={skus}/> : null

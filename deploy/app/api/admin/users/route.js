@@ -62,6 +62,34 @@ export async function POST(req) {
   }
 }
 
+// PATCH /api/admin/users — แก้ไขสิทธิ์/ชื่อผู้ใช้
+export async function PATCH(req) {
+  try {
+    const { userId, role, display_name } = await req.json()
+    if (!userId) {
+      return NextResponse.json({ error: "กรุณาระบุ userId" }, { status: 400 })
+    }
+
+    const update = {}
+    if (role !== undefined) update.role = role
+    if (display_name !== undefined) update.display_name = display_name
+
+    if (Object.keys(update).length === 0) {
+      return NextResponse.json({ error: "ไม่มีข้อมูลที่จะอัปเดต" }, { status: 400 })
+    }
+
+    const { error } = await adminClient
+      .from("profiles")
+      .update(update)
+      .eq("id", userId)
+    if (error) throw error
+
+    return NextResponse.json({ success: true })
+  } catch (err) {
+    return NextResponse.json({ error: err.message }, { status: 400 })
+  }
+}
+
 // DELETE /api/admin/users — ลบผู้ใช้
 export async function DELETE(req) {
   try {

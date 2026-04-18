@@ -285,3 +285,70 @@ export async function getMachineStock() {
   if (error) throw error
   return data
 }
+
+// ── Machine Assignments (ผูกแอดมินกับตู้) ─────────────────────
+export async function getMachineAssignments() {
+  const { data, error } = await supabase
+    .from("machine_assignments")
+    .select("*")
+    .eq("is_active", true)
+    .order("machine_id")
+  if (error) throw error
+  return data
+}
+
+export async function addMachineAssignment(record) {
+  const { data, error } = await supabase
+    .from("machine_assignments")
+    .insert([record])
+    .select()
+    .single()
+  if (error) throw error
+  return data
+}
+
+export async function deleteMachineAssignment(id) {
+  const { error } = await supabase
+    .from("machine_assignments")
+    .delete()
+    .eq("id", id)
+  if (error) throw error
+}
+
+// ── Stock Transfers (แจกจ่ายสินค้าจากสต็อกหลัก → สต็อกย่อย) ──
+export async function getStockTransfers() {
+  const { data, error } = await supabase
+    .from("stock_transfers")
+    .select("*")
+    .order("transferred_at", { ascending: false })
+  if (error) throw error
+  return data
+}
+
+export async function addStockTransfer(record) {
+  const { data, error } = await supabase
+    .from("stock_transfers")
+    .insert([record])
+    .select()
+    .single()
+  if (error) throw error
+  return data
+}
+
+export async function deleteStockTransfer(id) {
+  const { error } = await supabase
+    .from("stock_transfers")
+    .delete()
+    .eq("id", id)
+  if (error) throw error
+}
+
+// ── Profiles (ดึงรายชื่อ admin ทั้งหมด) ──────────────────────
+export async function getAllProfiles() {
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("*")
+    .order("display_name")
+  if (error) throw error
+  return data
+}
