@@ -177,6 +177,18 @@ export async function deleteStockIn(id) {
   if (error) throw error
 }
 
+// ── แก้ไข Stock Out ───────────────────────────────────────────
+export async function updateStockOut(id, record) {
+  const { data, error } = await supabase
+    .from("stock_out")
+    .update(record)
+    .eq("id", id)
+    .select()
+    .single()
+  if (error) throw error
+  return data
+}
+
 // ── ลบ Stock Out ──────────────────────────────────────────────
 export async function deleteStockOut(id) {
   const { error } = await supabase

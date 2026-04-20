@@ -1,15 +1,45 @@
 import { useState } from "react"
-import { Clock } from "lucide-react"
+import { Clock, Pencil, Trash2, Loader2, X, CheckCircle } from "lucide-react"
 import { fmt, today, sortByDateThenSku } from "../shared/helpers"
 import { Badge } from "../shared/ui"
+import EditStockOutModal from "./EditStockOutModal"
 
-export default function PageMachineHistory({ machine, stockOut, skus, hideHeader }) {
+export default function PageMachineHistory({ machine, stockOut, skus, hideHeader, machines, session, profile, onUpdateStockOut, onDeleteStockOut }) {
   const [filterMode, setFilterMode] = useState("all") // all, daily, monthly, yearly
   const [filterDateFrom, setFilterDateFrom] = useState(today())
   const [filterDateTo, setFilterDateTo] = useState(today())
   const [filterMonth, setFilterMonth] = useState(today().slice(0,7))
   const [filterYear, setFilterYear] = useState(today().slice(0,4))
   const [filterSku, setFilterSku] = useState("")
+
+  // Edit / Delete state
+  const [editRecord, setEditRecord] = useState(null)
+  const [deleteId, setDeleteId] = useState(null)
+  const [busy, setBusy] = useState(false)
+  const [toast, setToast] = useState(null)
+
+  const userId = session?.user?.id
+  const isAdmin = profile?.role === "admin"
+  const canEditRecord = (r) => isAdmin || (userId && r.withdrawn_by_user_id === userId)
+  const showToast = (msg, type="success") => { setToast({msg,type}); setTimeout(() => setToast(null), 3000) }
+
+  const handleDelete = async (id) => {
+    if (!onDeleteStockOut) return
+    setBusy(true)
+    try {
+      await onDeleteStockOut(id)
+      setDeleteId(null)
+      showToast("ลบรายการสำเร็จ — คืนสต็อกแล้ว")
+    } catch (err) {
+      showToast("ลบไม่สำเร็จ: " + err.message, "error")
+    } finally { setBusy(false) }
+  }
+
+  const handleUpdate = async (id, data) => {
+    if (!onUpdateStockOut) return
+    await onUpdateStockOut(id, data)
+    showToast("บันทึกการแก้ไขสำเร็จ")
+  }
 
   // กรองเฉพาะตู้นี้
   const machineOut = stockOut.filter(r => r.machine_id === machine.machine_id)
@@ -38,6 +68,20 @@ export default function PageMachineHistory({ machine, stockOut, skus, hideHeader
 
   return (
     <div className="space-y-6">
+      {editRecord && onUpdateStockOut && (
+        <EditStockOutModal
+          record={editRecord}
+          skus={skus}
+          machines={machines}
+          onSave={async (id, data) => { await handleUpdate(id, data); setEditRecord(null) }}
+          onClose={() => setEditRecord(null)}
+        />
+      )}
+      {toast && (
+        <div className={`fixed top-4 left-4 right-4 sm:left-auto sm:right-4 sm:max-w-sm z-50 px-4 py-3 rounded-xl shadow-lg text-white text-sm flex items-center gap-2 ${toast.type==="error"?"bg-red-500":"bg-green-500"}`}>
+          {toast.type==="error" ? <X size={16}/> : <CheckCircle size={16}/>} {toast.msg}
+        </div>
+      )}
       {!hideHeader && (
         <div>
           <h1 className="text-2xl font-bold text-gray-800">{machine.name}</h1>
@@ -127,34 +171,66 @@ export default function PageMachineHistory({ machine, stockOut, skus, hideHeader
           <p className="text-gray-400 text-sm text-center py-8">ไม่มีรายการในช่วงเวลาที่เลือก</p>
         ) : (
           <div className="space-y-2 max-h-[500px] overflow-y-auto pr-1">
-            {filtered.map((r, i) => {
+            {filtered.map((r) => {
               const sku = skus.find(s => s.sku_id === r.sku_id)
               const unitMatch = r.note?.match(/^\[(\d+)(กล่อง|ซอง)\]/)
               const cleanNote = r.note?.replace(/^\[\d+(กล่อง|ซอง)\]\s*/, "") || ""
+              const editable = canEditRecord(r) && onUpdateStockOut && onDeleteStockOut
+              const isConfirming = deleteId === r.id
               return (
-                <div key={i} className="p-3 rounded-xl bg-gray-50 flex items-start justify-between">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-mono text-xs font-bold text-gray-700">{r.sku_id}</span>
-                      <Badge series={sku?.series || "OP"}/>
-                      {r.lot_number && (
-                        <span className="font-mono text-xs bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded">{r.lot_number}</span>
-                      )}
-                      {unitMatch && (
-                        <span className="text-xs bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded font-medium">
-                          {unitMatch[1]} {unitMatch[2]}
-                        </span>
+                <div key={r.id} className="p-3 rounded-xl bg-gray-50">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-mono text-xs font-bold text-gray-700">{r.sku_id}</span>
+                        <Badge series={sku?.series || "OP"}/>
+                        {r.lot_number && (
+                          <span className="font-mono text-xs bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded">{r.lot_number}</span>
+                        )}
+                        {unitMatch && (
+                          <span className="text-xs bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded font-medium">
+                            {unitMatch[1]} {unitMatch[2]}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-gray-400 flex items-center gap-1 mt-1">
+                        <Clock size={10}/> {r.withdrawn_at?.slice(0,10)} {r.withdrawn_at?.slice(11,16) || ""}
+                        {r.created_by && <span className="ml-1">· โดย {r.created_by}</span>}
+                      </p>
+                      {cleanNote && <p className="text-xs text-gray-400 mt-0.5 italic">"{cleanNote}"</p>}
+                    </div>
+                    <div className="text-right flex-shrink-0 ml-2">
+                      <span className="text-orange-500 font-bold text-sm">-{fmt(r.quantity_packs)} ซอง</span>
+                      {editable && (
+                        <div className="flex gap-1 justify-end mt-1">
+                          <button onClick={() => setEditRecord(r)} title="แก้ไข"
+                            className="p-1 rounded-lg bg-blue-100 text-blue-600 hover:bg-blue-200">
+                            <Pencil size={12}/>
+                          </button>
+                          <button onClick={() => setDeleteId(r.id)} title="ลบ"
+                            className="p-1 rounded-lg bg-red-100 text-red-500 hover:bg-red-200">
+                            <Trash2 size={12}/>
+                          </button>
+                        </div>
                       )}
                     </div>
-                    <p className="text-xs text-gray-400 flex items-center gap-1 mt-1">
-                      <Clock size={10}/> {r.withdrawn_at?.slice(0,10)} {r.withdrawn_at?.slice(11,16) || ""}
-                      {r.created_by && <span className="ml-1">· โดย {r.created_by}</span>}
-                    </p>
-                    {cleanNote && <p className="text-xs text-gray-400 mt-0.5 italic">"{cleanNote}"</p>}
                   </div>
-                  <span className="text-orange-500 font-bold text-sm flex-shrink-0 ml-2">
-                    -{fmt(r.quantity_packs)} ซอง
-                  </span>
+                  {isConfirming && (
+                    <div className="mt-2 pt-2 border-t border-red-100 flex items-center justify-between bg-red-50 -mx-3 -mb-3 p-3 rounded-b-xl">
+                      <p className="text-xs text-red-600 font-medium">ยืนยันลบ? จำนวนจะคืนกลับสต็อก</p>
+                      <div className="flex gap-2">
+                        <button onClick={() => setDeleteId(null)} disabled={busy}
+                          className="px-3 py-1 text-xs rounded-lg border border-gray-200 text-gray-600 bg-white hover:bg-gray-50 disabled:opacity-50">
+                          ยกเลิก
+                        </button>
+                        <button onClick={() => handleDelete(r.id)} disabled={busy}
+                          className="px-3 py-1 text-xs rounded-lg bg-red-500 text-white hover:bg-red-600 disabled:opacity-50 flex items-center gap-1">
+                          {busy ? <Loader2 size={10} className="animate-spin"/> : <Trash2 size={10}/>}
+                          ลบ
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )
             })}

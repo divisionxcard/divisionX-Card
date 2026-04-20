@@ -17,6 +17,7 @@ import {
   getStockBalance, getStockIn, getStockOut,
   addStockIn as dbAddStockIn, addStockOut as dbAddStockOut,
   updateStockIn as dbUpdateStockIn,
+  updateStockOut as dbUpdateStockOut,
   deleteStockIn as dbDeleteStockIn,
   deleteStockOut as dbDeleteStockOut,
   getMachines, getSalesByMachine,
@@ -3930,10 +3931,25 @@ function PageTransfer({ stockIn, stockOut, stockBalance, skus, transfers, profil
 // ─────────────────────────────────────────────
 // PAGE: สต็อกของฉัน (แอดมินแต่ละคน)
 // ─────────────────────────────────────────────
-function PageMyStock({ transfers, stockOut, skus, profile, session, profiles, machines, machineAssignments }) {
+function PageMyStock({ transfers, stockOut, skus, profile, session, profiles, machines, machineAssignments, onDeleteTransfer }) {
   const [tab, setTab] = useState("balance") // balance, history_in, history_out
   const isAdmin = profile?.role === "admin"
   const userId = session?.user?.id
+
+  const [deleteTransferId, setDeleteTransferId] = useState(null)
+  const [deletingTransfer, setDeletingTransfer] = useState(false)
+  const [toast, setToast] = useState(null)
+  const showToast = (msg, type="success") => { setToast({msg,type}); setTimeout(() => setToast(null), 3000) }
+  const handleDeleteTransfer = async (id) => {
+    setDeletingTransfer(true)
+    try {
+      await onDeleteTransfer(id)
+      setDeleteTransferId(null)
+      showToast("ลบสำเร็จ — คืนสต็อกหลักแล้ว")
+    } catch (err) {
+      showToast("ลบไม่สำเร็จ: " + err.message, "error")
+    } finally { setDeletingTransfer(false) }
+  }
 
   // Admin สามารถเลือกดูสต็อกของคนอื่นได้
   const usersWithTransfers = [...new Set(transfers.map(t => t.to_user_id))]
@@ -3997,6 +4013,11 @@ function PageMyStock({ transfers, stockOut, skus, profile, session, profiles, ma
 
   return (
     <div className="space-y-6">
+      {toast && (
+        <div className={`fixed top-4 left-4 right-4 sm:left-auto sm:right-4 sm:max-w-sm z-50 px-4 py-3 rounded-xl shadow-lg text-white text-sm flex items-center gap-2 ${toast.type==="error"?"bg-red-500":"bg-green-500"}`}>
+          {toast.type==="error" ? <X size={16}/> : <CheckCircle size={16}/>} {toast.msg}
+        </div>
+      )}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-gray-800">
@@ -4116,19 +4137,45 @@ function PageMyStock({ transfers, stockOut, skus, profile, session, profiles, ma
                     <th className="text-right py-2 text-xs text-gray-400">จำนวน</th>
                     <th className="text-left py-2 text-xs text-gray-400">ผู้แจกจ่าย</th>
                     <th className="text-left py-2 text-xs text-gray-400">หมายเหตุ</th>
+                    {onDeleteTransfer && <th className="text-center py-2 text-xs text-gray-400 w-28">จัดการ</th>}
                   </tr>
                 </thead>
                 <tbody>
-                  {[...myTransfers].sort((a,b) => (b.transferred_at||"").localeCompare(a.transferred_at||"")).map(t => (
-                    <tr key={t.id} className="border-b border-gray-50 hover:bg-gray-50">
-                      <td className="py-2 text-xs text-gray-600">{(t.transferred_at||"").slice(0,10)}</td>
-                      <td className="py-2"><span className="font-mono text-xs font-bold">{t.sku_id}</span></td>
-                      <td className="py-2 text-xs text-gray-500">{t.lot_number || "-"}</td>
-                      <td className="py-2 text-right text-xs font-semibold text-green-600">+{fmt(t.quantity_packs)} ซอง</td>
-                      <td className="py-2 text-xs text-gray-500">{t.created_by || "-"}</td>
-                      <td className="py-2 text-xs text-gray-400">{t.note || "-"}</td>
-                    </tr>
-                  ))}
+                  {[...myTransfers].sort((a,b) => (b.transferred_at||"").localeCompare(a.transferred_at||"")).map(t => {
+                    const isConfirming = deleteTransferId === t.id
+                    return (
+                      <tr key={t.id} className="border-b border-gray-50 hover:bg-gray-50">
+                        <td className="py-2 text-xs text-gray-600">{(t.transferred_at||"").slice(0,10)}</td>
+                        <td className="py-2"><span className="font-mono text-xs font-bold">{t.sku_id}</span></td>
+                        <td className="py-2 text-xs text-gray-500">{t.lot_number || "-"}</td>
+                        <td className="py-2 text-right text-xs font-semibold text-green-600">+{fmt(t.quantity_packs)} ซอง</td>
+                        <td className="py-2 text-xs text-gray-500">{t.created_by || "-"}</td>
+                        <td className="py-2 text-xs text-gray-400">{t.note || "-"}</td>
+                        {onDeleteTransfer && (
+                          <td className="py-2 text-center">
+                            {isConfirming ? (
+                              <div className="flex items-center justify-center gap-1">
+                                <button onClick={() => setDeleteTransferId(null)} disabled={deletingTransfer}
+                                  className="px-2 py-0.5 text-[10px] rounded border border-gray-200 text-gray-600 bg-white hover:bg-gray-50 disabled:opacity-50">
+                                  ยกเลิก
+                                </button>
+                                <button onClick={() => handleDeleteTransfer(t.id)} disabled={deletingTransfer}
+                                  className="px-2 py-0.5 text-[10px] rounded bg-red-500 text-white hover:bg-red-600 disabled:opacity-50 flex items-center gap-1">
+                                  {deletingTransfer ? <Loader2 size={9} className="animate-spin"/> : <Trash2 size={9}/>}
+                                  ลบ
+                                </button>
+                              </div>
+                            ) : (
+                              <button onClick={() => setDeleteTransferId(t.id)} title="ลบและคืนกลับสต็อกหลัก"
+                                className="p-1 rounded-lg bg-red-100 text-red-500 hover:bg-red-200">
+                                <Trash2 size={12}/>
+                              </button>
+                            )}
+                          </td>
+                        )}
+                      </tr>
+                    )
+                  })}
                 </tbody>
               </table>
             </div>
@@ -4383,6 +4430,13 @@ export default function DivisionXApp() {
     setSkus(await getSkus())
   }
 
+  const updateStockOut = async (id, record) => {
+    await dbUpdateStockOut(id, record)
+    const [newSO, newSB] = await Promise.all([getStockOut(), getStockBalance()])
+    setStockOut(newSO)
+    setStockBalance(newSB)
+  }
+
   const deleteStockOut = async (id) => {
     await dbDeleteStockOut(id)
     const [newSO, newSB] = await Promise.all([getStockOut(), getStockBalance()])
@@ -4421,7 +4475,9 @@ export default function DivisionXApp() {
 
   const deleteTransfer = async (id) => {
     await dbDeleteStockTransfer(id)
-    setTransfers(await getStockTransfers())
+    const [newT, newSB] = await Promise.all([getStockTransfers(), getStockBalance()])
+    setTransfers(newT)
+    setStockBalance(newSB)
   }
 
   // ── Machine Assignment Operations ──
@@ -4589,8 +4645,8 @@ export default function DivisionXApp() {
           {page === "stock"      && <PageStock     stockIn={stockIn} stockBalance={stockBalance} skus={skus} onAddStockIn={addStockIn} onUpdateStockIn={updateStockIn} onDeleteStockIn={deleteStockIn} onAddSku={addSku} onDeactivateSku={deactivateSku} onRecalcAvgCost={async (skuId) => { await recalcAvgCost(skuId); setSkus(await getSkus()) }}/>}
           {page === "withdrawal" && <PageWithdrawal machines={machines} stockOut={stockOut} stockIn={stockIn} stockBalance={stockBalance} skus={skus} onAddStockOut={addStockOut} onDeleteStockOut={deleteStockOut} transfers={transfers} machineAssignments={machineAssignments} session={session} profile={profile}/>}
           {page === "transfer"   && <PageTransfer  stockIn={stockIn} stockOut={stockOut} stockBalance={stockBalance} skus={skus} transfers={transfers} profiles={allProfiles} onAddTransfer={addTransfer} onDeleteTransfer={deleteTransfer}/>}
-          {page === "mystock"    && <PageMyStock   transfers={transfers} stockOut={stockOut} skus={skus} profile={profile} session={session} profiles={allProfiles} machines={machines} machineAssignments={machineAssignments}/>}
-          {page === "refillprep" && <PageRefillPrep machines={machines} machineStock={machineStock} machineAssignments={machineAssignments} transfers={transfers} stockOut={stockOut} skus={skus} profile={profile} session={session} profiles={allProfiles} onAddStockOut={addStockOut}/>}
+          {page === "mystock"    && <PageMyStock   transfers={transfers} stockOut={stockOut} skus={skus} profile={profile} session={session} profiles={allProfiles} machines={machines} machineAssignments={machineAssignments} onDeleteTransfer={deleteTransfer}/>}
+          {page === "refillprep" && <PageRefillPrep machines={machines} machineStock={machineStock} machineAssignments={machineAssignments} transfers={transfers} stockOut={stockOut} skus={skus} profile={profile} session={session} profiles={allProfiles} onAddStockOut={addStockOut} onUpdateStockOut={updateStockOut} onDeleteStockOut={deleteStockOut}/>}
           {page === "machstock"  && <PageMachineStockView machines={machines} machineStock={machineStock} skus={skus} onRefresh={loadAll}/>}
           {page === "sales"      && <PageSales     machines={machines} sales={sales} skus={skus} claims={claims} onRefresh={loadAll}/>}
           {page === "claims"     && <PageClaims    machines={machines} skus={skus} claims={claims} onAddClaim={addClaim} onConfirmClaim={confirmClaim} onDeleteClaim={deleteClaim} machineAssignments={machineAssignments} session={session}/>}
@@ -4598,7 +4654,7 @@ export default function DivisionXApp() {
           {page === "users"      && <PageUsers     currentProfile={profile} machines={machines} machineAssignments={machineAssignments} allProfiles={allProfiles} onAddAssignment={addAssignment} onRemoveAssignment={removeAssignment}/>}
           {page.startsWith("machine_") && (() => {
             const m = machines.find(mc => `machine_${mc.machine_id}` === page)
-            return m ? <PageMachineHistory machine={m} stockOut={stockOut} skus={skus}/> : null
+            return m ? <PageMachineHistory machine={m} stockOut={stockOut} skus={skus} machines={machines} session={session} profile={profile} onUpdateStockOut={updateStockOut} onDeleteStockOut={deleteStockOut}/> : null
           })()}
         </main>
       </div>

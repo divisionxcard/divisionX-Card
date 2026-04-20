@@ -7,7 +7,7 @@ import { fmt } from "../shared/helpers"
 import KpiCard from "../shared/KpiCard"
 import PageMachineHistory from "./PageMachineHistory"
 
-export default function PageRefillPrep({ machines, machineStock, machineAssignments, transfers, stockOut, skus, profile, session, profiles, onAddStockOut }) {
+export default function PageRefillPrep({ machines, machineStock, machineAssignments, transfers, stockOut, skus, profile, session, profiles, onAddStockOut, onUpdateStockOut, onDeleteStockOut }) {
   const userId = session?.user?.id
   const isAdmin = profile?.role === "admin"
 
@@ -169,11 +169,9 @@ export default function PageRefillPrep({ machines, machineStock, machineAssignme
           sku_id:        a.r.sku_id,
           lot_number:    a.lot_number,
           machine_id:    a.r.machine_id,
-          unit:          a.r.isBox ? "box" : "pack",
-          quantity:      a.qty,
           quantity_packs: a.packs,
           withdrawn_at:  now,
-          note:          `เบิกจากหน้าเตรียมของเติมตู้ (batch)`,
+          note:          `[${a.qty}${a.r.isBox ? "กล่อง" : "ซอง"}] เบิกจากหน้าเตรียมของเติมตู้ (batch)`,
         })
       }
       showToast(`เบิกสำเร็จ ${assignments.length} รายการ → ${machineNameMap[picks[0].machine_id]}`)
@@ -380,7 +378,9 @@ export default function PageRefillPrep({ machines, machineStock, machineAssignme
           </div>
 
           {subView === "history" ? (
-            <PageMachineHistory machine={activeMachine} stockOut={stockOut} skus={skus} hideHeader/>
+            <PageMachineHistory machine={activeMachine} stockOut={stockOut} skus={skus} hideHeader
+              machines={machines} session={session} profile={profile}
+              onUpdateStockOut={onUpdateStockOut} onDeleteStockOut={onDeleteStockOut}/>
           ) : (<>
           {/* KPI ของตู้นี้ */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
