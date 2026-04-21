@@ -1,18 +1,28 @@
+// PageClaims — Dark Theme
 import { useState } from "react"
-import { CheckCircle, AlertTriangle, Trash2 } from "lucide-react"
+import { CheckCircle, AlertTriangle, Trash2, Loader2 } from "lucide-react"
 import { fmtB, sortSkus } from "../shared/helpers"
+import { SectionTitle } from "../shared/dx-components"
+
+const STATUS_OPTIONS = [
+  { v: "returned", l: "คืนสต็อก", desc: "สภาพดี นำกลับมาขายได้", accent: { text: "var(--dx-success)", bg: "rgba(0,255,136,0.08)", border: "rgba(0,255,136,0.35)" } },
+  { v: "damaged",  l: "ชำรุด",    desc: "เสียหาย ขายต่อไม่ได้",   accent: { text: "var(--dx-danger)",  bg: "rgba(255,68,102,0.08)", border: "rgba(255,68,102,0.35)" } },
+  { v: "lost",     l: "สูญหาย",   desc: "ตู้ปล่อยเกิน ไม่ได้คืน",  accent: { text: "#FFA573",            bg: "rgba(255,165,115,0.08)", border: "rgba(255,165,115,0.35)" } },
+]
+
+const REASONS = ["สินค้าไม่ตก", "ตกผิดช่อง", "ตู้ปล่อยเกิน", "เครื่องค้าง", "สินค้าชำรุด", "อื่นๆ"]
 
 export default function PageClaims({ machines, skus, claims, onAddClaim, onConfirmClaim, onDeleteClaim, machineAssignments, session }) {
-  // กรองตู้ตาม assignment (ถ้ามี)
   const userId = session?.user?.id
   const myAssignments = (machineAssignments || []).filter(a => a.user_id === userId && a.is_active)
   const hasAssignment = myAssignments.length > 0
   const myMachines = hasAssignment ? machines.filter(m => myAssignments.some(a => a.machine_id === m.machine_id)) : machines
   const myClaims = hasAssignment ? claims.filter(c => myAssignments.some(a => a.machine_id === c.machine_id)) : claims
+
   const [form, setForm] = useState({
-    machine_id:"", sku_id:"", quantity:"1", refund_amount:"",
-    product_status:"returned", reason:"สินค้าไม่ตก", note:"",
-    claimed_at: new Date().toISOString().slice(0,10),
+    machine_id: "", sku_id: "", quantity: "1", refund_amount: "",
+    product_status: "returned", reason: "สินค้าไม่ตก", note: "",
+    claimed_at: new Date().toISOString().slice(0, 10),
   })
   const [saving, setSaving] = useState(false)
   const [toast, setToast] = useState(null)
@@ -20,31 +30,30 @@ export default function PageClaims({ machines, skus, claims, onAddClaim, onConfi
   const [confirmId, setConfirmId] = useState(null)
   const [confirming, setConfirming] = useState(false)
 
-  const showToast = (msg, type="success") => { setToast({msg,type}); setTimeout(() => setToast(null), 3000) }
+  const showToast = (msg, type = "success") => { setToast({ msg, type }); setTimeout(() => setToast(null), 3000) }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    if (!form.machine_id) { showToast("กรุณาเลือกตู้","error"); return }
-    if (!form.sku_id)     { showToast("กรุณาเลือกสินค้า","error"); return }
-    if (form.product_status !== "lost" && (!form.refund_amount || parseFloat(form.refund_amount) <= 0)) { showToast("กรุณาระบุยอดคืนเงิน","error"); return }
-    if (!form.claimed_at) { showToast("กรุณาระบุวันที่เคลม","error"); return }
+    if (!form.machine_id) { showToast("กรุณาเลือกตู้", "error"); return }
+    if (!form.sku_id) { showToast("กรุณาเลือกสินค้า", "error"); return }
+    if (form.product_status !== "lost" && (!form.refund_amount || parseFloat(form.refund_amount) <= 0)) { showToast("กรุณาระบุยอดคืนเงิน", "error"); return }
+    if (!form.claimed_at) { showToast("กรุณาระบุวันที่เคลม", "error"); return }
     try {
       setSaving(true)
       await onAddClaim({
-        machine_id:     form.machine_id,
-        sku_id:         form.sku_id,
-        quantity:       parseInt(form.quantity) || 1,
-        refund_amount:  parseFloat(form.refund_amount) || 0,
+        machine_id: form.machine_id,
+        sku_id: form.sku_id,
+        quantity: parseInt(form.quantity) || 1,
+        refund_amount: parseFloat(form.refund_amount) || 0,
         product_status: form.product_status,
-        reason:         form.reason || null,
-        note:           form.note || null,
-        claimed_at:     form.claimed_at,
+        reason: form.reason || null,
+        note: form.note || null,
+        claimed_at: form.claimed_at,
       })
       showToast(`บันทึกเคลมสำเร็จ: ${form.sku_id} → ${form.product_status === "returned" ? "คืนสต็อก" : "ตัดชำรุด"}`)
-      setForm(f => ({...f, machine_id:"", sku_id:"", quantity:"1", refund_amount:"", note:"", claimed_at: new Date().toISOString().slice(0,10) }))
-    } catch (err) {
-      showToast("เกิดข้อผิดพลาด: " + err.message, "error")
-    } finally { setSaving(false) }
+      setForm(f => ({ ...f, machine_id: "", sku_id: "", quantity: "1", refund_amount: "", note: "", claimed_at: new Date().toISOString().slice(0, 10) }))
+    } catch (err) { showToast("เกิดข้อผิดพลาด: " + err.message, "error") }
+    finally { setSaving(false) }
   }
 
   const handleDelete = async (id) => {
@@ -65,205 +74,264 @@ export default function PageClaims({ machines, skus, claims, onAddClaim, onConfi
     finally { setConfirming(false) }
   }
 
-  // สรุป (ใช้ myClaims ที่กรองตามตู้ที่ assign แล้ว)
-  const totalRefund  = myClaims.reduce((a, r) => a + (parseFloat(r.refund_amount) || 0), 0)
+  const totalRefund = myClaims.reduce((a, r) => a + (parseFloat(r.refund_amount) || 0), 0)
   const totalReturned = myClaims.filter(r => r.product_status === "returned").length
-  const totalDamaged  = myClaims.filter(r => r.product_status === "damaged").length
-  const totalLost     = myClaims.filter(r => r.product_status === "lost").length
+  const totalDamaged = myClaims.filter(r => r.product_status === "damaged").length
+  const totalLost = myClaims.filter(r => r.product_status === "lost").length
+
+  const labelStyle = { fontSize: 10, fontWeight: 500, letterSpacing: 0.4, textTransform: "uppercase", color: "var(--dx-text-muted)", marginBottom: 6, display: "block" }
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-gray-800">เคลม / คืนเงิน</h1>
+    <div style={{ padding: 24, display: "flex", flexDirection: "column", gap: 20 }}>
+      <SectionTitle pill="Claims · Refunds" title="เคลม / คืนเงิน" subtitle="บันทึกรายการเคลม · คืนสต็อก · ตัดชำรุด · สูญหาย"/>
 
       {toast && (
-        <div className={`flex items-center gap-2 px-4 py-3 rounded-xl text-sm ${toast.type==="success"?"bg-green-50 text-green-700 border border-green-200":"bg-red-50 text-red-700 border border-red-200"}`}>
-          {toast.type==="success" ? <CheckCircle size={16}/> : <AlertTriangle size={16}/>}
+        <div style={{
+          display: "flex", alignItems: "center", gap: 10, padding: "12px 16px", borderRadius: 10, fontSize: 12,
+          background: toast.type === "success" ? "rgba(0,255,136,0.08)" : "rgba(255,68,102,0.08)",
+          border: `1px solid ${toast.type === "success" ? "rgba(0,255,136,0.25)" : "rgba(255,68,102,0.25)"}`,
+          color: toast.type === "success" ? "var(--dx-success)" : "var(--dx-danger)",
+        }}>
+          {toast.type === "success" ? <CheckCircle size={16}/> : <AlertTriangle size={16}/>}
           {toast.msg}
         </div>
       )}
 
       {/* KPI */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-white rounded-2xl border shadow-sm p-4">
-          <p className="text-xs text-gray-400">เคลมทั้งหมด</p>
-          <p className="text-xl font-bold text-red-600">{myClaims.length} รายการ</p>
-        </div>
-        <div className="bg-white rounded-2xl border shadow-sm p-4">
-          <p className="text-xs text-gray-400">ยอดคืนเงินรวม</p>
-          <p className="text-xl font-bold text-red-600">{fmtB(totalRefund)}</p>
-        </div>
-        <div className="bg-white rounded-2xl border shadow-sm p-4">
-          <p className="text-xs text-gray-400">สถานะสินค้า</p>
-          <p className="text-sm font-medium text-gray-700 mt-1">
-            <span className="text-green-600">{totalReturned} คืนสต็อก</span>
-            {" · "}
-            <span className="text-red-500">{totalDamaged} ชำรุด</span>
-            {totalLost > 0 && <>{" · "}<span className="text-orange-500">{totalLost} สูญหาย</span></>}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 14 }}>
+        <StatCard label="เคลมทั้งหมด" value={`${myClaims.length} รายการ`} accent="var(--dx-danger)"/>
+        <StatCard label="ยอดคืนเงินรวม" value={fmtB(totalRefund)} accent="var(--dx-danger)" mono/>
+        <div className="dx-card" style={{ padding: 16 }}>
+          <p style={{ margin: 0, fontSize: 10, color: "var(--dx-text-muted)", letterSpacing: 0.5, textTransform: "uppercase" }}>
+            สถานะสินค้า
+          </p>
+          <p style={{ margin: "6px 0 0", fontSize: 12, color: "var(--dx-text-secondary)" }}>
+            <span style={{ color: "var(--dx-success)", fontWeight: 600 }}>{totalReturned} คืนสต็อก</span>
+            <span style={{ color: "var(--dx-text-muted)", margin: "0 6px" }}>·</span>
+            <span style={{ color: "var(--dx-danger)", fontWeight: 600 }}>{totalDamaged} ชำรุด</span>
+            {totalLost > 0 && (
+              <>
+                <span style={{ color: "var(--dx-text-muted)", margin: "0 6px" }}>·</span>
+                <span style={{ color: "#FFA573", fontWeight: 600 }}>{totalLost} สูญหาย</span>
+              </>
+            )}
           </p>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* ฟอร์มบันทึกเคลม */}
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-          <h2 className="font-semibold text-gray-700 mb-4">บันทึกเคลม</h2>
-          <form onSubmit={handleSubmit} className="space-y-4">
-
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(380px, 1fr))", gap: 18 }}>
+        {/* Form */}
+        <div className="dx-card" style={{ padding: 20 }}>
+          <h2 style={{ margin: "0 0 14px", fontSize: 13, fontWeight: 600, color: "var(--dx-text)" }}>
+            บันทึกเคลม
+          </h2>
+          <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
             <div>
-              <label className="block text-xs text-gray-500 mb-1">วันที่เคลม</label>
-              <input type="date" value={form.claimed_at} onChange={e => setForm({...form, claimed_at:e.target.value})}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-200"/>
+              <label style={labelStyle}>วันที่เคลม</label>
+              <input type="date" value={form.claimed_at} onChange={e => setForm({ ...form, claimed_at: e.target.value })} className="dx-input"/>
             </div>
 
             <div>
-              <label className="block text-xs text-gray-500 mb-1">ตู้ที่เกิดปัญหา</label>
-              <select value={form.machine_id} onChange={e => setForm({...form, machine_id:e.target.value})}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-200">
+              <label style={labelStyle}>ตู้ที่เกิดปัญหา</label>
+              <select value={form.machine_id} onChange={e => setForm({ ...form, machine_id: e.target.value })} className="dx-input">
                 <option value="" disabled>— เลือกตู้ —</option>
                 {myMachines.map(m => <option key={m.machine_id} value={m.machine_id}>{m.name} ({m.machine_id})</option>)}
               </select>
             </div>
 
             <div>
-              <label className="block text-xs text-gray-500 mb-1">สินค้า (SKU)</label>
-              <select value={form.sku_id} onChange={e => setForm({...form, sku_id:e.target.value})}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-200">
+              <label style={labelStyle}>สินค้า (SKU)</label>
+              <select value={form.sku_id} onChange={e => setForm({ ...form, sku_id: e.target.value })} className="dx-input">
                 <option value="" disabled>— เลือกสินค้า —</option>
                 {sortSkus(skus).map(s => <option key={s.sku_id} value={s.sku_id}>{s.sku_id} — {s.name}</option>)}
               </select>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
               <div>
-                <label className="block text-xs text-gray-500 mb-1">จำนวน (ซอง)</label>
-                <input type="number" min="1" value={form.quantity} onChange={e => setForm({...form, quantity:e.target.value})}
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-200"/>
+                <label style={labelStyle}>จำนวน (ซอง)</label>
+                <input type="number" min="1" value={form.quantity} onChange={e => setForm({ ...form, quantity: e.target.value })}
+                  className="dx-input dx-mono" style={{ fontWeight: 700 }}/>
               </div>
               <div>
-                <label className="block text-xs text-gray-500 mb-1">ยอดคืนเงิน (฿)</label>
-                <input type="number" min="0" step="0.01" value={form.refund_amount} onChange={e => setForm({...form, refund_amount:e.target.value})}
-                  placeholder="0.00"
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-200"/>
+                <label style={labelStyle}>ยอดคืนเงิน (฿)</label>
+                <input type="number" min="0" step="0.01" value={form.refund_amount} onChange={e => setForm({ ...form, refund_amount: e.target.value })}
+                  placeholder="0.00" className="dx-input dx-mono"/>
               </div>
             </div>
 
             <div>
-              <label className="block text-xs text-gray-500 mb-1">สาเหตุ</label>
-              <select value={form.reason} onChange={e => setForm({...form, reason:e.target.value})}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-200">
-                <option value="สินค้าไม่ตก">สินค้าไม่ตก</option>
-                <option value="ตกผิดช่อง">ตกผิดช่อง</option>
-                <option value="ตู้ปล่อยเกิน">ตู้ปล่อยเกิน (สินค้าตกเกินจำนวน)</option>
-                <option value="เครื่องค้าง">เครื่องค้าง</option>
-                <option value="สินค้าชำรุด">สินค้าชำรุด</option>
-                <option value="อื่นๆ">อื่นๆ</option>
+              <label style={labelStyle}>สาเหตุ</label>
+              <select value={form.reason} onChange={e => setForm({ ...form, reason: e.target.value })} className="dx-input">
+                {REASONS.map(r => <option key={r} value={r}>{r}</option>)}
               </select>
             </div>
 
             <div>
-              <label className="block text-xs text-gray-500 mb-1">สถานะสินค้า</label>
-              <div className="grid grid-cols-2 gap-2">
-                {[{v:"returned",l:"คืนสต็อก",desc:"สภาพดี นำกลับมาขายได้",color:"green"},{v:"damaged",l:"ชำรุด",desc:"เสียหาย ขายต่อไม่ได้",color:"red"},{v:"lost",l:"สูญหาย",desc:"ตู้ปล่อยเกิน ไม่ได้คืน",color:"orange"}].map(opt => (
-                  <button key={opt.v} type="button" onClick={() => setForm({...form, product_status:opt.v})}
-                    className={`p-3 rounded-xl border-2 text-left transition-all ${form.product_status===opt.v ? `border-${opt.color}-400 bg-${opt.color}-50` : "border-gray-200 hover:border-gray-300"}`}>
-                    <p className={`text-sm font-semibold ${form.product_status===opt.v ? `text-${opt.color}-700` : "text-gray-700"}`}>{opt.l}</p>
-                    <p className="text-xs text-gray-400">{opt.desc}</p>
-                  </button>
-                ))}
+              <label style={labelStyle}>สถานะสินค้า</label>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                {STATUS_OPTIONS.map(opt => {
+                  const isActive = form.product_status === opt.v
+                  return (
+                    <button key={opt.v} type="button" onClick={() => setForm({ ...form, product_status: opt.v })}
+                      style={{
+                        padding: 12, borderRadius: 10, textAlign: "left", cursor: "pointer",
+                        fontFamily: "inherit",
+                        background: isActive ? opt.accent.bg : "var(--dx-bg-input)",
+                        border: `1px solid ${isActive ? opt.accent.border : "var(--dx-border)"}`,
+                        boxShadow: isActive ? `0 0 0 3px ${opt.accent.bg}` : "none",
+                        transition: "all .15s",
+                      }}>
+                      <p style={{ margin: 0, fontSize: 12, fontWeight: 600, color: isActive ? opt.accent.text : "var(--dx-text)" }}>
+                        {opt.l}
+                      </p>
+                      <p style={{ margin: "2px 0 0", fontSize: 10, color: "var(--dx-text-muted)" }}>{opt.desc}</p>
+                    </button>
+                  )
+                })}
               </div>
             </div>
 
             <div>
-              <label className="block text-xs text-gray-500 mb-1">หมายเหตุ</label>
-              <input type="text" value={form.note} onChange={e => setForm({...form, note:e.target.value})}
-                placeholder="รายละเอียดเพิ่มเติม (ไม่บังคับ)"
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-200"/>
+              <label style={labelStyle}>หมายเหตุ</label>
+              <input value={form.note} onChange={e => setForm({ ...form, note: e.target.value })}
+                placeholder="รายละเอียดเพิ่มเติม (ไม่บังคับ)" className="dx-input"/>
             </div>
 
             <button type="submit" disabled={saving}
-              className="w-full py-2.5 rounded-xl bg-red-600 text-white font-semibold text-sm hover:bg-red-700 disabled:opacity-50 transition-all">
+              style={{
+                width: "100%", padding: 12, borderRadius: 10, fontSize: 13, fontWeight: 600,
+                background: "var(--dx-danger)", color: "#fff", border: "none",
+                cursor: saving ? "not-allowed" : "pointer",
+                opacity: saving ? 0.5 : 1,
+                display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                boxShadow: "0 4px 16px -4px rgba(255,68,102,0.4)",
+                transition: "all .15s",
+              }}>
+              {saving ? <Loader2 size={14} className="animate-spin"/> : <AlertTriangle size={14}/>}
               {saving ? "กำลังบันทึก..." : "บันทึกเคลม"}
             </button>
           </form>
         </div>
 
         {/* ประวัติเคลม */}
-        <div className="lg:col-span-2 bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-          <h2 className="font-semibold text-gray-700 mb-4">ประวัติเคลม ({myClaims.length} รายการ)</h2>
+        <div className="dx-card" style={{ padding: 20, gridColumn: "span 1", minWidth: 0 }}>
+          <h2 style={{ margin: "0 0 14px", fontSize: 13, fontWeight: 600, color: "var(--dx-text)" }}>
+            ประวัติเคลม ({myClaims.length} รายการ)
+          </h2>
           {myClaims.length === 0 ? (
-            <p className="text-sm text-gray-400 text-center py-10">ยังไม่มีรายการเคลม</p>
+            <p style={{ textAlign: "center", color: "var(--dx-text-muted)", padding: "40px 0", fontSize: 13 }}>
+              ยังไม่มีรายการเคลม
+            </p>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+            <div style={{ overflowX: "auto" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
                 <thead>
-                  <tr className="border-b border-gray-100">
-                    <th className="text-left py-2 text-xs text-gray-400">วันที่</th>
-                    <th className="text-left py-2 text-xs text-gray-400">ตู้</th>
-                    <th className="text-left py-2 text-xs text-gray-400">SKU</th>
-                    <th className="text-right py-2 text-xs text-gray-400">จำนวน</th>
-                    <th className="text-right py-2 text-xs text-gray-400">คืนเงิน</th>
-                    <th className="text-center py-2 text-xs text-gray-400">สาเหตุ</th>
-                    <th className="text-center py-2 text-xs text-gray-400">สถานะ</th>
-                    <th className="text-center py-2 text-xs text-gray-400">ยืนยัน</th>
-                    <th className="text-left py-2 text-xs text-gray-400">ผู้บันทึก</th>
-                    <th className="py-2 text-xs text-gray-400"></th>
+                  <tr style={{ borderBottom: "1px solid var(--dx-border-strong)" }}>
+                    <Th align="left">วันที่</Th>
+                    <Th align="left">ตู้</Th>
+                    <Th align="left">SKU</Th>
+                    <Th align="right">จำนวน</Th>
+                    <Th align="right">คืนเงิน</Th>
+                    <Th align="center">สาเหตุ</Th>
+                    <Th align="center">สถานะ</Th>
+                    <Th align="center">ยืนยัน</Th>
+                    <Th align="left">ผู้บันทึก</Th>
+                    <Th/>
                   </tr>
                 </thead>
                 <tbody>
                   {myClaims.map(c => {
                     const m = machines.find(m => m.machine_id === c.machine_id)
+                    const statusInfo = STATUS_OPTIONS.find(s => s.v === c.product_status) || STATUS_OPTIONS[0]
                     return (
-                      <tr key={c.id} className="border-b border-gray-50 hover:bg-gray-50">
-                        <td className="py-2.5 text-xs text-gray-600">{c.claimed_at}</td>
-                        <td className="py-2.5 text-xs text-gray-700 font-medium">{m?.name || c.machine_id}</td>
-                        <td className="py-2.5">
-                          <span className="font-mono text-xs font-bold text-gray-700">{c.sku_id}</span>
+                      <tr key={c.id} style={{ borderBottom: "1px solid var(--dx-border)" }}>
+                        <td className="dx-mono" style={{ padding: "10px 8px", fontSize: 11, color: "var(--dx-text-muted)" }}>{c.claimed_at}</td>
+                        <td style={{ padding: "10px 8px", fontSize: 11, fontWeight: 500, color: "var(--dx-text)" }}>{m?.name || c.machine_id}</td>
+                        <td className="dx-mono" style={{ padding: "10px 8px", fontSize: 11, fontWeight: 600, color: "var(--dx-text)" }}>{c.sku_id}</td>
+                        <td style={{ padding: "10px 8px", textAlign: "right", fontSize: 11, color: "var(--dx-text-secondary)" }}>{c.quantity} ซอง</td>
+                        <td className="dx-mono" style={{ padding: "10px 8px", textAlign: "right", fontSize: 12, fontWeight: 700, color: "var(--dx-danger)" }}>
+                          {fmtB(c.refund_amount)}
                         </td>
-                        <td className="py-2.5 text-right text-xs text-gray-700">{c.quantity} ซอง</td>
-                        <td className="py-2.5 text-right text-xs font-semibold text-red-600">{fmtB(c.refund_amount)}</td>
-                        <td className="py-2.5 text-center">
-                          <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">{c.reason}</span>
+                        <td style={{ padding: "10px 8px", textAlign: "center" }}>
+                          <span style={{
+                            fontSize: 10, padding: "2px 8px", borderRadius: 999,
+                            background: "var(--dx-bg-elevated)", color: "var(--dx-text-secondary)",
+                            border: "1px solid var(--dx-border)",
+                          }}>{c.reason}</span>
                         </td>
-                        <td className="py-2.5 text-center">
-                          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                            c.product_status === "returned" ? "bg-green-100 text-green-700"
-                            : c.product_status === "lost" ? "bg-orange-100 text-orange-700"
-                            : "bg-red-100 text-red-700"
-                          }`}>
+                        <td style={{ padding: "10px 8px", textAlign: "center" }}>
+                          <span style={{
+                            fontSize: 10, fontWeight: 600, padding: "2px 8px", borderRadius: 999,
+                            background: statusInfo.accent.bg, color: statusInfo.accent.text,
+                            border: `1px solid ${statusInfo.accent.border}`,
+                          }}>
                             {c.product_status === "returned" ? "คืนสต็อก" : c.product_status === "lost" ? "สูญหาย" : "ชำรุด"}
                           </span>
                         </td>
-                        <td className="py-2.5 text-center">
+                        <td style={{ padding: "10px 8px", textAlign: "center" }}>
                           {c.confirm_status === "confirmed" ? (
-                            <span className="text-xs text-green-600 font-medium">ตัดสต็อกแล้ว</span>
+                            <span style={{ fontSize: 10, fontWeight: 600, color: "var(--dx-success)" }}>ตัดสต็อกแล้ว</span>
                           ) : c.confirm_status === "pending" ? (
                             confirmId === c.id ? (
-                              <div className="flex gap-1 justify-center">
+                              <div style={{ display: "inline-flex", gap: 4 }}>
                                 <button onClick={() => handleConfirm(c)} disabled={confirming}
-                                  className="text-xs bg-red-600 text-white px-2 py-1 rounded-lg font-medium hover:bg-red-700 disabled:opacity-50">
+                                  style={{
+                                    padding: "3px 8px", fontSize: 10, fontWeight: 600, borderRadius: 6,
+                                    background: "var(--dx-danger)", color: "#fff", border: "none",
+                                    cursor: confirming ? "not-allowed" : "pointer",
+                                    opacity: confirming ? 0.5 : 1,
+                                  }}>
                                   {confirming ? "..." : "ยืนยันตัดสต็อก"}
                                 </button>
-                                <button onClick={() => setConfirmId(null)} className="text-xs text-gray-400 px-1">ยกเลิก</button>
+                                <button onClick={() => setConfirmId(null)}
+                                  style={{ fontSize: 10, color: "var(--dx-text-muted)", background: "transparent", border: "none", cursor: "pointer" }}>
+                                  ยกเลิก
+                                </button>
                               </div>
                             ) : (
                               <button onClick={() => setConfirmId(c.id)}
-                                className="text-xs bg-amber-100 text-amber-700 px-2.5 py-1 rounded-lg font-medium hover:bg-amber-200">
+                                style={{
+                                  fontSize: 10, fontWeight: 600, padding: "3px 10px", borderRadius: 6,
+                                  background: "rgba(255,200,87,0.12)", color: "var(--dx-warning)",
+                                  border: "1px solid rgba(255,200,87,0.3)",
+                                  cursor: "pointer",
+                                }}
+                                onMouseEnter={e => e.currentTarget.style.background = "rgba(255,200,87,0.2)"}
+                                onMouseLeave={e => e.currentTarget.style.background = "rgba(255,200,87,0.12)"}>
                                 รอยืนยัน
                               </button>
                             )
                           ) : (
-                            <span className="text-xs text-gray-400">—</span>
+                            <span style={{ fontSize: 10, color: "var(--dx-text-muted)" }}>—</span>
                           )}
                         </td>
-                        <td className="py-2.5 text-xs text-gray-500 whitespace-nowrap">{c.created_by || "—"}</td>
-                        <td className="py-2.5 text-right">
+                        <td style={{ padding: "10px 8px", fontSize: 10, color: "var(--dx-text-muted)", whiteSpace: "nowrap" }}>
+                          {c.created_by || "—"}
+                        </td>
+                        <td style={{ padding: "10px 8px", textAlign: "right" }}>
                           {deleteId === c.id ? (
-                            <div className="flex gap-1 justify-end">
-                              <button onClick={() => handleDelete(c.id)} className="text-xs text-red-600 font-medium">ลบ</button>
-                              <button onClick={() => setDeleteId(null)} className="text-xs text-gray-400">ยกเลิก</button>
+                            <div style={{ display: "inline-flex", gap: 6 }}>
+                              <button onClick={() => handleDelete(c.id)}
+                                style={{ fontSize: 10, fontWeight: 600, color: "var(--dx-danger)", background: "transparent", border: "none", cursor: "pointer" }}>
+                                ลบ
+                              </button>
+                              <button onClick={() => setDeleteId(null)}
+                                style={{ fontSize: 10, color: "var(--dx-text-muted)", background: "transparent", border: "none", cursor: "pointer" }}>
+                                ยกเลิก
+                              </button>
                             </div>
                           ) : (
-                            <button onClick={() => setDeleteId(c.id)} className="text-gray-300 hover:text-red-400"><Trash2 size={14}/></button>
+                            <button onClick={() => setDeleteId(c.id)}
+                              style={{
+                                padding: 4, borderRadius: 4, border: "none", cursor: "pointer",
+                                background: "transparent", color: "var(--dx-text-muted)",
+                                display: "inline-flex", alignItems: "center", justifyContent: "center",
+                              }}
+                              onMouseEnter={e => e.currentTarget.style.color = "var(--dx-danger)"}
+                              onMouseLeave={e => e.currentTarget.style.color = "var(--dx-text-muted)"}>
+                              <Trash2 size={13}/>
+                            </button>
                           )}
                         </td>
                       </tr>
@@ -276,5 +344,33 @@ export default function PageClaims({ machines, skus, claims, onAddClaim, onConfi
         </div>
       </div>
     </div>
+  )
+}
+
+function StatCard({ label, value, accent, mono }) {
+  return (
+    <div className="dx-card" style={{ padding: 16 }}>
+      <p style={{ margin: 0, fontSize: 10, color: "var(--dx-text-muted)", letterSpacing: 0.5, textTransform: "uppercase" }}>
+        {label}
+      </p>
+      <p className={mono ? "dx-mono" : undefined} style={{
+        margin: "6px 0 0", fontSize: 20, fontWeight: 700, color: accent, lineHeight: 1.1,
+      }}>
+        {value}
+      </p>
+    </div>
+  )
+}
+
+function Th({ children, align = "left", style }) {
+  return (
+    <th style={{
+      padding: "8px 8px", textAlign: align,
+      fontSize: 10, fontWeight: 500, letterSpacing: 0.5, textTransform: "uppercase",
+      color: "var(--dx-text-muted)",
+      ...style,
+    }}>
+      {children}
+    </th>
   )
 }
