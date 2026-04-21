@@ -29,7 +29,7 @@ export default function DesignSystemPage() {
         </div>
         <div style={{ display: "flex", gap: 8 }}>
           <a href="/preview-dark" className="dx-btn dx-btn-secondary" style={{ textDecoration: "none" }}>Dashboard Preview →</a>
-          <a href="/" className="dx-btn dx-btn-ghost" style={{ textDecoration: "none" }}>← กลับหน้าจริง</a>
+          <a href="/" className="dx-btn dx-btn-ghost" style={{ textDecoration: "none" }}>← หน้าจริง</a>
         </div>
       </div>
 

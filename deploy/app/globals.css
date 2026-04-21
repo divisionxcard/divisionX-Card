@@ -299,6 +299,137 @@ body.dx-theme ::-webkit-scrollbar-thumb:hover { background: #2A4472; }
 .dx-noscroll { scrollbar-width: none; }
 
 /* ────────────────────────────────────────────────────
+   Dark Theme Compatibility Layer
+   ──────────────────────────────────────────────────────
+   แปลง Tailwind light classes → dark tokens อัตโนมัติ
+   ใช้ระหว่าง transition — หน้าที่ยังไม่ migrate จะดูเป็น dark theme พอใช้ได้
+   เมื่อ migrate หน้าแล้ว สามารถใช้ .dx-* classes ตรงๆ ได้ (ไม่ต้องพึ่ง layer นี้)
+   ──────────────────────────────────────────────────── */
+
+/* Backgrounds — surface/page translation */
+body.dx-theme .bg-white                 { background-color: var(--dx-bg-card) !important; }
+body.dx-theme .bg-gray-50               { background-color: var(--dx-bg-page); }
+body.dx-theme .bg-gray-100              { background-color: var(--dx-bg-elevated); }
+body.dx-theme .bg-gray-200              { background-color: var(--dx-bg-elevated); }
+body.dx-theme .hover\:bg-gray-50:hover  { background-color: var(--dx-bg-elevated) !important; }
+body.dx-theme .hover\:bg-gray-100:hover { background-color: var(--dx-bg-elevated) !important; }
+body.dx-theme .hover\:bg-gray-200:hover { background-color: var(--dx-border-strong) !important; }
+
+/* Text — gray scale → dx text tokens */
+body.dx-theme .text-gray-800 { color: var(--dx-text); }
+body.dx-theme .text-gray-700 { color: var(--dx-text); }
+body.dx-theme .text-gray-600 { color: var(--dx-text-2); }
+body.dx-theme .text-gray-500 { color: var(--dx-text-muted); }
+body.dx-theme .text-gray-400 { color: var(--dx-text-muted); }
+body.dx-theme .text-gray-300 { color: var(--dx-text-dis); }
+
+/* Borders */
+body.dx-theme .border-gray-50   { border-color: var(--dx-border); }
+body.dx-theme .border-gray-100  { border-color: var(--dx-border); }
+body.dx-theme .border-gray-200  { border-color: var(--dx-border); }
+body.dx-theme .border-b-gray-50 { border-bottom-color: var(--dx-border); }
+body.dx-theme .border-b         { border-bottom-color: var(--dx-border); }
+body.dx-theme .border-b-2       { border-bottom-color: var(--dx-border-strong); }
+body.dx-theme .divide-gray-100 > :not([hidden]) ~ :not([hidden]) { border-color: var(--dx-border); }
+
+/* Primary actions: orange/blue → cyan */
+body.dx-theme .bg-orange-500              { background-color: var(--dx-cyan) !important; color: var(--dx-text-on-accent, #0A1628) !important; }
+body.dx-theme .bg-orange-600              { background-color: var(--dx-cyan-bright) !important; color: var(--dx-text-on-accent, #0A1628) !important; }
+body.dx-theme .hover\:bg-orange-600:hover { background-color: var(--dx-cyan-bright) !important; }
+body.dx-theme .bg-blue-500                { background-color: var(--dx-cyan) !important; color: var(--dx-text-on-accent, #0A1628) !important; }
+body.dx-theme .bg-blue-600                { background-color: var(--dx-cyan-bright) !important; color: var(--dx-text-on-accent, #0A1628) !important; }
+body.dx-theme .hover\:bg-blue-600:hover   { background-color: var(--dx-cyan-bright) !important; }
+body.dx-theme .hover\:bg-blue-700:hover   { background-color: var(--dx-cyan-bright) !important; }
+body.dx-theme .text-orange-500 { color: var(--dx-cyan); }
+body.dx-theme .text-orange-600 { color: var(--dx-cyan-bright); }
+body.dx-theme .text-orange-700 { color: var(--dx-cyan-bright); }
+body.dx-theme .text-blue-500   { color: var(--dx-cyan-soft); }
+body.dx-theme .text-blue-600   { color: var(--dx-cyan); }
+body.dx-theme .text-blue-700   { color: var(--dx-cyan-bright); }
+body.dx-theme .bg-orange-50    { background-color: rgba(0,212,255,0.08); }
+body.dx-theme .bg-orange-100   { background-color: rgba(0,212,255,0.12); }
+body.dx-theme .bg-blue-50      { background-color: rgba(0,212,255,0.05); }
+body.dx-theme .bg-blue-100     { background-color: rgba(0,212,255,0.12); }
+body.dx-theme .border-orange-200 { border-color: rgba(0,212,255,0.25); }
+body.dx-theme .border-orange-300 { border-color: rgba(0,212,255,0.35); }
+body.dx-theme .border-orange-400 { border-color: var(--dx-cyan); }
+body.dx-theme .border-blue-200   { border-color: rgba(0,212,255,0.25); }
+body.dx-theme .border-blue-300   { border-color: rgba(0,212,255,0.35); }
+body.dx-theme .border-blue-400   { border-color: var(--dx-cyan); }
+
+/* Semantic — green/red/amber/purple map to dx semantic */
+body.dx-theme .bg-green-50   { background-color: rgba(0,255,136,0.08); }
+body.dx-theme .bg-green-100  { background-color: rgba(0,255,136,0.12); }
+body.dx-theme .bg-green-500  { background-color: var(--dx-success) !important; color: var(--dx-text-on-accent, #0A1628) !important; }
+body.dx-theme .bg-green-600  { background-color: var(--dx-success) !important; color: var(--dx-text-on-accent, #0A1628) !important; }
+body.dx-theme .text-green-500 { color: var(--dx-success); }
+body.dx-theme .text-green-600 { color: var(--dx-success); }
+body.dx-theme .text-green-700 { color: var(--dx-success); }
+body.dx-theme .border-green-100 { border-color: rgba(0,255,136,0.15); }
+body.dx-theme .border-green-200 { border-color: rgba(0,255,136,0.25); }
+
+body.dx-theme .bg-red-50    { background-color: rgba(255,68,102,0.08); }
+body.dx-theme .bg-red-100   { background-color: rgba(255,68,102,0.12); }
+body.dx-theme .bg-red-500   { background-color: var(--dx-danger) !important; }
+body.dx-theme .bg-red-600   { background-color: var(--dx-danger) !important; }
+body.dx-theme .hover\:bg-red-200:hover { background-color: rgba(255,68,102,0.18) !important; }
+body.dx-theme .hover\:bg-red-600:hover { background-color: #ff5577 !important; }
+body.dx-theme .text-red-400 { color: var(--dx-danger); }
+body.dx-theme .text-red-500 { color: var(--dx-danger); }
+body.dx-theme .text-red-600 { color: var(--dx-danger); }
+body.dx-theme .text-red-700 { color: var(--dx-danger); }
+body.dx-theme .border-red-100 { border-color: rgba(255,68,102,0.15); }
+body.dx-theme .border-red-200 { border-color: rgba(255,68,102,0.25); }
+
+body.dx-theme .bg-amber-50    { background-color: rgba(255,200,87,0.08); }
+body.dx-theme .bg-amber-100   { background-color: rgba(255,200,87,0.12); }
+body.dx-theme .bg-amber-400   { background-color: var(--dx-warning); }
+body.dx-theme .bg-amber-500   { background-color: var(--dx-warning); color: var(--dx-text-on-accent, #0A1628); }
+body.dx-theme .text-amber-400 { color: var(--dx-warning); }
+body.dx-theme .text-amber-500 { color: var(--dx-warning); }
+body.dx-theme .text-amber-600 { color: var(--dx-warning); }
+body.dx-theme .text-amber-700 { color: var(--dx-warning); }
+body.dx-theme .border-amber-200 { border-color: rgba(255,200,87,0.25); }
+body.dx-theme .border-amber-300 { border-color: rgba(255,200,87,0.35); }
+
+body.dx-theme .bg-purple-50  { background-color: rgba(183,148,246,0.08); }
+body.dx-theme .bg-purple-100 { background-color: rgba(183,148,246,0.15); }
+body.dx-theme .text-purple-500 { color: #B794F6; }
+body.dx-theme .text-purple-600 { color: #B794F6; }
+body.dx-theme .text-purple-700 { color: #C8A8F8; }
+
+body.dx-theme .bg-emerald-100 { background-color: rgba(104,211,145,0.12); }
+body.dx-theme .text-emerald-700 { color: #68D391; }
+
+body.dx-theme .bg-indigo-600 { background-color: var(--dx-cyan) !important; color: var(--dx-text-on-accent, #0A1628) !important; }
+body.dx-theme .hover\:bg-indigo-700:hover { background-color: var(--dx-cyan-bright) !important; }
+
+/* Input bg on dark theme */
+body.dx-theme input[type="text"],
+body.dx-theme input[type="email"],
+body.dx-theme input[type="password"],
+body.dx-theme input[type="number"],
+body.dx-theme input[type="date"],
+body.dx-theme input[type="time"],
+body.dx-theme input[type="datetime-local"],
+body.dx-theme input[type="month"],
+body.dx-theme select,
+body.dx-theme textarea {
+  background-color: var(--dx-bg-input);
+  color: var(--dx-text);
+  border-color: var(--dx-border-strong);
+}
+body.dx-theme input[type="date"]::-webkit-calendar-picker-indicator,
+body.dx-theme input[type="time"]::-webkit-calendar-picker-indicator,
+body.dx-theme input[type="datetime-local"]::-webkit-calendar-picker-indicator,
+body.dx-theme input[type="month"]::-webkit-calendar-picker-indicator {
+  filter: invert(0.7);
+}
+
+/* Table row hover */
+body.dx-theme tr.hover\:bg-gray-50:hover { background-color: var(--dx-bg-elevated) !important; }
+
+/* ────────────────────────────────────────────────────
    Print (keep light theme — ประหยัดหมึก)
    ──────────────────────────────────────────────────── */
 @media print {

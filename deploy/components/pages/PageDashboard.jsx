@@ -1,13 +1,17 @@
+// DivisionX Card — Dashboard (Dark Theme version)
+// Ported from Claude Design's shell.jsx.DashboardPage + SkuCard + EmptyState
+// ใช้ business logic + props เดิมของ pages/PageDashboard.jsx
+// แค่เปลี่ยน UI เป็น dark theme โดยใช้ shared/dx-components + globals.css classes
+
 import { useState } from "react"
 import {
-  Package, AlertTriangle, Layers, TrendingUp, Search, Clock,
+  Package, AlertTriangle, Layers, TrendingUp, Search, Plus,
+  Download, Filter, RefreshCw, Clock,
 } from "lucide-react"
-import { UNIT_LABEL } from "../shared/constants"
-import { fmt, fmtB, fmtBoxPack } from "../shared/helpers"
-import KpiCard from "../shared/KpiCard"
-import { Badge } from "../shared/ui"
+import { fmt, fmtB } from "../shared/helpers"
+import { Badge, StatusDot, KpiCard, SectionTitle, BoosterPH } from "../shared/dx-components"
 
-export default function PageDashboard({ stockIn, stockOut, stockBalance, skus }) {
+export default function PageDashboardDX({ stockIn, stockOut, stockBalance, skus }) {
   const [expandedSku, setExpandedSku] = useState(null)
   const [seriesSel,   setSeriesSel]   = useState("ทั้งหมด")
   const [search,      setSearch]      = useState("")
@@ -19,9 +23,9 @@ export default function PageDashboard({ stockIn, stockOut, stockBalance, skus })
     balance:   parseFloat(r.balance)   || 0,
   }]))
 
-  const totalPacks     = stockBalance.reduce((a, r) => a + (parseFloat(r.balance) || 0), 0)
-  const lowStock       = skus.filter(s => (balMap[s.sku_id]?.balance || 0) < 24)
-  const totalLotValue  = stockIn.reduce((a, r) => a + (parseFloat(r.total_cost) || 0), 0)
+  const totalPacks    = stockBalance.reduce((a, r) => a + (parseFloat(r.balance) || 0), 0)
+  const lowStock      = skus.filter(s => (balMap[s.sku_id]?.balance || 0) < 24)
+  const totalLotValue = stockIn.reduce((a, r) => a + (parseFloat(r.total_cost) || 0), 0)
 
   // Lots grouped by SKU (sorted newest first)
   const lotsMap = {}
@@ -41,237 +45,339 @@ export default function PageDashboard({ stockIn, stockOut, stockBalance, skus })
     .sort((a, b) => (SERIES_ORDER[a.series] ?? 9) - (SERIES_ORDER[b.series] ?? 9) || a.sku_id.localeCompare(b.sku_id))
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-800">ภาพรวมสต็อกสินค้า</h1>
-        <p className="text-sm text-gray-400">สต็อกคงเหลือแยกตาม SKU พร้อมประวัติ Lot ต้นทุน</p>
-      </div>
+    <div style={{ padding: 24, display: "flex", flexDirection: "column", gap: 20 }}>
+      <SectionTitle
+        pill="Live Inventory"
+        title="ภาพรวมสต็อกสินค้า"
+        subtitle="สต็อกคงเหลือแยกตาม SKU พร้อมประวัติ Lot ต้นทุน"
+        actions={
+          <>
+            <button className="dx-btn dx-btn-ghost"><Download size={14}/>Export</button>
+            <button className="dx-btn dx-btn-primary"><Plus size={14}/>รับของเข้า Lot</button>
+          </>
+        }
+      />
 
-      {/* KPI */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <KpiCard icon={Package}       label="สต็อกรวม"      value={`${fmt(totalPacks)} ซอง`}    sub={`≈ ${fmt(Math.floor(totalPacks / 12))} กล่อง`} color="blue"/>
-        <KpiCard icon={AlertTriangle} label="ใกล้หมด"       value={`${lowStock.length} SKU`}   sub="ต่ำกว่า 24 ซอง"    color="amber"/>
-        <KpiCard icon={Layers}        label="Lot ทั้งหมด"   value={`${stockIn.length} Lot`}     sub="รายการรับเข้า"    color="green"/>
-        <KpiCard icon={TrendingUp}    label="มูลค่าซื้อรวม" value={fmtB(totalLotValue)}         sub="ต้นทุนสะสมทั้งหมด" color="purple"/>
+      {/* KPI Row */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 14 }}>
+        <KpiCard
+          icon={Package}
+          label="สต็อกรวม"
+          value={`${fmt(totalPacks)}`}
+          sub={`ซอง · ≈ ${fmt(Math.floor(totalPacks / 12))} กล่อง`}
+          accent="cyan"
+          glow
+        />
+        <KpiCard
+          icon={AlertTriangle}
+          label="ใกล้หมด"
+          value={`${lowStock.length} SKU`}
+          sub="ต่ำกว่า 24 ซอง"
+          accent="warning"
+        />
+        <KpiCard
+          icon={Layers}
+          label="Lot ทั้งหมด"
+          value={`${fmt(stockIn.length)}`}
+          sub="รายการรับเข้า"
+          accent="green"
+        />
+        <KpiCard
+          icon={TrendingUp}
+          label="มูลค่าซื้อรวม"
+          value={fmtB(totalLotValue)}
+          sub="ต้นทุนสะสมทั้งหมด"
+          accent="purple"
+        />
       </div>
 
       {/* Filters */}
-      <div className="flex flex-wrap gap-3">
-        <div className="relative flex-1 min-w-[180px]">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"/>
-          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="ค้นหา SKU..."
-            className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-200"/>
+      <div className="dx-card" style={{ padding: 14, display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
+        <div style={{ position: "relative", flex: 1, minWidth: 240 }}>
+          <Search size={14} style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "var(--dx-text-muted)", pointerEvents: "none" }}/>
+          <input
+            className="dx-input"
+            style={{ paddingLeft: 36 }}
+            placeholder="ค้นหา SKU หรือ ชื่อสินค้า..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+          />
         </div>
-        <div className="flex gap-1">
-          {["ทั้งหมด","OP","PRB","EB"].map(s => (
-            <button key={s} onClick={() => setSeriesSel(s)}
-              className={`px-3 py-2 text-xs rounded-lg font-medium transition-all ${seriesSel===s?"bg-blue-600 text-white":"bg-gray-100 text-gray-600 hover:bg-gray-200"}`}>
+        <div style={{ display: "flex", gap: 6 }}>
+          {["ทั้งหมด", "OP", "PRB", "EB"].map(s => (
+            <button
+              key={s}
+              className={`dx-chip ${seriesSel === s ? "dx-chip-active" : ""}`}
+              onClick={() => setSeriesSel(s)}
+            >
               {s}
+              {s !== "ทั้งหมด" && (
+                <span className="dx-mono" style={{ opacity: 0.7, marginLeft: 4 }}>
+                  {skus.filter(x => x.series === s).length}
+                </span>
+              )}
             </button>
           ))}
         </div>
+        <div style={{ width: 1, height: 26, background: "var(--dx-border)" }}/>
+        <button className="dx-btn dx-btn-ghost"><Filter size={13}/>ตัวกรอง</button>
       </div>
 
-      {/* SKU Cards — Visual Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-        {filtered.map(s => {
-          const b          = balMap[s.sku_id] || { balance:0, total_in:0, total_out:0 }
-          const low        = b.balance < 24
-          const lots       = lotsMap[s.sku_id] || []
-          const isExpanded = expandedSku === s.sku_id
+      {/* SKU Grid */}
+      {filtered.length === 0 ? (
+        <EmptyState
+          title="ไม่พบ SKU ที่ค้นหา"
+          subtitle="ลองเปลี่ยนคำค้นหา หรือเลือกชุดอื่น"
+          onReset={() => { setSearch(""); setSeriesSel("ทั้งหมด") }}
+        />
+      ) : (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 14 }}>
+          {filtered.map(sku => (
+            <SkuCard
+              key={sku.sku_id}
+              sku={sku}
+              balance={balMap[sku.sku_id]?.balance || 0}
+              lots={lotsMap[sku.sku_id] || []}
+              stockOut={stockOut}
+              expanded={expandedSku === sku.sku_id}
+              onToggle={() => setExpandedSku(expandedSku === sku.sku_id ? null : sku.sku_id)}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
 
-          // Moving Average Cost (ต้นทุนเฉลี่ยเคลื่อนที่ — ตรึงไว้จนกว่าจะรับของใหม่)
-          const avgCpp = s.avg_cost || 0
+// ─────────────────────────────────────────────
+// SkuCard — dark themed SKU display with expand-to-lots
+// ─────────────────────────────────────────────
+function SkuCard({ sku, balance, lots, stockOut, expanded, onToggle }) {
+  const isEmpty = balance === 0
+  const isLow   = !isEmpty && balance < 24
+  const ppb     = sku.packs_per_box || 24
 
-          // แปลงหน่วยแสดงผล
-          const balCotton = Math.floor(b.balance / (12 * s.packs_per_box))
-          const balBoxes  = Math.floor((b.balance % (12 * s.packs_per_box)) / s.packs_per_box)
-          const balPacks  = b.balance % s.packs_per_box
+  // แยกกล่อง/ซอง
+  const boxes = Math.floor(balance / ppb)
+  const packs = balance % ppb
 
-          // สีของ series
-          const seriesBg = { OP: "from-blue-500 to-blue-600", PRB: "from-purple-500 to-purple-600", EB: "from-emerald-500 to-emerald-600" }
-          const seriesBgLight = { OP: "from-blue-50 to-blue-100", PRB: "from-purple-50 to-purple-100", EB: "from-emerald-50 to-emerald-100" }
+  // FIFO — map lots to remaining balance
+  const activeLots = (() => {
+    if (lots.length === 0) return []
+    const skuTotalOut = stockOut
+      .filter(r => r.sku_id === sku.sku_id)
+      .reduce((a, r) => a + (r.quantity_packs || 0), 0)
+    const lotsForFifo = [...lots].sort((a, b) =>
+      (a.purchased_at || "").localeCompare(b.purchased_at || "") || (a.id || 0) - (b.id || 0)
+    )
+    let remainOut = skuTotalOut
+    return lotsForFifo
+      .map(lot => {
+        const used = Math.min(lot.quantity_packs || 0, remainOut)
+        remainOut -= used
+        return { ...lot, lotBalance: (lot.quantity_packs || 0) - used }
+      })
+      .filter(l => l.lotBalance > 0)
+      .reverse() // newest first
+  })()
 
-          // Progress
-          const maxPacks = lots.reduce((a, r) => a + (r.quantity_packs || 0), 0) || 1
-          const pctRemain = Math.min(100, (b.balance / maxPacks) * 100)
+  const borderColor = isEmpty
+    ? "rgba(255,68,102,0.35)"
+    : isLow
+    ? "rgba(255,200,87,0.35)"
+    : "var(--dx-border)"
+  const boxShadow = isEmpty
+    ? "0 0 20px -10px rgba(255,68,102,0.4)"
+    : isLow
+    ? "0 0 20px -10px rgba(255,200,87,0.4)"
+    : "none"
 
-          return (
-            <div key={s.sku_id} className="flex flex-col">
-              {/* Card */}
-              <div className={`bg-white rounded-2xl border shadow-sm overflow-hidden transition-all hover:shadow-md cursor-pointer
-                ${low && b.balance > 0 ? "border-amber-300 ring-1 ring-amber-100" : b.balance === 0 ? "border-red-300 ring-1 ring-red-100" : "border-gray-100"}`}
-                onClick={() => setExpandedSku(isExpanded ? null : s.sku_id)}>
+  return (
+    <div
+      className="dx-card"
+      onClick={onToggle}
+      style={{
+        padding: 0,
+        cursor: "pointer",
+        overflow: "hidden",
+        borderColor,
+        boxShadow,
+      }}
+    >
+      <div style={{ padding: 10, position: "relative" }}>
+        {sku.image_url ? (
+          <div style={{
+            height: 120,
+            borderRadius: 12,
+            overflow: "hidden",
+            background: "linear-gradient(135deg, rgba(0,212,255,0.1) 0%, #1A2F52 60%, #0F1F3D 100%)",
+            border: "1px solid rgba(0,212,255,0.15)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+          }}>
+            <img src={sku.image_url} alt={sku.sku_id}
+              style={{ height: "100%", width: "auto", objectFit: "contain", padding: 4 }}/>
+          </div>
+        ) : (
+          <BoosterPH sku={sku.sku_id} series={sku.series}/>
+        )}
+        {isEmpty && (
+          <div style={{
+            position: "absolute", top: 14, right: 14,
+            background: "var(--dx-danger)", color: "#fff",
+            fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 4,
+            boxShadow: "0 0 12px var(--dx-danger)",
+          }}>หมด</div>
+        )}
+        {isLow && (
+          <div style={{
+            position: "absolute", top: 14, right: 14,
+            background: "var(--dx-warning)", color: "#0A1628",
+            fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 4,
+          }}>ใกล้หมด</div>
+        )}
+      </div>
 
-                {/* Image area */}
-                <div className={`relative h-32 bg-gradient-to-br ${seriesBgLight[s.series] || "from-gray-50 to-gray-100"} flex items-center justify-center overflow-hidden`}>
-                  {s.image_url ? (
-                    <img src={s.image_url} alt={s.sku_id}
-                      className="h-full w-full object-contain p-2"
-                      onError={e => { e.target.style.display='none'; e.target.nextSibling.style.display='flex' }}/>
-                  ) : null}
-                  <div className={`${s.image_url ? 'hidden' : 'flex'} w-16 h-16 rounded-2xl bg-gradient-to-br ${seriesBg[s.series] || "from-gray-400 to-gray-500"} items-center justify-center shadow-lg`}>
-                    <span className="text-white font-black text-xs leading-tight text-center">{s.sku_id}</span>
-                  </div>
-                  {/* Status badge */}
-                  {b.balance === 0 && (
-                    <div className="absolute top-2 right-2 bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">หมด</div>
-                  )}
-                  {low && b.balance > 0 && (
-                    <div className="absolute top-2 right-2 bg-amber-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">ใกล้หมด</div>
-                  )}
-                </div>
+      <div style={{ padding: "6px 14px 14px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
+          <Badge series={sku.series}/>
+          <span className="dx-mono" style={{ fontSize: 11, fontWeight: 600, color: "var(--dx-text-secondary)" }}>
+            {sku.sku_id}
+          </span>
+        </div>
+        <div style={{
+          fontSize: 12, color: "var(--dx-text-muted)",
+          marginBottom: 10,
+          overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+        }} title={sku.name}>
+          {sku.name}
+        </div>
 
-                {/* Info */}
-                <div className="p-3">
-                  <div className="flex items-center gap-1.5 mb-1">
-                    <Badge series={s.series}/>
-                    <span className="font-mono text-xs font-bold text-gray-700">{s.sku_id}</span>
-                  </div>
-                  <p className="text-xs text-gray-500 truncate mb-3" title={s.name}>{s.name}</p>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 2, fontSize: 11 }}>
+          <div style={{ color: "var(--dx-text-muted)" }}>กล่อง</div>
+          <div className="dx-mono" style={{ textAlign: "right", fontWeight: 600, color: "var(--dx-text)" }}>{boxes}</div>
+          <div style={{ color: "var(--dx-text-muted)" }}>ซอง</div>
+          <div className="dx-mono" style={{ textAlign: "right", fontWeight: 600, color: "var(--dx-text)" }}>{packs}</div>
+        </div>
 
-                  {/* Stock display */}
-                  <div className="space-y-1.5">
-                    {balCotton > 0 && (
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs text-gray-400">Cotton</span>
-                        <span className="text-sm font-bold text-gray-800">{fmt(balCotton)}</span>
-                      </div>
-                    )}
-                    {balBoxes > 0 && (
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs text-gray-400">กล่อง</span>
-                        <span className="text-sm font-bold text-gray-800">{fmt(balBoxes)}</span>
-                      </div>
-                    )}
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs text-gray-400">ซอง</span>
-                      <span className={`text-sm font-bold ${b.balance === 0 ? "text-red-500" : low ? "text-amber-600" : "text-gray-800"}`}>
-                        {balCotton > 0 || balBoxes > 0 ? fmt(balPacks) : fmt(b.balance)}
-                      </span>
-                    </div>
-                    <div className="pt-1.5 border-t border-gray-100 flex items-center justify-between">
-                      <span className="text-xs text-gray-400">รวม</span>
-                      <span className={`text-xs font-semibold ${b.balance === 0 ? "text-red-500" : low ? "text-amber-600" : "text-blue-600"}`}>
-                        {fmt(b.balance)} ซอง
-                      </span>
-                    </div>
-                  </div>
+        <div style={{ borderTop: "1px dashed var(--dx-border)", margin: "10px 0 8px" }}/>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+          <span style={{ fontSize: 10, color: "var(--dx-text-muted)", letterSpacing: 0.4, textTransform: "uppercase" }}>
+            รวม
+          </span>
+          <span className="dx-mono" style={{
+            fontSize: 16, fontWeight: 700,
+            color: isEmpty ? "var(--dx-danger)" : isLow ? "var(--dx-warning)" : "var(--dx-cyan-bright)",
+          }}>
+            {fmt(balance)}{" "}
+            <span style={{ fontSize: 10, color: "var(--dx-text-muted)", fontWeight: 500 }}>ซอง</span>
+          </span>
+        </div>
 
-                  {/* Progress bar */}
-                  <div className="mt-2 w-full bg-gray-100 rounded-full h-1.5">
-                    <div className={`h-1.5 rounded-full transition-all ${b.balance === 0 ? "bg-red-400" : low ? "bg-amber-400" : "bg-green-400"}`}
-                      style={{width:`${pctRemain}%`}}/>
-                  </div>
+        {/* Progress bar */}
+        <div style={{ marginTop: 8, height: 4, background: "var(--dx-bg-input)", borderRadius: 2, overflow: "hidden" }}>
+          <div style={{
+            height: "100%",
+            width: `${Math.min(100, (balance / Math.max(500, balance * 1.2)) * 100)}%`,
+            background: isEmpty
+              ? "var(--dx-danger)"
+              : isLow
+              ? "var(--dx-warning)"
+              : "linear-gradient(90deg, var(--dx-cyan), var(--dx-cyan-bright))",
+            boxShadow: !isEmpty && !isLow ? "0 0 8px var(--dx-glow)" : "none",
+          }}/>
+        </div>
 
-                  {/* Cost */}
-                  {avgCpp > 0 && (
-                    <p className="text-xs text-purple-500 mt-1.5 text-center">ต้นทุน {fmtB(avgCpp.toFixed(2))}/ซอง</p>
-                  )}
-                </div>
-              </div>
+        {sku.avg_cost > 0 && (
+          <div className="dx-mono" style={{ marginTop: 10, fontSize: 10, color: "#B794F6", textAlign: "center" }}>
+            ต้นทุน {fmtB(sku.avg_cost.toFixed(2))}/ซอง
+          </div>
+        )}
 
-              {/* Expanded Lot detail — below card */}
-              {isExpanded && (
-                <div className="mt-1 bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden col-span-full">
-                  {/* Summary bar */}
-                  <div className="px-4 py-3 bg-gray-50 flex flex-wrap gap-x-6 gap-y-1 text-xs">
-                    <span className="font-semibold text-gray-600">{s.sku_id} — {s.name}</span>
-                    <span className="text-blue-600 font-medium">
-                      รับเข้า: {fmtBoxPack(b.total_in, s.packs_per_box)}
-                    </span>
-                    <span className="text-orange-500 font-medium">
-                      เบิกออก: {fmtBoxPack(b.total_out, s.packs_per_box)}
-                    </span>
-                    {avgCpp > 0 && (
-                      <span className="text-purple-600 font-medium">ต้นทุน: {fmtB(avgCpp.toFixed(2))}/ซอง</span>
-                    )}
-                    <span className="text-gray-500">{lots.length} Lot</span>
-                  </div>
-                  <div className="p-4 space-y-2">
-                    {lots.length === 0 ? (
-                      <p className="text-xs text-gray-400 text-center py-4">ยังไม่มีข้อมูลการรับสินค้า</p>
-                    ) : (() => {
-                      const activeLots = []
-                      const depletedLots = []
-                      // FIFO: กระจาย stock_out ทั้งหมดของ SKU ลง lot เรียงจากเก่าสุด
-                      const skuTotalOut = stockOut.filter(r => r.sku_id === s.sku_id).reduce((a, r) => a + (r.quantity_packs || 0), 0)
-                      const lotsForFifo = [...lots].sort((a, b) => (a.purchased_at || "").localeCompare(b.purchased_at || "") || (a.id || 0) - (b.id || 0))
-                      let remainOut = skuTotalOut
-                      const fifoBalMap = new Map()
-                      lotsForFifo.forEach(lot => {
-                        const usedFromLot = Math.min(lot.quantity_packs || 0, remainOut)
-                        remainOut -= usedFromLot
-                        fifoBalMap.set(lot.id, { lotWithdrawn: usedFromLot, lotBalance: (lot.quantity_packs || 0) - usedFromLot })
-                      })
-                      lots.forEach(lot => {
-                        const fifo = fifoBalMap.get(lot.id) || { lotWithdrawn: 0, lotBalance: lot.quantity_packs || 0 }
-                        const lotWithdrawn = fifo.lotWithdrawn
-                        const lotBalance = fifo.lotBalance
-                        const lotOuts = stockOut.filter(r => r.lot_number === lot.lot_number)
-                        const lastOut = lotOuts.length > 0 ? lotOuts.sort((a,b) => (b.withdrawn_at||"").localeCompare(a.withdrawn_at||""))[0] : null
-                        const entry = { lot, lotWithdrawn, lotBalance, lastOut }
-                        if (lotBalance <= 0) depletedLots.push(entry)
-                        else activeLots.push(entry)
-                      })
-                      return (
-                        <>
-                          {/* Lot ที่ยังมีสต็อก */}
-                          {activeLots.map(({ lot, lotWithdrawn, lotBalance }, i) => {
-                            const cpp = (lot.quantity_packs || 0) > 0 ? (parseFloat(lot.total_cost) || 0) / lot.quantity_packs : 0
-                            return (
-                              <div key={i} className="p-3 rounded-xl border bg-gray-50 border-gray-100">
-                                <div className="flex items-start justify-between gap-2">
-                                  <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-2 flex-wrap">
-                                      <span className="font-mono text-xs font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded">{lot.lot_number || "ไม่ระบุ"}</span>
-                                      <span className="text-xs text-gray-500">{lot.source}</span>
-                                    </div>
-                                    <p className="text-xs text-gray-400 mt-1 flex items-center gap-1"><Clock size={10}/> {lot.purchased_at?.slice(0,10)}</p>
-                                  </div>
-                                  <div className="text-right flex-shrink-0">
-                                    <p className="text-sm font-bold text-green-600">{fmtBoxPack(lotBalance, s.packs_per_box)}</p>
-                                    <p className="text-xs text-gray-400">{fmt(lotBalance)} ซอง</p>
-                                  </div>
-                                </div>
-                                {lot.quantity_packs > 0 && (
-                                  <div className="mt-2 flex items-center gap-2">
-                                    <div className="flex-1 bg-gray-200 rounded-full h-1.5">
-                                      <div className="h-1.5 rounded-full bg-green-400 transition-all" style={{width:`${Math.max(0,(lotBalance/lot.quantity_packs)*100)}%`}}/>
-                                    </div>
-                                    <span className="text-xs text-gray-400">{fmt(lotWithdrawn)}/{fmt(lot.quantity_packs)}</span>
-                                  </div>
-                                )}
-                                <div className="mt-2 pt-2 border-t border-gray-100 grid grid-cols-3 gap-2 text-center">
-                                  <div>
-                                    <p className="text-xs text-gray-400">รับเข้า</p>
-                                    <p className="text-xs font-bold text-blue-600">+{fmt(lot.quantity)} {UNIT_LABEL[lot.unit] || lot.unit}</p>
-                                    <p className="text-xs text-blue-400">= {fmt(lot.quantity_packs)} ซอง</p>
-                                  </div>
-                                  <div>
-                                    <p className="text-xs text-gray-400">ต้นทุน/ซอง</p>
-                                    <p className="text-xs font-bold text-purple-600">{fmtB(cpp.toFixed(2))}</p>
-                                  </div>
-                                  <div>
-                                    <p className="text-xs text-gray-400">มูลค่า Lot</p>
-                                    <p className="text-xs font-bold text-gray-800">{fmtB(lot.total_cost)}</p>
-                                  </div>
-                                </div>
-                                {lot.note && <p className="text-xs text-gray-400 mt-1.5 italic">"{lot.note}"</p>}
-                              </div>
-                            )
-                          })}
-
-                        </>
-                      )
-                    })()}
-                  </div>
-                </div>
-              )}
+        {expanded && (
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              marginTop: 12, padding: 10,
+              background: "var(--dx-bg-input)",
+              borderRadius: 10,
+              border: "1px solid var(--dx-border)",
+            }}
+          >
+            <div style={{ fontSize: 10, color: "var(--dx-text-muted)", letterSpacing: 0.4, textTransform: "uppercase", marginBottom: 8 }}>
+              Active Lots · {activeLots.length}
             </div>
-          )
-        })}
+            {activeLots.length === 0 ? (
+              <div style={{ fontSize: 11, color: "var(--dx-text-muted)", textAlign: "center", padding: "8px 0" }}>
+                ไม่มี lot ที่เหลือสต็อก
+              </div>
+            ) : (
+              activeLots.map((l, i) => {
+                const cpp = (l.quantity_packs || 0) > 0
+                  ? (parseFloat(l.total_cost) || 0) / l.quantity_packs
+                  : 0
+                return (
+                  <div key={l.id || i} style={{
+                    display: "flex", justifyContent: "space-between", alignItems: "center",
+                    padding: "6px 0",
+                    borderTop: i === 0 ? "none" : "1px solid var(--dx-border)",
+                    fontSize: 11,
+                  }}>
+                    <div>
+                      <div className="dx-mono" style={{ color: "var(--dx-cyan-soft)", fontWeight: 600 }}>
+                        {l.lot_number || "—"}
+                      </div>
+                      <div style={{ color: "var(--dx-text-muted)", fontSize: 10 }}>
+                        {(l.purchased_at || "").slice(0, 10)}
+                      </div>
+                    </div>
+                    <div style={{ textAlign: "right" }}>
+                      <div className="dx-mono" style={{ color: "var(--dx-success)", fontWeight: 600 }}>
+                        {fmt(l.lotBalance)} ซอง
+                      </div>
+                      {cpp > 0 && (
+                        <div className="dx-mono" style={{ color: "#B794F6", fontSize: 10 }}>
+                          ฿{cpp.toFixed(2)}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )
+              })
+            )}
+          </div>
+        )}
       </div>
+    </div>
+  )
+}
+
+// ─────────────────────────────────────────────
+// EmptyState
+// ─────────────────────────────────────────────
+function EmptyState({ title, subtitle, onReset }) {
+  return (
+    <div className="dx-card" style={{ padding: 60, textAlign: "center" }}>
+      <div style={{
+        width: 64, height: 64, borderRadius: 16,
+        margin: "0 auto 16px",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        background: "rgba(0,212,255,0.05)",
+        border: "1px dashed var(--dx-border-glow)",
+        color: "var(--dx-cyan)",
+      }}>
+        <Search size={24}/>
+      </div>
+      <div style={{ fontSize: 15, fontWeight: 600, color: "var(--dx-text)", marginBottom: 4 }}>
+        {title}
+      </div>
+      <div style={{ fontSize: 12, color: "var(--dx-text-muted)", marginBottom: 16 }}>
+        {subtitle}
+      </div>
+      {onReset && (
+        <button className="dx-btn dx-btn-secondary" onClick={onReset}>
+          <RefreshCw size={13}/>ล้างตัวกรอง
+        </button>
+      )}
     </div>
   )
 }

@@ -1,6 +1,6 @@
 "use client"
 import { useEffect } from "react"
-import PageDashboardDX from "../../components/pages/PageDashboardDX"
+import PageDashboard from "../../components/pages/PageDashboard"
 import { MOCK_STOCK_IN, MOCK_STOCK_OUT, MOCK_STOCK_BALANCE, MOCK_SKUS } from "./mock-data"
 
 export default function PreviewDarkPage() {
@@ -36,14 +36,14 @@ export default function PreviewDarkPage() {
         </div>
         <div style={{ flex: 1 }}/>
         <a href="/" className="dx-btn dx-btn-ghost" style={{ textDecoration: "none" }}>
-          ← กลับหน้าจริง (light theme)
+          ← หน้าจริง (login)
         </a>
         <a href="/design-system" className="dx-btn dx-btn-secondary" style={{ textDecoration: "none" }}>
           Design System →
         </a>
       </header>
 
-      <PageDashboardDX
+      <PageDashboard
         stockIn={MOCK_STOCK_IN}
         stockOut={MOCK_STOCK_OUT}
         stockBalance={MOCK_STOCK_BALANCE}
