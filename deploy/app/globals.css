@@ -419,6 +419,22 @@ body.dx-theme textarea {
   color: var(--dx-text);
   border-color: var(--dx-border-strong);
 }
+
+/* Override browser autofill (Chrome ทา bg เหลือง/ขาวทับค่าที่เรากำหนด) */
+body.dx-theme input:-webkit-autofill,
+body.dx-theme input:-webkit-autofill:hover,
+body.dx-theme input:-webkit-autofill:focus,
+body.dx-theme input:-webkit-autofill:active,
+body.dx-theme textarea:-webkit-autofill,
+body.dx-theme select:-webkit-autofill,
+.dx-input:-webkit-autofill,
+.dx-input:-webkit-autofill:hover,
+.dx-input:-webkit-autofill:focus {
+  -webkit-box-shadow: 0 0 0 1000px var(--dx-bg-input) inset !important;
+  -webkit-text-fill-color: var(--dx-text) !important;
+  caret-color: var(--dx-text) !important;
+  transition: background-color 9999s ease-in-out 0s;
+}
 body.dx-theme input[type="date"]::-webkit-calendar-picker-indicator,
 body.dx-theme input[type="time"]::-webkit-calendar-picker-indicator,
 body.dx-theme input[type="datetime-local"]::-webkit-calendar-picker-indicator,
