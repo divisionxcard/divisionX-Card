@@ -10,21 +10,20 @@ const fs = require("fs")
 const path = require("path")
 const { createClient } = require("@supabase/supabase-js")
 
-// ── อ่าน .env.local (ไม่ต้องพึ่ง dotenv) ──
+// ── อ่าน .env.local ถ้ามี (local dev) — ถ้าไม่มี ใช้ process.env (GitHub Actions) ──
 const envPath = path.join(__dirname, "..", ".env.local")
-if (!fs.existsSync(envPath)) {
-  console.error("❌ ไม่พบ .env.local — ต้องมีไฟล์นี้ใน deploy/")
-  process.exit(1)
+if (fs.existsSync(envPath)) {
+  fs.readFileSync(envPath, "utf8").split("\n").forEach(line => {
+    const m = line.match(/^([A-Z_][A-Z0-9_]*)=(.*)$/)
+    if (m && !process.env[m[1]]) process.env[m[1]] = m[2].replace(/^["']|["']$/g, "")
+  })
 }
-fs.readFileSync(envPath, "utf8").split("\n").forEach(line => {
-  const m = line.match(/^([A-Z_][A-Z0-9_]*)=(.*)$/)
-  if (m) process.env[m[1]] = m[2].replace(/^["']|["']$/g, "")
-})
 
-const SUPA_URL = process.env.NEXT_PUBLIC_SUPABASE_URL
-const SUPA_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+// รองรับทั้งชื่อ env ของ Next.js (local) และชื่อที่ scraper ใช้ (GHA)
+const SUPA_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL
+const SUPA_KEY = process.env.SUPABASE_SERVICE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 if (!SUPA_URL || !SUPA_KEY) {
-  console.error("❌ ไม่พบ NEXT_PUBLIC_SUPABASE_URL หรือ NEXT_PUBLIC_SUPABASE_ANON_KEY ใน .env.local")
+  console.error("❌ ไม่พบ Supabase URL/Key — ตั้ง NEXT_PUBLIC_SUPABASE_URL + NEXT_PUBLIC_SUPABASE_ANON_KEY (local) หรือ SUPABASE_URL + SUPABASE_SERVICE_KEY (CI)")
   process.exit(1)
 }
 const supabase = createClient(SUPA_URL, SUPA_KEY)

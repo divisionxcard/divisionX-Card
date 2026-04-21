@@ -1,0 +1,44 @@
+name: Weekly Backup
+
+on:
+  schedule:
+    # รันทุกวันอาทิตย์ 00:05 น. ไทย (17:05 UTC วันเสาร์)
+    - cron: "5 17 * * 6"
+  workflow_dispatch:  # กดรันเองได้
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install dependencies
+        working-directory: deploy
+        run: npm install --no-audit --no-fund @supabase/supabase-js
+
+      - name: Run backup script
+        working-directory: deploy
+        env:
+          SUPABASE_URL:         ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: node scripts/backup-tables.js
+
+      - name: Generate timestamp
+        id: ts
+        run: echo "stamp=$(date -u +'%Y-%m-%dT%H-%M-%S')" >> $GITHUB_OUTPUT
+
+      - name: Upload backup artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: supabase-backup-${{ steps.ts.outputs.stamp }}
+          path: deploy/backups/
+          retention-days: 90  # เก็บ 90 วัน (quota 500 MB ครอบคลุมสบาย)
+          if-no-files-found: error
