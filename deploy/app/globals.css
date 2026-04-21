@@ -2,12 +2,305 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ────────────────────────────────────────────────────
+   Fonts
+   ──────────────────────────────────────────────────── */
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+/* ────────────────────────────────────────────────────
+   DivisionX — Dark Theme Design Tokens (CSS vars)
+   ──────────────────────────────────────────────────── */
+:root {
+  --dx-bg-page: #0A1628;
+  --dx-bg-surface: #132947;
+  --dx-bg-card: #1A2F52;
+  --dx-bg-elevated: #1E3A5F;
+  --dx-bg-input: #0F1F3D;
+  --dx-bg-sidebar: #0D1E38;
+  --dx-cyan: #00D4FF;
+  --dx-cyan-bright: #00E5FF;
+  --dx-cyan-soft: #4FC3F7;
+  --dx-cyan-dim: #007EA7;
+  --dx-glow: rgba(0,212,255,0.35);
+  --dx-glow-soft: rgba(0,212,255,0.15);
+  --dx-text: #FFFFFF;
+  --dx-text-2: #B8C5E0;
+  --dx-text-muted: #7A8BA8;
+  --dx-text-dis: #4A5A7A;
+  --dx-success: #00FF88;
+  --dx-warning: #FFC857;
+  --dx-danger: #FF4466;
+  --dx-border: #1E3A5F;
+  --dx-border-strong: #2A4472;
+  --dx-border-glow: rgba(0,212,255,0.4);
+  --dx-font: 'IBM Plex Sans Thai', 'IBM Plex Sans', system-ui, -apple-system, sans-serif;
+  --dx-mono: 'JetBrains Mono', 'Menlo', monospace;
+}
+
 html, body {
   padding: 0;
   margin: 0;
+  /* ⏸ Legacy light theme — ใช้งานปกติจนกว่าจะ migrate ทุกหน้าเสร็จ
+     เมื่อ migrate แล้ว: เพิ่ม class "dx-theme" บน <body> (ดู layout.jsx)
+     หรือเปลี่ยน default ทั้งหมดเป็น var(--dx-bg-page) + var(--dx-text) */
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans Thai', sans-serif;
 }
 
+/* เมื่อเพิ่ม .dx-theme บน <body> ทั้งแอปจะเข้าสู่โทน dark navy */
+body.dx-theme {
+  font-family: var(--dx-font);
+  color: var(--dx-text);
+  background: var(--dx-bg-page);
+  -webkit-font-smoothing: antialiased;
+  font-feature-settings: "ss01" on, "cv01" on;
+}
+
+/* ────────────────────────────────────────────────────
+   DivisionX — Component Classes (ใช้ได้ทั่วแอปแม้ยังไม่เปิด dx-theme)
+   ──────────────────────────────────────────────────── */
+
+/* Hexagonal/tech starfield bg (ใช้ใน hero/header marketing-style) */
+.dx-hex-bg {
+  background:
+    radial-gradient(ellipse at 20% 10%, rgba(0,212,255,0.15) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 90%, rgba(79,195,247,0.08) 0%, transparent 50%),
+    linear-gradient(180deg, #0A1628 0%, #132947 100%);
+  position: relative;
+  overflow: hidden;
+}
+.dx-hex-bg::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(circle at 15% 25%, #fff 0.5px, transparent 1px),
+    radial-gradient(circle at 85% 55%, #4FC3F7 0.4px, transparent 0.8px),
+    radial-gradient(circle at 40% 80%, #fff 0.5px, transparent 1px),
+    radial-gradient(circle at 70% 15%, #00D4FF 0.5px, transparent 1px);
+  background-size: 180px 180px, 220px 220px, 250px 250px, 300px 300px;
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+/* HUD chart grid background */
+.dx-hud-grid {
+  background-image:
+    linear-gradient(rgba(0,212,255,0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,212,255,0.06) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+/* Scrollbars (active เมื่อ body เป็น dark theme — fallback ใน browsers อื่นไม่เปลี่ยน) */
+body.dx-theme ::-webkit-scrollbar { width: 10px; height: 10px; }
+body.dx-theme ::-webkit-scrollbar-track { background: var(--dx-bg-page); }
+body.dx-theme ::-webkit-scrollbar-thumb { background: #1E3A5F; border-radius: 5px; border: 2px solid var(--dx-bg-page); }
+body.dx-theme ::-webkit-scrollbar-thumb:hover { background: #2A4472; }
+
+/* Card / surface */
+.dx-card {
+  background: var(--dx-bg-card);
+  border: 1px solid var(--dx-border);
+  border-radius: 16px;
+  transition: border-color .2s, box-shadow .2s;
+}
+.dx-card-glow {
+  background: linear-gradient(180deg, rgba(0,212,255,0.04) 0%, transparent 100%), var(--dx-bg-card);
+  border: 1px solid var(--dx-border-glow);
+  box-shadow: 0 0 0 1px rgba(0,212,255,0.06), 0 0 24px -8px var(--dx-glow);
+}
+.dx-card:hover {
+  border-color: var(--dx-border-strong);
+}
+
+/* Buttons */
+.dx-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 16px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 500;
+  font-family: var(--dx-font);
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all .18s;
+  white-space: nowrap;
+}
+.dx-btn-primary {
+  background: linear-gradient(180deg, var(--dx-cyan-bright) 0%, var(--dx-cyan) 100%);
+  color: #062235;
+  font-weight: 600;
+  box-shadow: 0 0 0 1px rgba(0,212,255,0.3), 0 4px 16px -4px var(--dx-glow);
+}
+.dx-btn-primary:hover {
+  box-shadow: 0 0 0 1px rgba(0,229,255,0.5), 0 6px 20px -4px var(--dx-glow);
+  transform: translateY(-1px);
+}
+.dx-btn-secondary {
+  background: var(--dx-bg-elevated);
+  color: var(--dx-text);
+  border-color: var(--dx-border-strong);
+}
+.dx-btn-secondary:hover {
+  background: #24457A;
+  border-color: var(--dx-border-glow);
+}
+.dx-btn-ghost {
+  background: transparent;
+  color: var(--dx-text-2);
+  border-color: var(--dx-border);
+}
+.dx-btn-ghost:hover {
+  background: var(--dx-bg-elevated);
+  color: var(--dx-text);
+}
+
+/* Input */
+.dx-input {
+  background: var(--dx-bg-input);
+  border: 1px solid var(--dx-border);
+  border-radius: 10px;
+  color: var(--dx-text);
+  font-family: var(--dx-font);
+  font-size: 13px;
+  padding: 10px 12px;
+  outline: none;
+  transition: border-color .15s, box-shadow .15s;
+  width: 100%;
+}
+.dx-input:focus {
+  border-color: var(--dx-cyan);
+  box-shadow: 0 0 0 3px rgba(0,212,255,0.15);
+}
+.dx-input::placeholder { color: var(--dx-text-dis); }
+
+/* Chip / filter */
+.dx-chip {
+  padding: 7px 14px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 500;
+  border: 1px solid var(--dx-border);
+  background: var(--dx-bg-elevated);
+  color: var(--dx-text-2);
+  cursor: pointer;
+  transition: all .15s;
+}
+.dx-chip:hover { color: var(--dx-text); border-color: var(--dx-border-strong); }
+.dx-chip-active {
+  background: linear-gradient(180deg, rgba(0,229,255,0.15) 0%, rgba(0,212,255,0.08) 100%);
+  border-color: var(--dx-cyan);
+  color: var(--dx-cyan-bright);
+  box-shadow: 0 0 0 1px rgba(0,212,255,0.2), 0 0 14px -4px var(--dx-glow);
+}
+
+/* Badge (SKU series) */
+.dx-badge {
+  padding: 3px 8px;
+  border-radius: 5px;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  font-family: var(--dx-mono);
+  border: 1px solid;
+}
+.dx-badge-OP  { color: #4FC3F7; background: rgba(79,195,247,0.12);  border-color: rgba(79,195,247,0.3); }
+.dx-badge-PRB { color: #B794F6; background: rgba(183,148,246,0.12); border-color: rgba(183,148,246,0.3); }
+.dx-badge-EB  { color: #68D391; background: rgba(104,211,145,0.12); border-color: rgba(104,211,145,0.3); }
+
+/* Pulse (status dots) */
+@keyframes dx-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.6; transform: scale(1.15); }
+}
+.dx-pulse { animation: dx-pulse 1.8s ease-in-out infinite; }
+
+/* Shimmer (loading) */
+@keyframes dx-shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.dx-shimmer {
+  background: linear-gradient(90deg, transparent 20%, rgba(0,212,255,0.15) 50%, transparent 80%);
+  background-size: 200% 100%;
+  animation: dx-shimmer 3s linear infinite;
+}
+
+/* Tab */
+.dx-tab {
+  padding: 9px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--dx-text-muted);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: all .15s;
+}
+.dx-tab:hover { color: var(--dx-text-2); }
+.dx-tab-active {
+  color: var(--dx-cyan-bright);
+  border-bottom-color: var(--dx-cyan);
+  text-shadow: 0 0 12px var(--dx-glow);
+}
+
+/* Pill */
+.dx-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  border: 1px solid var(--dx-border-glow);
+  background: rgba(0,212,255,0.05);
+  color: var(--dx-cyan-bright);
+}
+
+/* Mono font (tabular numbers) */
+.dx-mono { font-family: var(--dx-mono); font-feature-settings: "tnum"; }
+
+/* Scanline (tech feel overlay) */
+.dx-scanline { position: relative; }
+.dx-scanline::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    180deg,
+    transparent 0,
+    transparent 3px,
+    rgba(0,212,255,0.02) 3px,
+    rgba(0,212,255,0.02) 4px
+  );
+  pointer-events: none;
+}
+
+/* Booster card placeholder graphic */
+.dx-booster-ph {
+  background:
+    linear-gradient(135deg, rgba(0,212,255,0.15) 0%, rgba(26,47,82,0.8) 100%),
+    repeating-linear-gradient(45deg, rgba(0,212,255,0.05) 0 12px, transparent 12px 24px);
+  position: relative;
+  overflow: hidden;
+}
+.dx-booster-ph::before {
+  content: "";
+  position: absolute;
+  inset: -50%;
+  background: radial-gradient(ellipse, rgba(0,212,255,0.25) 0%, transparent 70%);
+}
+
+/* Hide scrollbars (artboard mode) */
+.dx-noscroll::-webkit-scrollbar { display: none; }
+.dx-noscroll { scrollbar-width: none; }
+
+/* ────────────────────────────────────────────────────
+   Print (keep light theme — ประหยัดหมึก)
+   ──────────────────────────────────────────────────── */
 @media print {
   body * { visibility: hidden; }
   #refill-report, #refill-report * { visibility: visible; }
@@ -30,4 +323,6 @@ html, body {
   table { font-size: 9px !important; }
   th, td { padding: 2px 4px !important; }
   .refill-machine { margin-bottom: 0 !important; }
+  /* Force light theme in print (in case dx-theme is on) */
+  body, .dx-card, .dx-btn, * { background: white !important; color: black !important; box-shadow: none !important; }
 }
