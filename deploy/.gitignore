@@ -14,3 +14,6 @@ Thumbs.db
 
 # Backup files (JSON dumps จาก scripts/backup-tables.js)
 backups/
+
+# Claude Design handoff bundle (ของใหญ่ + มี image assets — ไม่ควรขึ้น git)
+.claude-design-output/
