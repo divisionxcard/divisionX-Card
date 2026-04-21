@@ -1,10 +1,11 @@
+// PageRefillPrep — Dark Theme (native dx-components + dx-* classes)
 import { useState, useEffect } from "react"
 import {
   AlertTriangle, CheckCircle, X, ClipboardList, Clock, Monitor,
   Boxes, Package, RefreshCw, Loader2,
 } from "lucide-react"
 import { fmt } from "../shared/helpers"
-import KpiCard from "../shared/KpiCard"
+import { Badge, KpiCard, SectionTitle } from "../shared/dx-components"
 import PageMachineHistory from "./PageMachineHistory"
 
 export default function PageRefillPrep({ machines, machineStock, machineAssignments, transfers, stockOut, skus, profile, session, profiles, onAddStockOut, onUpdateStockOut, onDeleteStockOut }) {
@@ -50,9 +51,7 @@ export default function PageRefillPrep({ machines, machineStock, machineAssignme
     Object.values(skuRefill).forEach(r => refillItems.push(r))
   })
 
-  // Tab เลือกตู้ — "all" หรือ machine_id
   const [activeTab, setActiveTab] = useState("all")
-  // Reset tab เมื่อสลับ user (กัน tab ชี้ไปตู้ที่ user ใหม่ไม่มี)
   useEffect(() => { setActiveTab("all") }, [activeUserId])
 
   // group by SKU (สรุปรวม)
@@ -72,7 +71,7 @@ export default function PageRefillPrep({ machines, machineStock, machineAssignme
   const machineNameMap = {}
   machines.forEach(m => { machineNameMap[m.machine_id] = m.name || m.machine_id })
 
-  // Helper: นับ refill ต่อตู้ (จำนวน SKU + รวมซอง)
+  // Helper: นับ refill ต่อตู้
   const machineStats = {}
   myMachineIds.forEach(machId => {
     const items = refillItems.filter(r => r.machine_id === machId)
@@ -83,7 +82,7 @@ export default function PageRefillPrep({ machines, machineStock, machineAssignme
     machineStats[machId] = { skuCount: items.length, totalPacks }
   })
 
-  // ── Refill action: FIFO lot balance ต่อ SKU ของ active user ──
+  // FIFO lot balance ต่อ SKU
   const getSubLots = (skuId) => {
     const lotMap = {}
     myTransfers.filter(t => t.sku_id === skuId && t.lot_number).forEach(t => {
@@ -100,36 +99,27 @@ export default function PageRefillPrep({ machines, machineStock, machineAssignme
     })
   }
 
-  const [qtyMap,      setQtyMap]      = useState({})
-  const [submitting,  setSubmitting]  = useState(false)
-  const [toast,       setToast]       = useState(null)
-  const [subView,     setSubView]     = useState("prep") // "prep" | "history"
+  const [qtyMap, setQtyMap] = useState({})
+  const [submitting, setSubmitting] = useState(false)
+  const [toast, setToast] = useState(null)
+  const [subView, setSubView] = useState("prep")
 
-  // reset subView เมื่อสลับ tab/user
   useEffect(() => { setSubView("prep") }, [activeTab, activeUserId])
 
-  const showToast = (msg, type="success") => { setToast({msg,type}); setTimeout(() => setToast(null), 3500) }
+  const showToast = (msg, type = "success") => { setToast({ msg, type }); setTimeout(() => setToast(null), 3500) }
 
-  // ห้าม admin เบิกแทน user คนอื่น — เบิกได้เฉพาะตัวเอง
   const canRefill = activeUserId === userId
+  const itemKey = (item) => `${item.machine_id}_${item.sku_id}_${item.isBox ? "b" : "p"}`
 
-  const itemKey = (item) => `${item.machine_id}_${item.sku_id}_${item.isBox?"b":"p"}`
-
-  // Reset qtyMap เมื่อสลับ tab/user — default = r.refill (ยอดที่ตู้ต้องการเสมอ ไม่เกี่ยวกับสต็อกฉัน)
   useEffect(() => {
     if (activeTab === "all") { setQtyMap({}); return }
     const q = {}
-    refillItems.filter(r => r.machine_id === activeTab).forEach(r => {
-      q[itemKey(r)] = r.refill
-    })
+    refillItems.filter(r => r.machine_id === activeTab).forEach(r => { q[itemKey(r)] = r.refill })
     setQtyMap(q)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, activeUserId])
 
-  const getQty = (r) => {
-    const v = qtyMap[itemKey(r)]
-    return v === undefined ? r.refill : v
-  }
+  const getQty = (r) => { const v = qtyMap[itemKey(r)]; return v === undefined ? r.refill : v }
   const setQty = (r, next) => {
     const max = r.refill
     const v = Math.max(0, Math.min(max, next))
@@ -137,12 +127,9 @@ export default function PageRefillPrep({ machines, machineStock, machineAssignme
   }
 
   const handleBatchSubmit = async (items) => {
-    // ข้ามแถวไม่มีสต็อก อัตโนมัติ
     const picks = items.filter(r => getQty(r) > 0 && (myBalMap[r.sku_id] || 0) > 0)
-    if (picks.length === 0) { showToast("ไม่มีรายการที่เบิกได้","error"); return }
-
-    // FIFO lot assignment + validate
-    const lotUsage = {} // key: sku_id_lot → packs ที่ใช้ไปแล้วใน batch นี้
+    if (picks.length === 0) { showToast("ไม่มีรายการที่เบิกได้", "error"); return }
+    const lotUsage = {}
     const assignments = []
     for (const r of picks) {
       const qty = getQty(r)
@@ -160,121 +147,93 @@ export default function PageRefillPrep({ machines, machineStock, machineAssignme
       lotUsage[`${r.sku_id}_${lot.lot_number}`] = (lotUsage[`${r.sku_id}_${lot.lot_number}`] || 0) + packs
       assignments.push({ r, qty, packs, lot_number: lot.lot_number })
     }
-
     try {
       setSubmitting(true)
       const now = new Date().toISOString()
       for (const a of assignments) {
         await onAddStockOut({
-          sku_id:        a.r.sku_id,
-          lot_number:    a.lot_number,
-          machine_id:    a.r.machine_id,
+          sku_id: a.r.sku_id,
+          lot_number: a.lot_number,
+          machine_id: a.r.machine_id,
           quantity_packs: a.packs,
-          withdrawn_at:  now,
-          note:          `[${a.qty}${a.r.isBox ? "กล่อง" : "ซอง"}] เบิกจากหน้าเตรียมของเติมตู้ (batch)`,
+          withdrawn_at: now,
+          note: `[${a.qty}${a.r.isBox ? "กล่อง" : "ซอง"}] เบิกจากหน้าเตรียมของเติมตู้ (batch)`,
         })
       }
       showToast(`เบิกสำเร็จ ${assignments.length} รายการ → ${machineNameMap[picks[0].machine_id]}`)
       setQtyMap({})
     } catch (err) {
       showToast("เกิดข้อผิดพลาด: " + err.message, "error")
-    } finally {
-      setSubmitting(false)
-    }
+    } finally { setSubmitting(false) }
   }
+
+  // Admin user switcher chips (reused in 2 places)
+  const AdminSwitcher = () => !isAdmin || viewableUsers.length === 0 ? null : (
+    <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+      <span style={{ fontSize: 11, color: "var(--dx-text-muted)", textTransform: "uppercase", letterSpacing: 0.5 }}>ดูของ</span>
+      <div style={{ display: "flex", gap: 4 }}>
+        {viewableUsers.map(p => (
+          <button key={p.id} onClick={() => setViewUserId(p.id)}
+            className={`dx-chip ${activeUserId === p.id ? "dx-chip-active" : ""}`}>
+            {p.display_name || p.email}
+          </button>
+        ))}
+      </div>
+    </div>
+  )
 
   // Empty state: ไม่มี user ไหนมี assignment เลย
   if (viewableUsers.length === 0 && !usersWithAssignments.includes(userId)) {
     return (
-      <div className="space-y-6">
-        <h1 className="text-2xl font-bold text-gray-800">เตรียมของเติมตู้</h1>
-        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-6 text-center">
-          <AlertTriangle size={32} className="text-amber-400 mx-auto mb-2"/>
-          <p className="text-sm text-amber-700">ยังไม่มีการกำหนดตู้ให้ผู้ใช้คนใด กรุณาไปที่ "จัดการผู้ใช้ → กำหนดตู้"</p>
-        </div>
+      <div style={{ padding: 24, display: "flex", flexDirection: "column", gap: 20 }}>
+        <SectionTitle pill="Refill Prep" title="เตรียมของเติมตู้" subtitle="คำนวณจาก VMS เทียบกับสต็อก"/>
+        <EmptyBanner icon={<AlertTriangle size={32}/>}
+          text="ยังไม่มีการกำหนดตู้ให้ผู้ใช้คนใด กรุณาไปที่ &quot;จัดการผู้ใช้ → กำหนดตู้&quot;"/>
       </div>
     )
   }
 
   if (myMachineIds.length === 0) {
     return (
-      <div className="space-y-6">
-        <h1 className="text-2xl font-bold text-gray-800">เตรียมของเติมตู้</h1>
-        {/* Admin switcher */}
-        {isAdmin && viewableUsers.length > 0 && (
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-xs text-gray-400">ดูของ:</span>
-            <div className="flex flex-wrap gap-1 bg-gray-100 p-1 rounded-xl">
-              {viewableUsers.map(p => (
-                <button key={p.id} onClick={() => setViewUserId(p.id)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${activeUserId === p.id ? "bg-white shadow text-blue-600" : "text-gray-500 hover:text-gray-700"}`}>
-                  {p.display_name || p.email}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-6 text-center">
-          <AlertTriangle size={32} className="text-amber-400 mx-auto mb-2"/>
-          <p className="text-sm text-amber-700">
-            {isAdmin && activeUserId !== userId
-              ? `${activeProfile?.display_name || "?"} ยังไม่ได้ถูก assign ตู้`
-              : "คุณยังไม่ได้ถูก assign ตู้ กรุณาติดต่อแอดมินเพื่อกำหนดตู้ที่รับผิดชอบ"}
-          </p>
-        </div>
+      <div style={{ padding: 24, display: "flex", flexDirection: "column", gap: 20 }}>
+        <SectionTitle pill="Refill Prep" title="เตรียมของเติมตู้" subtitle="คำนวณจาก VMS เทียบกับสต็อก" actions={<AdminSwitcher/>}/>
+        <EmptyBanner icon={<AlertTriangle size={32}/>}
+          text={isAdmin && activeUserId !== userId
+            ? `${activeProfile?.display_name || "?"} ยังไม่ได้ถูก assign ตู้`
+            : "คุณยังไม่ได้ถูก assign ตู้ กรุณาติดต่อแอดมินเพื่อกำหนดตู้ที่รับผิดชอบ"}/>
       </div>
     )
   }
 
-  // Active items ตาม tab
   const activeItems = activeTab === "all" ? refillItems : refillItems.filter(r => r.machine_id === activeTab)
   const activeMachine = activeTab !== "all" ? machines.find(m => m.machine_id === activeTab) : null
 
   return (
-    <div className="space-y-5">
-      {toast && (
-        <div className={`fixed top-4 left-4 right-4 sm:left-auto sm:right-4 sm:max-w-sm z-50 px-4 py-3 rounded-xl shadow-lg text-white text-sm flex items-center gap-2 ${toast.type==="error"?"bg-red-500":"bg-green-500"}`}>
-          {toast.type==="error"?<X size={16}/>:<CheckCircle size={16}/>} {toast.msg}
-        </div>
-      )}
-      {/* Header */}
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-800">
-            เตรียมของเติมตู้
-            {isAdmin && activeUserId !== userId && (
-              <span className="ml-2 text-base font-normal text-gray-500">· {activeProfile?.display_name || "?"}</span>
-            )}
-          </h1>
-          <p className="text-sm text-gray-400">
-            คำนวณจาก VMS เทียบกับสต็อก
-            {lastSync && <span className="ml-2">· VMS: {lastSync.slice(0,10)} {lastSync.slice(11,16)}</span>}
-          </p>
-        </div>
-        {/* Admin switcher */}
-        {isAdmin && viewableUsers.length > 0 && (
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-xs text-gray-400">ดูของ:</span>
-            <div className="flex flex-wrap gap-1 bg-gray-100 p-1 rounded-xl">
-              {viewableUsers.map(p => (
-                <button key={p.id} onClick={() => setViewUserId(p.id)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${activeUserId === p.id ? "bg-white shadow text-blue-600" : "text-gray-500 hover:text-gray-700"}`}>
-                  {p.display_name || p.email}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
+    <div style={{ padding: 24, display: "flex", flexDirection: "column", gap: 20 }}>
+      {toast && <Toast toast={toast}/>}
 
-      {/* Tab เลือกตู้ */}
-      <div className="flex flex-wrap gap-2">
+      {/* Header */}
+      <SectionTitle
+        pill={lastSync ? `VMS · ${lastSync.slice(0, 10)} ${lastSync.slice(11, 16)}` : "Refill Prep"}
+        title={<>เตรียมของเติมตู้
+          {isAdmin && activeUserId !== userId && (
+            <span style={{ marginLeft: 10, fontSize: 16, fontWeight: 400, color: "var(--dx-text-muted)" }}>
+              · {activeProfile?.display_name || "?"}
+            </span>
+          )}
+        </>}
+        subtitle="คำนวณจาก VMS เทียบกับสต็อกของคุณ"
+        actions={<AdminSwitcher/>}
+      />
+
+      {/* Machine tabs */}
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
         <button onClick={() => setActiveTab("all")}
-          className={`px-4 py-2 rounded-xl text-sm font-medium border-2 transition-all ${activeTab === "all" ? "border-blue-500 bg-blue-50 text-blue-700" : "border-gray-200 bg-white text-gray-600 hover:border-gray-300"}`}>
-          <span className="flex items-center gap-1.5">
-            <ClipboardList size={14}/>
-            สรุปรวม
-            <span className="text-xs text-gray-400">({refillItems.length})</span>
+          className={`dx-chip ${activeTab === "all" ? "dx-chip-active" : ""}`}
+          style={{ padding: "9px 14px" }}>
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+            <ClipboardList size={13}/>สรุปรวม
+            <span className="dx-mono" style={{ opacity: 0.7 }}>({refillItems.length})</span>
           </span>
         </button>
         {myMachines.map(m => {
@@ -283,14 +242,13 @@ export default function PageRefillPrep({ machines, machineStock, machineAssignme
           const empty = stat.skuCount === 0
           return (
             <button key={m.machine_id} onClick={() => setActiveTab(m.machine_id)} disabled={empty}
-              className={`px-4 py-2 rounded-xl text-sm font-medium border-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed
-                ${isActive ? "border-orange-500 bg-orange-50 text-orange-700" : "border-gray-200 bg-white text-gray-600 hover:border-gray-300"}`}>
-              <span className="flex items-center gap-1.5">
-                <Monitor size={14}/>
-                {m.name}
+              className={`dx-chip ${isActive ? "dx-chip-active" : ""}`}
+              style={{ padding: "9px 14px", opacity: empty ? 0.5 : 1, cursor: empty ? "not-allowed" : "pointer" }}>
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                <Monitor size={13}/>{m.name}
                 {empty
-                  ? <span className="text-xs text-green-600">✓</span>
-                  : <span className={`text-xs ${isActive ? "text-orange-500" : "text-gray-400"}`}>({stat.skuCount})</span>
+                  ? <CheckCircle size={11} style={{ color: "var(--dx-success)" }}/>
+                  : <span className="dx-mono" style={{ opacity: 0.7 }}>({stat.skuCount})</span>
                 }
               </span>
             </button>
@@ -302,27 +260,31 @@ export default function PageRefillPrep({ machines, machineStock, machineAssignme
       {activeTab === "all" ? (
         /* ── สรุปรวมทุกตู้ ── */
         <>
-          {/* KPI รวม */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-            <KpiCard icon={AlertTriangle} label="ต้องเติม (SKU)" value={summaryList.length} color="red"/>
-            <KpiCard icon={Package} label="ตู้รับผิดชอบ" value={`${myMachines.length} ตู้`} color="blue"/>
-            <KpiCard icon={Boxes} label="SKU ที่ฉันมี" value={`${Object.values(myBalMap).filter(v => v > 0).length} SKU`} color="purple"/>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 14 }}>
+            <KpiCard icon={AlertTriangle} label="ต้องเติม (SKU)" value={summaryList.length} accent="danger"/>
+            <KpiCard icon={Package} label="ตู้รับผิดชอบ" value={`${myMachines.length} ตู้`} accent="cyan"/>
+            <KpiCard icon={Boxes} label="SKU ที่ฉันมี" value={`${Object.values(myBalMap).filter(v => v > 0).length} SKU`} accent="purple"/>
           </div>
 
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-            <h2 className="font-semibold text-gray-700 mb-3 text-sm">สรุปสินค้าที่ต้องเตรียมทั้งหมด</h2>
+          <div className="dx-card" style={{ padding: 20 }}>
+            <h2 style={{ margin: "0 0 14px", fontSize: 13, fontWeight: 600, color: "var(--dx-text)" }}>
+              สรุปสินค้าที่ต้องเตรียมทั้งหมด
+            </h2>
             {summaryList.length === 0 ? (
-              <p className="text-sm text-gray-400 text-center py-10">✓ ตู้ทุกช่องเต็มแล้ว</p>
+              <p style={{ textAlign: "center", color: "var(--dx-text-muted)", padding: "40px 0", fontSize: 13 }}>
+                <CheckCircle size={16} style={{ display: "inline", verticalAlign: "middle", marginRight: 6, color: "var(--dx-success)" }}/>
+                ตู้ทุกช่องเต็มแล้ว
+              </p>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
+              <div style={{ overflowX: "auto" }}>
+                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
                   <thead>
-                    <tr className="border-b-2 border-gray-200">
-                      <th className="text-left py-2 text-xs text-gray-400">SKU</th>
-                      <th className="text-right py-2 text-xs text-gray-400">ต้องเติม</th>
-                      <th className="text-right py-2 text-xs text-gray-400">สต็อกของฉัน</th>
-                      <th className="text-center py-2 text-xs text-gray-400">สถานะ</th>
-                      <th className="text-left py-2 text-xs text-gray-400 pl-4">ตู้</th>
+                    <tr style={{ borderBottom: "1px solid var(--dx-border-strong)" }}>
+                      <Th align="left">SKU</Th>
+                      <Th align="right">ต้องเติม</Th>
+                      <Th align="right">สต็อกของฉัน</Th>
+                      <Th align="center">สถานะ</Th>
+                      <Th align="left">ตู้</Th>
                     </tr>
                   </thead>
                   <tbody>
@@ -333,23 +295,34 @@ export default function PageRefillPrep({ machines, machineStock, machineAssignme
                       const enough = myBal >= refillPacks
                       const unit = r.isBox ? "กล่อง" : "ซอง"
                       return (
-                        <tr key={r.sku_id + (r.isBox?"b":"p")} className="border-b border-gray-50 hover:bg-gray-50">
-                          <td className="py-2.5"><span className="font-mono text-xs font-bold text-gray-700">{r.sku_id}</span></td>
-                          <td className="py-2.5 text-right text-sm font-bold text-red-600">{fmt(r.totalRefill)} {unit}</td>
-                          <td className="py-2.5 text-right text-sm">
-                            <span className={`font-bold ${enough ? "text-green-600" : "text-amber-600"}`}>{fmt(myBal)} ซอง</span>
+                        <tr key={r.sku_id + (r.isBox ? "b" : "p")} style={{ borderBottom: "1px solid var(--dx-border)" }}>
+                          <td style={{ padding: "11px 10px" }}>
+                            <span className="dx-mono" style={{ fontSize: 11, fontWeight: 600, color: "var(--dx-text)" }}>{r.sku_id}</span>
                           </td>
-                          <td className="py-2.5 text-center">
-                            {enough
-                              ? <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">พร้อม</span>
-                              : <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-medium">ไม่พอ</span>}
+                          <td style={{ padding: "11px 10px", textAlign: "right" }}>
+                            <span className="dx-mono" style={{ fontSize: 13, fontWeight: 700, color: "var(--dx-danger)" }}>
+                              {fmt(r.totalRefill)} {unit}
+                            </span>
                           </td>
-                          <td className="py-2.5 text-xs text-gray-500 pl-4">
-                            {r.machines.map(m => (
-                              <span key={m.machine_id} className="inline-block mr-1.5 mb-0.5 px-1.5 py-0.5 bg-gray-100 rounded">
-                                {machineNameMap[m.machine_id]}({m.refill})
-                              </span>
-                            ))}
+                          <td style={{ padding: "11px 10px", textAlign: "right" }}>
+                            <span className="dx-mono" style={{ fontSize: 13, fontWeight: 700, color: enough ? "var(--dx-success)" : "var(--dx-warning)" }}>
+                              {fmt(myBal)} ซอง
+                            </span>
+                          </td>
+                          <td style={{ padding: "11px 10px", textAlign: "center" }}>
+                            <StatusPill enough={enough}/>
+                          </td>
+                          <td style={{ padding: "11px 10px" }}>
+                            <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+                              {r.machines.map(m => (
+                                <span key={m.machine_id} className="dx-mono" style={{
+                                  fontSize: 10, padding: "2px 6px", borderRadius: 4,
+                                  background: "var(--dx-bg-input)", color: "var(--dx-text-secondary)",
+                                }}>
+                                  {machineNameMap[m.machine_id]}({m.refill})
+                                </span>
+                              ))}
+                            </div>
                           </td>
                         </tr>
                       )
@@ -364,165 +337,302 @@ export default function PageRefillPrep({ machines, machineStock, machineAssignme
         /* ── ตู้เดียว ── */
         <>
           {/* Sub-tab: เตรียมของ / ประวัติการเบิก */}
-          <div className="flex gap-1 border-b-2 border-gray-100">
-            <button onClick={() => setSubView("prep")}
-              className={`px-4 py-2 text-sm font-medium border-b-2 -mb-0.5 transition-all
-                ${subView === "prep" ? "border-orange-500 text-orange-600" : "border-transparent text-gray-500 hover:text-gray-700"}`}>
-              <span className="flex items-center gap-1.5"><ClipboardList size={14}/>เตรียมของ</span>
-            </button>
-            <button onClick={() => setSubView("history")}
-              className={`px-4 py-2 text-sm font-medium border-b-2 -mb-0.5 transition-all
-                ${subView === "history" ? "border-orange-500 text-orange-600" : "border-transparent text-gray-500 hover:text-gray-700"}`}>
-              <span className="flex items-center gap-1.5"><Clock size={14}/>ประวัติการเบิก</span>
-            </button>
+          <div style={{ display: "flex", gap: 4, borderBottom: "1px solid var(--dx-border)" }}>
+            <div className={`dx-tab ${subView === "prep" ? "dx-tab-active" : ""}`} onClick={() => setSubView("prep")}>
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}><ClipboardList size={13}/>เตรียมของ</span>
+            </div>
+            <div className={`dx-tab ${subView === "history" ? "dx-tab-active" : ""}`} onClick={() => setSubView("history")}>
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}><Clock size={13}/>ประวัติการเบิก</span>
+            </div>
           </div>
 
           {subView === "history" ? (
             <PageMachineHistory machine={activeMachine} stockOut={stockOut} skus={skus} hideHeader
               machines={machines} session={session} profile={profile}
               onUpdateStockOut={onUpdateStockOut} onDeleteStockOut={onDeleteStockOut}/>
-          ) : (<>
-          {/* KPI ของตู้นี้ */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <KpiCard icon={Monitor} label="ตู้" value={activeMachine?.name || activeTab}
-              sub={activeMachine?.location || ""} color="orange"/>
-            <KpiCard icon={AlertTriangle} label="ช่องที่ต้องเติม" value={`${activeItems.length} SKU`} color="red"/>
-            <KpiCard icon={Package} label="รวม (ซอง)" value={fmt(machineStats[activeTab]?.totalPacks || 0)} color="blue"/>
-            <KpiCard icon={Boxes} label="สต็อกของฉัน"
-              value={fmt(Object.values(myBalMap).reduce((a,v) => a + Math.max(0,v), 0))}
-              sub="ซอง รวมทุก SKU" color="green"/>
-          </div>
+          ) : (
+            <>
+              {/* KPI ของตู้นี้ */}
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 14 }}>
+                <KpiCard icon={Monitor} label="ตู้" value={activeMachine?.name || activeTab} sub={activeMachine?.location || ""} accent="cyan" glow/>
+                <KpiCard icon={AlertTriangle} label="ช่องที่ต้องเติม" value={`${activeItems.length} SKU`} accent="danger"/>
+                <KpiCard icon={Package} label="รวม (ซอง)" value={fmt(machineStats[activeTab]?.totalPacks || 0)} accent="cyan"/>
+                <KpiCard icon={Boxes} label="สต็อกของฉัน"
+                  value={fmt(Object.values(myBalMap).reduce((a, v) => a + Math.max(0, v), 0))}
+                  sub="ซอง รวมทุก SKU" accent="green"/>
+              </div>
 
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="font-semibold text-gray-700 text-sm">
-                รายการเติม — {activeMachine?.name}
-              </h2>
-              {activeMachine?.location && <span className="text-xs text-gray-400">{activeMachine.location}</span>}
-            </div>
-            {activeItems.length === 0 ? (
-              <p className="text-sm text-gray-400 text-center py-10">✓ ตู้นี้ทุกช่องเต็มแล้ว</p>
-            ) : (() => {
-              const sortedItems = [...activeItems].sort((a,b) => (a.sku_id||"").localeCompare(b.sku_id||""))
-              // รวมสรุปต่อ batch — นับเฉพาะแถวที่มีสต็อกและ qty > 0
-              const picks = sortedItems.filter(r => getQty(r) > 0 && (myBalMap[r.sku_id] || 0) > 0)
-              const skipped = sortedItems.filter(r => getQty(r) > 0 && (myBalMap[r.sku_id] || 0) <= 0).length
-              const totalPacks = picks.reduce((a, r) => {
-                const sku = skus.find(s => s.sku_id === r.sku_id)
-                return a + (r.isBox ? getQty(r) * (sku?.packs_per_box || 24) : getQty(r))
-              }, 0)
-              return (
-                <>
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead>
-                        <tr className="border-b-2 border-gray-200">
-                          <th className="text-left py-2 text-xs text-gray-400">SKU</th>
-                          <th className="text-left py-2 text-xs text-gray-400">ช่อง</th>
-                          <th className="text-right py-2 text-xs text-gray-400">คงเหลือ/ความจุ</th>
-                          <th className="text-center py-2 text-xs text-gray-400 font-bold text-red-500">ต้องเติม</th>
-                          <th className="text-right py-2 text-xs text-gray-400">สต็อกฉัน</th>
-                          <th className="text-center py-2 text-xs text-gray-400">สถานะ</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {sortedItems.map(r => {
-                          const myBal = myBalMap[r.sku_id] || 0
-                          const sku = skus.find(s => s.sku_id === r.sku_id)
-                          const refillPacks = r.isBox ? r.refill * (sku?.packs_per_box || 24) : r.refill
-                          const enough = myBal >= refillPacks
-                          const unit = r.isBox ? "กล่อง" : "ซอง"
-                          const key = itemKey(r)
-                          const qty = getQty(r)
-                          const disabled = !canRefill || myBal <= 0
-                          const changed = qty !== r.refill
-
-                          return (
-                            <tr key={key} className="border-b border-gray-50 hover:bg-gray-50">
-                              <td className="py-2.5"><span className="font-mono text-xs font-bold">{r.sku_id}</span></td>
-                              <td className="py-2.5 text-xs text-gray-500">{r.slotNums.join(", ")}</td>
-                              <td className="py-2.5 text-right text-xs text-gray-600">{r.remain} / {r.capacity}</td>
-                              <td className="py-2.5">
-                                {canRefill ? (
-                                  <div className="flex items-center justify-center gap-1">
-                                    <button type="button" onClick={() => setQty(r, qty - 1)} disabled={disabled || qty <= 0}
-                                      title="ลด" aria-label="ลด"
-                                      className="w-7 h-7 rounded-lg border border-gray-200 bg-white text-gray-600 hover:border-red-300 hover:text-red-500 hover:bg-red-50 disabled:opacity-40 disabled:cursor-not-allowed font-bold text-base leading-none flex items-center justify-center">−</button>
-                                    <input type="number" min="0" max={r.refill}
-                                      value={qty}
-                                      onChange={e => setQty(r, parseInt(e.target.value) || 0)}
-                                      disabled={disabled}
-                                      className={`w-12 text-center font-bold text-sm border border-gray-200 rounded-lg py-1 focus:outline-none focus:ring-2 focus:ring-orange-200 disabled:opacity-50 disabled:bg-gray-50 disabled:cursor-not-allowed ${qty === 0 ? "text-gray-400 bg-gray-50" : qty < r.refill ? "text-amber-600" : "text-red-600"}`}/>
-                                    <button type="button" onClick={() => setQty(r, qty + 1)} disabled={disabled || qty >= r.refill}
-                                      title="เพิ่ม" aria-label="เพิ่ม"
-                                      className="w-7 h-7 rounded-lg border border-gray-200 bg-white text-gray-600 hover:border-green-300 hover:text-green-600 hover:bg-green-50 disabled:opacity-40 disabled:cursor-not-allowed font-bold text-base leading-none flex items-center justify-center">+</button>
-                                    <span className="text-xs text-gray-500 ml-0.5">{unit}</span>
-                                    {changed && !disabled && (
-                                      <button type="button" onClick={() => setQty(r, r.refill)}
-                                        title={`คืนค่าเดิม (${r.refill})`} aria-label="คืนค่าเดิม"
-                                        className="w-7 h-7 ml-0.5 rounded-lg border border-blue-200 bg-blue-50 text-blue-600 hover:bg-blue-100 flex items-center justify-center">
-                                        <RefreshCw size={12}/>
-                                      </button>
-                                    )}
-                                  </div>
-                                ) : (
-                                  <div className="text-right text-sm font-bold text-red-600">{fmt(r.refill)} {unit}</div>
-                                )}
-                                {canRefill && myBal <= 0 && <div className="text-center text-[10px] text-amber-600 mt-1">ไม่มีสต็อก</div>}
-                              </td>
-                              <td className="py-2.5 text-right text-sm">
-                                <span className={`font-bold ${enough ? "text-green-600" : "text-amber-600"}`}>{fmt(myBal)}</span>
-                              </td>
-                              <td className="py-2.5 text-center">
-                                {enough
-                                  ? <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">พร้อม</span>
-                                  : <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-medium">ไม่พอ</span>}
-                              </td>
-                            </tr>
-                          )
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-
-                  {canRefill && (
-                    <div className="mt-4 flex flex-wrap items-center justify-between gap-3 p-4 bg-orange-50 rounded-xl border border-orange-200">
-                      <div className="text-sm">
-                        <div className="text-xs text-gray-500">สรุปเบิก → <b>{activeMachine?.name}</b></div>
-                        <div className="font-bold text-orange-700">
-                          {picks.length === 0
-                            ? <span className="text-gray-400 font-normal">ยังไม่ได้เลือกจำนวน</span>
-                            : <>{picks.length} SKU · รวม <span className="text-orange-600">{fmt(totalPacks)}</span> ซอง</>}
-                        </div>
-                        {skipped > 0 && (
-                          <div className="text-[11px] text-amber-600 mt-0.5">ข้าม {skipped} SKU (ไม่มีสต็อก)</div>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <button onClick={() => {
-                          const q = {}
-                          sortedItems.forEach(r => { q[itemKey(r)] = r.refill })
-                          setQtyMap(q)
-                        }} disabled={submitting}
-                          className="px-3 py-2 text-xs rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-50">
-                          รีเซ็ตยอด
-                        </button>
-                        <button onClick={() => handleBatchSubmit(sortedItems)}
-                          disabled={submitting || picks.length === 0}
-                          className="px-5 py-2 text-sm rounded-xl bg-orange-500 text-white hover:bg-orange-600 disabled:opacity-50 font-semibold flex items-center gap-1.5 shadow-sm">
-                          {submitting ? <Loader2 size={14} className="animate-spin"/> : <CheckCircle size={14}/>}
-                          {submitting ? "กำลังบันทึก..." : "ยืนยันเบิกทั้งหมด"}
-                        </button>
-                      </div>
-                    </div>
+              <div className="dx-card" style={{ padding: 20 }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+                  <h2 style={{ margin: 0, fontSize: 13, fontWeight: 600, color: "var(--dx-text)" }}>
+                    รายการเติม — {activeMachine?.name}
+                  </h2>
+                  {activeMachine?.location && (
+                    <span style={{ fontSize: 11, color: "var(--dx-text-muted)" }}>{activeMachine.location}</span>
                   )}
-                </>
-              )
-            })()}
-          </div>
-          </>)}
+                </div>
+
+                {activeItems.length === 0 ? (
+                  <p style={{ textAlign: "center", color: "var(--dx-text-muted)", padding: "40px 0", fontSize: 13 }}>
+                    <CheckCircle size={16} style={{ display: "inline", verticalAlign: "middle", marginRight: 6, color: "var(--dx-success)" }}/>
+                    ตู้นี้ทุกช่องเต็มแล้ว
+                  </p>
+                ) : (() => {
+                  const sortedItems = [...activeItems].sort((a, b) => (a.sku_id || "").localeCompare(b.sku_id || ""))
+                  const picks = sortedItems.filter(r => getQty(r) > 0 && (myBalMap[r.sku_id] || 0) > 0)
+                  const skipped = sortedItems.filter(r => getQty(r) > 0 && (myBalMap[r.sku_id] || 0) <= 0).length
+                  const totalPacks = picks.reduce((a, r) => {
+                    const sku = skus.find(s => s.sku_id === r.sku_id)
+                    return a + (r.isBox ? getQty(r) * (sku?.packs_per_box || 24) : getQty(r))
+                  }, 0)
+                  return (
+                    <>
+                      <div style={{ overflowX: "auto" }}>
+                        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+                          <thead>
+                            <tr style={{ borderBottom: "1px solid var(--dx-border-strong)" }}>
+                              <Th align="left">SKU</Th>
+                              <Th align="left">ช่อง</Th>
+                              <Th align="right">คงเหลือ/ความจุ</Th>
+                              <Th align="center" style={{ color: "var(--dx-danger)", fontWeight: 700 }}>ต้องเติม</Th>
+                              <Th align="right">สต็อกฉัน</Th>
+                              <Th align="center">สถานะ</Th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {sortedItems.map(r => {
+                              const myBal = myBalMap[r.sku_id] || 0
+                              const sku = skus.find(s => s.sku_id === r.sku_id)
+                              const refillPacks = r.isBox ? r.refill * (sku?.packs_per_box || 24) : r.refill
+                              const enough = myBal >= refillPacks
+                              const unit = r.isBox ? "กล่อง" : "ซอง"
+                              const key = itemKey(r)
+                              const qty = getQty(r)
+                              const disabled = !canRefill || myBal <= 0
+                              const changed = qty !== r.refill
+
+                              return (
+                                <tr key={key} style={{ borderBottom: "1px solid var(--dx-border)" }}>
+                                  <td style={{ padding: "11px 10px" }}>
+                                    <span className="dx-mono" style={{ fontSize: 11, fontWeight: 600, color: "var(--dx-text)" }}>{r.sku_id}</span>
+                                  </td>
+                                  <td style={{ padding: "11px 10px", fontSize: 11, color: "var(--dx-text-muted)" }}>{r.slotNums.join(", ")}</td>
+                                  <td style={{ padding: "11px 10px", textAlign: "right", fontSize: 11, color: "var(--dx-text-secondary)" }} className="dx-mono">
+                                    {r.remain} / {r.capacity}
+                                  </td>
+                                  <td style={{ padding: "11px 10px" }}>
+                                    {canRefill ? (
+                                      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 4 }}>
+                                        <QtyBtn onClick={() => setQty(r, qty - 1)} disabled={disabled || qty <= 0} variant="minus"/>
+                                        <input type="number" min={0} max={r.refill} value={qty}
+                                          onChange={e => setQty(r, parseInt(e.target.value) || 0)}
+                                          disabled={disabled}
+                                          style={{
+                                            width: 48, padding: "5px 4px", textAlign: "center",
+                                            fontFamily: "var(--dx-mono)", fontSize: 13, fontWeight: 700,
+                                            background: "var(--dx-bg-input)",
+                                            border: "1px solid var(--dx-border)",
+                                            borderRadius: 8,
+                                            color: qty === 0 ? "var(--dx-text-muted)"
+                                              : qty < r.refill ? "var(--dx-warning)"
+                                              : "var(--dx-danger)",
+                                            outline: "none",
+                                          }}/>
+                                        <QtyBtn onClick={() => setQty(r, qty + 1)} disabled={disabled || qty >= r.refill} variant="plus"/>
+                                        <span style={{ fontSize: 10, color: "var(--dx-text-muted)", marginLeft: 2 }}>{unit}</span>
+                                        {changed && !disabled && (
+                                          <button type="button" onClick={() => setQty(r, r.refill)}
+                                            title={`คืนค่าเดิม (${r.refill})`}
+                                            style={{
+                                              marginLeft: 4, width: 26, height: 26, padding: 0,
+                                              borderRadius: 8, cursor: "pointer",
+                                              background: "rgba(0,212,255,0.08)",
+                                              border: "1px solid rgba(0,212,255,0.25)",
+                                              color: "var(--dx-cyan-soft)",
+                                              display: "flex", alignItems: "center", justifyContent: "center",
+                                            }}>
+                                            <RefreshCw size={11}/>
+                                          </button>
+                                        )}
+                                      </div>
+                                    ) : (
+                                      <div style={{ textAlign: "right", fontSize: 13, fontWeight: 700, color: "var(--dx-danger)" }}>
+                                        {fmt(r.refill)} {unit}
+                                      </div>
+                                    )}
+                                    {canRefill && myBal <= 0 && (
+                                      <div style={{ textAlign: "center", fontSize: 10, color: "var(--dx-warning)", marginTop: 3 }}>
+                                        ไม่มีสต็อก
+                                      </div>
+                                    )}
+                                  </td>
+                                  <td style={{ padding: "11px 10px", textAlign: "right" }}>
+                                    <span className="dx-mono" style={{ fontSize: 12, fontWeight: 700, color: enough ? "var(--dx-success)" : "var(--dx-warning)" }}>
+                                      {fmt(myBal)}
+                                    </span>
+                                  </td>
+                                  <td style={{ padding: "11px 10px", textAlign: "center" }}>
+                                    <StatusPill enough={enough}/>
+                                  </td>
+                                </tr>
+                              )
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+
+                      {canRefill && (
+                        <div style={{
+                          marginTop: 14, padding: 16,
+                          background: "linear-gradient(180deg, rgba(0,212,255,0.08) 0%, rgba(0,212,255,0.02) 100%)",
+                          border: "1px solid var(--dx-border-glow)",
+                          borderRadius: 12,
+                          boxShadow: "0 0 20px -8px var(--dx-glow)",
+                          display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: 12,
+                        }}>
+                          <div>
+                            <div style={{ fontSize: 10, color: "var(--dx-text-muted)", letterSpacing: 0.5, textTransform: "uppercase" }}>
+                              สรุปเบิก → <b style={{ color: "var(--dx-text)" }}>{activeMachine?.name}</b>
+                            </div>
+                            <div className="dx-mono" style={{ fontSize: 14, fontWeight: 700, color: "var(--dx-cyan-bright)", marginTop: 2 }}>
+                              {picks.length === 0
+                                ? <span style={{ color: "var(--dx-text-muted)", fontWeight: 400 }}>ยังไม่ได้เลือกจำนวน</span>
+                                : <>{picks.length} SKU · รวม <span style={{ color: "var(--dx-cyan)" }}>{fmt(totalPacks)}</span> ซอง</>}
+                            </div>
+                            {skipped > 0 && (
+                              <div style={{ fontSize: 11, color: "var(--dx-warning)", marginTop: 2 }}>
+                                ข้าม {skipped} SKU (ไม่มีสต็อก)
+                              </div>
+                            )}
+                          </div>
+                          <div style={{ display: "flex", gap: 8 }}>
+                            <button onClick={() => {
+                              const q = {}
+                              sortedItems.forEach(r => { q[itemKey(r)] = r.refill })
+                              setQtyMap(q)
+                            }} disabled={submitting} className="dx-btn dx-btn-ghost">
+                              <RefreshCw size={12}/>รีเซ็ตยอด
+                            </button>
+                            <button onClick={() => handleBatchSubmit(sortedItems)}
+                              disabled={submitting || picks.length === 0}
+                              className="dx-btn dx-btn-primary"
+                              style={{ padding: "10px 20px", fontSize: 13, opacity: (submitting || picks.length === 0) ? 0.5 : 1 }}>
+                              {submitting ? <Loader2 size={14} className="animate-spin"/> : <CheckCircle size={14}/>}
+                              {submitting ? "กำลังบันทึก..." : "ยืนยันเบิกทั้งหมด"}
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  )
+                })()}
+              </div>
+            </>
+          )}
         </>
       )}
+    </div>
+  )
+}
+
+// ─────────────────────────────────────────────
+// Helpers
+// ─────────────────────────────────────────────
+function Th({ children, align = "left", style }) {
+  return (
+    <th style={{
+      padding: "10px 10px",
+      textAlign: align,
+      fontSize: 10, fontWeight: 500,
+      letterSpacing: 0.5, textTransform: "uppercase",
+      color: "var(--dx-text-muted)",
+      ...style,
+    }}>
+      {children}
+    </th>
+  )
+}
+
+function StatusPill({ enough }) {
+  const c = enough
+    ? { bg: "rgba(0,255,136,0.1)", text: "var(--dx-success)", border: "rgba(0,255,136,0.25)", label: "พร้อม" }
+    : { bg: "rgba(255,200,87,0.1)", text: "var(--dx-warning)", border: "rgba(255,200,87,0.25)", label: "ไม่พอ" }
+  return (
+    <span style={{
+      fontSize: 10, fontWeight: 600,
+      padding: "2px 8px", borderRadius: 999,
+      background: c.bg, color: c.text, border: `1px solid ${c.border}`,
+    }}>{c.label}</span>
+  )
+}
+
+function QtyBtn({ onClick, disabled, variant }) {
+  const isPlus = variant === "plus"
+  return (
+    <button type="button" onClick={onClick} disabled={disabled}
+      title={isPlus ? "เพิ่ม" : "ลด"}
+      style={{
+        width: 28, height: 28, padding: 0, borderRadius: 8,
+        border: "1px solid var(--dx-border)",
+        background: "var(--dx-bg-elevated)",
+        color: "var(--dx-text-secondary)",
+        fontSize: 16, fontWeight: 700, lineHeight: 1,
+        cursor: disabled ? "not-allowed" : "pointer",
+        opacity: disabled ? 0.4 : 1,
+        display: "flex", alignItems: "center", justifyContent: "center",
+        transition: "all .15s",
+      }}
+      onMouseEnter={e => {
+        if (disabled) return
+        e.currentTarget.style.borderColor = isPlus ? "rgba(0,255,136,0.5)" : "rgba(255,68,102,0.5)"
+        e.currentTarget.style.color = isPlus ? "var(--dx-success)" : "var(--dx-danger)"
+      }}
+      onMouseLeave={e => {
+        if (disabled) return
+        e.currentTarget.style.borderColor = "var(--dx-border)"
+        e.currentTarget.style.color = "var(--dx-text-secondary)"
+      }}>
+      {isPlus ? "+" : "−"}
+    </button>
+  )
+}
+
+function EmptyBanner({ icon, text }) {
+  return (
+    <div className="dx-card" style={{
+      padding: 32, textAlign: "center",
+      borderColor: "rgba(255,200,87,0.25)",
+      background: "linear-gradient(180deg, rgba(255,200,87,0.04) 0%, transparent 100%), var(--dx-bg-card)",
+    }}>
+      <div style={{ color: "var(--dx-warning)", marginBottom: 10, display: "flex", justifyContent: "center" }}>
+        {icon}
+      </div>
+      <p style={{ margin: 0, fontSize: 13, color: "var(--dx-warning)" }}>{text}</p>
+    </div>
+  )
+}
+
+function Toast({ toast }) {
+  const isError = toast.type === "error"
+  return (
+    <div style={{
+      position: "fixed",
+      top: 16, left: 16, right: 16,
+      zIndex: 50,
+      padding: "12px 16px",
+      borderRadius: 12,
+      display: "flex", alignItems: "center", gap: 10,
+      background: "var(--dx-bg-card)",
+      border: `1px solid ${isError ? "rgba(255,68,102,0.35)" : "rgba(0,255,136,0.35)"}`,
+      color: isError ? "var(--dx-danger)" : "var(--dx-success)",
+      boxShadow: "0 20px 40px -10px rgba(0,0,0,0.5)",
+      fontSize: 13,
+      ...(typeof window !== "undefined" && window.innerWidth >= 640
+        ? { left: "auto", right: 16, maxWidth: 360 }
+        : {}),
+    }}>
+      {isError ? <X size={16}/> : <CheckCircle size={16}/>}
+      <span>{toast.msg}</span>
     </div>
   )
 }
