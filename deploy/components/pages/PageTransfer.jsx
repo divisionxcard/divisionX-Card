@@ -1,25 +1,26 @@
+// PageTransfer — Dark Theme
 import { useState } from "react"
-import { X, CheckCircle, Send, Trash2 } from "lucide-react"
+import { X, CheckCircle, Send, Trash2, Loader2 } from "lucide-react"
 import { fmt, sortSkus } from "../shared/helpers"
+import { SectionTitle } from "../shared/dx-components"
 
 export default function PageTransfer({ stockIn, stockOut, stockBalance, skus, transfers, profiles, onAddTransfer, onDeleteTransfer }) {
-  const nowDate = () => new Date().toISOString().slice(0,10)
-  const nowTime = () => new Date().toTimeString().slice(0,5)
-  const [form, setForm] = useState({ sku_id:"", lot_number:"", to_user_id:"", unit:"box", quantity:"1", note:"", date: nowDate(), time: nowTime() })
+  const nowDate = () => new Date().toISOString().slice(0, 10)
+  const nowTime = () => new Date().toTimeString().slice(0, 5)
+  const [form, setForm] = useState({ sku_id: "", lot_number: "", to_user_id: "", unit: "box", quantity: "1", note: "", date: nowDate(), time: nowTime() })
   const [toast, setToast] = useState(null)
   const [saving, setSaving] = useState(false)
   const [deleteId, setDeleteId] = useState(null)
   const [historyFilter, setHistoryFilter] = useState("all")
   const [historyDateFrom, setHistoryDateFrom] = useState(nowDate())
-  const [historyDateTo,   setHistoryDateTo]   = useState(nowDate())
+  const [historyDateTo, setHistoryDateTo] = useState(nowDate())
 
-  const showToast = (msg, type="success") => { setToast({msg,type}); setTimeout(() => setToast(null), 3500) }
+  const showToast = (msg, type = "success") => { setToast({ msg, type }); setTimeout(() => setToast(null), 3500) }
 
-  // สต็อกหลัก = stock_in - transfers ออก (ไม่นับ stock_out เก่าที่ยังไม่มี withdrawn_by_user_id)
+  // สต็อกหลัก = stock_in - transfers ออก - stock_out(เก่า)
   const mainBalMap = {}
   stockIn.forEach(r => { mainBalMap[r.sku_id] = (mainBalMap[r.sku_id] || 0) + (r.quantity_packs || 0) })
   transfers.forEach(r => { mainBalMap[r.sku_id] = (mainBalMap[r.sku_id] || 0) - (r.quantity_packs || 0) })
-  // หักข้อมูลเก่า (stock_out ที่ไม่มี withdrawn_by_user_id = เบิกจากสต็อกหลักโดยตรง)
   stockOut.filter(r => !r.withdrawn_by_user_id).forEach(r => { mainBalMap[r.sku_id] = (mainBalMap[r.sku_id] || 0) - (r.quantity_packs || 0) })
 
   const available = mainBalMap[form.sku_id] || 0
@@ -34,9 +35,8 @@ export default function PageTransfer({ stockIn, stockOut, stockBalance, skus, tr
       lotMap[r.lot_number].quantity_packs += r.quantity_packs || 0
     })
     const lotsArr = Object.values(lotMap).sort((a, b) => new Date(a.purchased_at) - new Date(b.purchased_at))
-    // FIFO: หักทั้ง transfers + stock_out(เก่า) ออก
-    const totalUsed = (transfers.filter(t => t.sku_id === form.sku_id).reduce((a, t) => a + (t.quantity_packs || 0), 0))
-      + (stockOut.filter(so => so.sku_id === form.sku_id && !so.withdrawn_by_user_id).reduce((a, so) => a + (so.quantity_packs || 0), 0))
+    const totalUsed = transfers.filter(t => t.sku_id === form.sku_id).reduce((a, t) => a + (t.quantity_packs || 0), 0)
+      + stockOut.filter(so => so.sku_id === form.sku_id && !so.withdrawn_by_user_id).reduce((a, so) => a + (so.quantity_packs || 0), 0)
     let remainOut = totalUsed
     return lotsArr.map(r => {
       const used = Math.min(r.quantity_packs || 0, remainOut)
@@ -56,12 +56,12 @@ export default function PageTransfer({ stockIn, stockOut, stockBalance, skus, tr
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    if (!form.sku_id) { showToast("กรุณาเลือกสินค้า","error"); return }
-    if (!form.to_user_id) { showToast("กรุณาเลือกแอดมินปลายทาง","error"); return }
-    if (!withdrawQty || withdrawQty <= 0) { showToast("กรุณาระบุจำนวน","error"); return }
+    if (!form.sku_id) { showToast("กรุณาเลือกสินค้า", "error"); return }
+    if (!form.to_user_id) { showToast("กรุณาเลือกแอดมินปลายทาง", "error"); return }
+    if (!withdrawQty || withdrawQty <= 0) { showToast("กรุณาระบุจำนวน", "error"); return }
     if (overStock) { showToast(`สต็อกหลักไม่เพียงพอ: คงเหลือ ${fmt(available)} ซอง`, "error"); return }
     if (overLot) { showToast(`เกินสต็อก Lot: คงเหลือ ${fmt(selectedLot.lotBalance)} ซอง`, "error"); return }
-    if (availableLots.length > 0 && !form.lot_number) { showToast("กรุณาเลือก Lot","error"); return }
+    if (availableLots.length > 0 && !form.lot_number) { showToast("กรุณาเลือก Lot", "error"); return }
     try {
       setSaving(true)
       const toAdmin = adminProfiles.find(p => p.id === form.to_user_id)
@@ -74,81 +74,108 @@ export default function PageTransfer({ stockIn, stockOut, stockBalance, skus, tr
         quantity_packs: withdrawPacks,
         transferred_at: `${form.date}T${form.time}:00`,
         note: form.note
-          ? `[${form.unit === "box" ? withdrawQty+"กล่อง" : withdrawQty+"ซอง"}] ${form.note}`
-          : `[${form.unit === "box" ? withdrawQty+"กล่อง" : withdrawQty+"ซอง"}]`,
+          ? `[${form.unit === "box" ? withdrawQty + "กล่อง" : withdrawQty + "ซอง"}] ${form.note}`
+          : `[${form.unit === "box" ? withdrawQty + "กล่อง" : withdrawQty + "ซอง"}]`,
       })
       showToast(`แจกจ่ายสำเร็จ: ${form.sku_id} → ${toAdmin?.display_name || "?"} ${fmt(withdrawPacks)} ซอง`)
-      setForm(f => ({...f, sku_id:"", lot_number:"", quantity:"1", note:""}))
+      setForm(f => ({ ...f, sku_id: "", lot_number: "", quantity: "1", note: "" }))
     } catch (err) { showToast("เกิดข้อผิดพลาด: " + err.message, "error") }
     finally { setSaving(false) }
   }
 
-  // ประวัติการแจกจ่าย (กรองวัน)
   const filteredTransfers = transfers.filter(t => {
-    const d = (t.transferred_at || t.created_at || "").slice(0,10)
+    const d = (t.transferred_at || t.created_at || "").slice(0, 10)
     if (historyFilter === "date") return d >= historyDateFrom && d <= historyDateTo
     return true
-  }).sort((a,b) => (b.transferred_at||"").localeCompare(a.transferred_at||""))
+  }).sort((a, b) => (b.transferred_at || "").localeCompare(a.transferred_at || ""))
+
+  const labelStyle = { fontSize: 10, fontWeight: 500, letterSpacing: 0.4, textTransform: "uppercase", color: "var(--dx-text-muted)", marginBottom: 6, display: "block" }
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-gray-800">แจกจ่ายสินค้า</h1>
-      <p className="text-sm text-gray-400">เบิกจากสต็อกหลัก แจกจ่ายให้แอดมินแต่ละคนเพื่อนำไปเติมตู้</p>
+    <div style={{ padding: 24, display: "flex", flexDirection: "column", gap: 20 }}>
+      {toast && <Toast toast={toast}/>}
 
-      {toast && (
-        <div className={`fixed top-4 left-4 right-4 sm:left-auto sm:right-4 sm:max-w-sm z-50 px-4 py-3 rounded-xl shadow-lg text-white text-sm flex items-center gap-2 ${toast.type==="error"?"bg-red-500":"bg-green-500"}`}>
-          {toast.type==="error"?<X size={16}/>:<CheckCircle size={16}/>} {toast.msg}
-        </div>
-      )}
+      <SectionTitle
+        pill="Distribute · Admin Only"
+        title="แจกจ่ายสินค้า"
+        subtitle="เบิกจากสต็อกหลัก แจกจ่ายให้แอดมินแต่ละคนเพื่อนำไปเติมตู้"
+      />
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* ฟอร์มแจกจ่าย */}
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-          <h2 className="font-semibold text-gray-700 mb-1">บันทึกการแจกจ่าย</h2>
-          <p className="text-xs text-gray-400 mb-4">เลือกสินค้าจากสต็อกหลัก แจกจ่ายให้แอดมินที่รับผิดชอบ</p>
-          <form onSubmit={handleSubmit} className="space-y-4">
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(420px, 1fr))", gap: 18 }}>
+        {/* Form */}
+        <div className="dx-card" style={{ padding: 20 }}>
+          <h2 style={{ margin: "0 0 4px", fontSize: 13, fontWeight: 600, color: "var(--dx-text)" }}>
+            บันทึกการแจกจ่าย
+          </h2>
+          <p style={{ margin: "0 0 16px", fontSize: 11, color: "var(--dx-text-muted)" }}>
+            เลือกสินค้าจากสต็อกหลัก แจกจ่ายให้แอดมินที่รับผิดชอบ
+          </p>
 
-            {/* SKU */}
+          <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
             <div>
-              <label className="block text-xs text-gray-500 mb-1">สินค้า (SKU)</label>
-              <select value={form.sku_id} onChange={e => setForm({...form, sku_id:e.target.value, lot_number:""})}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200">
+              <label style={labelStyle}>สินค้า (SKU)</label>
+              <select value={form.sku_id} onChange={e => setForm({ ...form, sku_id: e.target.value, lot_number: "" })} className="dx-input">
                 <option value="" disabled>-- เลือกสินค้า --</option>
                 {sortSkus(skus).map(s => <option key={s.sku_id} value={s.sku_id}>{s.sku_id} -- {s.name}</option>)}
               </select>
             </div>
 
-            {/* Lot selection */}
             {skuLots.length > 0 && (
               <div>
-                <label className="block text-xs text-gray-500 mb-2">
-                  เลือก Lot <span className="text-red-400">*</span>
-                  <span className="ml-1 text-gray-400">({availableLots.length}/{skuLots.length} Lot มีสต็อก)</span>
+                <label style={labelStyle}>
+                  เลือก Lot <span style={{ color: "var(--dx-danger)" }}>*</span>
+                  <span style={{ marginLeft: 6, textTransform: "none", letterSpacing: 0, fontSize: 10, opacity: 0.7 }}>
+                    ({availableLots.length}/{skuLots.length} Lot มีสต็อก)
+                  </span>
                 </label>
-                <div className="space-y-2 max-h-48 overflow-y-auto">
+                <div style={{ display: "flex", flexDirection: "column", gap: 8, maxHeight: 192, overflowY: "auto" }}>
                   {skuLots.map(lot => {
                     const isSelected = form.lot_number === lot.lot_number
                     const depleted = lot.lotBalance <= 0
                     return (
                       <button type="button" key={lot.lot_number} disabled={depleted}
-                        onClick={() => setForm({...form, lot_number: isSelected ? "" : lot.lot_number})}
-                        className={`w-full p-3 rounded-xl border-2 text-left transition-all disabled:opacity-40 disabled:cursor-not-allowed
-                          ${isSelected ? "border-blue-400 bg-blue-50" : depleted ? "border-gray-200 bg-gray-50" : "border-gray-200 hover:border-blue-300"}`}>
-                        <div className="flex items-center justify-between gap-2">
-                          <span className={`font-mono text-xs font-bold px-1.5 py-0.5 rounded ${isSelected ? "bg-blue-100 text-blue-700" : "bg-gray-100 text-gray-700"}`}>
+                        onClick={() => setForm({ ...form, lot_number: isSelected ? "" : lot.lot_number })}
+                        style={{
+                          width: "100%", padding: 12, borderRadius: 12, textAlign: "left",
+                          cursor: depleted ? "not-allowed" : "pointer", fontFamily: "inherit",
+                          background: isSelected
+                            ? "linear-gradient(180deg, rgba(0,212,255,0.12) 0%, rgba(0,212,255,0.04) 100%)"
+                            : "var(--dx-bg-input)",
+                          border: `1px solid ${isSelected ? "var(--dx-cyan)" : "var(--dx-border)"}`,
+                          boxShadow: isSelected ? "0 0 0 3px rgba(0,212,255,0.1)" : "none",
+                          opacity: depleted ? 0.4 : 1,
+                          transition: "all .15s",
+                        }}>
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+                          <span className="dx-mono" style={{
+                            fontSize: 11, fontWeight: 700, padding: "2px 6px", borderRadius: 4,
+                            background: isSelected ? "rgba(0,212,255,0.15)" : "rgba(0,212,255,0.08)",
+                            color: isSelected ? "var(--dx-cyan-bright)" : "var(--dx-cyan-soft)",
+                          }}>
                             {lot.lot_number}
                           </span>
-                          <span className={`text-sm font-bold ${depleted ? "text-gray-400" : "text-green-600"}`}>
+                          <span className="dx-mono" style={{
+                            fontSize: 13, fontWeight: 700,
+                            color: depleted ? "var(--dx-text-muted)" : "var(--dx-success)",
+                          }}>
                             {fmt(lot.lotBalance)} ซอง
                           </span>
                         </div>
                         {lot.quantity_packs > 0 && (
-                          <div className="mt-1.5 flex items-center gap-2">
-                            <div className="flex-1 bg-gray-200 rounded-full h-1">
-                              <div className={`h-1 rounded-full ${isSelected?"bg-blue-400":"bg-green-400"}`}
-                                style={{width:`${Math.max(0,(lot.lotBalance/lot.quantity_packs)*100)}%`}}/>
+                          <div style={{ marginTop: 6, display: "flex", alignItems: "center", gap: 8 }}>
+                            <div style={{ flex: 1, height: 3, background: "var(--dx-bg-page)", borderRadius: 2, overflow: "hidden" }}>
+                              <div style={{
+                                height: "100%",
+                                width: `${Math.max(0, (lot.lotBalance / lot.quantity_packs) * 100)}%`,
+                                background: isSelected
+                                  ? "linear-gradient(90deg, var(--dx-cyan), var(--dx-cyan-bright))"
+                                  : "var(--dx-success)",
+                                boxShadow: isSelected ? "0 0 6px var(--dx-glow)" : "none",
+                              }}/>
                             </div>
-                            <span className="text-xs text-gray-400">{fmt(lot.lotBalance)}/{fmt(lot.quantity_packs)}</span>
+                            <span className="dx-mono" style={{ fontSize: 9, color: "var(--dx-text-muted)" }}>
+                              {fmt(lot.lotBalance)}/{fmt(lot.quantity_packs)}
+                            </span>
                           </div>
                         )}
                       </button>
@@ -158,19 +185,26 @@ export default function PageTransfer({ stockIn, stockOut, stockBalance, skus, tr
               </div>
             )}
 
-            {/* สต็อกคงเหลือ */}
             {form.sku_id && (
-              <div className={`p-3 rounded-xl text-sm ${available < 24 ? "bg-amber-50" : "bg-green-50"}`}>
-                <p className={`text-xs ${available < 24 ? "text-amber-500" : "text-green-500"}`}>สต็อกหลักคงเหลือ</p>
-                <p className={`text-lg font-bold ${available < 24 ? "text-amber-700" : "text-green-700"}`}>{fmt(available)} ซอง</p>
+              <div style={{
+                padding: 12, borderRadius: 10,
+                background: available < 24
+                  ? "linear-gradient(180deg, rgba(255,200,87,0.08) 0%, transparent 100%)"
+                  : "linear-gradient(180deg, rgba(0,255,136,0.08) 0%, transparent 100%)",
+                border: `1px solid ${available < 24 ? "rgba(255,200,87,0.2)" : "rgba(0,255,136,0.2)"}`,
+              }}>
+                <p style={{ margin: 0, fontSize: 10, color: available < 24 ? "var(--dx-warning)" : "var(--dx-success)", letterSpacing: 0.4, textTransform: "uppercase" }}>
+                  สต็อกหลักคงเหลือ
+                </p>
+                <p className="dx-mono" style={{ margin: "2px 0 0", fontSize: 18, fontWeight: 700, color: available < 24 ? "var(--dx-warning)" : "var(--dx-success)" }}>
+                  {fmt(available)} <span style={{ fontSize: 11, fontWeight: 500, color: "var(--dx-text-muted)" }}>ซอง</span>
+                </p>
               </div>
             )}
 
-            {/* แอดมินปลายทาง */}
             <div>
-              <label className="block text-xs text-gray-500 mb-1">แจกจ่ายให้</label>
-              <select value={form.to_user_id} onChange={e => setForm({...form, to_user_id:e.target.value})}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200">
+              <label style={labelStyle}>แจกจ่ายให้</label>
+              <select value={form.to_user_id} onChange={e => setForm({ ...form, to_user_id: e.target.value })} className="dx-input">
                 <option value="" disabled>-- เลือกแอดมิน --</option>
                 {adminProfiles.map(p => (
                   <option key={p.id} value={p.id}>{p.display_name || p.email}</option>
@@ -178,68 +212,86 @@ export default function PageTransfer({ stockIn, stockOut, stockBalance, skus, tr
               </select>
             </div>
 
-            {/* หน่วย + จำนวน */}
-            <div className="grid grid-cols-2 gap-3">
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
               <div>
-                <label className="block text-xs text-gray-500 mb-1">หน่วย</label>
-                <div className="flex gap-1 bg-gray-100 p-1 rounded-xl">
-                  {[{v:"box",l:"กล่อง"},{v:"pack",l:"ซอง"}].map(u => (
-                    <button key={u.v} type="button" onClick={() => setForm({...form, unit:u.v})}
-                      className={`flex-1 py-1.5 rounded-lg text-xs font-medium transition-all ${form.unit===u.v?"bg-white shadow text-blue-600":"text-gray-500"}`}>
-                      {u.l}
-                    </button>
-                  ))}
+                <label style={labelStyle}>หน่วย</label>
+                <div style={{ display: "flex", gap: 4, padding: 4, background: "var(--dx-bg-input)", borderRadius: 10, border: "1px solid var(--dx-border)" }}>
+                  {[{ v: "box", l: "กล่อง" }, { v: "pack", l: "ซอง" }].map(u => {
+                    const isActive = form.unit === u.v
+                    return (
+                      <button key={u.v} type="button" onClick={() => setForm({ ...form, unit: u.v })}
+                        style={{
+                          flex: 1, padding: "6px", borderRadius: 6,
+                          fontSize: 11, fontWeight: 600, border: "none", cursor: "pointer",
+                          fontFamily: "inherit",
+                          background: isActive ? "rgba(0,212,255,0.15)" : "transparent",
+                          color: isActive ? "var(--dx-cyan-bright)" : "var(--dx-text-muted)",
+                          transition: "all .15s",
+                        }}>
+                        {u.l}
+                      </button>
+                    )
+                  })}
                 </div>
               </div>
               <div>
-                <label className="block text-xs text-gray-500 mb-1">จำนวน</label>
-                <input type="number" min="1" value={form.quantity} onChange={e => setForm({...form, quantity:e.target.value})}
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"/>
+                <label style={labelStyle}>จำนวน</label>
+                <input type="number" min="1" value={form.quantity} onChange={e => setForm({ ...form, quantity: e.target.value })}
+                  className="dx-input dx-mono" style={{ fontWeight: 700 }}/>
               </div>
             </div>
 
             {withdrawPacks > 0 && (
-              <p className={`text-xs ${overStock || overLot ? "text-red-500 font-semibold" : "text-gray-400"}`}>
+              <p className="dx-mono" style={{
+                margin: 0, fontSize: 11,
+                color: (overStock || overLot) ? "var(--dx-danger)" : "var(--dx-text-muted)",
+                fontWeight: (overStock || overLot) ? 600 : 400,
+              }}>
                 = {fmt(withdrawPacks)} ซอง {overStock ? "(เกินสต็อกหลัก!)" : overLot ? "(เกินสต็อก Lot!)" : ""}
               </p>
             )}
 
-            {/* วัน/เวลา */}
-            <div className="grid grid-cols-2 gap-3">
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
               <div>
-                <label className="block text-xs text-gray-500 mb-1">วันที่</label>
-                <input type="date" value={form.date} onChange={e => setForm({...form, date:e.target.value})}
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"/>
+                <label style={labelStyle}>วันที่</label>
+                <input type="date" value={form.date} onChange={e => setForm({ ...form, date: e.target.value })} className="dx-input"/>
               </div>
               <div>
-                <label className="block text-xs text-gray-500 mb-1">เวลา</label>
-                <input type="time" value={form.time} onChange={e => setForm({...form, time:e.target.value})}
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"/>
+                <label style={labelStyle}>เวลา</label>
+                <input type="time" value={form.time} onChange={e => setForm({ ...form, time: e.target.value })} className="dx-input"/>
               </div>
             </div>
 
-            {/* หมายเหตุ */}
             <div>
-              <label className="block text-xs text-gray-500 mb-1">หมายเหตุ</label>
-              <input type="text" value={form.note} onChange={e => setForm({...form, note:e.target.value})}
-                placeholder="ไม่บังคับ" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"/>
+              <label style={labelStyle}>หมายเหตุ</label>
+              <input value={form.note} onChange={e => setForm({ ...form, note: e.target.value })}
+                placeholder="ไม่บังคับ" className="dx-input"/>
             </div>
 
-            <button type="submit" disabled={saving}
-              className="w-full py-2.5 rounded-xl bg-blue-600 text-white font-semibold text-sm hover:bg-blue-700 disabled:opacity-50 flex items-center justify-center gap-2">
-              <Send size={16}/> {saving ? "กำลังบันทึก..." : "แจกจ่ายสินค้า"}
+            <button type="submit" disabled={saving || overStock || overLot}
+              className="dx-btn dx-btn-primary"
+              style={{
+                width: "100%", padding: 12, fontSize: 13, justifyContent: "center",
+                opacity: (saving || overStock || overLot) ? 0.5 : 1,
+                cursor: (saving || overStock || overLot) ? "not-allowed" : "pointer",
+              }}>
+              {saving ? <Loader2 size={15} className="animate-spin"/> : <Send size={15}/>}
+              {saving ? "กำลังบันทึก..." : "แจกจ่ายสินค้า"}
             </button>
           </form>
         </div>
 
-        {/* ประวัติแจกจ่าย */}
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="font-semibold text-gray-700">ประวัติแจกจ่าย ({filteredTransfers.length})</h2>
-            <div className="flex gap-1 bg-gray-100 p-1 rounded-xl">
-              {[{v:"all",l:"ทั้งหมด"},{v:"date",l:"เลือกวัน"}].map(f => (
+        {/* History */}
+        <div className="dx-card" style={{ padding: 20 }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14, gap: 8, flexWrap: "wrap" }}>
+            <h2 style={{ margin: 0, fontSize: 13, fontWeight: 600, color: "var(--dx-text)" }}>
+              ประวัติแจกจ่าย ({filteredTransfers.length})
+            </h2>
+            <div style={{ display: "flex", gap: 4 }}>
+              {[{ v: "all", l: "ทั้งหมด" }, { v: "date", l: "เลือกวัน" }].map(f => (
                 <button key={f.v} onClick={() => setHistoryFilter(f.v)}
-                  className={`px-3 py-1 rounded-lg text-xs font-medium ${historyFilter===f.v?"bg-white shadow text-blue-600":"text-gray-500"}`}>
+                  className={`dx-chip ${historyFilter === f.v ? "dx-chip-active" : ""}`}
+                  style={{ padding: "5px 10px", fontSize: 11 }}>
                   {f.l}
                 </button>
               ))}
@@ -247,48 +299,87 @@ export default function PageTransfer({ stockIn, stockOut, stockBalance, skus, tr
           </div>
 
           {historyFilter === "date" && (
-            <div className="flex gap-2 mb-3">
+            <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
               <input type="date" value={historyDateFrom} onChange={e => setHistoryDateFrom(e.target.value)}
-                className="flex-1 border border-gray-200 rounded-lg px-2 py-1.5 text-xs"/>
-              <span className="text-xs text-gray-400 self-center">ถึง</span>
+                className="dx-input" style={{ flex: 1, padding: "6px 10px", fontSize: 11 }}/>
+              <span style={{ fontSize: 10, color: "var(--dx-text-muted)", alignSelf: "center" }}>ถึง</span>
               <input type="date" value={historyDateTo} onChange={e => setHistoryDateTo(e.target.value)}
-                className="flex-1 border border-gray-200 rounded-lg px-2 py-1.5 text-xs"/>
+                className="dx-input" style={{ flex: 1, padding: "6px 10px", fontSize: 11 }}/>
             </div>
           )}
 
           {filteredTransfers.length === 0 ? (
-            <p className="text-sm text-gray-400 text-center py-10">ยังไม่มีประวัติแจกจ่าย</p>
+            <p style={{ textAlign: "center", color: "var(--dx-text-muted)", padding: "40px 0", fontSize: 13 }}>
+              ยังไม่มีประวัติแจกจ่าย
+            </p>
           ) : (
-            <div className="space-y-2 max-h-[600px] overflow-y-auto">
+            <div style={{ display: "flex", flexDirection: "column", gap: 8, maxHeight: 600, overflowY: "auto" }}>
               {filteredTransfers.map(t => {
                 const toAdmin = profiles.find(p => p.id === t.to_user_id)
                 return (
-                  <div key={t.id} className="p-3 rounded-xl border border-gray-100 hover:bg-gray-50">
-                    <div className="flex items-center justify-between gap-2">
+                  <div key={t.id} style={{
+                    padding: 12, borderRadius: 10,
+                    background: "var(--dx-bg-input)",
+                    border: "1px solid var(--dx-border)",
+                  }}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
                       <div>
-                        <span className="font-mono text-xs font-bold text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded">{t.sku_id}</span>
-                        {t.lot_number && <span className="text-xs text-gray-400 ml-2">{t.lot_number}</span>}
+                        <span className="dx-mono" style={{
+                          fontSize: 11, fontWeight: 700, padding: "2px 6px", borderRadius: 4,
+                          background: "rgba(0,212,255,0.08)", color: "var(--dx-cyan-soft)",
+                          border: "1px solid rgba(0,212,255,0.15)",
+                        }}>{t.sku_id}</span>
+                        {t.lot_number && (
+                          <span className="dx-mono" style={{ fontSize: 10, color: "var(--dx-text-muted)", marginLeft: 8 }}>
+                            {t.lot_number}
+                          </span>
+                        )}
                       </div>
-                      <div className="text-right">
-                        <span className="text-sm font-bold text-gray-700">{fmt(t.quantity_packs)} ซอง</span>
-                      </div>
+                      <span className="dx-mono" style={{ fontSize: 13, fontWeight: 700, color: "var(--dx-text)" }}>
+                        {fmt(t.quantity_packs)} ซอง
+                      </span>
                     </div>
-                    <div className="flex items-center justify-between mt-1">
-                      <span className="text-xs text-gray-500">
-                        → <span className="font-semibold text-purple-600">{toAdmin?.display_name || "?"}</span>
-                        <span className="ml-2 text-gray-400">{(t.transferred_at || t.created_at || "").slice(0,10)}</span>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 6 }}>
+                      <span style={{ fontSize: 11, color: "var(--dx-text-muted)" }}>
+                        → <span style={{ fontWeight: 600, color: "#B794F6" }}>{toAdmin?.display_name || "?"}</span>
+                        <span className="dx-mono" style={{ marginLeft: 8, color: "var(--dx-text-muted)" }}>
+                          {(t.transferred_at || t.created_at || "").slice(0, 10)}
+                        </span>
                       </span>
                       {deleteId === t.id ? (
-                        <div className="flex gap-1">
-                          <button onClick={async () => { await onDeleteTransfer(t.id); setDeleteId(null); showToast("ลบสำเร็จ") }}
-                            className="text-xs text-red-600 font-medium">ลบ</button>
-                          <button onClick={() => setDeleteId(null)} className="text-xs text-gray-400">ยกเลิก</button>
+                        <div style={{ display: "flex", gap: 6 }}>
+                          <button onClick={async () => {
+                            try { await onDeleteTransfer(t.id); setDeleteId(null); showToast("ลบสำเร็จ") }
+                            catch (err) { showToast("ลบไม่สำเร็จ: " + err.message, "error") }
+                          }}
+                            style={{
+                              fontSize: 11, fontWeight: 600, color: "var(--dx-danger)",
+                              background: "transparent", border: "none", cursor: "pointer",
+                            }}>ลบ</button>
+                          <button onClick={() => setDeleteId(null)}
+                            style={{
+                              fontSize: 11, color: "var(--dx-text-muted)",
+                              background: "transparent", border: "none", cursor: "pointer",
+                            }}>ยกเลิก</button>
                         </div>
                       ) : (
-                        <button onClick={() => setDeleteId(t.id)} className="text-gray-300 hover:text-red-400"><Trash2 size={14}/></button>
+                        <button onClick={() => setDeleteId(t.id)} title="ลบ"
+                          style={{
+                            padding: 4, borderRadius: 4, border: "none", cursor: "pointer",
+                            background: "transparent", color: "var(--dx-text-muted)",
+                            display: "flex", alignItems: "center", justifyContent: "center",
+                          }}
+                          onMouseEnter={e => e.currentTarget.style.color = "var(--dx-danger)"}
+                          onMouseLeave={e => e.currentTarget.style.color = "var(--dx-text-muted)"}>
+                          <Trash2 size={13}/>
+                        </button>
                       )}
                     </div>
-                    {t.note && <p className="text-xs text-gray-400 mt-1">{t.note}</p>}
+                    {t.note && (
+                      <p style={{ margin: "6px 0 0", fontSize: 10, color: "var(--dx-text-muted)", fontStyle: "italic" }}>
+                        {t.note}
+                      </p>
+                    )}
                   </div>
                 )
               })}
@@ -296,6 +387,31 @@ export default function PageTransfer({ stockIn, stockOut, stockBalance, skus, tr
           )}
         </div>
       </div>
+    </div>
+  )
+}
+
+function Toast({ toast }) {
+  const isError = toast.type === "error"
+  return (
+    <div style={{
+      position: "fixed",
+      top: 16, left: 16, right: 16,
+      zIndex: 50,
+      padding: "12px 16px",
+      borderRadius: 12,
+      display: "flex", alignItems: "center", gap: 10,
+      background: "var(--dx-bg-card)",
+      border: `1px solid ${isError ? "rgba(255,68,102,0.35)" : "rgba(0,255,136,0.35)"}`,
+      color: isError ? "var(--dx-danger)" : "var(--dx-success)",
+      boxShadow: "0 20px 40px -10px rgba(0,0,0,0.5)",
+      fontSize: 13,
+      ...(typeof window !== "undefined" && window.innerWidth >= 640
+        ? { left: "auto", right: 16, maxWidth: 360 }
+        : {}),
+    }}>
+      {isError ? <X size={16}/> : <CheckCircle size={16}/>}
+      <span>{toast.msg}</span>
     </div>
   )
 }
