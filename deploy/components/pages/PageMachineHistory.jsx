@@ -18,9 +18,8 @@ export default function PageMachineHistory({ machine, stockOut, skus, hideHeader
   const [busy, setBusy] = useState(false)
   const [toast, setToast] = useState(null)
 
-  const userId = session?.user?.id
   const isAdmin = profile?.role === "admin"
-  const canEditRecord = (r) => isAdmin || (userId && r.withdrawn_by_user_id === userId)
+  const canEditRecord = () => isAdmin
   const showToast = (msg, type = "success") => { setToast({ msg, type }); setTimeout(() => setToast(null), 3000) }
 
   const handleDelete = async (id) => {
@@ -99,7 +98,7 @@ export default function PageMachineHistory({ machine, stockOut, skus, hideHeader
             style={{ width: "auto", minWidth: 120, padding: "9px 12px" }}>
             <option value="">ทุก SKU</option>
             {skus.filter(s => s.is_active !== false).sort((a, b) => {
-              const order = { OP: 1, EB: 2, PRB: 3 }
+              const order = { OP: 1, PRB: 2, EB: 3 }
               return (order[a.series] || 9) - (order[b.series] || 9) || a.sku_id.localeCompare(b.sku_id)
             }).map(s => <option key={s.sku_id} value={s.sku_id}>{s.sku_id}</option>)}
           </select>

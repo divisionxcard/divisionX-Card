@@ -12,6 +12,7 @@ export default function PageWithdrawal({ machines, stockOut, stockIn, stockBalan
   const [saving, setSaving] = useState(false)
 
   const userId = session?.user?.id
+  const isAdmin = profile?.role === "admin"
   const myAssignments = (machineAssignments || []).filter(a => a.user_id === userId && a.is_active)
   const hasAssignment = myAssignments.length > 0
   const myMachines = hasAssignment ? machines.filter(m => myAssignments.some(a => a.machine_id === m.machine_id)) : machines
@@ -414,7 +415,7 @@ export default function PageWithdrawal({ machines, stockOut, stockIn, stockBalan
                 className="dx-input" style={{ width: "auto", padding: "6px 10px", fontSize: 11 }}>
                 <option value="">ทุก SKU</option>
                 {skus.filter(s => s.is_active !== false).sort((a, b) => {
-                  const order = { OP: 1, EB: 2, PRB: 3 }
+                  const order = { OP: 1, PRB: 2, EB: 3 }
                   return (order[a.series] || 9) - (order[b.series] || 9) || a.sku_id.localeCompare(b.sku_id)
                 }).map(s => <option key={s.sku_id} value={s.sku_id}>{s.sku_id}</option>)}
               </select>
@@ -518,16 +519,18 @@ export default function PageWithdrawal({ machines, stockOut, stockIn, stockBalan
                           <span className="dx-mono" style={{ fontSize: 13, fontWeight: 700, color: "var(--dx-danger)", display: "block" }}>
                             -{fmt(r.quantity_packs)} ซอง
                           </span>
-                          <button onClick={() => setDeleteOutId(r.id)} title="ลบ"
-                            style={{
-                              marginTop: 6, padding: 5, borderRadius: 6, border: "none", cursor: "pointer",
-                              background: "rgba(255,68,102,0.1)", color: "var(--dx-danger)",
-                              display: "inline-flex", alignItems: "center", justifyContent: "center",
-                            }}
-                            onMouseEnter={e => e.currentTarget.style.background = "rgba(255,68,102,0.2)"}
-                            onMouseLeave={e => e.currentTarget.style.background = "rgba(255,68,102,0.1)"}>
-                            <Trash2 size={11}/>
-                          </button>
+                          {isAdmin && (
+                            <button onClick={() => setDeleteOutId(r.id)} title="ลบ"
+                              style={{
+                                marginTop: 6, padding: 5, borderRadius: 6, border: "none", cursor: "pointer",
+                                background: "rgba(255,68,102,0.1)", color: "var(--dx-danger)",
+                                display: "inline-flex", alignItems: "center", justifyContent: "center",
+                              }}
+                              onMouseEnter={e => e.currentTarget.style.background = "rgba(255,68,102,0.2)"}
+                              onMouseLeave={e => e.currentTarget.style.background = "rgba(255,68,102,0.1)"}>
+                              <Trash2 size={11}/>
+                            </button>
+                          )}
                         </div>
                       </div>
                       {isConfirming && (

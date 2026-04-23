@@ -375,7 +375,7 @@ export default function PageStock({ stockIn, stockBalance, onAddStockIn, onUpdat
                   className="dx-input" style={{ width: "auto", padding: "5px 10px", fontSize: 11 }}>
                   <option value="">ทุก SKU</option>
                   {skus.filter(s => s.is_active !== false).sort((a, b) => {
-                    const order = { OP: 1, EB: 2, PRB: 3 }
+                    const order = { OP: 1, PRB: 2, EB: 3 }
                     return (order[a.series] || 9) - (order[b.series] || 9) || a.sku_id.localeCompare(b.sku_id)
                   }).map(s => <option key={s.sku_id} value={s.sku_id}>{s.sku_id}</option>)}
                 </select>
@@ -493,7 +493,7 @@ export default function PageStock({ stockIn, stockBalance, onAddStockIn, onUpdat
                 className="dx-input" style={{ width: "auto", padding: "5px 10px", fontSize: 11 }}>
                 <option value="">ทุก SKU</option>
                 {skus.filter(s => s.is_active !== false).sort((a, b) => {
-                  const order = { OP: 1, EB: 2, PRB: 3 }
+                  const order = { OP: 1, PRB: 2, EB: 3 }
                   return (order[a.series] || 9) - (order[b.series] || 9) || a.sku_id.localeCompare(b.sku_id)
                 }).map(s => <option key={s.sku_id} value={s.sku_id}>{s.sku_id}</option>)}
               </select>

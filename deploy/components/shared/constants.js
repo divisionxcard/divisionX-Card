@@ -30,6 +30,6 @@ export const CHART_COLORS = ["#3b82f6","#8b5cf6","#10b981","#f59e0b","#ef4444","
 
 export const THAI_MONTHS = ["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."]
 
-export const SKU_SERIES_ORDER = { OP: 0, EB: 1, PRB: 2 }
+export const SKU_SERIES_ORDER = { OP: 0, PRB: 1, EB: 2 }
 
 export const UNIT_LABEL = { pack: "ซอง", box: "กล่อง", cotton: "Cotton" }

@@ -11,7 +11,8 @@ import {
 import { fmt, fmtB } from "../shared/helpers"
 import { Badge, StatusDot, KpiCard, SectionTitle, BoosterPH } from "../shared/dx-components"
 
-export default function PageDashboardDX({ stockIn, stockOut, stockBalance, skus, transfers = [], onAddLot }) {
+export default function PageDashboardDX({ stockIn, stockOut, stockBalance, skus, transfers = [], onAddLot, profile }) {
+  const isAdmin = profile?.role === "admin"
   const [expandedSku, setExpandedSku] = useState(null)
   const [seriesSel,   setSeriesSel]   = useState("ทั้งหมด")
   const [search,      setSearch]      = useState("")
@@ -59,7 +60,7 @@ export default function PageDashboardDX({ stockIn, stockOut, stockBalance, skus,
     arr.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
   )
 
-  const SERIES_ORDER = { OP: 0, EB: 1, PRB: 2 }
+  const SERIES_ORDER = { OP: 0, PRB: 1, EB: 2 }
   const filtered = skus
     .filter(s => s.sku_id.toLowerCase().includes(search.toLowerCase()) ||
                  s.name.toLowerCase().includes(search.toLowerCase()))
@@ -72,12 +73,12 @@ export default function PageDashboardDX({ stockIn, stockOut, stockBalance, skus,
         pill="Live Inventory"
         title="ภาพรวมสต็อกสินค้า"
         subtitle="สต็อกคงเหลือแยกตาม SKU พร้อมประวัติ Lot ต้นทุน"
-        actions={
+        actions={isAdmin ? (
           <>
             <button className="dx-btn dx-btn-ghost"><Download size={14}/>Export</button>
             <button className="dx-btn dx-btn-primary" onClick={onAddLot}><Plus size={14}/>รับของเข้า Lot</button>
           </>
-        }
+        ) : null}
       />
 
       {/* KPI Row */}

@@ -1,10 +1,10 @@
 // PageMyStock — Dark Theme
 import { useState } from "react"
-import { X, CheckCircle, Package, PlusCircle, MinusCircle, Loader2, Trash2 } from "lucide-react"
-import { fmt, fmtBoxPack, sortSkus, getSkuSeries } from "../shared/helpers"
+import { X, CheckCircle, Package, PlusCircle, Wallet, Loader2, Trash2 } from "lucide-react"
+import { fmt, fmtB, fmtBoxPack, sortSkus, getSkuSeries } from "../shared/helpers"
 import { Badge, KpiCard, SectionTitle } from "../shared/dx-components"
 
-export default function PageMyStock({ transfers, stockOut, skus, profile, session, profiles, machines, machineAssignments, onDeleteTransfer }) {
+export default function PageMyStock({ transfers, stockOut, stockIn = [], skus, profile, session, profiles, machines, machineAssignments, onDeleteTransfer }) {
   const [tab, setTab] = useState("balance")
   const isAdmin = profile?.role === "admin"
   const userId = session?.user?.id
@@ -63,6 +63,19 @@ export default function PageMyStock({ transfers, stockOut, skus, profile, sessio
   const totalBalance = balanceList.reduce((a, r) => a + r.balance, 0)
   const totalReceived = balanceList.reduce((a, r) => a + r.received, 0)
 
+  // ต้นทุนต่อซองของแต่ละ lot (จาก stock_in จริง ไม่ใช่ avg_cost)
+  const lotCostAgg = {}
+  stockIn.forEach(r => {
+    const key = `${r.sku_id}__${r.lot_number || ""}`
+    if (!lotCostAgg[key]) lotCostAgg[key] = { packs: 0, cost: 0 }
+    lotCostAgg[key].packs += parseFloat(r.quantity_packs) || 0
+    lotCostAgg[key].cost  += parseFloat(r.total_cost)     || 0
+  })
+  const cppOf = (sku_id, lot_number) => {
+    const info = lotCostAgg[`${sku_id}__${lot_number || ""}`]
+    return info && info.packs > 0 ? info.cost / info.packs : 0
+  }
+
   const getMyLotBalance = (skuId) => {
     const lotMap = {}
     myTransfers.filter(t => t.sku_id === skuId && t.lot_number).forEach(t => {
@@ -78,6 +91,35 @@ export default function PageMyStock({ transfers, stockOut, skus, profile, sessio
       return { ...r, lotBalance: r.quantity_packs - used }
     })
   }
+
+  // มูลค่าคงเหลือรวมของ user นี้ = Σ(lotBalance × cost_per_pack ของ lot นั้น)
+  const totalRemainingValue = balanceList.reduce((sum, r) => {
+    const activeLots = getMyLotBalance(r.sku_id).filter(l => l.lotBalance > 0)
+    return sum + activeLots.reduce((a, l) => a + l.lotBalance * cppOf(r.sku_id, l.lot_number), 0)
+  }, 0)
+
+  // Admin-only: มูลค่าคงเหลือรวมของ user ทุกคน (FIFO ต่อ user ต่อ SKU)
+  const grandRemainingValue = isAdmin ? usersWithTransfers.reduce((grand, uid) => {
+    const uTransfers = transfers.filter(t => t.to_user_id === uid)
+    const uStockOut  = stockOut.filter(so => so.withdrawn_by_user_id === uid)
+    const uSkus = [...new Set(uTransfers.map(t => t.sku_id))]
+    return grand + uSkus.reduce((sumSku, skuId) => {
+      const lotMap = {}
+      uTransfers.filter(t => t.sku_id === skuId && t.lot_number).forEach(t => {
+        if (!lotMap[t.lot_number]) lotMap[t.lot_number] = { lot_number: t.lot_number, quantity_packs: 0, transferred_at: t.transferred_at }
+        lotMap[t.lot_number].quantity_packs += t.quantity_packs || 0
+      })
+      const lotsArr = Object.values(lotMap).sort((a, b) => new Date(a.transferred_at) - new Date(b.transferred_at))
+      const totalOut = uStockOut.filter(so => so.sku_id === skuId).reduce((a, so) => a + (so.quantity_packs || 0), 0)
+      let remainOut = totalOut
+      return sumSku + lotsArr.reduce((s, lot) => {
+        const used = Math.min(lot.quantity_packs, remainOut)
+        remainOut -= used
+        const lotBalance = lot.quantity_packs - used
+        return s + lotBalance * cppOf(skuId, lot.lot_number)
+      }, 0)
+    }, 0)
+  }, 0) : 0
 
   const tabs = [
     { v: "balance",     l: "ยอดคงเหลือ" },
@@ -133,8 +175,11 @@ export default function PageMyStock({ transfers, stockOut, skus, profile, sessio
       {/* KPI */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 14 }}>
         <KpiCard icon={Package}     label="สต็อกคงเหลือ (ซอง)" value={fmt(totalBalance)} accent="cyan" glow/>
+        {isAdmin && (
+          <KpiCard icon={Wallet} label="มูลค่าคงเหลือรวมทุก User" value={fmtB(grandRemainingValue)} sub="ทุกแอดมินรวมกัน" accent="warning"/>
+        )}
         <KpiCard icon={PlusCircle}  label="รับเข้าทั้งหมด (ซอง)" value={fmt(totalReceived)} accent="success"/>
-        <KpiCard icon={MinusCircle} label="SKU ที่ถือ" value={`${balanceList.filter(r => r.balance > 0).length} รายการ`} accent="purple"/>
+        <KpiCard icon={Wallet} label="มูลค่าคงเหลือ" value={fmtB(totalRemainingValue)} sub="ต้นทุนจริงของ Lot ที่ถือ" accent="purple"/>
       </div>
 
       {/* Tabs */}

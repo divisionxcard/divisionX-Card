@@ -708,11 +708,11 @@ export default function DivisionXApp() {
         </header>
 
         <main className="flex-1 p-4 lg:p-6 overflow-y-auto">
-          {page === "dashboard"  && <PageDashboard stockIn={stockIn} stockOut={stockOut} stockBalance={stockBalance} skus={skus} transfers={transfers} onAddLot={() => { setStockInitialTab("addin"); setPage("stock") }}/>}
+          {page === "dashboard"  && <PageDashboard stockIn={stockIn} stockOut={stockOut} stockBalance={stockBalance} skus={skus} transfers={transfers} profile={profile} onAddLot={() => { setStockInitialTab("addin"); setPage("stock") }}/>}
           {page === "stock"      && <PageStock     stockIn={stockIn} stockBalance={stockBalance} skus={skus} initialTab={stockInitialTab} onAddStockIn={addStockIn} onUpdateStockIn={updateStockIn} onDeleteStockIn={deleteStockIn} onAddSku={addSku} onDeactivateSku={deactivateSku} onRecalcAvgCost={async (skuId) => { await recalcAvgCost(skuId); setSkus(await getSkus()) }}/>}
           {page === "withdrawal" && <PageWithdrawal machines={machines} stockOut={stockOut} stockIn={stockIn} stockBalance={stockBalance} skus={skus} onAddStockOut={addStockOut} onDeleteStockOut={deleteStockOut} transfers={transfers} machineAssignments={machineAssignments} session={session} profile={profile}/>}
           {page === "transfer"   && <PageTransfer  stockIn={stockIn} stockOut={stockOut} stockBalance={stockBalance} skus={skus} transfers={transfers} profiles={allProfiles} onAddTransfer={addTransfer} onDeleteTransfer={deleteTransfer}/>}
-          {page === "mystock"    && <PageMyStock   transfers={transfers} stockOut={stockOut} skus={skus} profile={profile} session={session} profiles={allProfiles} machines={machines} machineAssignments={machineAssignments} onDeleteTransfer={deleteTransfer}/>}
+          {page === "mystock"    && <PageMyStock   transfers={transfers} stockOut={stockOut} stockIn={stockIn} skus={skus} profile={profile} session={session} profiles={allProfiles} machines={machines} machineAssignments={machineAssignments} onDeleteTransfer={deleteTransfer}/>}
           {page === "refillprep" && <PageRefillPrep machines={machines} machineStock={machineStock} machineAssignments={machineAssignments} transfers={transfers} stockOut={stockOut} skus={skus} profile={profile} session={session} profiles={allProfiles} onAddStockOut={addStockOut} onUpdateStockOut={updateStockOut} onDeleteStockOut={deleteStockOut}/>}
           {page === "machstock"  && <PageMachineStockView machines={machines} machineStock={machineStock} skus={skus} onRefresh={loadAll}/>}
           {page === "sales"      && <PageSales     machines={machines} sales={sales} skus={skus} claims={claims} onRefresh={loadAll}/>}

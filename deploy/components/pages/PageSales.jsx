@@ -34,6 +34,17 @@ function SalesSkuByMachine({ sales, machines, skus }) {
     machineSkuMap[r.machine_id][r.sku_id].rev += r.revenue || 0
   })
 
+  // รวมทุกตู้
+  const grandTotal = filteredSales.reduce((a, r) => a + (r.revenue || 0), 0)
+  let grandPack = 0, grandBox = 0
+  filteredSales.forEach(r => {
+    const raw = (r.product_name_raw || "").toLowerCase()
+    const isBox = raw.includes("(box)") || raw.split(/\s+/).includes("box")
+    if (isBox) grandBox += 1
+    else grandPack += r.quantity_sold || 0
+  })
+  const grandTxn = new Set(filteredSales.map(r => r.transaction_id).filter(Boolean)).size
+
   return (
     <div className="dx-card" style={{ padding: 20 }}>
       <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: 14 }}>
@@ -141,7 +152,7 @@ function SalesSkuByMachine({ sales, machines, skus }) {
                           <tr style={{ background: "var(--dx-bg-elevated)" }}>
                             <Th align="center" style={{ width: 44 }}>#</Th>
                             <Th align="left">SKU</Th>
-                            <Th align="left">ชื่อสินค้า</Th>
+                            <Th align="left" className="hidden sm:table-cell">ชื่อสินค้า</Th>
                             <Th align="center">Series</Th>
                             <Th align="right" style={{ color: "var(--dx-danger)" }}>กล่อง</Th>
                             <Th align="right">ซอง</Th>
@@ -165,7 +176,7 @@ function SalesSkuByMachine({ sales, machines, skus }) {
                                 <td className="dx-mono" style={{ padding: "8px 8px", fontSize: 11, fontWeight: 600, color: "var(--dx-text)" }}>
                                   {r.sku_id}
                                 </td>
-                                <td style={{ padding: "8px 8px", fontSize: 11, color: "var(--dx-text-muted)", maxWidth: 120, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                <td className="hidden sm:table-cell" style={{ padding: "8px 8px", fontSize: 11, color: "var(--dx-text-muted)", maxWidth: 120, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                                   {r.name}
                                 </td>
                                 <td style={{ padding: "8px 8px", textAlign: "center" }}>
@@ -218,6 +229,31 @@ function SalesSkuByMachine({ sales, machines, skus }) {
             </div>
           )
         })}
+
+        {/* รวมทุกตู้ — มุมขวาล่าง */}
+        <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 4 }}>
+          <div style={{
+            display: "flex", alignItems: "center", gap: 14,
+            padding: "10px 16px", borderRadius: 10,
+            background: "var(--dx-bg-elevated)",
+            border: "1px solid var(--dx-border-glow)",
+            boxShadow: "0 0 14px -8px var(--dx-glow)",
+          }}>
+            <div style={{ textAlign: "right" }}>
+              <p style={{ margin: 0, fontSize: 10, color: "var(--dx-text-muted)", letterSpacing: 0.5, textTransform: "uppercase" }}>
+                รวมทุกตู้{dateFilter === "daily" ? ` · ${fmtDayLabel(selectedDate)}` : ""}
+              </p>
+              <p style={{ margin: "2px 0 0", fontSize: 10, color: "var(--dx-text-muted)" }}>
+                {fmt(grandTxn)} ธุรกรรม
+                {grandBox > 0 ? ` · ${fmt(grandBox)} กล่อง` : ""}
+                {" · "}{fmt(grandPack)} ซอง
+              </p>
+            </div>
+            <p className="dx-mono" style={{ margin: 0, fontSize: 18, fontWeight: 800, color: "var(--dx-success)" }}>
+              {fmtB(grandTotal)}
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   )
@@ -368,6 +404,9 @@ export default function PageSales({ machines, sales, skus, claims, onRefresh }) 
             <KpiCard icon={TrendingUp} label="กำไรโดยประมาณ" value={fmtB(profit)} sub="หลังต้นทุน" accent="warning"/>
           </div>
 
+          {/* รายการขายแยก SKU ต่อตู้ */}
+          <SalesSkuByMachine sales={filtered} machines={machines} skus={skus}/>
+
           {/* Daily Chart */}
           <div className="dx-card" style={{ padding: 20 }}>
             <h2 style={{ margin: "0 0 14px", fontSize: 13, fontWeight: 600, color: "var(--dx-text)" }}>
@@ -379,7 +418,8 @@ export default function PageSales({ machines, sales, skus, claims, onRefresh }) 
                   <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,212,255,0.08)"/>
                   <XAxis dataKey="day" tick={{ fontSize: 11, fill: "var(--dx-text-muted)" }} stroke="var(--dx-border)"/>
                   <YAxis tick={{ fontSize: 11, fill: "var(--dx-text-muted)" }} tickFormatter={v => fmt(v)} stroke="var(--dx-border)"/>
-                  <Tooltip formatter={v => fmtB(v)} contentStyle={chartTooltipStyle} labelStyle={{ color: "var(--dx-text-muted)" }}/>
+                  <Tooltip formatter={v => fmtB(v)} contentStyle={chartTooltipStyle} labelStyle={{ color: "var(--dx-text-muted)" }}
+                    cursor={{ fill: "transparent" }}/>
                   <Legend wrapperStyle={{ fontSize: 11, color: "var(--dx-text-secondary)" }}/>
                   {machines.map((m, i) => (
                     <Bar key={m.machine_id} dataKey={m.name} fill={CHART_COLORS[i]}
@@ -411,17 +451,15 @@ export default function PageSales({ machines, sales, skus, claims, onRefresh }) 
               </ResponsiveContainer>
             </div>
           )}
-
-          <SalesSkuByMachine sales={filtered} machines={machines} skus={skus}/>
         </>
       )}
     </div>
   )
 }
 
-function Th({ children, align = "left", style }) {
+function Th({ children, align = "left", style, className }) {
   return (
-    <th style={{
+    <th className={className} style={{
       padding: "8px 8px",
       textAlign: align,
       fontSize: 10, fontWeight: 500,

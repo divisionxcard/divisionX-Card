@@ -4,7 +4,8 @@ import {
   AlertTriangle, CheckCircle, X, ClipboardList, Clock, Monitor,
   Boxes, Package, RefreshCw, Loader2,
 } from "lucide-react"
-import { fmt } from "../shared/helpers"
+import { fmt, getSkuSeries } from "../shared/helpers"
+import { SKU_SERIES_ORDER } from "../shared/constants"
 import { Badge, KpiCard, SectionTitle } from "../shared/dx-components"
 import PageMachineHistory from "./PageMachineHistory"
 
@@ -62,7 +63,11 @@ export default function PageRefillPrep({ machines, machineStock, machineAssignme
     skuSummary[key].totalRefill += r.refill
     skuSummary[key].machines.push({ machine_id: r.machine_id, refill: r.refill })
   })
-  const summaryList = Object.values(skuSummary).sort((a, b) => (a.sku_id || "").localeCompare(b.sku_id || ""))
+  const summaryList = Object.values(skuSummary).sort((a, b) => {
+    const sa = SKU_SERIES_ORDER[getSkuSeries(a.sku_id)] ?? 9
+    const sb = SKU_SERIES_ORDER[getSkuSeries(b.sku_id)] ?? 9
+    return sa - sb || (a.sku_id || "").localeCompare(b.sku_id || "")
+  })
 
   const lastSync = machineStock.length > 0
     ? machineStock.reduce((latest, s) => { const t = s.synced_at || ""; return t > latest ? t : latest }, "")
