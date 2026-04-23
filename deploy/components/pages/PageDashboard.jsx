@@ -5,13 +5,13 @@
 
 import { useState } from "react"
 import {
-  Package, AlertTriangle, Layers, TrendingUp, Search, Plus,
+  Package, AlertTriangle, TrendingUp, Wallet, Search, Plus,
   Download, Filter, RefreshCw, Clock,
 } from "lucide-react"
 import { fmt, fmtB } from "../shared/helpers"
 import { Badge, StatusDot, KpiCard, SectionTitle, BoosterPH } from "../shared/dx-components"
 
-export default function PageDashboardDX({ stockIn, stockOut, stockBalance, skus }) {
+export default function PageDashboardDX({ stockIn, stockOut, stockBalance, skus, transfers = [], onAddLot }) {
   const [expandedSku, setExpandedSku] = useState(null)
   const [seriesSel,   setSeriesSel]   = useState("ทั้งหมด")
   const [search,      setSearch]      = useState("")
@@ -26,6 +26,28 @@ export default function PageDashboardDX({ stockIn, stockOut, stockBalance, skus 
   const totalPacks    = stockBalance.reduce((a, r) => a + (parseFloat(r.balance) || 0), 0)
   const lowStock      = skus.filter(s => (balMap[s.sku_id]?.balance || 0) < 24)
   const totalLotValue = stockIn.reduce((a, r) => a + (parseFloat(r.total_cost) || 0), 0)
+
+  // มูลค่าคงเหลือรวม = total_cost ของทุก Lot − (packs เบิกออก × cost_per_pack ของ lot นั้น ๆ)
+  // ใช้ต้นทุนรับเข้าจริงต่อ lot (ไม่ใช่ avg_cost)
+  const lotKey = (sku_id, lot_number) => `${sku_id}__${lot_number || ""}`
+  const lotAgg = {}
+  stockIn.forEach(r => {
+    const k = lotKey(r.sku_id, r.lot_number)
+    if (!lotAgg[k]) lotAgg[k] = { packs: 0, cost: 0 }
+    lotAgg[k].packs += parseFloat(r.quantity_packs) || 0
+    lotAgg[k].cost  += parseFloat(r.total_cost)     || 0
+  })
+  const cppOf = (sku_id, lot_number) => {
+    const info = lotAgg[lotKey(sku_id, lot_number)]
+    return info && info.packs > 0 ? info.cost / info.packs : 0
+  }
+  const transferOutValue = transfers.reduce(
+    (a, t) => a + (parseFloat(t.quantity_packs) || 0) * cppOf(t.sku_id, t.lot_number), 0
+  )
+  const directOutValue = stockOut
+    .filter(so => !so.withdrawn_by_user_id)
+    .reduce((a, so) => a + (parseFloat(so.quantity_packs) || 0) * cppOf(so.sku_id, so.lot_number), 0)
+  const totalRemainingValue = Math.max(0, totalLotValue - transferOutValue - directOutValue)
 
   // Lots grouped by SKU (sorted newest first)
   const lotsMap = {}
@@ -53,7 +75,7 @@ export default function PageDashboardDX({ stockIn, stockOut, stockBalance, skus 
         actions={
           <>
             <button className="dx-btn dx-btn-ghost"><Download size={14}/>Export</button>
-            <button className="dx-btn dx-btn-primary"><Plus size={14}/>รับของเข้า Lot</button>
+            <button className="dx-btn dx-btn-primary" onClick={onAddLot}><Plus size={14}/>รับของเข้า Lot</button>
           </>
         }
       />
@@ -76,17 +98,17 @@ export default function PageDashboardDX({ stockIn, stockOut, stockBalance, skus 
           accent="warning"
         />
         <KpiCard
-          icon={Layers}
-          label="Lot ทั้งหมด"
-          value={`${fmt(stockIn.length)}`}
-          sub="รายการรับเข้า"
-          accent="green"
-        />
-        <KpiCard
           icon={TrendingUp}
           label="มูลค่าซื้อรวม"
           value={fmtB(totalLotValue)}
           sub="ต้นทุนสะสมทั้งหมด"
+          accent="green"
+        />
+        <KpiCard
+          icon={Wallet}
+          label="มูลค่าคงเหลือรวม"
+          value={fmtB(totalRemainingValue)}
+          sub="หลังหักยอดเบิกจ่ายแอดมิน"
           accent="purple"
         />
       </div>

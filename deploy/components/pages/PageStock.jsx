@@ -14,8 +14,8 @@ function genLotNumber() {
   return `LOT-${ymd}-${hm}`
 }
 
-export default function PageStock({ stockIn, stockBalance, onAddStockIn, onUpdateStockIn, onDeleteStockIn, skus, onAddSku, onDeactivateSku, onRecalcAvgCost }) {
-  const [tab, setTab] = useState("balance")
+export default function PageStock({ stockIn, stockBalance, onAddStockIn, onUpdateStockIn, onDeleteStockIn, skus, onAddSku, onDeactivateSku, onRecalcAvgCost, initialTab }) {
+  const [tab, setTab] = useState(initialTab || "balance")
   const [search, setSearch] = useState("")
   const [seriesSel, setSeriesSel] = useState("ทั้งหมด")
   const [saving, setSaving] = useState(false)
