@@ -98,20 +98,24 @@ export default function PageDashboardDX({ stockIn, stockOut, stockBalance, skus,
           sub="ต่ำกว่า 24 ซอง"
           accent="warning"
         />
-        <KpiCard
-          icon={TrendingUp}
-          label="มูลค่าซื้อรวม"
-          value={fmtB(totalLotValue)}
-          sub="ต้นทุนสะสมทั้งหมด"
-          accent="green"
-        />
-        <KpiCard
-          icon={Wallet}
-          label="มูลค่าคงเหลือรวม"
-          value={fmtB(totalRemainingValue)}
-          sub="หลังหักยอดเบิกจ่ายแอดมิน"
-          accent="purple"
-        />
+        {isAdmin && (
+          <>
+            <KpiCard
+              icon={TrendingUp}
+              label="มูลค่าซื้อรวม"
+              value={fmtB(totalLotValue)}
+              sub="ต้นทุนสะสมทั้งหมด"
+              accent="green"
+            />
+            <KpiCard
+              icon={Wallet}
+              label="มูลค่าคงเหลือรวม"
+              value={fmtB(totalRemainingValue)}
+              sub="หลังหักยอดเบิกจ่ายแอดมิน"
+              accent="purple"
+            />
+          </>
+        )}
       </div>
 
       {/* Filters */}
