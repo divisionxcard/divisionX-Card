@@ -148,8 +148,11 @@ export default function PageDashboardDX({ stockIn, stockOut, stockBalance, skus,
       {/* KPI Grid — admin: 4 cols w/ tall card #4; user: simple 2 cards */}
       {isAdmin ? (
         <div className="grid grid-cols-1 md:grid-cols-4 gap-3.5">
+          {/* Mobile order: 1=สต็อกรวม, 2=ใกล้หมด, 3=ซื้อรวม, 4=Main, 5=User, 6=ทุกตู้, 7=composite */}
           {/* #1 สต็อกรวม (ซอง) */}
           <KpiCard
+            compact
+            className="order-1 md:order-none"
             icon={Package}
             label="สต็อกรวม"
             value={fmt(totalPacks)}
@@ -159,6 +162,8 @@ export default function PageDashboardDX({ stockIn, stockOut, stockBalance, skus,
           />
           {/* #2 มูลค่าซื้อรวม */}
           <KpiCard
+            compact
+            className="order-3 md:order-none"
             icon={TrendingUp}
             label="มูลค่าซื้อรวม"
             value={fmtB(totalLotValue)}
@@ -167,14 +172,16 @@ export default function PageDashboardDX({ stockIn, stockOut, stockBalance, skus,
           />
           {/* #3 มูลค่าสต็อกรวมทุก User */}
           <KpiCard
+            compact
+            className="order-5 md:order-none"
             icon={Users}
             label="มูลค่าสต็อกรวมทุก User"
             value={fmtB(totalUserValue)}
             sub="ของที่แอดมินถืออยู่ก่อนเติมตู้"
             accent="purple"
           />
-          {/* #4 Composite: มูลค่าคงเหลือรวมในบริษัท (tall, md+ row-span-2) */}
-          <div className="md:row-span-2">
+          {/* #4 Composite: มูลค่าคงเหลือรวมในบริษัท (mobile: last & compact · desktop: tall row-span-2) */}
+          <div className="order-7 md:order-none md:row-span-2">
             <CompositeValueCard
               mainValue={totalMainValue}  mainBoxes={mainBP.boxes}    mainPacks={mainBP.packs}
               userValue={totalUserValue}  userBoxes={userBP.boxes}    userPacks={userBP.packs}
@@ -183,6 +190,8 @@ export default function PageDashboardDX({ stockIn, stockOut, stockBalance, skus,
           </div>
           {/* #5 SKU ใกล้หมด */}
           <KpiCard
+            compact
+            className="order-2 md:order-none"
             icon={AlertTriangle}
             label="จำนวน SKU ใกล้หมด"
             value={`${lowStock.length} SKU`}
@@ -191,6 +200,8 @@ export default function PageDashboardDX({ stockIn, stockOut, stockBalance, skus,
           />
           {/* #6 มูลค่าสต็อก Main */}
           <KpiCard
+            compact
+            className="order-4 md:order-none"
             icon={Home}
             label="มูลค่าสต็อก Main"
             value={fmtB(totalMainValue)}
@@ -199,6 +210,8 @@ export default function PageDashboardDX({ stockIn, stockOut, stockBalance, skus,
           />
           {/* #7 มูลค่าสต็อกรวมทุกตู้ */}
           <KpiCard
+            compact
+            className="order-6 md:order-none"
             icon={Monitor}
             label="มูลค่าสต็อกรวมทุกตู้"
             value={fmtB(totalMachineValue)}
@@ -499,80 +512,29 @@ function CompositeValueCard({
   const totalPacks = mainPacks + userPacks + machinePacks
 
   return (
-    <div className="dx-card" style={{ padding: 18, height: "100%", display: "flex", flexDirection: "column" }}>
-      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
+    <div className="dx-card" style={{ padding: 12, height: "100%", display: "flex", flexDirection: "column", justifyContent: "center" }}>
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10 }}>
         <p style={{ margin: 0, fontSize: 11, fontWeight: 500, color: "var(--dx-text-muted)", letterSpacing: 0.5, textTransform: "uppercase" }}>
           มูลค่าคงเหลือรวมในบริษัท
         </p>
         <div style={{
-          width: 40, height: 40, borderRadius: 10,
+          width: 32, height: 32, borderRadius: 10,
           display: "flex", alignItems: "center", justifyContent: "center",
           background: "rgba(183,148,246,0.10)",
           border: "1px solid rgba(183,148,246,0.30)",
           color: "#B794F6",
           flexShrink: 0,
         }}>
-          <Warehouse size={18}/>
+          <Warehouse size={15}/>
         </div>
       </div>
 
-      <p className="dx-mono" style={{ margin: "6px 0 0", fontSize: 26, fontWeight: 700, color: "var(--dx-text)", lineHeight: 1.1, letterSpacing: -0.5 }}>
+      <p className="dx-mono" style={{ margin: "4px 0 0", fontSize: 20, fontWeight: 700, color: "var(--dx-text)", lineHeight: 1.1, letterSpacing: -0.5 }}>
         {fmtB(totalValue)}
       </p>
-      <p style={{ margin: "4px 0 0", fontSize: 11, color: "var(--dx-text-muted)" }}>
+      <p style={{ margin: "2px 0 0", fontSize: 10, color: "var(--dx-text-muted)" }}>
         {fmt(totalBoxes)} กล่อง · {fmt(totalPacks)} ซอง
       </p>
-
-      <div style={{ borderTop: "1px dashed var(--dx-border)", margin: "14px 0 10px" }}/>
-
-      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-        <BreakdownRow icon={Home}    label="Main" color="#4FC3F7" boxes={mainBoxes}    packs={mainPacks}    value={mainValue}/>
-        <BreakdownRow icon={Users}   label="User" color="#B794F6" boxes={userBoxes}    packs={userPacks}    value={userValue}/>
-        <BreakdownRow icon={Monitor} label="ตู้"  color="#FFC857" boxes={machineBoxes} packs={machinePacks} value={machineValue}/>
-      </div>
-    </div>
-  )
-}
-
-function BreakdownRow({ icon: Icon, label, color, boxes, packs, value }) {
-  return (
-    <div style={{
-      padding: "8px 10px",
-      borderRadius: 8,
-      background: `${color}14`,          // ≈8% alpha tint
-      border: `1px solid ${color}33`,     // ≈20% alpha border
-    }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
-          <div style={{
-            width: 22, height: 22, borderRadius: 6,
-            display: "flex", alignItems: "center", justifyContent: "center",
-            background: `${color}22`,
-            color,
-            flexShrink: 0,
-          }}>
-            <Icon size={13}/>
-          </div>
-          <span style={{ fontSize: 12, fontWeight: 700, color, letterSpacing: 0.3 }}>{label}</span>
-        </div>
-        <div className="dx-mono" style={{
-          fontSize: 14,
-          color,
-          fontWeight: 800,
-          whiteSpace: "nowrap",
-          textShadow: `0 0 10px ${color}55`,
-        }}>
-          {fmtB(value)}
-        </div>
-      </div>
-      <div className="dx-mono" style={{
-        marginTop: 4,
-        marginLeft: 30,
-        fontSize: 10,
-        color: "var(--dx-text-muted)",
-      }}>
-        {fmt(boxes)} กล่อง · {fmt(packs)} ซอง
-      </div>
     </div>
   )
 }

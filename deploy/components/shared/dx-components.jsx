@@ -59,24 +59,27 @@ const KPI_ACCENT_COLORS = {
   green:   { text: "#68D391", bg: "rgba(104,211,145,0.08)", border: "rgba(104,211,145,0.25)" },
 }
 
-export function KpiCard({ icon: Icon, label, value, sub, accent = "cyan", glow = false, trend }) {
+export function KpiCard({ icon: Icon, label, value, sub, accent = "cyan", glow = false, trend, compact = false, className = "" }) {
   const c = KPI_ACCENT_COLORS[accent] || KPI_ACCENT_COLORS.cyan
+  const P = compact ? { pad: 12, valSize: 20, iconBox: 32, iconSize: 15, gap: 4, subGap: 2 }
+                    : { pad: 18, valSize: 26, iconBox: 40, iconSize: 18, gap: 6, subGap: 4 }
+  const baseClass = glow ? "dx-card dx-card-glow" : "dx-card"
   return (
-    <div className={glow ? "dx-card dx-card-glow" : "dx-card"} style={{ padding: 18, position: "relative", overflow: "hidden" }}>
-      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
+    <div className={`${baseClass} ${className}`.trim()} style={{ padding: P.pad, position: "relative", overflow: "hidden" }}>
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10 }}>
         <div style={{ minWidth: 0, flex: 1 }}>
           <p style={{ margin: 0, fontSize: 11, fontWeight: 500, color: "var(--dx-text-muted)", letterSpacing: 0.5, textTransform: "uppercase" }}>
             {label}
           </p>
-          <p className="dx-mono" style={{ margin: "6px 0 0", fontSize: 26, fontWeight: 700, color: "var(--dx-text)", lineHeight: 1.1, letterSpacing: -0.5 }}>
+          <p className="dx-mono" style={{ margin: `${P.gap}px 0 0`, fontSize: P.valSize, fontWeight: 700, color: "var(--dx-text)", lineHeight: 1.1, letterSpacing: -0.5 }}>
             {value}
           </p>
-          {sub && <p style={{ margin: "4px 0 0", fontSize: 11, color: "var(--dx-text-muted)" }}>{sub}</p>}
+          {sub && <p style={{ margin: `${P.subGap}px 0 0`, fontSize: 10, color: "var(--dx-text-muted)" }}>{sub}</p>}
         </div>
         {Icon && (
           <div style={{
-            width: 40,
-            height: 40,
+            width: P.iconBox,
+            height: P.iconBox,
             borderRadius: 10,
             display: "flex",
             alignItems: "center",
@@ -86,7 +89,7 @@ export function KpiCard({ icon: Icon, label, value, sub, accent = "cyan", glow =
             color: c.text,
             flexShrink: 0,
           }}>
-            <Icon size={18} />
+            <Icon size={P.iconSize} />
           </div>
         )}
       </div>
