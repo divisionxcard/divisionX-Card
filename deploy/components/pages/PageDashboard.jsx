@@ -7,17 +7,18 @@ import { useState } from "react"
 import {
   Package, AlertTriangle, TrendingUp, Wallet, Search, Plus,
   Download, Filter, RefreshCw, Clock,
+  Users, Warehouse, Home, Monitor,
 } from "lucide-react"
 import { fmt, fmtB } from "../shared/helpers"
 import { Badge, StatusDot, KpiCard, SectionTitle, BoosterPH } from "../shared/dx-components"
 
-export default function PageDashboardDX({ stockIn, stockOut, stockBalance, skus, transfers = [], onAddLot, profile }) {
+export default function PageDashboardDX({ stockIn, stockOut, stockBalance, skus, transfers = [], machineStock = [], onAddLot, profile }) {
   const isAdmin = profile?.role === "admin"
   const [expandedSku, setExpandedSku] = useState(null)
   const [seriesSel,   setSeriesSel]   = useState("ทั้งหมด")
   const [search,      setSearch]      = useState("")
 
-  // Balance map from view
+  // Balance map from view (main warehouse)
   const balMap = Object.fromEntries(stockBalance.map(r => [r.sku_id, {
     total_in:  parseFloat(r.total_in)  || 0,
     total_out: parseFloat(r.total_out) || 0,
@@ -28,8 +29,7 @@ export default function PageDashboardDX({ stockIn, stockOut, stockBalance, skus,
   const lowStock      = skus.filter(s => (balMap[s.sku_id]?.balance || 0) < 24)
   const totalLotValue = stockIn.reduce((a, r) => a + (parseFloat(r.total_cost) || 0), 0)
 
-  // มูลค่าคงเหลือรวม = total_cost ของทุก Lot − (packs เบิกออก × cost_per_pack ของ lot นั้น ๆ)
-  // ใช้ต้นทุนรับเข้าจริงต่อ lot (ไม่ใช่ avg_cost)
+  // ── Lot cost aggregation (ต้นทุนต่อซองของแต่ละ lot จริง ไม่ใช่ avg_cost)
   const lotKey = (sku_id, lot_number) => `${sku_id}__${lot_number || ""}`
   const lotAgg = {}
   stockIn.forEach(r => {
@@ -42,13 +42,77 @@ export default function PageDashboardDX({ stockIn, stockOut, stockBalance, skus,
     const info = lotAgg[lotKey(sku_id, lot_number)]
     return info && info.packs > 0 ? info.cost / info.packs : 0
   }
+
+  // ── #6 Main value = total_cost − transferred − direct_stock_out (by lot cost)
   const transferOutValue = transfers.reduce(
     (a, t) => a + (parseFloat(t.quantity_packs) || 0) * cppOf(t.sku_id, t.lot_number), 0
   )
   const directOutValue = stockOut
     .filter(so => !so.withdrawn_by_user_id)
     .reduce((a, so) => a + (parseFloat(so.quantity_packs) || 0) * cppOf(so.sku_id, so.lot_number), 0)
-  const totalRemainingValue = Math.max(0, totalLotValue - transferOutValue - directOutValue)
+  const totalMainValue = Math.max(0, totalLotValue - transferOutValue - directOutValue)
+
+  // ── #3 User value = Σ (user lot balance × cost_per_pack of lot) ทุก user
+  const usersWithTransfers = [...new Set(transfers.map(t => t.to_user_id).filter(Boolean))]
+  const totalUserValue = usersWithTransfers.reduce((grand, uid) => {
+    const uTransfers = transfers.filter(t => t.to_user_id === uid)
+    const uStockOut  = stockOut.filter(so => so.withdrawn_by_user_id === uid)
+    const uSkus = [...new Set(uTransfers.map(t => t.sku_id))]
+    return grand + uSkus.reduce((sumSku, skuId) => {
+      const lotMap = {}
+      uTransfers.filter(t => t.sku_id === skuId && t.lot_number).forEach(t => {
+        if (!lotMap[t.lot_number]) lotMap[t.lot_number] = { lot_number: t.lot_number, packs: 0, transferred_at: t.transferred_at }
+        lotMap[t.lot_number].packs += t.quantity_packs || 0
+      })
+      const lots = Object.values(lotMap).sort((a, b) => new Date(a.transferred_at) - new Date(b.transferred_at))
+      const totalOut = uStockOut.filter(so => so.sku_id === skuId).reduce((a, so) => a + (so.quantity_packs || 0), 0)
+      let remainOut = totalOut
+      return sumSku + lots.reduce((s, lot) => {
+        const used = Math.min(lot.packs, remainOut)
+        remainOut -= used
+        return s + (lot.packs - used) * cppOf(skuId, lot.lot_number)
+      }, 0)
+    }, 0)
+  }, 0)
+
+  // ── #7 Machine value = Σ machine_stock.remain × skus.avg_cost
+  const skuAvgCostMap = Object.fromEntries(skus.map(s => [s.sku_id, parseFloat(s.avg_cost) || 0]))
+  const totalMachineValue = machineStock.reduce((sum, slot) => {
+    const remain = parseInt(slot.remain) || 0
+    return sum + remain * (skuAvgCostMap[slot.sku_id] || 0)
+  }, 0)
+
+  // ── #4 Breakdown: Main / User / ตู้ packs by SKU → boxes + packs
+  const skuPpbMap = Object.fromEntries(skus.map(s => [s.sku_id, s.packs_per_box || 24]))
+  const toBoxesPacks = (packsBySku) => {
+    let boxes = 0, packs = 0
+    Object.entries(packsBySku).forEach(([sid, p]) => {
+      const ppb = skuPpbMap[sid] || 24
+      const n = Math.max(0, p)
+      boxes += Math.floor(n / ppb)
+      packs += n % ppb
+    })
+    return { boxes, packs }
+  }
+  // Main packs by SKU (จาก view)
+  const mainPacksBySku = Object.fromEntries(stockBalance.map(r => [r.sku_id, parseFloat(r.balance) || 0]))
+  // User packs by SKU (transfers - user stock_out)
+  const userPacksBySku = {}
+  transfers.forEach(t => {
+    userPacksBySku[t.sku_id] = (userPacksBySku[t.sku_id] || 0) + (t.quantity_packs || 0)
+  })
+  stockOut.filter(so => so.withdrawn_by_user_id).forEach(so => {
+    userPacksBySku[so.sku_id] = (userPacksBySku[so.sku_id] || 0) - (so.quantity_packs || 0)
+  })
+  // Machine packs by SKU
+  const machinePacksBySku = {}
+  machineStock.forEach(slot => {
+    if (!slot.sku_id) return
+    machinePacksBySku[slot.sku_id] = (machinePacksBySku[slot.sku_id] || 0) + (parseInt(slot.remain) || 0)
+  })
+  const mainBP    = toBoxesPacks(mainPacksBySku)
+  const userBP    = toBoxesPacks(userPacksBySku)
+  const machineBP = toBoxesPacks(machinePacksBySku)
 
   // Lots grouped by SKU (sorted newest first)
   const lotsMap = {}
@@ -81,42 +145,86 @@ export default function PageDashboardDX({ stockIn, stockOut, stockBalance, skus,
         ) : null}
       />
 
-      {/* KPI Row */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 14 }}>
-        <KpiCard
-          icon={Package}
-          label="สต็อกรวม"
-          value={`${fmt(totalPacks)}`}
-          sub={`ซอง · ≈ ${fmt(Math.floor(totalPacks / 12))} กล่อง`}
-          accent="cyan"
-          glow
-        />
-        <KpiCard
-          icon={AlertTriangle}
-          label="ใกล้หมด"
-          value={`${lowStock.length} SKU`}
-          sub="ต่ำกว่า 24 ซอง"
-          accent="warning"
-        />
-        {isAdmin && (
-          <>
-            <KpiCard
-              icon={TrendingUp}
-              label="มูลค่าซื้อรวม"
-              value={fmtB(totalLotValue)}
-              sub="ต้นทุนสะสมทั้งหมด"
-              accent="green"
+      {/* KPI Grid — admin: 4 cols w/ tall card #4; user: simple 2 cards */}
+      {isAdmin ? (
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-3.5">
+          {/* #1 สต็อกรวม (ซอง) */}
+          <KpiCard
+            icon={Package}
+            label="สต็อกรวม"
+            value={fmt(totalPacks)}
+            sub={`ซอง · ≈ ${fmt(Math.floor(totalPacks / 12))} กล่อง`}
+            accent="cyan"
+            glow
+          />
+          {/* #2 มูลค่าซื้อรวม */}
+          <KpiCard
+            icon={TrendingUp}
+            label="มูลค่าซื้อรวม"
+            value={fmtB(totalLotValue)}
+            sub="ต้นทุนสะสมทั้งหมด"
+            accent="green"
+          />
+          {/* #3 มูลค่าสต็อกรวมทุก User */}
+          <KpiCard
+            icon={Users}
+            label="มูลค่าสต็อกรวมทุก User"
+            value={fmtB(totalUserValue)}
+            sub="ของที่แอดมินถืออยู่ก่อนเติมตู้"
+            accent="purple"
+          />
+          {/* #4 Composite: มูลค่าคงเหลือรวมในบริษัท (tall, md+ row-span-2) */}
+          <div className="md:row-span-2">
+            <CompositeValueCard
+              mainValue={totalMainValue}  mainBoxes={mainBP.boxes}    mainPacks={mainBP.packs}
+              userValue={totalUserValue}  userBoxes={userBP.boxes}    userPacks={userBP.packs}
+              machineValue={totalMachineValue} machineBoxes={machineBP.boxes} machinePacks={machineBP.packs}
             />
-            <KpiCard
-              icon={Wallet}
-              label="มูลค่าคงเหลือรวม"
-              value={fmtB(totalRemainingValue)}
-              sub="หลังหักยอดเบิกจ่ายแอดมิน"
-              accent="purple"
-            />
-          </>
-        )}
-      </div>
+          </div>
+          {/* #5 SKU ใกล้หมด */}
+          <KpiCard
+            icon={AlertTriangle}
+            label="จำนวน SKU ใกล้หมด"
+            value={`${lowStock.length} SKU`}
+            sub="ต่ำกว่า 24 ซอง"
+            accent="warning"
+          />
+          {/* #6 มูลค่าสต็อก Main */}
+          <KpiCard
+            icon={Home}
+            label="มูลค่าสต็อก Main"
+            value={fmtB(totalMainValue)}
+            sub="คลังหลัก · ยังไม่แจก"
+            accent="cyan"
+          />
+          {/* #7 มูลค่าสต็อกรวมทุกตู้ */}
+          <KpiCard
+            icon={Monitor}
+            label="มูลค่าสต็อกรวมทุกตู้"
+            value={fmtB(totalMachineValue)}
+            sub="หน้าตู้ (VMS) × avg_cost"
+            accent="warning"
+          />
+        </div>
+      ) : (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 14 }}>
+          <KpiCard
+            icon={Package}
+            label="สต็อกรวม"
+            value={fmt(totalPacks)}
+            sub={`ซอง · ≈ ${fmt(Math.floor(totalPacks / 12))} กล่อง`}
+            accent="cyan"
+            glow
+          />
+          <KpiCard
+            icon={AlertTriangle}
+            label="จำนวน SKU ใกล้หมด"
+            value={`${lowStock.length} SKU`}
+            sub="ต่ำกว่า 24 ซอง"
+            accent="warning"
+          />
+        </div>
+      )}
 
       {/* Filters */}
       <div className="dx-card" style={{ padding: 14, display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
@@ -373,6 +481,97 @@ function SkuCard({ sku, balance, lots, stockOut, expanded, onToggle }) {
             )}
           </div>
         )}
+      </div>
+    </div>
+  )
+}
+
+// ─────────────────────────────────────────────
+// CompositeValueCard — การ์ด #4 สูง 2 แถว แสดง Main/User/ตู้ แยกเป็นมูลค่า + กล่อง + ซอง
+// ─────────────────────────────────────────────
+function CompositeValueCard({
+  mainValue, mainBoxes, mainPacks,
+  userValue, userBoxes, userPacks,
+  machineValue, machineBoxes, machinePacks,
+}) {
+  const totalValue = mainValue + userValue + machineValue
+  const totalBoxes = mainBoxes + userBoxes + machineBoxes
+  const totalPacks = mainPacks + userPacks + machinePacks
+
+  return (
+    <div className="dx-card" style={{ padding: 18, height: "100%", display: "flex", flexDirection: "column" }}>
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
+        <p style={{ margin: 0, fontSize: 11, fontWeight: 500, color: "var(--dx-text-muted)", letterSpacing: 0.5, textTransform: "uppercase" }}>
+          มูลค่าคงเหลือรวมในบริษัท
+        </p>
+        <div style={{
+          width: 40, height: 40, borderRadius: 10,
+          display: "flex", alignItems: "center", justifyContent: "center",
+          background: "rgba(183,148,246,0.10)",
+          border: "1px solid rgba(183,148,246,0.30)",
+          color: "#B794F6",
+          flexShrink: 0,
+        }}>
+          <Warehouse size={18}/>
+        </div>
+      </div>
+
+      <p className="dx-mono" style={{ margin: "6px 0 0", fontSize: 26, fontWeight: 700, color: "var(--dx-text)", lineHeight: 1.1, letterSpacing: -0.5 }}>
+        {fmtB(totalValue)}
+      </p>
+      <p style={{ margin: "4px 0 0", fontSize: 11, color: "var(--dx-text-muted)" }}>
+        {fmt(totalBoxes)} กล่อง · {fmt(totalPacks)} ซอง
+      </p>
+
+      <div style={{ borderTop: "1px dashed var(--dx-border)", margin: "14px 0 10px" }}/>
+
+      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        <BreakdownRow icon={Home}    label="Main" color="#4FC3F7" boxes={mainBoxes}    packs={mainPacks}    value={mainValue}/>
+        <BreakdownRow icon={Users}   label="User" color="#B794F6" boxes={userBoxes}    packs={userPacks}    value={userValue}/>
+        <BreakdownRow icon={Monitor} label="ตู้"  color="#FFC857" boxes={machineBoxes} packs={machinePacks} value={machineValue}/>
+      </div>
+    </div>
+  )
+}
+
+function BreakdownRow({ icon: Icon, label, color, boxes, packs, value }) {
+  return (
+    <div style={{
+      padding: "8px 10px",
+      borderRadius: 8,
+      background: `${color}14`,          // ≈8% alpha tint
+      border: `1px solid ${color}33`,     // ≈20% alpha border
+    }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
+          <div style={{
+            width: 22, height: 22, borderRadius: 6,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            background: `${color}22`,
+            color,
+            flexShrink: 0,
+          }}>
+            <Icon size={13}/>
+          </div>
+          <span style={{ fontSize: 12, fontWeight: 700, color, letterSpacing: 0.3 }}>{label}</span>
+        </div>
+        <div className="dx-mono" style={{
+          fontSize: 14,
+          color,
+          fontWeight: 800,
+          whiteSpace: "nowrap",
+          textShadow: `0 0 10px ${color}55`,
+        }}>
+          {fmtB(value)}
+        </div>
+      </div>
+      <div className="dx-mono" style={{
+        marginTop: 4,
+        marginLeft: 30,
+        fontSize: 10,
+        color: "var(--dx-text-muted)",
+      }}>
+        {fmt(boxes)} กล่อง · {fmt(packs)} ซอง
       </div>
     </div>
   )

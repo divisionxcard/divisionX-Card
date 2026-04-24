@@ -1,7 +1,7 @@
 import { THAI_MONTHS, SKU_SERIES_ORDER } from "./constants"
 
 export const fmt   = (n) => (n ?? 0).toLocaleString("th-TH")
-export const fmtB  = (n) => `฿${(n ?? 0).toLocaleString("th-TH")}`
+export const fmtB  = (n) => `฿${(n ?? 0).toLocaleString("th-TH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 export const today = () => new Date().toISOString().slice(0, 10)
 
 export const getSkuSeries = (skuId) => {
