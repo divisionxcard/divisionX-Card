@@ -14,7 +14,8 @@ function genLotNumber() {
   return `LOT-${ymd}-${hm}`
 }
 
-export default function PageStock({ stockIn, stockBalance, onAddStockIn, onUpdateStockIn, onDeleteStockIn, skus, onAddSku, onDeactivateSku, onRecalcAvgCost, initialTab }) {
+export default function PageStock({ stockIn, stockBalance, onAddStockIn, onUpdateStockIn, onDeleteStockIn, skus, onAddSku, onDeactivateSku, onRecalcAvgCost, initialTab, profile }) {
+  const isAdmin = profile?.role === "admin"
   const [tab, setTab] = useState(initialTab || "balance")
   const [search, setSearch] = useState("")
   const [seriesSel, setSeriesSel] = useState("ทั้งหมด")
@@ -142,10 +143,10 @@ export default function PageStock({ stockIn, stockBalance, onAddStockIn, onUpdat
 
   const tabs = [
     { key: "balance", label: "สต็อกคงเหลือ" },
-    { key: "addin", label: "รับสินค้าเข้า" },
+    ...(isAdmin ? [{ key: "addin", label: "รับสินค้าเข้า" }] : []),
     { key: "history", label: "ประวัติการรับ" },
     { key: "lothistory", label: "ประวัติ Lot" },
-    { key: "skus", label: "จัดการ SKU" },
+    ...(isAdmin ? [{ key: "skus", label: "จัดการ SKU" }] : []),
   ]
 
   return (
@@ -154,7 +155,7 @@ export default function PageStock({ stockIn, stockBalance, onAddStockIn, onUpdat
         pill="Stock Ops"
         title="จัดการสต็อกสินค้า"
         subtitle="บันทึกรับเข้า · ตรวจสอบ Lot · แก้ไข SKU"
-        actions={
+        actions={isAdmin ? (
           <>
             <select value={recalcSku} onChange={e => setRecalcSku(e.target.value)}
               className="dx-input" style={{ width: "auto", padding: "7px 10px", fontSize: 11, borderColor: "rgba(183,148,246,0.3)" }}>
@@ -179,7 +180,7 @@ export default function PageStock({ stockIn, stockBalance, onAddStockIn, onUpdat
               <RefreshCw size={12}/> คำนวณต้นทุนใหม่
             </button>
           </>
-        }
+        ) : null}
       />
 
       {editRecord && (
@@ -425,10 +426,12 @@ export default function PageStock({ stockIn, stockBalance, onAddStockIn, onUpdat
                             <p style={{ margin: "2px 0 0", fontSize: 10, color: "var(--dx-text-muted)" }}>
                               {fmt(r.quantity)} {r.unit}
                             </p>
-                            <div style={{ display: "flex", gap: 4, justifyContent: "flex-end", marginTop: 6 }}>
-                              <IconBtn onClick={() => setEditRecord(r)} variant="info" title="แก้ไข"><Pencil size={11}/></IconBtn>
-                              <IconBtn onClick={() => setDeleteId(r.id)} variant="danger" title="ลบ"><Trash2 size={11}/></IconBtn>
-                            </div>
+                            {isAdmin && (
+                              <div style={{ display: "flex", gap: 4, justifyContent: "flex-end", marginTop: 6 }}>
+                                <IconBtn onClick={() => setEditRecord(r)} variant="info" title="แก้ไข"><Pencil size={11}/></IconBtn>
+                                <IconBtn onClick={() => setDeleteId(r.id)} variant="danger" title="ลบ"><Trash2 size={11}/></IconBtn>
+                              </div>
+                            )}
                           </div>
                         </div>
 

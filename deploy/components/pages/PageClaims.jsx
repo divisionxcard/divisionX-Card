@@ -1,5 +1,5 @@
 // PageClaims — Dark Theme
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { CheckCircle, AlertTriangle, Trash2, Loader2 } from "lucide-react"
 import { fmtB, sortSkus } from "../shared/helpers"
 import { SectionTitle } from "../shared/dx-components"
@@ -24,6 +24,17 @@ export default function PageClaims({ machines, skus, claims, onAddClaim, onConfi
     product_status: "returned", reason: "สินค้าไม่ตก", note: "",
     claimed_at: new Date().toISOString().slice(0, 10),
   })
+
+  // Auto-fill refund_amount = avg_cost × quantity เมื่อเลือก damaged/lost
+  useEffect(() => {
+    if (form.product_status === "damaged" || form.product_status === "lost") {
+      const sku = skus.find(s => s.sku_id === form.sku_id)
+      const avg = parseFloat(sku?.avg_cost) || 0
+      const qty = parseInt(form.quantity) || 0
+      setForm(f => ({ ...f, refund_amount: (avg * qty).toFixed(2) }))
+    }
+  }, [form.product_status, form.sku_id, form.quantity, skus])
+
   const [saving, setSaving] = useState(false)
   const [toast, setToast] = useState(null)
   const [deleteId, setDeleteId] = useState(null)
@@ -154,7 +165,14 @@ export default function PageClaims({ machines, skus, claims, onAddClaim, onConfi
                   className="dx-input dx-mono" style={{ fontWeight: 700 }}/>
               </div>
               <div>
-                <label style={labelStyle}>ยอดคืนเงิน (฿)</label>
+                <label style={labelStyle}>
+                  ยอดคืนเงิน (฿)
+                  {(form.product_status === "damaged" || form.product_status === "lost") && (
+                    <span style={{ marginLeft: 6, fontSize: 9, color: "var(--dx-cyan-soft)", textTransform: "none", letterSpacing: 0 }}>
+                      · auto: avg_cost × จำนวน
+                    </span>
+                  )}
+                </label>
                 <input type="number" min="0" step="0.01" value={form.refund_amount} onChange={e => setForm({ ...form, refund_amount: e.target.value })}
                   placeholder="0.00" className="dx-input dx-mono"/>
               </div>

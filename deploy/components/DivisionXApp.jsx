@@ -522,8 +522,24 @@ export default function DivisionXApp() {
   }
 
   const confirmClaim = async (claim) => {
-    // ยืนยันเคลม → เปลี่ยนสถานะเท่านั้น ไม่ตัด stock (ของออกจากคลังไปแล้วตอนเบิกเติมตู้)
+    // ยืนยันเคลม: ถ้า damaged/lost → ตัดสต็อกของ user ที่บันทึก (managed_by_user_id)
     await dbUpdateClaim(claim.id, { confirm_status: "confirmed" })
+    if ((claim.product_status === "damaged" || claim.product_status === "lost") && claim.managed_by_user_id) {
+      const label = claim.product_status === "damaged" ? "ตัดชำรุด" : "ตัดสูญหาย"
+      await dbAddStockOut({
+        sku_id:               claim.sku_id,
+        machine_id:           claim.machine_id,
+        quantity_packs:       claim.quantity,
+        withdrawn_at:         new Date().toISOString(),
+        withdrawn_by_user_id: claim.managed_by_user_id,
+        created_by:           profile?.display_name || session?.user?.email || "admin",
+        note:                 `${label} จากเคลม #${claim.id}`,
+        lot_number:           null,
+      })
+      const [newClaims, newStockOut, newSB] = await Promise.all([getClaims(), getStockOut(), getStockBalance()])
+      setClaims(newClaims); setStockOut(newStockOut); setStockBalance(newSB)
+      return
+    }
     setClaims(await getClaims())
   }
 
@@ -709,7 +725,7 @@ export default function DivisionXApp() {
 
         <main className="flex-1 p-4 lg:p-6 overflow-y-auto">
           {page === "dashboard"  && <PageDashboard stockIn={stockIn} stockOut={stockOut} stockBalance={stockBalance} skus={skus} transfers={transfers} machineStock={machineStock} profile={profile} onAddLot={() => { setStockInitialTab("addin"); setPage("stock") }}/>}
-          {page === "stock"      && <PageStock     stockIn={stockIn} stockBalance={stockBalance} skus={skus} initialTab={stockInitialTab} onAddStockIn={addStockIn} onUpdateStockIn={updateStockIn} onDeleteStockIn={deleteStockIn} onAddSku={addSku} onDeactivateSku={deactivateSku} onRecalcAvgCost={async (skuId) => { await recalcAvgCost(skuId); setSkus(await getSkus()) }}/>}
+          {page === "stock"      && <PageStock     stockIn={stockIn} stockBalance={stockBalance} skus={skus} initialTab={stockInitialTab} profile={profile} onAddStockIn={addStockIn} onUpdateStockIn={updateStockIn} onDeleteStockIn={deleteStockIn} onAddSku={addSku} onDeactivateSku={deactivateSku} onRecalcAvgCost={async (skuId) => { await recalcAvgCost(skuId); setSkus(await getSkus()) }}/>}
           {page === "withdrawal" && <PageWithdrawal machines={machines} stockOut={stockOut} stockIn={stockIn} stockBalance={stockBalance} skus={skus} onAddStockOut={addStockOut} onDeleteStockOut={deleteStockOut} transfers={transfers} machineAssignments={machineAssignments} session={session} profile={profile}/>}
           {page === "transfer"   && <PageTransfer  stockIn={stockIn} stockOut={stockOut} stockBalance={stockBalance} skus={skus} transfers={transfers} profiles={allProfiles} onAddTransfer={addTransfer} onDeleteTransfer={deleteTransfer}/>}
           {page === "mystock"    && <PageMyStock   transfers={transfers} stockOut={stockOut} stockIn={stockIn} skus={skus} profile={profile} session={session} profiles={allProfiles} machines={machines} machineAssignments={machineAssignments} onDeleteTransfer={deleteTransfer}/>}

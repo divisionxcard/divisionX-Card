@@ -292,7 +292,7 @@ export default function PageMyStock({ transfers, stockOut, stockIn = [], skus, p
                     <Th align="right">จำนวน</Th>
                     <Th align="left">ผู้แจกจ่าย</Th>
                     <Th align="left">หมายเหตุ</Th>
-                    {onDeleteTransfer && <Th align="center" style={{ width: 112 }}>จัดการ</Th>}
+                    {isAdmin && onDeleteTransfer && <Th align="center" style={{ width: 112 }}>จัดการ</Th>}
                   </tr>
                 </thead>
                 <tbody>
@@ -310,7 +310,7 @@ export default function PageMyStock({ transfers, stockOut, stockIn = [], skus, p
                         </Td>
                         <Td muted>{t.created_by || "-"}</Td>
                         <Td muted>{t.note || "-"}</Td>
-                        {onDeleteTransfer && (
+                        {isAdmin && onDeleteTransfer && (
                           <Td align="center">
                             {isConfirming ? (
                               <div style={{ display: "inline-flex", gap: 4 }}>
