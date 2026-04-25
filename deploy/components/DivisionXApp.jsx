@@ -298,9 +298,9 @@ const NAV_BASE = [
   { id:"transfer",   label:"แจกจ่ายสินค้า",  icon:Send,  adminOnly:true },
   { id:"mystock",    label:"สต็อกของฉัน",    icon:Boxes         },
   { id:"refillprep", label:"เตรียมของเติมตู้", icon:ClipboardList },
+  { id:"claims",     label:"เคลม/คืนเงิน",  icon:AlertTriangle },
   { id:"machstock",  label:"สต็อกหน้าตู้",   icon:Monitor       },
   { id:"sales",      label:"ยอดขาย",         icon:ShoppingCart  },
-  { id:"claims",     label:"เคลม/คืนเงิน",  icon:AlertTriangle },
   { id:"analytics",  label:"วิเคราะห์ SKU",  icon:BarChart2     },
 ]
 const NAV_ADMIN_ITEMS = [
@@ -511,19 +511,21 @@ export default function DivisionXApp() {
   }
 
   const addClaim = async (record) => {
-    // สูญหาย/ชำรุด → สถานะเริ่มต้น "pending" (รอยืนยัน)
-    // คืนสต็อก → บันทึกเลย ผู้ใช้ไปคีย์รับเข้าเอง
-    const status = (record.product_status === "lost" || record.product_status === "damaged")
-      ? "pending" : record.product_status
+    // ทุกสถานะ (lost/damaged/returned) → "pending" รอ admin ยืนยัน
+    //   confirm แล้วระบบจึงปรับสต็อก: damaged/lost → ตัด · returned → คืน
     const createdBy = profile?.display_name || session?.user?.email || null
     const userId = session?.user?.id || null
-    await dbAddClaim({ ...record, confirm_status: status, created_by: createdBy, managed_by_user_id: userId })
+    await dbAddClaim({ ...record, confirm_status: "pending", created_by: createdBy, managed_by_user_id: userId })
     setClaims(await getClaims())
   }
 
   const confirmClaim = async (claim) => {
-    // ยืนยันเคลม: ถ้า damaged/lost → ตัดสต็อกของ user ที่บันทึก (managed_by_user_id)
+    // ยืนยันเคลม:
+    //   damaged/lost → ตัดสต็อกของ user ที่บันทึก (สร้าง stock_out)
+    //   returned     → คืนสต็อกให้ user (สร้าง transfer)
     await dbUpdateClaim(claim.id, { confirm_status: "confirmed" })
+    const adminName = profile?.display_name || session?.user?.email || "admin"
+
     if ((claim.product_status === "damaged" || claim.product_status === "lost") && claim.managed_by_user_id) {
       const label = claim.product_status === "damaged" ? "ตัดชำรุด" : "ตัดสูญหาย"
       await dbAddStockOut({
@@ -532,7 +534,7 @@ export default function DivisionXApp() {
         quantity_packs:       claim.quantity,
         withdrawn_at:         new Date().toISOString(),
         withdrawn_by_user_id: claim.managed_by_user_id,
-        created_by:           profile?.display_name || session?.user?.email || "admin",
+        created_by:           adminName,
         note:                 `${label} จากเคลม #${claim.id}`,
         lot_number:           null,
       })
@@ -540,6 +542,25 @@ export default function DivisionXApp() {
       setClaims(newClaims); setStockOut(newStockOut); setStockBalance(newSB)
       return
     }
+
+    if (claim.product_status === "returned" && claim.managed_by_user_id) {
+      // คืนสต็อกให้ user (เช่น user ลืมหยิบของไป) → สร้าง transfer record คืน
+      await dbAddStockTransfer({
+        sku_id:         claim.sku_id,
+        quantity:       claim.quantity,
+        quantity_packs: claim.quantity,
+        unit:           "pack",
+        to_user_id:     claim.managed_by_user_id,
+        transferred_at: new Date().toISOString(),
+        created_by:     adminName,
+        note:           `คืนจากเคลม #${claim.id} (สถานะ: คืนสต็อก)`,
+        lot_number:     null,
+      })
+      const [newClaims, newTransfers, newSB] = await Promise.all([getClaims(), getStockTransfers(), getStockBalance()])
+      setClaims(newClaims); setTransfers(newTransfers); setStockBalance(newSB)
+      return
+    }
+
     setClaims(await getClaims())
   }
 
@@ -732,7 +753,7 @@ export default function DivisionXApp() {
           {page === "refillprep" && <PageRefillPrep machines={machines} machineStock={machineStock} machineAssignments={machineAssignments} transfers={transfers} stockOut={stockOut} skus={skus} profile={profile} session={session} profiles={allProfiles} onAddStockOut={addStockOut} onUpdateStockOut={updateStockOut} onDeleteStockOut={deleteStockOut}/>}
           {page === "machstock"  && <PageMachineStockView machines={machines} machineStock={machineStock} skus={skus} onRefresh={loadAll}/>}
           {page === "sales"      && <PageSales     machines={machines} sales={sales} skus={skus} claims={claims} onRefresh={loadAll}/>}
-          {page === "claims"     && <PageClaims    machines={machines} skus={skus} claims={claims} onAddClaim={addClaim} onConfirmClaim={confirmClaim} onDeleteClaim={deleteClaim} machineAssignments={machineAssignments} session={session}/>}
+          {page === "claims"     && <PageClaims    machines={machines} skus={skus} claims={claims} onAddClaim={addClaim} onConfirmClaim={confirmClaim} onDeleteClaim={deleteClaim} machineAssignments={machineAssignments} session={session} profile={profile}/>}
           {page === "analytics"  && <PageAnalytics sales={sales} skus={skus}/>}
           {page === "users"      && <PageUsers     currentProfile={profile} machines={machines} machineAssignments={machineAssignments} allProfiles={allProfiles} onAddAssignment={addAssignment} onRemoveAssignment={removeAssignment}/>}
           {page.startsWith("machine_") && (() => {

@@ -386,18 +386,18 @@ function SkuCard({ sku, balance, lots, stockOut, expanded, onToggle }) {
       </div>
 
       <div style={{ padding: "6px 14px 14px" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 10, minWidth: 0 }}>
           <Badge series={sku.series}/>
-          <span className="dx-mono" style={{ fontSize: 11, fontWeight: 600, color: "var(--dx-text-secondary)" }}>
+          <span className="dx-mono" style={{ fontSize: 11, fontWeight: 600, color: "var(--dx-text-secondary)", flexShrink: 0 }}>
             {sku.sku_id}
           </span>
-        </div>
-        <div style={{
-          fontSize: 12, color: "var(--dx-text-muted)",
-          marginBottom: 10,
-          overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-        }} title={sku.name}>
-          {sku.name}
+          <span style={{
+            fontSize: 11, color: "var(--dx-text-muted)",
+            overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+            minWidth: 0, flex: 1, textAlign: "right",
+          }} title={sku.name}>
+            {sku.name}
+          </span>
         </div>
 
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 2, fontSize: 11 }}>

@@ -339,12 +339,17 @@ export default function PageTransfer({ stockIn, stockOut, stockBalance, skus, tr
                         {fmt(t.quantity_packs)} ซอง
                       </span>
                     </div>
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 6 }}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 6, flexWrap: "wrap", gap: 6 }}>
                       <span style={{ fontSize: 11, color: "var(--dx-text-muted)" }}>
                         → <span style={{ fontWeight: 600, color: "#B794F6" }}>{toAdmin?.display_name || "?"}</span>
                         <span className="dx-mono" style={{ marginLeft: 8, color: "var(--dx-text-muted)" }}>
                           {(t.transferred_at || t.created_at || "").slice(0, 10)}
                         </span>
+                        {t.created_by && (
+                          <span style={{ marginLeft: 8, color: "var(--dx-text-muted)" }}>
+                            · โดย <span style={{ color: "var(--dx-cyan-soft)" }}>{t.created_by}</span>
+                          </span>
+                        )}
                       </span>
                       {deleteId === t.id ? (
                         <div style={{ display: "flex", gap: 6 }}>

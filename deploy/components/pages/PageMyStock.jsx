@@ -1,7 +1,8 @@
 // PageMyStock — Dark Theme
 import { useState } from "react"
 import { X, CheckCircle, Package, PlusCircle, Wallet, Loader2, Trash2 } from "lucide-react"
-import { fmt, fmtB, fmtBoxPack, sortSkus, getSkuSeries } from "../shared/helpers"
+import { fmt, fmtB, fmtBoxPack, getSkuSeries } from "../shared/helpers"
+import { SKU_SERIES_ORDER } from "../shared/constants"
 import { Badge, KpiCard, SectionTitle } from "../shared/dx-components"
 
 export default function PageMyStock({ transfers, stockOut, stockIn = [], skus, profile, session, profiles, machines, machineAssignments, onDeleteTransfer }) {
@@ -48,17 +49,24 @@ export default function PageMyStock({ transfers, stockOut, stockIn = [], skus, p
     balanceMap[so.sku_id].withdrawn += so.quantity_packs || 0
   })
 
-  const balanceList = sortSkus(
-    Object.entries(balanceMap).map(([sku_id, v]) => ({
-      sku_id,
-      name: skus.find(s => s.sku_id === sku_id)?.name || sku_id,
-      series: getSkuSeries(sku_id),
-      received: v.received,
-      withdrawn: v.withdrawn,
-      balance: v.received - v.withdrawn,
-      packs_per_box: skus.find(s => s.sku_id === sku_id)?.packs_per_box || 24,
-    }))
-  ).filter(r => r.received > 0 || r.withdrawn > 0)
+  // Sort: series (OP→PRB→EB) → balance น้อยสุดขึ้นก่อน → sku_id
+  const balanceList = Object.entries(balanceMap).map(([sku_id, v]) => ({
+    sku_id,
+    name: skus.find(s => s.sku_id === sku_id)?.name || sku_id,
+    series: getSkuSeries(sku_id),
+    received: v.received,
+    withdrawn: v.withdrawn,
+    balance: v.received - v.withdrawn,
+    packs_per_box: skus.find(s => s.sku_id === sku_id)?.packs_per_box || 24,
+  }))
+    .filter(r => r.received > 0 || r.withdrawn > 0)
+    .sort((a, b) => {
+      const sa = SKU_SERIES_ORDER[a.series] ?? 9
+      const sb = SKU_SERIES_ORDER[b.series] ?? 9
+      return sa - sb
+        || a.balance - b.balance
+        || (a.sku_id || "").localeCompare(b.sku_id || "")
+    })
 
   const totalBalance = balanceList.reduce((a, r) => a + r.balance, 0)
   const totalReceived = balanceList.reduce((a, r) => a + r.received, 0)

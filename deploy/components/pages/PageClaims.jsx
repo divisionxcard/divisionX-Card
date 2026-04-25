@@ -5,19 +5,23 @@ import { fmtB, sortSkus } from "../shared/helpers"
 import { SectionTitle } from "../shared/dx-components"
 
 const STATUS_OPTIONS = [
-  { v: "returned", l: "คืนสต็อก", desc: "สภาพดี นำกลับมาขายได้", accent: { text: "var(--dx-success)", bg: "rgba(0,255,136,0.08)", border: "rgba(0,255,136,0.35)" } },
-  { v: "damaged",  l: "ชำรุด",    desc: "เสียหาย ขายต่อไม่ได้",   accent: { text: "var(--dx-danger)",  bg: "rgba(255,68,102,0.08)", border: "rgba(255,68,102,0.35)" } },
-  { v: "lost",     l: "สูญหาย",   desc: "ตู้ปล่อยเกิน ไม่ได้คืน",  accent: { text: "#FFA573",            bg: "rgba(255,165,115,0.08)", border: "rgba(255,165,115,0.35)" } },
+  { v: "returned", l: "คืนสต็อก", desc: "สภาพดี / ไม่ได้หยิบ — คืนเข้าสต็อก",  accent: { text: "var(--dx-success)", bg: "rgba(0,255,136,0.08)", border: "rgba(0,255,136,0.35)" } },
+  { v: "damaged",  l: "ชำรุด",    desc: "เสียหาย ขายต่อไม่ได้",                accent: { text: "var(--dx-danger)",  bg: "rgba(255,68,102,0.08)", border: "rgba(255,68,102,0.35)" } },
+  { v: "lost",     l: "สูญหาย",   desc: "ตู้ปล่อยเกิน ไม่ได้คืน",               accent: { text: "#FFA573",            bg: "rgba(255,165,115,0.08)", border: "rgba(255,165,115,0.35)" } },
 ]
 
-const REASONS = ["สินค้าไม่ตก", "ตกผิดช่อง", "ตู้ปล่อยเกิน", "เครื่องค้าง", "สินค้าชำรุด", "อื่นๆ"]
+const REASONS = ["สินค้าไม่ตก", "ตกผิดช่อง", "ตู้ปล่อยเกิน", "เครื่องค้าง", "สินค้าชำรุด", "ลืมหยิบของไป", "อื่นๆ"]
 
-export default function PageClaims({ machines, skus, claims, onAddClaim, onConfirmClaim, onDeleteClaim, machineAssignments, session }) {
+export default function PageClaims({ machines, skus, claims, onAddClaim, onConfirmClaim, onDeleteClaim, machineAssignments, session, profile }) {
   const userId = session?.user?.id
+  const isAdmin = profile?.role === "admin"
   const myAssignments = (machineAssignments || []).filter(a => a.user_id === userId && a.is_active)
   const hasAssignment = myAssignments.length > 0
   const myMachines = hasAssignment ? machines.filter(m => myAssignments.some(a => a.machine_id === m.machine_id)) : machines
-  const myClaims = hasAssignment ? claims.filter(c => myAssignments.some(a => a.machine_id === c.machine_id)) : claims
+  // Admin → เห็นทุกเคลม · User → เฉพาะเคลมของตัวเอง (managed_by_user_id)
+  const myClaims = isAdmin
+    ? claims
+    : claims.filter(c => c.managed_by_user_id === userId)
 
   const [form, setForm] = useState({
     machine_id: "", sku_id: "", quantity: "1", refund_amount: "",
@@ -47,7 +51,9 @@ export default function PageClaims({ machines, skus, claims, onAddClaim, onConfi
     e.preventDefault()
     if (!form.machine_id) { showToast("กรุณาเลือกตู้", "error"); return }
     if (!form.sku_id) { showToast("กรุณาเลือกสินค้า", "error"); return }
-    if (form.product_status !== "lost" && (!form.refund_amount || parseFloat(form.refund_amount) <= 0)) { showToast("กรุณาระบุยอดคืนเงิน", "error"); return }
+    // refund > 0 บังคับเฉพาะ damaged (สินค้าชำรุดที่ต้องคืนเงินลูกค้า)
+    // returned (คืนสต็อก / ไม่ได้หยิบ) + lost (สูญหาย) → 0 ได้
+    if (form.product_status === "damaged" && (!form.refund_amount || parseFloat(form.refund_amount) <= 0)) { showToast("กรุณาระบุยอดคืนเงิน", "error"); return }
     if (!form.claimed_at) { showToast("กรุณาระบุวันที่เคลม", "error"); return }
     try {
       setSaving(true)
@@ -255,7 +261,7 @@ export default function PageClaims({ machines, skus, claims, onAddClaim, onConfi
                     <Th align="center">สถานะ</Th>
                     <Th align="center">ยืนยัน</Th>
                     <Th align="left">ผู้บันทึก</Th>
-                    <Th/>
+                    {isAdmin && <Th/>}
                   </tr>
                 </thead>
                 <tbody>
@@ -327,31 +333,33 @@ export default function PageClaims({ machines, skus, claims, onAddClaim, onConfi
                         <td style={{ padding: "10px 8px", fontSize: 10, color: "var(--dx-text-muted)", whiteSpace: "nowrap" }}>
                           {c.created_by || "—"}
                         </td>
-                        <td style={{ padding: "10px 8px", textAlign: "right" }}>
-                          {deleteId === c.id ? (
-                            <div style={{ display: "inline-flex", gap: 6 }}>
-                              <button onClick={() => handleDelete(c.id)}
-                                style={{ fontSize: 10, fontWeight: 600, color: "var(--dx-danger)", background: "transparent", border: "none", cursor: "pointer" }}>
-                                ลบ
+                        {isAdmin && (
+                          <td style={{ padding: "10px 8px", textAlign: "right" }}>
+                            {deleteId === c.id ? (
+                              <div style={{ display: "inline-flex", gap: 6 }}>
+                                <button onClick={() => handleDelete(c.id)}
+                                  style={{ fontSize: 10, fontWeight: 600, color: "var(--dx-danger)", background: "transparent", border: "none", cursor: "pointer" }}>
+                                  ลบ
+                                </button>
+                                <button onClick={() => setDeleteId(null)}
+                                  style={{ fontSize: 10, color: "var(--dx-text-muted)", background: "transparent", border: "none", cursor: "pointer" }}>
+                                  ยกเลิก
+                                </button>
+                              </div>
+                            ) : (
+                              <button onClick={() => setDeleteId(c.id)}
+                                style={{
+                                  padding: 4, borderRadius: 4, border: "none", cursor: "pointer",
+                                  background: "transparent", color: "var(--dx-text-muted)",
+                                  display: "inline-flex", alignItems: "center", justifyContent: "center",
+                                }}
+                                onMouseEnter={e => e.currentTarget.style.color = "var(--dx-danger)"}
+                                onMouseLeave={e => e.currentTarget.style.color = "var(--dx-text-muted)"}>
+                                <Trash2 size={13}/>
                               </button>
-                              <button onClick={() => setDeleteId(null)}
-                                style={{ fontSize: 10, color: "var(--dx-text-muted)", background: "transparent", border: "none", cursor: "pointer" }}>
-                                ยกเลิก
-                              </button>
-                            </div>
-                          ) : (
-                            <button onClick={() => setDeleteId(c.id)}
-                              style={{
-                                padding: 4, borderRadius: 4, border: "none", cursor: "pointer",
-                                background: "transparent", color: "var(--dx-text-muted)",
-                                display: "inline-flex", alignItems: "center", justifyContent: "center",
-                              }}
-                              onMouseEnter={e => e.currentTarget.style.color = "var(--dx-danger)"}
-                              onMouseLeave={e => e.currentTarget.style.color = "var(--dx-text-muted)"}>
-                              <Trash2 size={13}/>
-                            </button>
-                          )}
-                        </td>
+                            )}
+                          </td>
+                        )}
                       </tr>
                     )
                   })}
