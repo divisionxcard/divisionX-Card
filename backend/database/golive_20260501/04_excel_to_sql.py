@@ -70,8 +70,9 @@ def cell(ws, row, col):
 
 def parse_main(ws):
     """Main_Stock: row 4 = header, row 5+ = data
+       Business rule: Main เก็บเฉพาะ Cotton + Box (ไม่มีซองเศษ)
        Cols: sku_id | series | packs_per_box | packs_per_cotton |
-             full_cottons | full_boxes | loose_packs | total_packs (formula) |
+             full_cottons | full_boxes | total_packs (formula) |
              unit_cost_per_pack | note
     """
     main = {}
@@ -89,13 +90,12 @@ def parse_main(ws):
 
         cottons = cell(ws, r, 5) or 0
         boxes   = cell(ws, r, 6) or 0
-        loose   = cell(ws, r, 7) or 0
-        cost_pp = cell(ws, r, 9) or 0
+        cost_pp = cell(ws, r, 8) or 0
 
         try:
-            total_packs = int(cottons) * ppc + int(boxes) * ppb + int(loose)
+            total_packs = int(cottons) * ppc + int(boxes) * ppb
         except (TypeError, ValueError):
-            errors.append(f"Main_Stock row {r}: full_cottons/boxes/loose_packs ไม่ใช่ตัวเลข")
+            errors.append(f"Main_Stock row {r}: full_cottons/full_boxes ไม่ใช่ตัวเลข")
             continue
         if total_packs < 0:
             errors.append(f"Main_Stock row {r}: total_packs ติดลบ")

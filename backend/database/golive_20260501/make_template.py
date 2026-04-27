@@ -73,6 +73,8 @@ def style_header(cell):
 
 def make_main_stock(wb):
     ws = wb.create_sheet("Main_Stock")
+    # ⚠ Business rule: Main เก็บเฉพาะ Cotton + Box · ไม่มีซองเศษ
+    # (เศษซอง = อยู่ที่ User · admin จ่ายของจาก Main เป็น Cotton/Box เต็มเท่านั้น)
     headers = [
         ("A", "sku_id",             INFO_FILL,    14),
         ("B", "series",             INFO_FILL,     9),
@@ -80,21 +82,19 @@ def make_main_stock(wb):
         ("D", "packs_per_cotton",   INFO_FILL,    16),
         ("E", "full_cottons",       INPUT_FILL,   13),
         ("F", "full_boxes",         INPUT_FILL,   12),
-        ("G", "loose_packs",        INPUT_FILL,   12),
-        ("H", "total_packs (auto)", FORMULA_FILL, 17),
-        ("I", "unit_cost_per_pack", INPUT_FILL,   18),
-        ("J", "note",               INPUT_FILL,   28),
+        ("G", "total_packs (auto)", FORMULA_FILL, 17),
+        ("H", "unit_cost_per_pack", INPUT_FILL,   18),
+        ("I", "note",               INPUT_FILL,   28),
     ]
 
-    # Title
-    ws.merge_cells("A1:J1")
+    ws.merge_cells("A1:I1")
     ws["A1"] = "📦 สต็อกใน Main (คลังหลัก) ณ เช้าวันที่ 1 พ.ค. 2026"
     ws["A1"].font = Font(bold=True, size=12, color="2C5282")
     ws["A1"].alignment = LEFT
 
-    ws.merge_cells("A2:J2")
-    ws["A2"] = ("กรอกเฉพาะ column สีครีม: full_cottons (ลังใหญ่ครบ) · full_boxes (กล่องครบ) · "
-                "loose_packs (ซองเหลือ) · unit_cost_per_pack (ราคาใบเสร็จล่าสุด) · note")
+    ws.merge_cells("A2:I2")
+    ws["A2"] = ("Main เก็บเฉพาะ Cotton + Box · ไม่มีซองเศษ (เศษอยู่ที่ User) · "
+                "กรอก full_cottons (ลังใหญ่) + full_boxes (กล่อง) + unit_cost_per_pack (ราคาใบเสร็จล่าสุด)")
     ws["A2"].font = NOTE_FONT
     ws["A2"].alignment = LEFT
 
@@ -105,22 +105,20 @@ def make_main_stock(wb):
         style_header(c)
         ws.column_dimensions[col].width = width
 
-    # Data rows
     for i, (sku_id, series, ppb, bpc) in enumerate(SKUS):
         r = HEADER_ROW + 1 + i
         ws.cell(r, 1, sku_id).fill = INFO_FILL
         ws.cell(r, 2, series).fill = INFO_FILL
         ws.cell(r, 3, ppb).fill = INFO_FILL
         ws.cell(r, 4, ppb * bpc).fill = INFO_FILL  # packs_per_cotton
-        ws.cell(r, 5, 0).fill = INPUT_FILL   # full_cottons
-        ws.cell(r, 6, 0).fill = INPUT_FILL   # full_boxes
-        ws.cell(r, 7, 0).fill = INPUT_FILL   # loose_packs
-        ws.cell(r, 8, f"=E{r}*D{r}+F{r}*C{r}+G{r}").fill = FORMULA_FILL  # total_packs
-        ws.cell(r, 9, 0).fill = INPUT_FILL   # unit_cost_per_pack
-        ws.cell(r, 10, "").fill = INPUT_FILL # note
-        for col_idx in range(1, 11):
+        ws.cell(r, 5, 0).fill = INPUT_FILL         # full_cottons
+        ws.cell(r, 6, 0).fill = INPUT_FILL         # full_boxes
+        ws.cell(r, 7, f"=E{r}*D{r}+F{r}*C{r}").fill = FORMULA_FILL  # total_packs
+        ws.cell(r, 8, 0).fill = INPUT_FILL         # unit_cost_per_pack
+        ws.cell(r, 9, "").fill = INPUT_FILL        # note
+        for col_idx in range(1, 10):
             ws.cell(r, col_idx).border = BORDER
-            ws.cell(r, col_idx).alignment = CENTER if col_idx <= 9 else LEFT
+            ws.cell(r, col_idx).alignment = CENTER if col_idx <= 8 else LEFT
 
     ws.freeze_panes = f"A{HEADER_ROW + 1}"
 
@@ -189,9 +187,9 @@ def make_readme(wb):
         ("5) Save → ส่งไฟล์ให้ทีมเทค → reset + seed → go-live", None),
         ("", None),
         ("วิธีกรอก Sheet 'Main_Stock'", "h2"),
+        ("• Main เก็บเฉพาะ Cotton + Box · ไม่มีซองเศษ (เศษซองทั้งหมดอยู่ที่ User)", "note"),
         ("• full_cottons = ลังใหญ่ครบ (1 cotton = 12 box · OP/EB = 144 packs · PRB = 120 packs)", None),
         ("• full_boxes = กล่องครบที่ไม่ได้อยู่ในลัง", None),
-        ("• loose_packs = ซองที่ไม่ครบกล่อง", None),
         ("• total_packs = ระบบคำนวณให้อัตโนมัติ", None),
         ("• unit_cost_per_pack = ราคาทุน/ซอง (ใบเสร็จล่าสุด)", None),
         ("• ถ้าไม่มี SKU ไหนเลย ใส่ 0 ทุกช่อง", "note"),
@@ -201,6 +199,10 @@ def make_readme(wb):
         ("• 1 row = 1 ผู้ใช้ × 1 SKU (เพิ่ม row ตามต้องการ)", None),
         ("• total_packs = ซองที่ผู้ใช้คนนั้น 'เหลือในมือ' หลังจากเติมตู้แล้ว", None),
         ("• ถ้าผู้ใช้ไม่มี SKU ใดเลย ข้ามได้", "note"),
+        ("", None),
+        ("วิธีกรอก Sheet 'User_Stock'", "h2"),
+        ("• User เก็บได้ทั้ง Cotton/Box/Pack · นับรวมเป็น 'ซอง' ทั้งหมด", None),
+        ("• ใส่จำนวน 'ซองรวม' ที่ผู้ใช้ถือเหลือในมือ (หลังเติมตู้แล้ว)", None),
         ("", None),
         ("ห้ามแก้", "h2"),
         ("• Sheet README นี้", None),
