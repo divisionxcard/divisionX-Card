@@ -62,7 +62,8 @@ def fetch_sales(token: str, date_from: str, date_to: str) -> list[dict]:
 
     while True:
         print(f"  📥 ดึง offset={offset}...")
-        res = requests.get(f"{VMS_API_BASE}/sales/", headers=headers, params={
+        # ⚠ VMS rebuild 18-19 เม.ย. 2026 ย้าย endpoint /sales/ → /report/sales/
+        res = requests.get(f"{VMS_API_BASE}/report/sales/", headers=headers, params={
             "limit": page_size,
             "offset": offset,
             "sortBy": "created_at",
