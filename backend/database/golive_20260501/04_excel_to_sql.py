@@ -111,7 +111,8 @@ def parse_main(ws):
 
 def parse_user(ws):
     """User_Stock: row 5 = header, row 6+ = data
-       Cols: username | display_name | sku_id | total_packs | note
+       Cols: username | sku_id | full_cottons | full_boxes | loose_packs | total_packs (formula) | note
+       User เก็บได้ทั้ง Cotton/Box/Pack · script คำนวณ total เอง
     """
     user_packs = defaultdict(int)
     errors = []
@@ -122,22 +123,30 @@ def parse_user(ws):
         if username not in KNOWN_USERS:
             errors.append(f"User_Stock row {r}: username '{username}' ไม่รู้จัก")
             continue
-        sku = cell(ws, r, 3)
-        packs = cell(ws, r, 4)
+        sku = cell(ws, r, 2)
         if not sku:
             errors.append(f"User_Stock row {r}: ไม่มี sku_id")
             continue
         if sku not in SKUS_INFO:
             errors.append(f"User_Stock row {r}: sku_id '{sku}' ไม่รู้จัก")
             continue
+        _, ppb, bpc = SKUS_INFO[sku]
+        ppc = ppb * bpc
+
+        cottons = cell(ws, r, 3) or 0
+        boxes   = cell(ws, r, 4) or 0
+        loose   = cell(ws, r, 5) or 0
         try:
-            packs = int(packs or 0)
+            total_packs = int(cottons) * ppc + int(boxes) * ppb + int(loose)
         except (TypeError, ValueError):
-            errors.append(f"User_Stock row {r}: total_packs ไม่ใช่ตัวเลข")
+            errors.append(f"User_Stock row {r}: cottons/boxes/loose_packs ไม่ใช่ตัวเลข")
             continue
-        if packs <= 0:
+        if total_packs <= 0:
             continue
-        user_packs[(sku, username)] += packs
+        if total_packs < 0:
+            errors.append(f"User_Stock row {r}: total ติดลบ")
+            continue
+        user_packs[(sku, username)] += total_packs
     return dict(user_packs), errors
 
 

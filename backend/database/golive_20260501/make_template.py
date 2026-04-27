@@ -125,21 +125,24 @@ def make_main_stock(wb):
 
 def make_user_stock(wb):
     ws = wb.create_sheet("User_Stock")
+    # User เก็บได้ทั้ง Cotton/Box/Pack · กรอกแยกหน่วย ระบบคำนวณรวมเป็นซอง
     headers = [
-        ("A", "username",     INPUT_FILL,   20),
-        ("B", "display_name", INFO_FILL,    20),
-        ("C", "sku_id",       INPUT_FILL,   12),
-        ("D", "total_packs",  INPUT_FILL,   13),
-        ("E", "note",         INPUT_FILL,   30),
+        ("A", "username",           INPUT_FILL,   18),
+        ("B", "sku_id",             INPUT_FILL,   12),
+        ("C", "full_cottons",       INPUT_FILL,   13),
+        ("D", "full_boxes",         INPUT_FILL,   12),
+        ("E", "loose_packs",        INPUT_FILL,   13),
+        ("F", "total_packs (auto)", FORMULA_FILL, 17),
+        ("G", "note",               INPUT_FILL,   28),
     ]
 
-    ws.merge_cells("A1:E1")
+    ws.merge_cells("A1:G1")
     ws["A1"] = "👤 สต็อกที่แอดมินแต่ละคนถือเหลือ (หลังเติมตู้แล้ว) · ณ เช้า 1 พ.ค. 2026"
     ws["A1"].font = Font(bold=True, size=12, color="2C5282")
 
-    ws.merge_cells("A2:E2")
-    ws["A2"] = ("เพิ่ม 1 row ต่อ (ผู้ใช้, SKU) · username ตรงกับ User Reference ด้านล่าง · "
-                "total_packs = ซอง (ของที่เหลือในมือ ไม่รวมที่เติมไปในตู้แล้ว)")
+    ws.merge_cells("A2:G2")
+    ws["A2"] = ("เพิ่ม 1 row ต่อ (ผู้ใช้, SKU) · กรอก full_cottons + full_boxes + loose_packs · "
+                "ระบบคำนวณ total_packs ให้เอง (ดู SKU Reference ด้านล่างเพื่อเทียบขนาด)")
     ws["A2"].font = NOTE_FONT
 
     HEADER_ROW = 4
@@ -149,13 +152,31 @@ def make_user_stock(wb):
         style_header(c)
         ws.column_dimensions[col].width = width
 
-    # 60 empty input rows (5 users × ~10-15 SKUs · เผื่อพอ)
+    # 60 empty input rows + auto formula สำหรับ total_packs
     for r in range(HEADER_ROW + 1, HEADER_ROW + 61):
-        for col_idx in range(1, 6):
-            ws.cell(r, col_idx).fill = INPUT_FILL
+        # ไม่ใส่ formula ที่นี่เพราะ packs_per_box ขึ้นกับ SKU · ใช้ VLOOKUP ไป SKU Reference
+        # F = cottons * (ppb*12) + boxes * ppb + loose
+        # ppb ดึงจาก SKU Reference ที่ row ของ ref_skus
+        # ใช้ IFERROR เผื่อช่องว่าง
+        ppb_lookup = f'IFERROR(VLOOKUP(B{r},$J$5:$K$25,2,FALSE),0)'
+        ws.cell(r, 6, f'=IF(B{r}="","",C{r}*{ppb_lookup}*12+D{r}*{ppb_lookup}+E{r})').fill = FORMULA_FILL
+        for col_idx in range(1, 8):
+            if col_idx != 6:
+                ws.cell(r, col_idx).fill = INPUT_FILL
             ws.cell(r, col_idx).border = BORDER
 
-    # User reference table
+    # SKU Reference (ขวาของ data · column J-K) · ให้ VLOOKUP ใช้
+    ws.cell(4, 10, "🎴 SKU Reference (อ้างอิง)").font = Font(bold=True, color="2C5282", size=10)
+    ws.cell(4, 10).fill = INFO_FILL
+    ws.merge_cells(start_row=4, start_column=10, end_row=4, end_column=11)
+    for i, (sku_id, _, ppb, _) in enumerate(SKUS):
+        r = 5 + i
+        ws.cell(r, 10, sku_id).fill = INFO_FILL
+        ws.cell(r, 11, ppb).fill = INFO_FILL
+    ws.column_dimensions["J"].width = 10
+    ws.column_dimensions["K"].width = 8
+
+    # User reference table (ด้านล่าง)
     ref_start = HEADER_ROW + 63
     ws.cell(ref_start, 1, "👥 User Reference (อ้างอิง · อย่าแก้)").font = Font(bold=True, color="2C5282")
     ws.cell(ref_start + 1, 1, "username").fill = INFO_FILL
@@ -195,9 +216,11 @@ def make_readme(wb):
         ("• ถ้าไม่มี SKU ไหนเลย ใส่ 0 ทุกช่อง", "note"),
         ("", None),
         ("วิธีกรอก Sheet 'User_Stock'", "h2"),
+        ("• User เก็บได้ทั้ง Cotton/Box/Pack · กรอกแยกหน่วย", None),
         ("• username ต้องตรงกับ User Reference ด้านล่างของ sheet", None),
         ("• 1 row = 1 ผู้ใช้ × 1 SKU (เพิ่ม row ตามต้องการ)", None),
-        ("• total_packs = ซองที่ผู้ใช้คนนั้น 'เหลือในมือ' หลังจากเติมตู้แล้ว", None),
+        ("• full_cottons + full_boxes + loose_packs = ของที่ผู้ใช้คนนั้น 'เหลือในมือ' หลังเติมตู้", None),
+        ("• total_packs = ระบบคำนวณให้อัตโนมัติ (VLOOKUP packs_per_box จาก SKU Reference)", None),
         ("• ถ้าผู้ใช้ไม่มี SKU ใดเลย ข้ามได้", "note"),
         ("", None),
         ("วิธีกรอก Sheet 'User_Stock'", "h2"),

@@ -62,9 +62,10 @@
 - **Main** (คลังหลัก) — เก็บเฉพาะ Cotton + Box · **ไม่มีซองเศษที่ Main**
   - นับ full_cottons (ลังใหญ่) + full_boxes (กล่อง) + ราคาทุน/ซอง
   - เศษซองทั้งหมดอยู่ที่ User (Main จ่ายเป็นลัง/กล่องเต็มเสมอ)
-- **User** (ของแอดมินที่ **เหลือในมือ หลังเติมตู้แล้ว**): username + SKU + ซองรวม
+- **User** (ของแอดมินที่ **เหลือในมือ หลังเติมตู้แล้ว**)
+  - กรอกแยกหน่วย: full_cottons + full_boxes + loose_packs
   - ⚠ สำคัญ — นับ "หลังเติมตู้" ไม่ใช่ก่อนเติม
-  - User นับเป็น "ซองรวม" (รวม cotton/box/pack ที่ถือเป็นจำนวนซอง)
+  - total_packs ระบบคำนวณให้ (VLOOKUP packs_per_box จาก SKU Reference)
 - กรอกใน `golive_template.xlsx`
 - Save ส่งกลับให้ทีมเทค
 
