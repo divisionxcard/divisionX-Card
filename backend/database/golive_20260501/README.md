@@ -26,8 +26,22 @@
 |---|---|
 | **27 เม.ย.** (วันนี้) | ส่ง `golive_template.xlsx` ให้แอดมิน · อธิบายขั้นตอน |
 | **28-29 เม.ย.** | แอดมินดู template · ถามถ้าไม่เข้าใจ |
-| **30 เม.ย.** | Dry run บน staging · ปิด GitHub Actions VMS sync ตอนคืน |
+| **30 เม.ย. ดึก** | ปิด GitHub Actions VMS sync (กันรันชน reset) — ดูวิธีด้านล่าง |
 | **1 พ.ค. เช้า** | เติมตู้ → sync → นับ → reset → seed → go-live |
+| **1 พ.ค. หลัง go-live** | เปิด GitHub Actions กลับ |
+
+### วิธีปิด/เปิด GitHub Actions workflow
+
+**ปิด (คืน 30 เม.ย.):**
+1. เปิด https://github.com/divisionxcard/divisionX-Card/actions
+2. คลิก workflow `VMS Daily Sync` (ใน sidebar ซ้าย)
+3. กด `...` (3 จุด) มุมขวาบน → **"Disable workflow"**
+4. ทำซ้ำกับ `VMS Stock Sync`
+
+**เปิดกลับ (หลัง go-live):**
+- คลิก workflow ที่ disabled → กด **"Enable workflow"**
+- กด **"Run workflow"** ครั้งแรกเพื่อ trigger sync ทันที
+
 
 ---
 
