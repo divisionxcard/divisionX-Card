@@ -41,18 +41,27 @@ jobs:
           VMS_PASSWORD:         ${{ secrets.VMS_PASSWORD }}
           SUPABASE_URL:         ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          # ใช้ env vars แทน inline ${{ }} เพื่อกัน shell substitution edge cases
+          IN_DAYS:      ${{ inputs.days }}
+          IN_FROM_DATE: ${{ inputs.from_date }}
+          IN_TO_DATE:   ${{ inputs.to_date }}
         run: |
-          ARGS=""
-          if [ -n "${{ inputs.from_date }}" ] && [ -n "${{ inputs.to_date }}" ]; then
-            ARGS="--from-date ${{ inputs.from_date }} --to-date ${{ inputs.to_date }}"
-          elif [ -n "${{ inputs.days }}" ]; then
-            ARGS="--days ${{ inputs.days }}"
+          # Build args as bash array (รองรับช่องว่าง/อักขระพิเศษ + ป้องกัน positional leak)
+          ARGS=()
+          if [ -n "$IN_FROM_DATE" ] && [ -n "$IN_TO_DATE" ]; then
+            ARGS+=(--from-date "$IN_FROM_DATE" --to-date "$IN_TO_DATE")
+            echo "🗓  Backfill: $IN_FROM_DATE → $IN_TO_DATE"
+          elif [ -n "$IN_DAYS" ]; then
+            ARGS+=(--days "$IN_DAYS")
+            echo "📅 Days back: $IN_DAYS"
+          else
+            echo "📅 Default: --days 1"
           fi
           echo "🚀 ลอง API ก่อน..."
-          python deploy/scraper/vms_sales_api.py $ARGS || {
+          python deploy/scraper/vms_sales_api.py "${ARGS[@]}" || {
             echo "⚠️ API ไม่สำเร็จ — fallback ไป Playwright..."
             pip install playwright && playwright install --with-deps chromium
-            python deploy/scraper/vms_scraper.py $ARGS
+            python deploy/scraper/vms_scraper.py "${ARGS[@]}"
           }
 
       - name: Upload screenshots (debug)
