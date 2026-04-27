@@ -305,7 +305,19 @@ export default function PageSales({ machines, sales, skus, claims, onRefresh }) 
     .sort((a, b) => b[1].rev - a[1].rev).slice(0, 8)
     .map(([id, v]) => ({ sku_id: id, ...v }))
 
-  const totalRefund = (claims || []).reduce((a, c) => a + (parseFloat(c.refund_amount) || 0), 0)
+  // Filter claims ให้ตรงกับช่วง sales ที่แสดง + ตู้ที่เลือก
+  // (ก่อนหน้าใช้ refund ทั้งหมดตั้งแต่เปิดร้าน → กำไรช่วงเวลาเพี้ยน)
+  const salesDates = filtered.map(r => r.sold_at).filter(Boolean)
+  const minDate = salesDates.length ? salesDates.reduce((a, b) => a < b ? a : b) : null
+  const maxDate = salesDates.length ? salesDates.reduce((a, b) => a > b ? a : b) : null
+  const totalRefund = (claims || [])
+    .filter(c => {
+      if (machineSel !== "all" && c.machine_id !== machineSel) return false
+      if (!minDate || !maxDate) return false
+      const d = (c.claimed_at || "").slice(0, 10)
+      return d >= minDate && d <= maxDate
+    })
+    .reduce((a, c) => a + (parseFloat(c.refund_amount) || 0), 0)
   const profit = filtered.reduce((a, r) => {
     const s = skus.find(sk => sk.sku_id === r.sku_id)
     const cost = (s?.avg_cost || s?.cost_price || 0) * (r.quantity_sold || 0)
