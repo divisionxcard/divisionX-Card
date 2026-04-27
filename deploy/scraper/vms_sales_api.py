@@ -235,16 +235,21 @@ def main():
         exit(1)
 
     print(f"\n📊 ดึงจาก API ได้ {len(api_rows)} transactions")
-    # Debug: log first row keys + sample เพื่อช่วย diagnose ถ้า schema เปลี่ยนอีก
+    # Debug: status distribution + has-products count
     if api_rows:
+        from collections import Counter
+        status_counts = Counter(r.get("status", "<none>") for r in api_rows)
+        with_products = sum(1 for r in api_rows if r.get("products"))
+        print(f"🔍 status counts: {dict(status_counts)}")
+        print(f"🔍 rows with 'products' field: {with_products}/{len(api_rows)}")
+        # Sample จาก row ที่มี status='paid' (ถ้ามี) เผื่อโครงสร้างต่างจาก pending
         import json as _json
-        first = api_rows[0]
-        print(f"🔍 first row keys: {list(first.keys())}")
-        if first.get("products"):
-            p0 = first["products"][0] if first["products"] else {}
-            print(f"🔍 first product keys: {list(p0.keys())}")
-        sample = _json.dumps(first, default=str, ensure_ascii=False)[:800]
-        print(f"🔍 first row sample: {sample}")
+        paid_row = next((r for r in api_rows if r.get("status") == "paid"), api_rows[0])
+        print(f"🔍 sample row (paid if exists) keys: {list(paid_row.keys())}")
+        if paid_row.get("products"):
+            print(f"🔍 sample product keys: {list(paid_row['products'][0].keys())}")
+        sample = _json.dumps(paid_row, default=str, ensure_ascii=False)[:800]
+        print(f"🔍 sample row: {sample}")
 
     records = parse_api_sales(api_rows)
     print(f"📋 แปลงได้ {len(records)} records")
