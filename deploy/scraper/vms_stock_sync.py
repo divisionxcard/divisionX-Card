@@ -103,6 +103,7 @@ def main():
     token = login()
     synced_at = datetime.utcnow().isoformat()
     all_records = []
+    machines_with_data = 0
 
     for machine_id, cfg in KIOSKS.items():
         record_id = cfg["record_id"]
@@ -110,6 +111,8 @@ def main():
         print(f"\n📦 ดึงข้อมูล {machine_id} (record_id={record_id}, tabs={num_tabs})...")
         slots = get_slots(token, record_id, num_tabs)
         print(f"  ✅ พบ {len(slots)} slots")
+        if len(slots) > 0:
+            machines_with_data += 1
 
         for slot in slots:
             product_name = slot.get("product_name") or None
@@ -129,6 +132,16 @@ def main():
             })
 
     print(f"\n📊 รวม {len(all_records)} slots จาก {len(KIOSKS)} ตู้")
+
+    # Fail loud ถ้าทุกตู้ดึงข้อมูลไม่ได้เลย
+    # (ป้องกัน "sync ตายเงียบ" เช่นตอน VMS rebuild ทำให้ kiosk_record_id เปลี่ยน)
+    if machines_with_data == 0:
+        raise SystemExit(
+            f"ERROR: ทุกตู้ดึงข้อมูลไม่ได้เลย ({len(KIOSKS)} ตู้) · "
+            "VMS API อาจ down หรือ kiosk_record_id เปลี่ยน · "
+            "ตรวจ KIOSKS ใน deploy/scraper/vms_stock_sync.py และ workflow log"
+        )
+
     save_to_supabase(all_records)
 
 if __name__ == "__main__":

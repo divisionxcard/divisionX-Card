@@ -63,6 +63,11 @@ export default function PageMachineStockView({ machines, machineStock, skus, onR
     ? machineStock.reduce((latest, s) => { const t = s.synced_at || ""; return t > latest ? t : latest }, "")
     : null
 
+  // Stale = sync เก่ากว่า 24 ชม. → เตือน · กันกรณี sync ตายเงียบ (เช่น VMS API เปลี่ยน)
+  const lastSyncMs = lastSync ? new Date(lastSync).getTime() : 0
+  const staleHours = lastSync ? (Date.now() - lastSyncMs) / 3_600_000 : 0
+  const isStale = lastSync && staleHours > 24
+
   // Refill report data
   const getRefillData = () => {
     const machIds = selectedMachine === "all"
@@ -132,6 +137,21 @@ export default function PageMachineStockView({ machines, machineStock, skus, onR
           </>
         }
       />
+
+      {isStale && !syncMsg && (
+        <div style={{
+          display: "flex", alignItems: "center", gap: 10, padding: "12px 16px", borderRadius: 10, fontSize: 12,
+          background: "rgba(255,200,87,0.08)",
+          border: "1px solid rgba(255,200,87,0.3)",
+          color: "var(--dx-warning)",
+        }}>
+          <AlertTriangle size={16}/>
+          <span>
+            ข้อมูลสต็อกหน้าตู้เก่ากว่า {Math.floor(staleHours)} ชม. — sync อาจมีปัญหา
+            กดปุ่ม "ดึงข้อมูล VMS" เพื่อ refresh · ถ้ายังเก่าหลัง sync แจ้งทีมเทคโนโลยี
+          </span>
+        </div>
+      )}
 
       {syncMsg && (
         <div style={{
