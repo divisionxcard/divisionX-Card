@@ -63,6 +63,7 @@ def fetch_sales(token: str, date_from: str, date_to: str) -> list[dict]:
     while True:
         print(f"  📥 ดึง offset={offset}...")
         # ⚠ VMS rebuild 18-19 เม.ย. 2026 ย้าย endpoint /sales/ → /report/sales/
+        # เพิ่ม include_products=true (เห็นใน Network panel ของ VMS web)
         res = requests.get(f"{VMS_API_BASE}/report/sales/", headers=headers, params={
             "limit": page_size,
             "offset": offset,
@@ -70,6 +71,7 @@ def fetch_sales(token: str, date_from: str, date_to: str) -> list[dict]:
             "sortOrder": "desc",
             "date_from": date_from,
             "date_to": date_to,
+            "include_products": "true",
         })
 
         if res.status_code == 403:
@@ -233,6 +235,14 @@ def main():
         exit(1)
 
     print(f"\n📊 ดึงจาก API ได้ {len(api_rows)} transactions")
+    # Debug: log first row keys + sample เพื่อช่วย diagnose schema เปลี่ยน
+    if api_rows:
+        import json as _json
+        first = api_rows[0]
+        print(f"🔍 first row keys: {list(first.keys())}")
+        sample = _json.dumps(first, default=str)[:600]
+        print(f"🔍 first row sample: {sample}")
+
     records = parse_api_sales(api_rows)
     print(f"📋 แปลงได้ {len(records)} records")
 
