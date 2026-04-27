@@ -94,21 +94,31 @@ def collapse_dashes(text: str) -> str:
     return re.sub(r'\s*-\s*', '-', text)
 
 def map_sku(product_name: str) -> str | None:
-    """แปลงชื่อสินค้าจาก VMS เป็น SKU ID"""
+    """แปลงชื่อสินค้าจาก VMS เป็น SKU ID
+    ⚠ หลัง VMS rebuild 18-19 เม.ย. 2026 · format product name เปลี่ยน
+    ใช้ regex เป็น primary · fallback ไป SKU_MAP เดิมถ้า regex ไม่จับ
+    """
+    import re
     key = normalize(product_name)
-    # ลอง exact match ก่อน
+
+    # Regex-based: รองรับ "OP - 01", "OP-01", "op  -  1", "OP - 13 PRO", "OP - 15 Box" ฯลฯ
+    m = re.search(r'op\s*[-–]\s*(\d+)', key)
+    if m: return f"OP {m.group(1).zfill(2)}"
+    m = re.search(r'prb\s*[-–]?\s*(\d+)', key)
+    if m: return f"PRB {m.group(1).zfill(2)}"
+    m = re.search(r'eb\s*[-–]\s*(\d+)', key)
+    if m: return f"EB {m.group(1).zfill(2)}"
+
+    # Fallback: hardcoded SKU_MAP (กรณี format ที่ regex จับไม่ได้)
     if key in SKU_MAP:
         return SKU_MAP[key]
-    # ลอง normalized match กับทุก key ใน map
     for vms_name, sku_id in SKU_MAP.items():
         if normalize(vms_name) == key:
             return sku_id
-    # ลอง match หลัง collapse dashes (op - 13 == op-13)
     key_collapsed = collapse_dashes(key)
     for vms_name, sku_id in SKU_MAP.items():
         if collapse_dashes(normalize(vms_name)) == key_collapsed:
             return sku_id
-    # ลอง partial match
     for vms_name, sku_id in SKU_MAP.items():
         n = normalize(vms_name)
         if n in key or key in n:
