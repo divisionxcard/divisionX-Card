@@ -235,6 +235,17 @@ def main():
         exit(1)
 
     print(f"\n📊 ดึงจาก API ได้ {len(api_rows)} transactions")
+    # Debug: log first row keys + sample เพื่อช่วย diagnose ถ้า schema เปลี่ยนอีก
+    if api_rows:
+        import json as _json
+        first = api_rows[0]
+        print(f"🔍 first row keys: {list(first.keys())}")
+        if first.get("products"):
+            p0 = first["products"][0] if first["products"] else {}
+            print(f"🔍 first product keys: {list(p0.keys())}")
+        sample = _json.dumps(first, default=str, ensure_ascii=False)[:800]
+        print(f"🔍 first row sample: {sample}")
+
     records = parse_api_sales(api_rows)
     print(f"📋 แปลงได้ {len(records)} records")
 
