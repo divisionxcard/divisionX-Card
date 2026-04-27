@@ -8,6 +8,9 @@ const adminClient = createClient(
   { auth: { autoRefreshToken: false, persistSession: false } }
 )
 
+const USERNAME_RE = /^[a-z0-9_]{3,20}$/
+const validateUsername = (u) => typeof u === "string" && USERNAME_RE.test(u)
+
 // GET /api/admin/users — ดึงรายชื่อผู้ใช้ทั้งหมด
 export async function GET() {
   try {
@@ -21,6 +24,7 @@ export async function GET() {
       .map(u => ({
         id:           u.id,
         email:        u.email,
+        username:     profileMap[u.id]?.username || "",
         display_name: profileMap[u.id]?.display_name || "",
         role:         profileMap[u.id]?.role || "user",
         created_at:   u.created_at,
@@ -36,10 +40,21 @@ export async function GET() {
 // POST /api/admin/users — เพิ่มผู้ใช้ใหม่
 export async function POST(req) {
   try {
-    const { email, password, display_name, role } = await req.json()
+    const { email, password, username, display_name, role } = await req.json()
 
     if (!email || !password) {
       return NextResponse.json({ error: "กรุณากรอก email และ password" }, { status: 400 })
+    }
+    const u = (username || "").trim().toLowerCase()
+    if (!validateUsername(u)) {
+      return NextResponse.json({ error: "ชื่อผู้ใช้ต้องเป็นตัวอักษร a-z, 0-9, _ ความยาว 3-20 ตัว" }, { status: 400 })
+    }
+
+    // เช็คซ้ำก่อนสร้าง auth user (กัน orphaned auth user ถ้า profile insert พัง)
+    const { data: dup } = await adminClient
+      .from("profiles").select("id").eq("username", u).maybeSingle()
+    if (dup) {
+      return NextResponse.json({ error: "ชื่อผู้ใช้นี้มีอยู่แล้ว" }, { status: 400 })
     }
 
     const { data: { user }, error } = await adminClient.auth.admin.createUser({
@@ -50,11 +65,17 @@ export async function POST(req) {
     if (error) throw error
 
     // สร้าง profile
-    await adminClient.from("profiles").upsert({
+    const { error: profErr } = await adminClient.from("profiles").upsert({
       id:           user.id,
-      display_name: display_name || email.split("@")[0],
+      username:     u,
+      display_name: display_name || u,
       role:         role || "user",
     })
+    if (profErr) {
+      // rollback: ลบ auth user ถ้า profile สร้างไม่ได้ (ส่วนใหญ่เพราะ username ซ้ำ race)
+      await adminClient.auth.admin.deleteUser(user.id)
+      throw profErr
+    }
 
     return NextResponse.json({ success: true })
   } catch (err) {
@@ -62,10 +83,10 @@ export async function POST(req) {
   }
 }
 
-// PATCH /api/admin/users — แก้ไขสิทธิ์/ชื่อผู้ใช้
+// PATCH /api/admin/users — แก้ไขสิทธิ์/ชื่อผู้ใช้/username
 export async function PATCH(req) {
   try {
-    const { userId, role, display_name } = await req.json()
+    const { userId, role, display_name, username } = await req.json()
     if (!userId) {
       return NextResponse.json({ error: "กรุณาระบุ userId" }, { status: 400 })
     }
@@ -73,6 +94,18 @@ export async function PATCH(req) {
     const update = {}
     if (role !== undefined) update.role = role
     if (display_name !== undefined) update.display_name = display_name
+    if (username !== undefined) {
+      const u = (username || "").trim().toLowerCase()
+      if (!validateUsername(u)) {
+        return NextResponse.json({ error: "ชื่อผู้ใช้ต้องเป็นตัวอักษร a-z, 0-9, _ ความยาว 3-20 ตัว" }, { status: 400 })
+      }
+      const { data: dup } = await adminClient
+        .from("profiles").select("id").eq("username", u).neq("id", userId).maybeSingle()
+      if (dup) {
+        return NextResponse.json({ error: "ชื่อผู้ใช้นี้มีอยู่แล้ว" }, { status: 400 })
+      }
+      update.username = u
+    }
 
     if (Object.keys(update).length === 0) {
       return NextResponse.json({ error: "ไม่มีข้อมูลที่จะอัปเดต" }, { status: 400 })

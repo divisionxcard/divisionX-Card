@@ -166,7 +166,7 @@ export default function PageRefillPrep({ machines, machineStock, machineAssignme
         {viewableUsers.map(p => (
           <button key={p.id} onClick={() => setViewUserId(p.id)}
             className={`dx-chip ${activeUserId === p.id ? "dx-chip-active" : ""}`}>
-            {p.display_name || p.email}
+            {p.display_name || p.username || p.email}
           </button>
         ))}
       </div>

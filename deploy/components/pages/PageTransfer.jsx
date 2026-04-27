@@ -207,7 +207,7 @@ export default function PageTransfer({ stockIn, stockOut, stockBalance, skus, tr
               <select value={form.to_user_id} onChange={e => setForm({ ...form, to_user_id: e.target.value })} className="dx-input">
                 <option value="" disabled>-- เลือกแอดมิน --</option>
                 {adminProfiles.map(p => (
-                  <option key={p.id} value={p.id}>{p.display_name || p.email}</option>
+                  <option key={p.id} value={p.id}>{p.display_name || p.username || p.email}</option>
                 ))}
               </select>
             </div>

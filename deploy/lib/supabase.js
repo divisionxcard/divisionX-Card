@@ -12,6 +12,25 @@ export async function signIn(email, password) {
   return data
 }
 
+// Lookup email จาก username (ผ่าน server-side endpoint ที่ใช้ service_role)
+async function lookupEmailByUsername(username) {
+  const res = await fetch("/api/auth/lookup-email", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ username }),
+  })
+  if (!res.ok) throw new Error("not_found")
+  const { email } = await res.json()
+  if (!email) throw new Error("not_found")
+  return email
+}
+
+// Login ด้วย username (lookup email → signInWithPassword)
+export async function signInWithUsername(username, password) {
+  const email = await lookupEmailByUsername(username)
+  return signIn(email, password)
+}
+
 export async function signOut() {
   const { error } = await supabase.auth.signOut()
   if (error) throw error
@@ -22,6 +41,12 @@ export async function resetPassword(email) {
     redirectTo: `${typeof window !== "undefined" ? window.location.origin : ""}/`,
   })
   if (error) throw error
+}
+
+// Reset password ด้วย username (lookup email → ส่งลิงก์ไป email จริง)
+export async function resetPasswordByUsername(username) {
+  const email = await lookupEmailByUsername(username)
+  return resetPassword(email)
 }
 
 export async function updatePassword(newPassword) {

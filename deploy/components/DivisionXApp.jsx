@@ -22,7 +22,7 @@ import {
   deleteStockOut as dbDeleteStockOut,
   getMachines, getSalesByMachine,
   getSkus, addSku as dbAddSku, deactivateSku as dbDeactivateSku, updateSkuAvgCost,
-  signIn as authSignIn, signOut as authSignOut, getProfile, resetPassword, updatePassword,
+  signInWithUsername as authSignIn, signOut as authSignOut, getProfile, resetPasswordByUsername, updatePassword,
   getMachineStock,
   getClaims, addClaim as dbAddClaim, updateClaim as dbUpdateClaim, deleteClaim as dbDeleteClaim,
   logLoginEvent,
@@ -100,7 +100,7 @@ function ErrorScreen({ msg, onRetry }) {
 // LOGIN PAGE
 // ─────────────────────────────────────────────
 function LoginPage() {
-  const [email,    setEmail]    = useState("")
+  const [username, setUsername] = useState("")
   const [password, setPassword] = useState("")
   const [showPw,   setShowPw]   = useState(false)
   const [loading,  setLoading]  = useState(false)
@@ -113,9 +113,9 @@ function LoginPage() {
     setError("")
     setLoading(true)
     try {
-      await authSignIn(email, password)
+      await authSignIn(username.trim().toLowerCase(), password)
     } catch {
-      setError("อีเมลหรือรหัสผ่านไม่ถูกต้อง")
+      setError("ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง")
     } finally {
       setLoading(false)
     }
@@ -125,13 +125,13 @@ function LoginPage() {
     e.preventDefault()
     setError("")
     setSuccess("")
-    if (!email) { setError("กรุณากรอกอีเมล"); return }
+    if (!username) { setError("กรุณากรอกชื่อผู้ใช้"); return }
     setLoading(true)
     try {
-      await resetPassword(email)
-      setSuccess("ส่งลิงก์รีเซ็ตรหัสผ่านไปที่อีเมลแล้ว กรุณาตรวจสอบกล่องจดหมาย")
+      await resetPasswordByUsername(username.trim().toLowerCase())
+      setSuccess("ส่งลิงก์รีเซ็ตรหัสผ่านไปที่อีเมลที่ลงทะเบียนแล้ว กรุณาตรวจสอบกล่องจดหมาย")
     } catch {
-      setError("ไม่สามารถส่งอีเมลได้ กรุณาตรวจสอบอีเมลอีกครั้ง")
+      setError("ไม่พบผู้ใช้นี้ในระบบ")
     } finally {
       setLoading(false)
     }
@@ -150,9 +150,10 @@ function LoginPage() {
         {mode === "login" ? (
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-xs text-gray-500 mb-1.5 font-medium">อีเมล</label>
-              <input type="email" value={email} onChange={e => setEmail(e.target.value)}
-                placeholder="example@email.com" required autoFocus
+              <label className="block text-xs text-gray-500 mb-1.5 font-medium">ชื่อผู้ใช้</label>
+              <input type="text" value={username} onChange={e => setUsername(e.target.value)}
+                placeholder="username" required autoFocus
+                autoComplete="username" autoCapitalize="none" autoCorrect="off" spellCheck={false}
                 className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"/>
             </div>
             <div>
@@ -183,10 +184,12 @@ function LoginPage() {
         ) : (
           <form onSubmit={handleForgot} className="space-y-4">
             <div>
-              <label className="block text-xs text-gray-500 mb-1.5 font-medium">อีเมลที่ลงทะเบียน</label>
-              <input type="email" value={email} onChange={e => setEmail(e.target.value)}
-                placeholder="example@email.com" required autoFocus
+              <label className="block text-xs text-gray-500 mb-1.5 font-medium">ชื่อผู้ใช้</label>
+              <input type="text" value={username} onChange={e => setUsername(e.target.value)}
+                placeholder="username" required autoFocus
+                autoComplete="username" autoCapitalize="none" autoCorrect="off" spellCheck={false}
                 className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"/>
+              <p className="mt-1.5 text-[11px] text-gray-400">ระบบจะส่งลิงก์รีเซ็ตไปที่อีเมลที่ลงทะเบียนไว้</p>
             </div>
             {error && (
               <p className="text-xs text-red-600 bg-red-50 border border-red-100 px-3 py-2 rounded-lg">{error}</p>
@@ -442,7 +445,7 @@ export default function DivisionXApp() {
   }
 
   const addStockIn = async (record) => {
-    const createdBy = profile?.display_name || session?.user?.email || null
+    const createdBy = profile?.display_name || profile?.username || session?.user?.email || null
     await dbAddStockIn({ ...record, created_by: createdBy })
     // ── Moving Average Cost: คำนวณต้นทุนเฉลี่ยใหม่ ──
     const sku = skus.find(s => s.sku_id === record.sku_id)
@@ -463,7 +466,7 @@ export default function DivisionXApp() {
   }
 
   const addStockOut = async (record) => {
-    const createdBy = profile?.display_name || session?.user?.email || null
+    const createdBy = profile?.display_name || profile?.username || session?.user?.email || null
     const userId = session?.user?.id || null
     await dbAddStockOut({ ...record, created_by: createdBy, withdrawn_by_user_id: userId })
     const [newSO, newSB] = await Promise.all([getStockOut(), getStockBalance()])
@@ -513,7 +516,7 @@ export default function DivisionXApp() {
   const addClaim = async (record) => {
     // ทุกสถานะ (lost/damaged/returned) → "pending" รอ admin ยืนยัน
     //   confirm แล้วระบบจึงปรับสต็อก: damaged/lost → ตัด · returned → คืน
-    const createdBy = profile?.display_name || session?.user?.email || null
+    const createdBy = profile?.display_name || profile?.username || session?.user?.email || null
     const userId = session?.user?.id || null
     await dbAddClaim({ ...record, confirm_status: "pending", created_by: createdBy, managed_by_user_id: userId })
     setClaims(await getClaims())
@@ -524,7 +527,7 @@ export default function DivisionXApp() {
     //   damaged/lost → ตัดสต็อกของ user ที่บันทึก (สร้าง stock_out)
     //   returned     → คืนสต็อกให้ user (สร้าง transfer)
     await dbUpdateClaim(claim.id, { confirm_status: "confirmed" })
-    const adminName = profile?.display_name || session?.user?.email || "admin"
+    const adminName = profile?.display_name || profile?.username || session?.user?.email || "admin"
 
     if ((claim.product_status === "damaged" || claim.product_status === "lost") && claim.managed_by_user_id) {
       const label = claim.product_status === "damaged" ? "ตัดชำรุด" : "ตัดสูญหาย"
@@ -571,7 +574,7 @@ export default function DivisionXApp() {
 
   // ── Transfer Operations ──
   const addTransfer = async (record) => {
-    const createdBy = profile?.display_name || session?.user?.email || null
+    const createdBy = profile?.display_name || profile?.username || session?.user?.email || null
     await dbAddStockTransfer({ ...record, created_by: createdBy })
     setTransfers(await getStockTransfers())
   }
@@ -699,12 +702,12 @@ export default function DivisionXApp() {
             <div className="flex items-center gap-2.5">
               <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
                 <span className="text-xs font-bold text-blue-600">
-                  {(profile?.display_name || session.user.email)[0].toUpperCase()}
+                  {(profile?.display_name || profile?.username || session.user.email)[0].toUpperCase()}
                 </span>
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-xs font-semibold text-gray-700 truncate">
-                  {profile?.display_name || session.user.email}
+                  {profile?.display_name || profile?.username || session.user.email}
                 </p>
                 <p className="text-xs text-gray-400">
                   {profile?.role === "admin" ? "Admin" : "User"}

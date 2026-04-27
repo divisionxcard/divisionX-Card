@@ -10,7 +10,7 @@ export default function PageUsers({ currentProfile, machines, machineAssignments
   const [users, setUsers] = useState([])
   const [loading, setLoading] = useState(true)
   const [tab, setTab] = useState("list")
-  const [form, setForm] = useState({ email: "", display_name: "", password: "", role: "user" })
+  const [form, setForm] = useState({ username: "", email: "", display_name: "", password: "", role: "user" })
   const [showPw, setShowPw] = useState(false)
   const [saving, setSaving] = useState(false)
   const [toast, setToast] = useState(null)
@@ -38,15 +38,16 @@ export default function PageUsers({ currentProfile, machines, machineAssignments
     e.preventDefault()
     setSaving(true)
     try {
+      const payload = { ...form, username: form.username.trim().toLowerCase() }
       const res = await fetch("/api/admin/users", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify(payload),
       })
       const data = await res.json()
       if (data.error) throw new Error(data.error)
-      showToast(`เพิ่มผู้ใช้ ${form.email} สำเร็จ`)
-      setForm({ email: "", display_name: "", password: "", role: "user" })
+      showToast(`เพิ่มผู้ใช้ ${payload.username} สำเร็จ`)
+      setForm({ username: "", email: "", display_name: "", password: "", role: "user" })
       setTab("list")
       loadUsers()
     } catch (err) { showToast("เพิ่มไม่สำเร็จ: " + err.message, "error") }
@@ -68,6 +69,7 @@ export default function PageUsers({ currentProfile, machines, machineAssignments
           userId: editingUser.id,
           role: editingUser.role,
           display_name: editingUser.display_name,
+          username: editingUser.username?.trim().toLowerCase(),
         }),
       })
       const data = await res.json()
@@ -193,7 +195,7 @@ export default function PageUsers({ currentProfile, machines, machineAssignments
                             fontSize: 14, fontWeight: 700, color: "#0A1628",
                             flexShrink: 0,
                           }}>
-                            {(editingUser.display_name || u.email)[0].toUpperCase()}
+                            {(editingUser.display_name || editingUser.username || u.email)[0].toUpperCase()}
                           </div>
                           <div style={{ flex: 1, minWidth: 0 }}>
                             <p style={{ margin: "0 0 4px", fontSize: 10, color: "var(--dx-text-muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
@@ -204,6 +206,15 @@ export default function PageUsers({ currentProfile, machines, machineAssignments
                               placeholder="ชื่อที่แสดง"
                               className="dx-input" style={{ padding: "6px 10px", fontSize: 12 }}/>
                           </div>
+                        </div>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                          <label style={{ fontSize: 11, color: "var(--dx-text-muted)", flexShrink: 0, width: 56 }}>ชื่อผู้ใช้:</label>
+                          <input value={editingUser.username || ""}
+                            onChange={e => setEditingUser({ ...editingUser, username: e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, "") })}
+                            placeholder="username (a-z, 0-9, _)"
+                            maxLength={20}
+                            autoCapitalize="none" autoCorrect="off" spellCheck={false}
+                            className="dx-input dx-mono" style={{ flex: 1, padding: "6px 10px", fontSize: 12 }}/>
                         </div>
                         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                           <label style={{ fontSize: 11, color: "var(--dx-text-muted)", flexShrink: 0 }}>สิทธิ์:</label>
@@ -243,8 +254,15 @@ export default function PageUsers({ currentProfile, machines, machineAssignments
                           {(u.display_name || u.email)[0].toUpperCase()}
                         </div>
                         <div style={{ flex: 1, minWidth: 0 }}>
-                          <p style={{ margin: 0, fontSize: 13, fontWeight: 500, color: "var(--dx-text)" }}>
-                            {u.display_name || "—"}
+                          <p style={{ margin: 0, fontSize: 13, fontWeight: 500, color: "var(--dx-text)", display: "flex", alignItems: "baseline", gap: 6, minWidth: 0 }}>
+                            <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                              {u.display_name || "—"}
+                            </span>
+                            {u.username && (
+                              <span className="dx-mono" style={{ fontSize: 11, fontWeight: 400, color: "var(--dx-cyan-soft)", flexShrink: 0 }}>
+                                @{u.username}
+                              </span>
+                            )}
                           </p>
                           <p style={{ margin: "2px 0 0", fontSize: 11, color: "var(--dx-text-muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                             {u.email}
@@ -259,7 +277,7 @@ export default function PageUsers({ currentProfile, machines, machineAssignments
                         }}>
                           {u.role === "admin" ? "Admin" : "User"}
                         </span>
-                        <button onClick={() => setEditingUser({ id: u.id, display_name: u.display_name || "", role: u.role || "user" })}
+                        <button onClick={() => setEditingUser({ id: u.id, username: u.username || "", display_name: u.display_name || "", role: u.role || "user" })}
                           style={{
                             padding: 6, borderRadius: 6, border: "none", cursor: "pointer",
                             background: "transparent", color: "var(--dx-text-muted)",
@@ -318,9 +336,23 @@ export default function PageUsers({ currentProfile, machines, machineAssignments
           <form onSubmit={handleAdd} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 14 }}>
               <div>
+                <label style={labelStyle}>ชื่อผู้ใช้ <span style={{ color: "var(--dx-danger)" }}>*</span></label>
+                <input value={form.username}
+                  onChange={e => setForm({ ...form, username: e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, "") })}
+                  required minLength={3} maxLength={20}
+                  autoCapitalize="none" autoCorrect="off" spellCheck={false}
+                  placeholder="username (a-z, 0-9, _)" className="dx-input dx-mono"/>
+                <p style={{ margin: "4px 0 0", fontSize: 10, color: "var(--dx-text-muted)" }}>
+                  ใช้สำหรับ login · 3-20 ตัว · a-z, 0-9, _
+                </p>
+              </div>
+              <div>
                 <label style={labelStyle}>อีเมล <span style={{ color: "var(--dx-danger)" }}>*</span></label>
                 <input type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} required
                   placeholder="user@example.com" className="dx-input"/>
+                <p style={{ margin: "4px 0 0", fontSize: 10, color: "var(--dx-text-muted)" }}>
+                  ใช้สำหรับ reset รหัสผ่าน
+                </p>
               </div>
               <div>
                 <label style={labelStyle}>ชื่อที่แสดง</label>
@@ -408,7 +440,7 @@ export default function PageUsers({ currentProfile, machines, machineAssignments
                             border: "1px solid rgba(0,212,255,0.25)",
                           }}>
                             <span style={{ fontSize: 11, fontWeight: 500, color: "var(--dx-cyan-bright)" }}>
-                              {prof?.display_name || prof?.email || "?"}
+                              {prof?.display_name || prof?.username || prof?.email || "?"}
                             </span>
                             <button onClick={() => onRemoveAssignment(a.id)}
                               style={{
@@ -442,7 +474,7 @@ export default function PageUsers({ currentProfile, machines, machineAssignments
                       }}>
                       <option value="">+ เพิ่มแอดมิน</option>
                       {availableUsers.map(p => (
-                        <option key={p.id} value={p.id}>{p.display_name || p.email}</option>
+                        <option key={p.id} value={p.id}>{p.display_name || p.username || p.email}</option>
                       ))}
                     </select>
                   )}
