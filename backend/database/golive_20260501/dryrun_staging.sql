@@ -96,7 +96,7 @@ SELECT v.sku_id, 'GOLIVE-DRYRUN', p.id, 'pack', v.q, v.q,
        NOW(), 'DryRun transfer', 'system_dryrun'
 FROM (VALUES
   ('OP 01',  'admin1', 10),
-  ('PRB 01', 'user1',  5)
+  ('PRB 01', 'admin2', 5)  -- ใช้ admin2 (stable) แทน user1 ที่อาจถูก rename ใน login test
 ) AS v(sku_id, username, q)
 JOIN profiles p ON p.username = v.username;
 
