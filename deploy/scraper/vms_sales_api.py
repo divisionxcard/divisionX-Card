@@ -99,19 +99,37 @@ def parse_api_sales(api_rows: list[dict]) -> list[dict]:
     txn_counter = {}
 
     for row in api_rows:
-        # API อาจมี products เป็น array ใน 1 transaction
+        # ⚠ VMS rebuild 18-19 เม.ย. 2026 เปลี่ยน schema ของ API:
+        #   transaction_id → txid (หรือ record_id)
+        #   grand_total / total_amount → total_price
+        #   prod.price / prod.amount → prod.pay_price
+        # ก่อนหน้าใช้ key เก่า → txn_id=""  → sale_keys ชนกัน → upsert ทับ → ยอดขายหายไป
+
         products = row.get("products", [])
-        txn_id = str(row.get("transaction_id", row.get("id", "")))
+        txn_id = str(
+            row.get("txid")
+            or row.get("transaction_id")
+            or row.get("record_id")
+            or row.get("id")
+            or ""
+        )
         machine_id = str(row.get("kiosk_id", ""))
         sold_at = row.get("created_at", row.get("transaction_date", ""))
-        grand_total = float(row.get("grand_total", row.get("total_amount", 0)) or 0)
+        outer_total = float(
+            row.get("total_price")
+            or row.get("grand_total")
+            or row.get("total_amount")
+            or 0
+        )
         status = row.get("status", "")
 
         if status and status.lower() != "paid":
             continue
+        if not txn_id:
+            print(f"  ⚠️ skip row without txn_id: {row.get('record_id')}")
+            continue
 
         if products:
-            # หลายสินค้าใน 1 transaction
             for prod in products:
                 product_raw = prod.get("product_name", prod.get("name", ""))
                 sku_id = map_product_to_sku(product_raw)
@@ -124,6 +142,13 @@ def parse_api_sales(api_rows: list[dict]) -> list[dict]:
                 is_box = "(box)" in name_lower or "box" in name_lower.split()
                 qty = PACKS_PER_BOX.get(sku_id, 24) if is_box else 1
 
+                prod_price = float(
+                    prod.get("pay_price")
+                    or prod.get("price")
+                    or prod.get("amount")
+                    or 0
+                )
+
                 records.append({
                     "sale_key": sale_key,
                     "transaction_id": txn_id,
@@ -131,11 +156,10 @@ def parse_api_sales(api_rows: list[dict]) -> list[dict]:
                     "sku_id": sku_id,
                     "product_name_raw": product_raw,
                     "quantity_sold": qty,
-                    "grand_total": float(prod.get("price", prod.get("amount", 0)) or 0),
+                    "grand_total": prod_price,
                     "sold_at": sold_at,
                 })
         else:
-            # Single product format
             product_raw = str(row.get("product_name", "")).strip()
             if not product_raw: continue
             sku_id = map_product_to_sku(product_raw)
@@ -155,7 +179,7 @@ def parse_api_sales(api_rows: list[dict]) -> list[dict]:
                 "sku_id": sku_id,
                 "product_name_raw": product_raw,
                 "quantity_sold": qty,
-                "grand_total": grand_total,
+                "grand_total": outer_total,
                 "sold_at": sold_at,
             })
 
@@ -210,6 +234,14 @@ def main():
     print(f"\n📊 ดึงจาก API ได้ {len(api_rows)} transactions")
     records = parse_api_sales(api_rows)
     print(f"📋 แปลงได้ {len(records)} records")
+
+    # Fail loud: ถ้าดึง transactions ได้แต่ parse ไม่ออก = schema เปลี่ยน
+    if len(api_rows) > 0 and len(records) == 0:
+        raise SystemExit(
+            f"ERROR: ดึง {len(api_rows)} transactions แต่ parse ไม่ออกเลย · "
+            "VMS API schema อาจเปลี่ยน · ตรวจ key txid/pay_price/total_price ใน vms_sales_api.py"
+        )
+
     save_to_supabase(records)
 
 if __name__ == "__main__":
