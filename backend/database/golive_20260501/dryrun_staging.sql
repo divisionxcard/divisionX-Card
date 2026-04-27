@@ -11,6 +11,22 @@
 --   4) Verify
 -- =============================================================
 
+-- ── -1) Ensure machines + skus มีใน staging ─────────────────
+-- staging seed ใช้ test-kiosk-01 ไม่ใช่ chukes01-04 · เติมก่อนถ้าไม่มี
+INSERT INTO machines (machine_id, name, status) VALUES
+  ('chukes01', 'ตู้ 1 (dryrun)', 'active'),
+  ('chukes02', 'ตู้ 2 (dryrun)', 'active'),
+  ('chukes03', 'ตู้ 3 (dryrun)', 'active'),
+  ('chukes04', 'ตู้ 4 (dryrun)', 'active')
+ON CONFLICT (machine_id) DO NOTHING;
+
+INSERT INTO skus (sku_id, name, series, packs_per_box, boxes_per_cotton, sell_price, cost_price) VALUES
+  ('OP 01',  'OP 01 (dryrun)',  'OP',  12, 12, 100, 50),
+  ('OP 02',  'OP 02 (dryrun)',  'OP',  12, 12, 100, 55),
+  ('PRB 01', 'PRB 01 (dryrun)', 'PRB', 10, 12, 150, 80)
+ON CONFLICT (sku_id) DO NOTHING;
+
+
 -- ── 0) BEFORE RESET ─────────────────────────────────────────
 SELECT '=== BEFORE RESET ===' AS step;
 
