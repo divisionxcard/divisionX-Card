@@ -15,12 +15,13 @@ SUPABASE_URL = os.environ["SUPABASE_URL"]
 SUPABASE_KEY = os.environ["SUPABASE_SERVICE_KEY"]
 
 # ── Kiosk mapping: machine_id → { record_id, tabs } ──────────
-# tabs = จำนวน Tab ของตู้ (ตู้ 1-3 มี 1 Tab = 60 ช่อง, ตู้ 4 มี 2 Tab = 120 ช่อง)
+# tabs = จำนวน Tab ของตู้ (ตอนนี้ทุกตู้ 1 Tab = 60 ช่อง · update ถ้ามีตู้ 2 tab)
+# ⚠ record_id เปลี่ยนจาก 40-43 → 4-7 หลัง VMS rebuild (18-19 เม.ย. 2026)
 KIOSKS = {
-    "chukes01": { "record_id": 40, "tabs": 1 },
-    "chukes02": { "record_id": 41, "tabs": 1 },
-    "chukes03": { "record_id": 42, "tabs": 1 },
-    "chukes04": { "record_id": 43, "tabs": 1 },
+    "chukes01": { "record_id": 4, "tabs": 1 },
+    "chukes02": { "record_id": 5, "tabs": 1 },
+    "chukes03": { "record_id": 6, "tabs": 1 },
+    "chukes04": { "record_id": 7, "tabs": 1 },
 }
 
 # ── Map VMS product name → SKU ID ─────────────────────────────
