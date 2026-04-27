@@ -96,19 +96,36 @@ def fetch_sales(token: str, date_from: str, date_to: str) -> list[dict]:
 
     return all_sales
 
-def parse_api_sales(api_rows: list[dict]) -> list[dict]:
-    """แปลง API response เป็น records สำหรับ Supabase"""
+def fetch_slot_lookup(supabase) -> dict:
+    """ดึง machine_stock จาก Supabase เพื่อ build lookup (machine_id, slot) → (sku_id, product_name)
+    ⚠ หลัง VMS rebuild · API ไม่ส่ง products+name แล้ว · ต้อง lookup จาก DB
+    """
+    res = supabase.table("machine_stock").select(
+        "machine_id, slot_number, sku_id, product_name"
+    ).execute()
+    lookup = {}
+    for r in (res.data or []):
+        key = (r.get("machine_id") or "", r.get("slot_number") or "")
+        sku_id = r.get("sku_id")
+        # ถ้า DB ไม่มี sku_id แต่มี product_name → ลอง regex
+        if not sku_id and r.get("product_name"):
+            sku_id = map_product_to_sku(r["product_name"])
+        lookup[key] = (sku_id, r.get("product_name") or "")
+    print(f"🗺  Slot lookup: {len(lookup)} slots ({sum(1 for v in lookup.values() if v[0])} mapped)")
+    return lookup
+
+
+def parse_api_sales(api_rows: list[dict], slot_lookup: dict | None = None) -> list[dict]:
+    """แปลง API response เป็น records สำหรับ Supabase
+    หลัง VMS rebuild 28 เม.ย. 2026 schema เปลี่ยนเป็น cart + cart_slot (ไม่มี products+name)
+    → ใช้ slot_lookup เพื่อแปลง (machine_id, slot_code) → (sku_id, product_name)
+    """
     records = []
     txn_counter = {}
+    slot_lookup = slot_lookup or {}
+    skipped_no_lookup = 0
 
     for row in api_rows:
-        # ⚠ VMS rebuild 18-19 เม.ย. 2026 เปลี่ยน schema ของ API:
-        #   transaction_id → txid (หรือ record_id)
-        #   grand_total / total_amount → total_price
-        #   prod.price / prod.amount → prod.pay_price
-        # ก่อนหน้าใช้ key เก่า → txn_id=""  → sale_keys ชนกัน → upsert ทับ → ยอดขายหายไป
-
-        products = row.get("products", [])
         txn_id = str(
             row.get("txid")
             or row.get("transaction_id")
@@ -118,7 +135,7 @@ def parse_api_sales(api_rows: list[dict]) -> list[dict]:
         )
         machine_id = str(row.get("kiosk_id", ""))
         sold_at = row.get("created_at", row.get("transaction_date", ""))
-        outer_total = float(
+        total_price = float(
             row.get("total_price")
             or row.get("grand_total")
             or row.get("total_amount")
@@ -129,29 +146,26 @@ def parse_api_sales(api_rows: list[dict]) -> list[dict]:
         if status and status.lower() != "paid":
             continue
         if not txn_id:
-            print(f"  ⚠️ skip row without txn_id: {row.get('record_id')}")
             continue
 
+        # ── Path A: schema เก่ามี products[] (ใน API older versions) ──
+        products = row.get("products", [])
         if products:
             for prod in products:
                 product_raw = prod.get("product_name", prod.get("name", ""))
                 sku_id = map_product_to_sku(product_raw)
                 if not sku_id: continue
-
                 txn_counter[txn_id] = txn_counter.get(txn_id, -1) + 1
                 sale_key = f"{txn_id}-{txn_counter[txn_id]}"
-
                 name_lower = normalize(product_raw)
                 is_box = "(box)" in name_lower or "box" in name_lower.split()
                 qty = PACKS_PER_BOX.get(sku_id, 24) if is_box else 1
-
                 prod_price = float(
                     prod.get("pay_price")
                     or prod.get("price")
                     or prod.get("amount")
                     or 0
                 )
-
                 records.append({
                     "sale_key": sale_key,
                     "transaction_id": txn_id,
@@ -162,30 +176,40 @@ def parse_api_sales(api_rows: list[dict]) -> list[dict]:
                     "grand_total": prod_price,
                     "sold_at": sold_at,
                 })
-        else:
-            product_raw = str(row.get("product_name", "")).strip()
-            if not product_raw: continue
-            sku_id = map_product_to_sku(product_raw)
-            if not sku_id: continue
+            continue
 
+        # ── Path B: schema ใหม่ (post-rebuild 28 เม.ย.) ──
+        # ใช้ cart + cart_slot · lookup product_name + sku_id จาก machine_stock
+        cart       = row.get("cart") or []
+        cart_slot  = row.get("cart_slot") or []
+        n_items = len(cart_slot) or len(cart)
+        if n_items == 0:
+            continue
+        per_item_price = total_price / n_items if n_items else 0
+        for slot_code in cart_slot:
+            slot_str = str(slot_code) if slot_code is not None else ""
+            sku_id, product_name = slot_lookup.get((machine_id, slot_str), (None, ""))
+            if not sku_id:
+                skipped_no_lookup += 1
+                continue
             txn_counter[txn_id] = txn_counter.get(txn_id, -1) + 1
             sale_key = f"{txn_id}-{txn_counter[txn_id]}"
-
-            name_lower = normalize(product_raw)
+            name_lower = normalize(product_name)
             is_box = "(box)" in name_lower or "box" in name_lower.split()
             qty = PACKS_PER_BOX.get(sku_id, 24) if is_box else 1
-
             records.append({
                 "sale_key": sale_key,
                 "transaction_id": txn_id,
                 "machine_id": machine_id,
                 "sku_id": sku_id,
-                "product_name_raw": product_raw,
+                "product_name_raw": product_name,
                 "quantity_sold": qty,
-                "grand_total": outer_total,
+                "grand_total": per_item_price,
                 "sold_at": sold_at,
             })
 
+    if skipped_no_lookup:
+        print(f"  ⚠️ skip {skipped_no_lookup} items: ไม่พบ slot ใน machine_stock (อาจต้อง trigger stock sync ก่อน)")
     return records
 
 def save_to_supabase(records: list[dict]):
@@ -235,23 +259,12 @@ def main():
         exit(1)
 
     print(f"\n📊 ดึงจาก API ได้ {len(api_rows)} transactions")
-    # Debug: status distribution + has-products count
-    if api_rows:
-        from collections import Counter
-        status_counts = Counter(r.get("status", "<none>") for r in api_rows)
-        with_products = sum(1 for r in api_rows if r.get("products"))
-        print(f"🔍 status counts: {dict(status_counts)}")
-        print(f"🔍 rows with 'products' field: {with_products}/{len(api_rows)}")
-        # Sample จาก row ที่มี status='paid' (ถ้ามี) เผื่อโครงสร้างต่างจาก pending
-        import json as _json
-        paid_row = next((r for r in api_rows if r.get("status") == "paid"), api_rows[0])
-        print(f"🔍 sample row (paid if exists) keys: {list(paid_row.keys())}")
-        if paid_row.get("products"):
-            print(f"🔍 sample product keys: {list(paid_row['products'][0].keys())}")
-        sample = _json.dumps(paid_row, default=str, ensure_ascii=False)[:800]
-        print(f"🔍 sample row: {sample}")
 
-    records = parse_api_sales(api_rows)
+    # Build slot lookup จาก machine_stock (จำเป็นสำหรับ schema ใหม่)
+    supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+    slot_lookup = fetch_slot_lookup(supabase)
+
+    records = parse_api_sales(api_rows, slot_lookup)
     print(f"📋 แปลงได้ {len(records)} records")
 
     # Fail loud: ถ้าดึง transactions ได้แต่ parse ไม่ออก = schema เปลี่ยน
