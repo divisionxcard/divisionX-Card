@@ -4,6 +4,17 @@ export const fmt   = (n) => (n ?? 0).toLocaleString("th-TH")
 export const fmtB  = (n) => `฿${(n ?? 0).toLocaleString("th-TH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 export const today = () => new Date().toISOString().slice(0, 10)
 
+// แปลง ISO timestamp (UTC) → "YYYY-MM-DD" ตามเวลาไทย (Asia/Bangkok = UTC+7)
+// ใช้กับ sold_at จาก VMS ที่เป็น UTC · กันวันเลื่อนเที่ยงคืน BKK
+export const toBkkDate = (iso) => {
+  if (!iso) return ""
+  const d = new Date(iso)
+  if (isNaN(d.getTime())) return ""
+  // shift เพิ่ม 7 ชม. แล้วใช้ UTC parts เพื่อหลีกเลี่ยง timezone ของ browser
+  const bkk = new Date(d.getTime() + 7 * 3600 * 1000)
+  return bkk.toISOString().slice(0, 10)
+}
+
 export const getSkuSeries = (skuId) => {
   if (!skuId) return "ZZ"
   if (skuId.startsWith("OP"))  return "OP"

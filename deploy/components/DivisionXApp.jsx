@@ -34,7 +34,7 @@ import {
   SKUS, SERIES_COLOR, CHART_COLORS, THAI_MONTHS, SKU_SERIES_ORDER, UNIT_LABEL,
 } from "./shared/constants"
 import {
-  fmt, fmtB, today,
+  fmt, fmtB, today, toBkkDate,
   getSkuSeries, sortSkus, sortByDateThenSku,
   fmtBoxPack, getLastNDays, fmtDayLabel, convertToPacks,
 } from "./shared/helpers"
@@ -415,7 +415,7 @@ export default function DivisionXApp() {
           ...r,
           quantity_sold: qty,
           revenue:  parseFloat(r.grand_total) || 0,
-          sold_at:  r.sold_at ? r.sold_at.slice(0, 10) : "",
+          sold_at:  toBkkDate(r.sold_at),  // แปลง UTC → Bangkok timezone (กันวันเลื่อน)
         }
       }))
     } catch (err) {
