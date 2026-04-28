@@ -10,6 +10,7 @@ export default function PageMyStock({ transfers, stockOut, stockIn = [], skus, p
   const isAdmin = profile?.role === "admin"
   const userId = session?.user?.id
 
+  const [skuFilter, setSkuFilter] = useState("all")  // ตัวกรอง SKU ใน tab ยอดคงเหลือ
   const [deleteTransferId, setDeleteTransferId] = useState(null)
   const [deletingTransfer, setDeletingTransfer] = useState(false)
   const [toast, setToast] = useState(null)
@@ -209,7 +210,28 @@ export default function PageMyStock({ transfers, stockOut, stockIn = [], skus, p
             </p>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-              {balanceList.map(r => {
+              {/* ตัวกรอง SKU */}
+              <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                <span style={{ fontSize: 11, color: "var(--dx-text-muted)", letterSpacing: 0.5, textTransform: "uppercase" }}>
+                  กรอง SKU
+                </span>
+                <select value={skuFilter} onChange={e => setSkuFilter(e.target.value)}
+                  className="dx-input dx-mono"
+                  style={{ width: "auto", padding: "6px 10px", fontSize: 12 }}>
+                  <option value="all">ทุก SKU ({balanceList.length})</option>
+                  {balanceList.map(r => (
+                    <option key={r.sku_id} value={r.sku_id}>{r.sku_id} — {r.name}</option>
+                  ))}
+                </select>
+                {skuFilter !== "all" && (
+                  <button onClick={() => setSkuFilter("all")}
+                    className="dx-btn dx-btn-ghost"
+                    style={{ padding: "5px 10px", fontSize: 11 }}>
+                    <X size={11}/> เคลียร์
+                  </button>
+                )}
+              </div>
+              {(skuFilter === "all" ? balanceList : balanceList.filter(r => r.sku_id === skuFilter)).map(r => {
                 const lots = getMyLotBalance(r.sku_id)
                 const activeLots = lots.filter(l => l.lotBalance > 0)
                 const pct = r.received > 0 ? (r.balance / r.received * 100) : 0
