@@ -219,9 +219,15 @@ export default function PageMyStock({ transfers, stockOut, stockIn = [], skus, p
                   className="dx-input dx-mono"
                   style={{ width: "auto", padding: "6px 10px", fontSize: 12 }}>
                   <option value="all">ทุก SKU ({balanceList.length})</option>
-                  {balanceList.map(r => (
-                    <option key={r.sku_id} value={r.sku_id}>{r.sku_id} — {r.name}</option>
-                  ))}
+                  {[...balanceList]
+                    .sort((a, b) => {
+                      const sa = SKU_SERIES_ORDER[a.series] ?? 9
+                      const sb = SKU_SERIES_ORDER[b.series] ?? 9
+                      return sa - sb || (a.sku_id || "").localeCompare(b.sku_id || "")
+                    })
+                    .map(r => (
+                      <option key={r.sku_id} value={r.sku_id}>{r.sku_id} — {r.name}</option>
+                    ))}
                 </select>
                 {skuFilter !== "all" && (
                   <button onClick={() => setSkuFilter("all")}
