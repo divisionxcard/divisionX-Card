@@ -414,7 +414,7 @@ export default function DivisionXApp() {
         return {
           ...r,
           quantity_sold: qty,
-          revenue:  parseFloat(r.grand_total) || 0,
+          revenue:  Math.round(parseFloat(r.grand_total) || 0),
           sold_at:  toBkkDate(r.sold_at),  // แปลง UTC → Bangkok timezone (กันวันเลื่อน)
         }
       }))
