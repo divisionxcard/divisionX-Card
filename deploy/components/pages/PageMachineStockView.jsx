@@ -296,11 +296,13 @@ export default function PageMachineStockView({ machines, machineStock, skus, onR
             const allSkuMap = {}
             machineStock.filter(s => s.product_name && s.is_occupied).forEach(s => {
               const skuId = s.sku_id || s.product_name || "ไม่ระบุ"
-              if (!allSkuMap[skuId]) allSkuMap[skuId] = { sku_id: skuId, product_name: s.product_name, remain: 0, capacity: 0, perMachine: {} }
-              allSkuMap[skuId].remain += s.remain || 0
-              allSkuMap[skuId].capacity += s.max_capacity || 0
-              if (!allSkuMap[skuId].perMachine[s.machine_id]) allSkuMap[skuId].perMachine[s.machine_id] = 0
-              allSkuMap[skuId].perMachine[s.machine_id] += s.remain || 0
+              const isBox = (s.product_name || "").toLowerCase().includes("box")
+              const key = skuId + (isBox ? "_box" : "_pack")
+              if (!allSkuMap[key]) allSkuMap[key] = { sku_id: skuId, product_name: s.product_name, isBox, remain: 0, capacity: 0, perMachine: {} }
+              allSkuMap[key].remain += s.remain || 0
+              allSkuMap[key].capacity += s.max_capacity || 0
+              if (!allSkuMap[key].perMachine[s.machine_id]) allSkuMap[key].perMachine[s.machine_id] = 0
+              allSkuMap[key].perMachine[s.machine_id] += s.remain || 0
             })
             const allSkuList = Object.values(allSkuMap).sort((a, b) => b.remain - a.remain)
             const grandRemain = allSkuList.reduce((a, r) => a + r.remain, 0)
@@ -335,7 +337,7 @@ export default function PageMachineStockView({ machines, machineStock, skus, onR
                   <div style={{ textAlign: "left" }}>
                     <h2 style={{ margin: 0, fontSize: 13, fontWeight: 600, color: "var(--dx-text)" }}>สรุปยอดรวมทุกตู้</h2>
                     <p style={{ margin: "2px 0 0", fontSize: 11, color: "var(--dx-text-muted)" }}>
-                      {allSkuList.length} SKU · {fmt(grandRemain)} ซอง · {allMachineIds.length} ตู้
+                      {new Set(allSkuList.map(r => r.sku_id)).size} SKU · {fmt(grandBoxes)} กล่อง / {fmt(grandPacks)} ซอง · {allMachineIds.length} ตู้
                     </p>
                   </div>
                   <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
@@ -385,7 +387,7 @@ export default function PageMachineStockView({ machines, machineStock, skus, onR
                       </thead>
                       <tbody>
                         {allSkuList.map(r => {
-                          const isBox = (r.product_name || "").toLowerCase().includes("box")
+                          const isBox = r.isBox
                           return (
                             <tr key={r.sku_id + (isBox ? "_box" : "_pack")} style={{ borderBottom: "1px solid var(--dx-border)" }}>
                               <td className="dx-mono" style={{ padding: "8px 12px", fontSize: 11, fontWeight: 600, color: "var(--dx-text)" }}>{r.sku_id}</td>
