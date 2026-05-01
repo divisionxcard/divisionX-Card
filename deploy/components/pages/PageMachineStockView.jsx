@@ -304,7 +304,10 @@ export default function PageMachineStockView({ machines, machineStock, skus, onR
               if (!allSkuMap[key].perMachine[s.machine_id]) allSkuMap[key].perMachine[s.machine_id] = 0
               allSkuMap[key].perMachine[s.machine_id] += s.remain || 0
             })
-            const allSkuList = Object.values(allSkuMap).sort((a, b) => b.remain - a.remain)
+            const allSkuList = Object.values(allSkuMap).sort((a, b) => {
+              if (a.isBox !== b.isBox) return a.isBox ? -1 : 1
+              return b.remain - a.remain
+            })
             const grandRemain = allSkuList.reduce((a, r) => a + r.remain, 0)
             const allMachineIds = Object.keys(grouped).sort()
 
