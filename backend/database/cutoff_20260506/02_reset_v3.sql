@@ -22,7 +22,7 @@ TRUNCATE TABLE
   claims
 RESTART IDENTITY;
 
--- เก็บ sales — ห้าม truncate
+-- เก็บ sales — ห้าม truncate (ประวัติยอดขาย 1-4 พ.ค.)
 -- Reset avg_cost · seed step ใช้ unit_cost จาก Excel
 UPDATE skus SET avg_cost = 0;
 

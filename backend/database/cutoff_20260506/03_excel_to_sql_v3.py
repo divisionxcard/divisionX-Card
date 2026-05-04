@@ -366,12 +366,13 @@ def gen_seed(main, cost, user_packs):
     out.append("WHERE t.qty > 0;")
     out.append("")
 
-    # ── update avg_cost ─────────────────────────────────
-    out.append("-- 4) อัปเดต skus.avg_cost = unit_cost จาก Excel")
+    # ── update cost_price + avg_cost ─────────────────────
+    out.append("-- 4) อัปเดต skus.cost_price + avg_cost = unit_cost จาก Excel")
+    out.append("--    cost_price ใช้ใน v_stock_balance/Dashboard · avg_cost ใช้ใน profit calc")
     rows = []
     for sku, c in sorted(cost.items()):
         if c > 0:
-            rows.append(f"UPDATE skus SET avg_cost = {c:.2f} WHERE sku_id = {s(sku)};")
+            rows.append(f"UPDATE skus SET cost_price = {c:.2f}, avg_cost = {c:.2f} WHERE sku_id = {s(sku)};")
     if rows:
         out.extend(rows)
     else:
