@@ -18,7 +18,7 @@ ORDER BY tbl;
 SELECT
   DATE(sold_at AT TIME ZONE 'Asia/Bangkok') AS sale_date,
   COUNT(*) AS rows,
-  SUM(COALESCE(quantity_packs, quantity, 0)) AS total_packs
+  SUM(quantity_sold) AS total_packs
 FROM sales
 WHERE sold_at >= '2026-05-01 00:00:00+07'::timestamptz
   AND sold_at <  '2026-05-06 00:00:00+07'::timestamptz

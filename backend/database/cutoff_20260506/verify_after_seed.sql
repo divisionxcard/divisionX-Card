@@ -40,8 +40,8 @@ SELECT
   m.machine_code,
   so.sku_id,
   SUM(so.quantity_packs) AS loaded,
-  COALESCE(SUM(s.quantity_packs), SUM(s.quantity), 0) AS sold_from_machine,
-  SUM(so.quantity_packs) - COALESCE(SUM(s.quantity_packs), SUM(s.quantity), 0) AS in_machine_now
+  COALESCE(SUM(s.quantity_sold), 0) AS sold_from_machine,
+  SUM(so.quantity_packs) - COALESCE(SUM(s.quantity_sold), 0) AS in_machine_now
 FROM stock_out so
 JOIN machines m ON m.id = so.machine_id
 LEFT JOIN sales s ON s.machine_id = so.machine_id AND s.sku_id = so.sku_id
@@ -72,7 +72,7 @@ machine_now AS (
   GROUP BY sku_id
 ),
 sales_total AS (
-  SELECT sku_id, COALESCE(SUM(quantity_packs), SUM(quantity), 0) AS sold
+  SELECT sku_id, COALESCE(SUM(quantity_sold), 0) AS sold
   FROM sales
   WHERE sold_at >= '2026-05-01 00:00:00+07'::timestamptz
     AND sold_at <  '2026-05-06 00:00:00+07'::timestamptz
