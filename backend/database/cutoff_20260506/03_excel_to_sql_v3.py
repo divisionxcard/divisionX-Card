@@ -41,13 +41,16 @@ SALES_FROM = "2026-05-01 00:00:00+07"
 SALES_TO   = "2026-05-06 00:00:00+07"   # exclusive — ครอบคลุม 1, 2, 3, 4, 5
 
 SKUS_INFO = {
-    "OP 01":  ("OP",  12, 12), "OP 02":  ("OP",  12, 12), "OP 03":  ("OP",  12, 12),
-    "OP 04":  ("OP",  12, 12), "OP 05":  ("OP",  12, 12), "OP 06":  ("OP",  12, 12),
-    "OP 07":  ("OP",  12, 12), "OP 08":  ("OP",  12, 12), "OP 09":  ("OP",  12, 12),
-    "OP 10":  ("OP",  12, 12), "OP 11":  ("OP",  12, 12), "OP 12":  ("OP",  12, 12),
-    "OP 13":  ("OP",  12, 12), "OP 14":  ("OP",  12, 12), "OP 15":  ("OP",  12, 12),
-    "EB 01":  ("EB",  12, 12), "EB 02":  ("EB",  12, 12), "EB 03":  ("EB",  12, 12),
-    "EB 04":  ("EB",  12, 12), "PRB 01": ("PRB", 10, 12), "PRB 02": ("PRB", 10, 12),
+    # (series, packs_per_box, boxes_per_cotton) → packs_per_cotton = ppb × bpc
+    "OP 01":  ("OP",  24, 12), "OP 02":  ("OP",  24, 12), "OP 03":  ("OP",  24, 12),
+    "OP 04":  ("OP",  24, 12), "OP 05":  ("OP",  24, 12), "OP 06":  ("OP",  24, 12),
+    "OP 07":  ("OP",  24, 12), "OP 08":  ("OP",  24, 12), "OP 09":  ("OP",  24, 12),
+    "OP 10":  ("OP",  24, 12), "OP 11":  ("OP",  24, 12), "OP 12":  ("OP",  24, 12),
+    "OP 13":  ("OP",  24, 12), "OP 14":  ("OP",  24, 12), "OP 15":  ("OP",  24, 12),
+    "EB 01":  ("EB",  24, 12), "EB 02":  ("EB",  24, 12), "EB 03":  ("EB",  24, 12),
+    "EB 04":  ("EB",  24, 12),
+    "PRB 01": ("PRB", 10, 10),  # 100 packs/cotton
+    "PRB 02": ("PRB", 10, 20),  # 200 packs/cotton (ใหญ่กว่า PRB 01)
 }
 KNOWN_USERS = {"divisionxcard", "tueza5432", "aofwara66", "power23n", "mzadiz1989"}
 
@@ -199,7 +202,12 @@ def gen_refill_report(main, cost, user_packs):
     out.append("  GROUP BY sku_id")
     out.append("),")
     out.append("machine_totals AS (")
-    out.append("  SELECT sku_id, SUM(remain) AS machine_packs")
+    out.append("  -- Box slots (product_name มี 'box') → remain เป็นกล่อง · ต้อง × packs_per_box")
+    out.append("  SELECT sku_id, SUM(CASE")
+    out.append("    WHEN product_name ILIKE '%box%' AND sku_id LIKE 'PRB%' THEN remain * 10")
+    out.append("    WHEN product_name ILIKE '%box%' THEN remain * 24")
+    out.append("    ELSE remain")
+    out.append("  END) AS machine_packs")
     out.append("  FROM machine_stock")
     out.append("  WHERE sku_id IS NOT NULL AND remain > 0")
     out.append("  GROUP BY sku_id")
@@ -272,7 +280,12 @@ def gen_seed(main, cost, user_packs):
     out.append("  GROUP BY sku_id")
     out.append("),")
     out.append("machine_totals AS (")
-    out.append("  SELECT sku_id, SUM(remain) AS machine_packs")
+    out.append("  -- Box slots (product_name มี 'box') → remain เป็นกล่อง · ต้อง × packs_per_box")
+    out.append("  SELECT sku_id, SUM(CASE")
+    out.append("    WHEN product_name ILIKE '%box%' AND sku_id LIKE 'PRB%' THEN remain * 10")
+    out.append("    WHEN product_name ILIKE '%box%' THEN remain * 24")
+    out.append("    ELSE remain")
+    out.append("  END) AS machine_packs")
     out.append("  FROM machine_stock")
     out.append("  WHERE sku_id IS NOT NULL AND remain > 0")
     out.append("  GROUP BY sku_id")
@@ -333,7 +346,12 @@ def gen_seed(main, cost, user_packs):
     out.append("       'Initial machine load (Cutoff Re-Seed)',")
     out.append(f"       {s(CREATED_BY)}")
     out.append("FROM (")
-    out.append("  SELECT sku_id, machine_id, SUM(remain) AS qty")
+    out.append("  -- Box slots → remain เป็นกล่อง · ต้อง × packs_per_box")
+    out.append("  SELECT sku_id, machine_id, SUM(CASE")
+    out.append("    WHEN product_name ILIKE '%box%' AND sku_id LIKE 'PRB%' THEN remain * 10")
+    out.append("    WHEN product_name ILIKE '%box%' THEN remain * 24")
+    out.append("    ELSE remain")
+    out.append("  END) AS qty")
     out.append("  FROM machine_stock")
     out.append("  WHERE sku_id IS NOT NULL AND remain > 0")
     out.append("  GROUP BY sku_id, machine_id")
