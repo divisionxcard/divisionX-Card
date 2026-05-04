@@ -18,9 +18,12 @@ function SalesSkuByMachine({ sales, machines, skus }) {
   const [expandedMachine, setExpandedMachine] = useState(null)
   const [sortBy, setSortBy] = useState("rev")
   const [dateFilter, setDateFilter] = useState("all")
-  const [selectedDate, setSelectedDate] = useState(today())
+  const [fromDate, setFromDate] = useState(today())
+  const [toDate, setToDate]     = useState(today())
 
-  const filteredSales = dateFilter === "daily" ? sales.filter(r => r.sold_at === selectedDate) : sales
+  const filteredSales = dateFilter === "range"
+    ? sales.filter(r => r.sold_at >= fromDate && r.sold_at <= toDate)
+    : sales
 
   const machineSkuMap = {}
   machines.forEach(m => { machineSkuMap[m.machine_id] = {} })
@@ -50,23 +53,28 @@ function SalesSkuByMachine({ sales, machines, skus }) {
       <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: 14 }}>
         <h2 style={{ margin: 0, fontSize: 13, fontWeight: 600, color: "var(--dx-text)" }}>
           รายการขายแยก SKU ต่อตู้
-          {dateFilter === "daily" && (
+          {dateFilter === "range" && (
             <span style={{ marginLeft: 8, fontSize: 11, fontWeight: 400, color: "var(--dx-text-muted)" }}>
-              ({fmtDayLabel(selectedDate)})
+              ({fmtDayLabel(fromDate)}{fromDate !== toDate ? ` → ${fmtDayLabel(toDate)}` : ""})
             </span>
           )}
         </h2>
         <div style={{ display: "flex", flexWrap: "wrap", gap: 6, alignItems: "center" }}>
           <div style={{ display: "flex", gap: 4 }}>
-            {[{ v: "all", l: "ทั้งหมด" }, { v: "daily", l: "รายวัน" }].map(t => (
+            {[{ v: "all", l: "ทั้งหมด" }, { v: "range", l: "ช่วงวันที่" }].map(t => (
               <button key={t.v} onClick={() => setDateFilter(t.v)}
                 className={`dx-chip ${dateFilter === t.v ? "dx-chip-active" : ""}`}
                 style={{ padding: "5px 10px", fontSize: 11 }}>{t.l}</button>
             ))}
           </div>
-          {dateFilter === "daily" && (
-            <input type="date" value={selectedDate} onChange={e => setSelectedDate(e.target.value)}
-              className="dx-input" style={{ width: "auto", padding: "6px 10px", fontSize: 11 }}/>
+          {dateFilter === "range" && (
+            <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
+              <input type="date" value={fromDate} onChange={e => setFromDate(e.target.value)}
+                className="dx-input" style={{ width: "auto", padding: "6px 10px", fontSize: 11 }}/>
+              <span style={{ fontSize: 11, color: "var(--dx-text-muted)" }}>→</span>
+              <input type="date" value={toDate} onChange={e => setToDate(e.target.value)}
+                className="dx-input" style={{ width: "auto", padding: "6px 10px", fontSize: 11 }}/>
+            </div>
           )}
           <div style={{ display: "flex", gap: 4 }}>
             {[{ v: "rev", l: "ยอดขาย" }, { v: "qty", l: "จำนวน" }].map(t => (
