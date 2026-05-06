@@ -32,13 +32,13 @@ if sys.stdout.encoding and sys.stdout.encoding.lower() != "utf-8":
     sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8")
 
 
-CUTOFF_TS  = "2026-05-06 00:00:00+07"
-LOT_NUMBER = "CUTOFF-20260506"
-SOURCE     = "Cutoff Re-Seed (2026-05-06)"
+CUTOFF_TS  = "2026-05-07 00:00:00+07"
+LOT_NUMBER = "CUTOFF-20260507"
+SOURCE     = "Cutoff Re-Seed (2026-05-07)"
 CREATED_BY = "system_cutoff"
 
 SALES_FROM = "2026-05-01 00:00:00+07"
-SALES_TO   = "2026-05-06 00:00:00+07"   # exclusive — ครอบคลุม 1, 2, 3, 4, 5
+SALES_TO   = "2026-05-07 00:00:00+07"   # exclusive — ครอบคลุม 1-6 (6 วัน)
 
 SKUS_INFO = {
     # (series, packs_per_box, boxes_per_cotton) → packs_per_cotton = ppb × bpc

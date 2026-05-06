@@ -297,7 +297,7 @@ function ResetPasswordPage({ onDone }) {
 const NAV_BASE = [
   { id:"dashboard",  label:"ภาพรวม",         icon:Home          },
   { id:"stock",      label:"จัดการสต็อก",    icon:Package       },
-  // { id:"withdrawal", label:"เบิกเติมตู้",     icon:ArrowUpCircle },  // ซ่อนชั่วคราว · ยังไม่ได้ใช้งาน
+  { id:"withdrawal", label:"เบิกเติมตู้",     icon:ArrowUpCircle },
   { id:"transfer",   label:"แจกจ่ายสินค้า",  icon:Send,  adminOnly:true },
   { id:"mystock",    label:"สต็อกของฉัน",    icon:Boxes         },
   { id:"refillprep", label:"เตรียมของเติมตู้", icon:ClipboardList },
