@@ -386,7 +386,7 @@ export default function DivisionXApp() {
         getStockIn(),
         getStockOut(),
         getStockBalance(),
-        getSalesByMachine(30),
+        getSalesByMachine("2026-05-01T00:00:00+07:00"),
         getMachineStock(),
         getClaims(),
         getStockTransfers().catch(() => []),

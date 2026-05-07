@@ -369,7 +369,7 @@ export default function PageSales({ machines, sales, skus, claims, onRefresh }) 
       )}
 
       <SectionTitle
-        pill="Sales · 30 Days"
+        pill="Sales · ตั้งแต่ 1 พ.ค."
         title="ยอดขาย"
         subtitle="ข้อมูลธุรกรรมและยอดขายจาก VMS"
         actions={
@@ -417,7 +417,7 @@ export default function PageSales({ machines, sales, skus, claims, onRefresh }) 
         <>
           {/* KPIs */}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 14 }}>
-            <KpiCard icon={TrendingUp} label="ยอดขายรวม (30 วัน)" value={fmtB(totalRev)} accent="success" glow/>
+            <KpiCard icon={TrendingUp} label="ยอดขายรวม (ตั้งแต่ 1 พ.ค.)" value={fmtB(totalRev)} accent="success" glow/>
             <KpiCard icon={ShoppingCart} label="จำนวนธุรกรรม" value={fmt(totalTxn)} sub="ครั้ง" accent="cyan"/>
             <KpiCard icon={Layers} label="ซองที่ขาย" value={fmt(totalQty)} sub="ซอง" accent="purple"/>
             <KpiCard icon={Clock} label="เฉลี่ยต่อวัน" value={fmtB(Math.round(totalRev / dayCount))} accent="cyan"/>

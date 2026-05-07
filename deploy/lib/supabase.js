@@ -149,9 +149,14 @@ export async function getDailySales(days = 7) {
 }
 
 // ── Sales Summary by Machine (pagination เพื่อดึงครบทุก record) ──
-export async function getSalesByMachine(days = 30) {
-  const from = new Date()
-  from.setDate(from.getDate() - days)
+export async function getSalesByMachine(daysOrDate = 30) {
+  let from
+  if (typeof daysOrDate === "number") {
+    from = new Date()
+    from.setDate(from.getDate() - daysOrDate)
+  } else {
+    from = new Date(daysOrDate)
+  }
   const all = []
   let offset = 0
   const pageSize = 1000
