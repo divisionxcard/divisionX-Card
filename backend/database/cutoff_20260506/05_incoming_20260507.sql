@@ -4,7 +4,8 @@
 -- หลัง cutoff รอบ 2 (commit 328993b) · กรรมการนำของมาเติม
 -- ตามรายงาน refill_report_for_committee_20260507.md + เพิ่มสำรอง
 --
--- 18 SKU · 6,600 packs · ใช้ cost_price จาก skus table
+-- 18 SKU · 7,376 packs · ใช้ cost_price จาก skus table
+-- (rows 18 → 20 เพราะแยก row ของ OP 15 และ PRB 02 ที่เติมเพิ่ม part 2)
 -- Lot: INCOMING-20260507
 -- =============================================================
 
@@ -37,11 +38,13 @@ FROM (VALUES
   ('OP 13', 1308,  '6 box + 12 packs + 4 cotton'),
   ('OP 14', 97,    '4 box + 1 pack'),
   ('OP 15', 203,   '8 box + 11 packs'),
+  ('OP 15', 576,   '2 cotton เพิ่ม (เติม part 2)'),
   ('EB 02', 48,    '2 box'),
   ('EB 03', 487,   '8 box + 7 packs + 1 cotton'),
   ('EB 04', 88,    '3 box + 16 packs'),
   ('PRB 01', 1534, '3 box + 4 packs + 15 cotton'),
-  ('PRB 02', 107,  '10 box + 7 packs')
+  ('PRB 02', 107,  '10 box + 7 packs'),
+  ('PRB 02', 200,  '1 cotton เพิ่ม (เติม part 2)')
 ) AS v(sku_id, packs, note)
 JOIN skus s ON s.sku_id = v.sku_id;
 
