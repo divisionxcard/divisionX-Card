@@ -76,10 +76,16 @@ export default function PageDashboardDX({ stockIn, stockOut, stockBalance, skus,
   }, 0)
 
   // ── #7 Machine value = Σ machine_stock.remain × skus.avg_cost
+  //    Box slots (product_name มี 'box') → remain เป็นกล่อง · ต้อง × packs_per_box
   const skuAvgCostMap = Object.fromEntries(skus.map(s => [s.sku_id, parseFloat(s.avg_cost) || 0]))
-  const totalMachineValue = machineStock.reduce((sum, slot) => {
+  const skuPpbForMachine = Object.fromEntries(skus.map(s => [s.sku_id, parseInt(s.packs_per_box) || 24]))
+  const slotPacks = (slot) => {
     const remain = parseInt(slot.remain) || 0
-    return sum + remain * (skuAvgCostMap[slot.sku_id] || 0)
+    const isBox = (slot.product_name || "").toLowerCase().includes("box")
+    return isBox ? remain * (skuPpbForMachine[slot.sku_id] || 24) : remain
+  }
+  const totalMachineValue = machineStock.reduce((sum, slot) => {
+    return sum + slotPacks(slot) * (skuAvgCostMap[slot.sku_id] || 0)
   }, 0)
 
   // ── #4 Breakdown: Main / User / ตู้ packs by SKU → boxes + packs
@@ -104,11 +110,11 @@ export default function PageDashboardDX({ stockIn, stockOut, stockBalance, skus,
   stockOut.filter(so => so.withdrawn_by_user_id).forEach(so => {
     userPacksBySku[so.sku_id] = (userPacksBySku[so.sku_id] || 0) - (so.quantity_packs || 0)
   })
-  // Machine packs by SKU
+  // Machine packs by SKU (with box conversion)
   const machinePacksBySku = {}
   machineStock.forEach(slot => {
     if (!slot.sku_id) return
-    machinePacksBySku[slot.sku_id] = (machinePacksBySku[slot.sku_id] || 0) + (parseInt(slot.remain) || 0)
+    machinePacksBySku[slot.sku_id] = (machinePacksBySku[slot.sku_id] || 0) + slotPacks(slot)
   })
   const mainBP    = toBoxesPacks(mainPacksBySku)
   const userBP    = toBoxesPacks(userPacksBySku)
