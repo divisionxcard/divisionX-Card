@@ -162,7 +162,7 @@ export default function PageDashboardDX({ stockIn, stockOut, stockBalance, skus,
             icon={Package}
             label="สต็อกรวม"
             value={fmt(totalPacks)}
-            sub={`ซอง · ≈ ${fmt(Math.floor(totalPacks / 12))} กล่อง`}
+            sub={`ซอง · ≈ ${fmt(Math.floor(totalPacks / 24))} กล่อง`}
             accent="cyan"
             glow
           />
@@ -231,7 +231,7 @@ export default function PageDashboardDX({ stockIn, stockOut, stockBalance, skus,
             icon={Package}
             label="สต็อกรวม"
             value={fmt(totalPacks)}
-            sub={`ซอง · ≈ ${fmt(Math.floor(totalPacks / 12))} กล่อง`}
+            sub={`ซอง · ≈ ${fmt(Math.floor(totalPacks / 24))} กล่อง`}
             accent="cyan"
             glow
           />
