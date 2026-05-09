@@ -29,6 +29,10 @@ import {
   getMachineAssignments, addMachineAssignment as dbAddMachineAssignment, deleteMachineAssignment as dbDeleteMachineAssignment,
   getStockTransfers, addStockTransfer as dbAddStockTransfer, deleteStockTransfer as dbDeleteStockTransfer,
   getAllProfiles,
+  getWithdrawalRequests, addWithdrawalRequest as dbAddWithdrawalRequest,
+  approveWithdrawalRequest as dbApproveWithdrawalRequest,
+  rejectWithdrawalRequest as dbRejectWithdrawalRequest,
+  cancelWithdrawalRequest as dbCancelWithdrawalRequest,
 } from "../lib/supabase"
 import {
   SKUS, SERIES_COLOR, CHART_COLORS, THAI_MONTHS, SKU_SERIES_ORDER, UNIT_LABEL,
@@ -372,6 +376,7 @@ export default function DivisionXApp() {
   const [transfers,           setTransfers]           = useState([])
   const [machineAssignments,  setMachineAssignments]  = useState([])
   const [allProfiles,         setAllProfiles]         = useState([])
+  const [withdrawalRequests,  setWithdrawalRequests]  = useState([])
   const [loading,             setLoading]             = useState(true)
   const [dataError,     setDataError]     = useState(null)
 
@@ -380,7 +385,7 @@ export default function DivisionXApp() {
     try {
       setLoading(true)
       setDataError(null)
-      const [machData, skuData, siData, soData, sbData, salesData, msData, claimsData, tfData, maData, profData] = await Promise.all([
+      const [machData, skuData, siData, soData, sbData, salesData, msData, claimsData, tfData, maData, profData, wrData] = await Promise.all([
         getMachines(),
         getSkus(),
         getStockIn(),
@@ -392,6 +397,7 @@ export default function DivisionXApp() {
         getStockTransfers().catch(() => []),
         getMachineAssignments().catch(() => []),
         getAllProfiles().catch(() => []),
+        getWithdrawalRequests().catch(() => []),
       ])
       setMachines(machData)
       if (skuData?.length) setSkus(skuData)
@@ -403,6 +409,7 @@ export default function DivisionXApp() {
       setTransfers(tfData || [])
       setMachineAssignments(maData || [])
       setAllProfiles(profData || [])
+      setWithdrawalRequests(wrData || [])
       // Normalize sales: grand_total → revenue, sold_at timestamptz → date string
       // แปลง box → pack: ถ้า product_name_raw มีคำว่า "box" และ quantity_sold ยังเป็น 1 (ข้อมูลเก่า)
       setSales(salesData.map(r => {
@@ -586,6 +593,34 @@ export default function DivisionXApp() {
     setStockBalance(newSB)
   }
 
+  // ── Withdrawal Request Operations ──
+  const addWithdrawalRequest = async (record) => {
+    await dbAddWithdrawalRequest(record)
+    setWithdrawalRequests(await getWithdrawalRequests())
+  }
+
+  const cancelWithdrawalRequest = async (id) => {
+    await dbCancelWithdrawalRequest(id)
+    setWithdrawalRequests(await getWithdrawalRequests())
+  }
+
+  const approveWithdrawalRequest = async (id, lotNumber) => {
+    const resolvedBy = profile?.display_name || profile?.username || session?.user?.email || null
+    await dbApproveWithdrawalRequest(id, lotNumber, resolvedBy)
+    const [newWR, newT, newSB] = await Promise.all([
+      getWithdrawalRequests(), getStockTransfers(), getStockBalance(),
+    ])
+    setWithdrawalRequests(newWR)
+    setTransfers(newT)
+    setStockBalance(newSB)
+  }
+
+  const rejectWithdrawalRequest = async (id) => {
+    const resolvedBy = profile?.display_name || profile?.username || session?.user?.email || null
+    await dbRejectWithdrawalRequest(id, resolvedBy)
+    setWithdrawalRequests(await getWithdrawalRequests())
+  }
+
   // ── Machine Assignment Operations ──
   const addAssignment = async (record) => {
     await dbAddMachineAssignment(record)
@@ -751,8 +786,8 @@ export default function DivisionXApp() {
           {page === "dashboard"  && <PageDashboard stockIn={stockIn} stockOut={stockOut} stockBalance={stockBalance} skus={skus} transfers={transfers} machineStock={machineStock} profile={profile} onAddLot={() => { setStockInitialTab("addin"); setPage("stock") }}/>}
           {page === "stock"      && <PageStock     stockIn={stockIn} stockBalance={stockBalance} skus={skus} initialTab={stockInitialTab} profile={profile} onAddStockIn={addStockIn} onUpdateStockIn={updateStockIn} onDeleteStockIn={deleteStockIn} onAddSku={addSku} onDeactivateSku={deactivateSku} onRecalcAvgCost={async (skuId) => { await recalcAvgCost(skuId); setSkus(await getSkus()) }}/>}
           {page === "withdrawal" && <PageWithdrawal machines={machines} stockOut={stockOut} stockIn={stockIn} stockBalance={stockBalance} skus={skus} onAddStockOut={addStockOut} onDeleteStockOut={deleteStockOut} transfers={transfers} machineAssignments={machineAssignments} session={session} profile={profile}/>}
-          {page === "transfer"   && <PageTransfer  stockIn={stockIn} stockOut={stockOut} stockBalance={stockBalance} skus={skus} transfers={transfers} profiles={allProfiles} onAddTransfer={addTransfer} onDeleteTransfer={deleteTransfer}/>}
-          {page === "mystock"    && <PageMyStock   transfers={transfers} stockOut={stockOut} stockIn={stockIn} skus={skus} profile={profile} session={session} profiles={allProfiles} machines={machines} machineAssignments={machineAssignments} onDeleteTransfer={deleteTransfer}/>}
+          {page === "transfer"   && <PageTransfer  stockIn={stockIn} stockOut={stockOut} stockBalance={stockBalance} skus={skus} transfers={transfers} profiles={allProfiles} withdrawalRequests={withdrawalRequests} onAddTransfer={addTransfer} onDeleteTransfer={deleteTransfer} onApproveRequest={approveWithdrawalRequest} onRejectRequest={rejectWithdrawalRequest}/>}
+          {page === "mystock"    && <PageMyStock   transfers={transfers} stockOut={stockOut} stockIn={stockIn} skus={skus} profile={profile} session={session} profiles={allProfiles} machines={machines} machineAssignments={machineAssignments} stockBalance={stockBalance} withdrawalRequests={withdrawalRequests} onDeleteTransfer={deleteTransfer} onAddRequest={addWithdrawalRequest} onCancelRequest={cancelWithdrawalRequest}/>}
           {page === "refillprep" && <PageRefillPrep machines={machines} machineStock={machineStock} machineAssignments={machineAssignments} transfers={transfers} stockOut={stockOut} skus={skus} profile={profile} session={session} profiles={allProfiles} onAddStockOut={addStockOut} onUpdateStockOut={updateStockOut} onDeleteStockOut={deleteStockOut}/>}
           {page === "machstock"  && <PageMachineStockView machines={machines} machineStock={machineStock} skus={skus} onRefresh={loadAll}/>}
           {page === "sales"      && <PageSales     machines={machines} sales={sales} skus={skus} claims={claims} onRefresh={loadAll}/>}

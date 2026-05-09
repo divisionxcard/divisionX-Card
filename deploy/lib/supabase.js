@@ -394,3 +394,65 @@ export async function getAllProfiles() {
   if (error) throw error
   return data
 }
+
+// ── Stock Withdrawal Requests (คำขอเบิกจาก main · T อนุมัติ) ──
+export async function getWithdrawalRequests() {
+  const { data, error } = await supabase
+    .from("stock_withdrawal_requests")
+    .select("*")
+    .order("requested_at", { ascending: false })
+  if (error) throw error
+  return data
+}
+
+export async function addWithdrawalRequest(record) {
+  const { data, error } = await supabase
+    .from("stock_withdrawal_requests")
+    .insert([record])
+    .select()
+    .single()
+  if (error) throw error
+  return data
+}
+
+// Atomic: insert stock_transfers + update request → approved
+export async function approveWithdrawalRequest(requestId, lotNumber, resolvedBy) {
+  const { data, error } = await supabase.rpc("approve_withdrawal_request", {
+    p_request_id:  requestId,
+    p_lot_number:  lotNumber,
+    p_resolved_by: resolvedBy,
+  })
+  if (error) throw error
+  return data
+}
+
+export async function rejectWithdrawalRequest(requestId, resolvedBy) {
+  const { data, error } = await supabase
+    .from("stock_withdrawal_requests")
+    .update({
+      status:      "rejected",
+      resolved_at: new Date().toISOString(),
+      resolved_by: resolvedBy,
+    })
+    .eq("id", requestId)
+    .eq("status", "pending")
+    .select()
+    .single()
+  if (error) throw error
+  return data
+}
+
+export async function cancelWithdrawalRequest(requestId) {
+  const { data, error } = await supabase
+    .from("stock_withdrawal_requests")
+    .update({
+      status:      "cancelled",
+      resolved_at: new Date().toISOString(),
+    })
+    .eq("id", requestId)
+    .eq("status", "pending")
+    .select()
+    .single()
+  if (error) throw error
+  return data
+}

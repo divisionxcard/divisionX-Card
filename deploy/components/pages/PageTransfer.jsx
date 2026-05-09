@@ -1,10 +1,10 @@
 // PageTransfer — Dark Theme
 import { useState } from "react"
-import { X, CheckCircle, Send, Trash2, Loader2 } from "lucide-react"
+import { X, CheckCircle, Send, Trash2, Loader2, Check, Ban, Inbox } from "lucide-react"
 import { fmt, sortSkus } from "../shared/helpers"
 import { SectionTitle } from "../shared/dx-components"
 
-export default function PageTransfer({ stockIn, stockOut, stockBalance, skus, transfers, profiles, onAddTransfer, onDeleteTransfer }) {
+export default function PageTransfer({ stockIn, stockOut, stockBalance, skus, transfers, profiles, withdrawalRequests = [], onAddTransfer, onDeleteTransfer, onApproveRequest, onRejectRequest }) {
   const nowDate = () => new Date().toISOString().slice(0, 10)
   const nowTime = () => new Date().toTimeString().slice(0, 5)
   const [form, setForm] = useState({ sku_id: "", lot_number: "", to_user_id: "", unit: "box", quantity: "1", note: "", date: nowDate(), time: nowTime() })
@@ -14,6 +14,8 @@ export default function PageTransfer({ stockIn, stockOut, stockBalance, skus, tr
   const [historyFilter, setHistoryFilter] = useState("all")
   const [historyDateFrom, setHistoryDateFrom] = useState(nowDate())
   const [historyDateTo, setHistoryDateTo] = useState(nowDate())
+  const [approvingId, setApprovingId] = useState(null)
+  const [rejectingId, setRejectingId] = useState(null)
 
   const showToast = (msg, type = "success") => { setToast({ msg, type }); setTimeout(() => setToast(null), 3500) }
 
@@ -53,6 +55,66 @@ export default function PageTransfer({ stockIn, stockOut, stockBalance, skus, tr
   const overLot = selectedLot && withdrawPacks > selectedLot.lotBalance
 
   const adminProfiles = profiles.filter(p => p.role === "admin" || p.role === "user")
+
+  // ── Pending Withdrawal Requests ──
+  const pendingRequests = (withdrawalRequests || [])
+    .filter(r => r.status === "pending")
+    .sort((a, b) => (a.requested_at || "").localeCompare(b.requested_at || ""))
+
+  // FIFO lot finder ต่อ SKU
+  const computeLotsForSku = (skuId) => {
+    const lotMap = {}
+    stockIn.filter(r => r.sku_id === skuId && r.lot_number).forEach(r => {
+      if (!lotMap[r.lot_number]) lotMap[r.lot_number] = { ...r, quantity_packs: 0 }
+      lotMap[r.lot_number].quantity_packs += r.quantity_packs || 0
+    })
+    const lotsArr = Object.values(lotMap).sort((a, b) => new Date(a.purchased_at) - new Date(b.purchased_at))
+    const totalUsed = transfers.filter(t => t.sku_id === skuId).reduce((a, t) => a + (t.quantity_packs || 0), 0)
+      + stockOut.filter(so => so.sku_id === skuId && !so.withdrawn_by_user_id).reduce((a, so) => a + (so.quantity_packs || 0), 0)
+    let remainOut = totalUsed
+    return lotsArr.map(r => {
+      const used = Math.min(r.quantity_packs || 0, remainOut)
+      remainOut -= used
+      return { ...r, lotBalance: (r.quantity_packs || 0) - used }
+    })
+  }
+
+  const pickFifoLotForRequest = (req) => {
+    const lots = computeLotsForSku(req.sku_id).filter(l => l.lotBalance > 0)
+    return lots.find(l => l.lotBalance >= req.quantity_packs) || null
+  }
+
+  const handleApprove = async (req) => {
+    if (!onApproveRequest) return
+    const main = mainBalMap[req.sku_id] || 0
+    if (req.quantity_packs > main) {
+      showToast(`สต็อกหลัก ${req.sku_id} ไม่พอ (เหลือ ${fmt(main)} ซอง)`, "error")
+      return
+    }
+    const lot = pickFifoLotForRequest(req)
+    setApprovingId(req.id)
+    try {
+      await onApproveRequest(req.id, lot?.lot_number || null)
+      showToast(`อนุมัติสำเร็จ: ${req.sku_id} ${fmt(req.quantity_packs)} ซอง`)
+    } catch (err) {
+      showToast("อนุมัติไม่สำเร็จ: " + err.message, "error")
+    } finally {
+      setApprovingId(null)
+    }
+  }
+
+  const handleReject = async (req) => {
+    if (!onRejectRequest) return
+    setRejectingId(req.id)
+    try {
+      await onRejectRequest(req.id)
+      showToast(`ปฏิเสธคำขอ ${req.sku_id} แล้ว`)
+    } catch (err) {
+      showToast("ปฏิเสธไม่สำเร็จ: " + err.message, "error")
+    } finally {
+      setRejectingId(null)
+    }
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -100,6 +162,150 @@ export default function PageTransfer({ stockIn, stockOut, stockBalance, skus, tr
         title="แจกจ่ายสินค้า"
         subtitle="เบิกจากสต็อกหลัก แจกจ่ายให้แอดมินแต่ละคนเพื่อนำไปเติมตู้"
       />
+
+      {/* คำขอที่รออนุมัติ */}
+      {pendingRequests.length > 0 && (
+        <div className="dx-card" style={{
+          padding: 20,
+          border: "1px solid rgba(255,193,7,0.35)",
+          background: "linear-gradient(180deg, rgba(255,193,7,0.04) 0%, var(--dx-bg-card) 100%)",
+        }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14, gap: 8, flexWrap: "wrap" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <Inbox size={16} style={{ color: "var(--dx-warning)" }}/>
+              <h2 style={{ margin: 0, fontSize: 13, fontWeight: 700, color: "var(--dx-text)" }}>
+                คำขอเบิกที่รออนุมัติ
+              </h2>
+              <span style={{
+                padding: "3px 10px", borderRadius: 999, fontSize: 11, fontWeight: 600,
+                background: "rgba(255,193,7,0.15)", color: "var(--dx-warning)",
+                border: "1px solid rgba(255,193,7,0.3)",
+              }}>
+                {pendingRequests.length}
+              </span>
+            </div>
+            <span style={{ fontSize: 10, color: "var(--dx-text-muted)" }}>
+              ระบบเลือก Lot อัตโนมัติแบบ FIFO ตอนกดยืนยัน
+            </span>
+          </div>
+
+          <div style={{ overflowX: "auto" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+              <thead>
+                <tr style={{ borderBottom: "1px solid var(--dx-border-strong)" }}>
+                  <ReqTh align="left">เวลา</ReqTh>
+                  <ReqTh align="left">ผู้ขอ</ReqTh>
+                  <ReqTh align="left">SKU</ReqTh>
+                  <ReqTh align="right">จำนวน</ReqTh>
+                  <ReqTh align="right">= ซอง</ReqTh>
+                  <ReqTh align="right">สต็อกหลัก</ReqTh>
+                  <ReqTh align="left">Lot ที่จะใช้</ReqTh>
+                  <ReqTh align="center">สถานะ</ReqTh>
+                  <ReqTh align="center" style={{ width: 160 }}>จัดการ</ReqTh>
+                </tr>
+              </thead>
+              <tbody>
+                {pendingRequests.map(req => {
+                  const requester = profiles.find(p => p.id === req.requester_id)
+                  const main = mainBalMap[req.sku_id] || 0
+                  const enough = main >= req.quantity_packs
+                  const fifoLot = pickFifoLotForRequest(req)
+                  const isApproving = approvingId === req.id
+                  const isRejecting = rejectingId === req.id
+                  return (
+                    <tr key={req.id} style={{ borderBottom: "1px solid var(--dx-border)" }}>
+                      <ReqTd muted mono>{(req.requested_at || "").slice(5, 16).replace("T", " ")}</ReqTd>
+                      <ReqTd>
+                        <span style={{ fontSize: 11, fontWeight: 600, color: "#B794F6" }}>
+                          {requester?.display_name || requester?.username || "?"}
+                        </span>
+                      </ReqTd>
+                      <ReqTd>
+                        <span className="dx-mono" style={{ fontSize: 11, fontWeight: 700, color: "var(--dx-text)" }}>
+                          {req.sku_id}
+                        </span>
+                      </ReqTd>
+                      <ReqTd align="right">
+                        <span className="dx-mono" style={{ fontSize: 12, fontWeight: 600, color: "var(--dx-text)" }}>
+                          {fmt(req.quantity)} {req.unit === "cotton" ? "ลัง" : "กล่อง"}
+                        </span>
+                      </ReqTd>
+                      <ReqTd align="right" mono style={{ color: "var(--dx-text)" }}>
+                        {fmt(req.quantity_packs)}
+                      </ReqTd>
+                      <ReqTd align="right">
+                        <span className="dx-mono" style={{
+                          fontSize: 11, fontWeight: 600,
+                          color: enough ? "var(--dx-success)" : "var(--dx-danger)",
+                        }}>
+                          {fmt(main)}
+                        </span>
+                      </ReqTd>
+                      <ReqTd>
+                        {fifoLot ? (
+                          <span className="dx-mono" style={{
+                            fontSize: 10, padding: "2px 6px", borderRadius: 4,
+                            background: "rgba(0,212,255,0.08)", color: "var(--dx-cyan-soft)",
+                            border: "1px solid rgba(0,212,255,0.15)",
+                          }}>
+                            {fifoLot.lot_number}
+                          </span>
+                        ) : enough ? (
+                          <span style={{ fontSize: 10, color: "var(--dx-warning)" }}>ข้าม Lot (ไม่มี Lot เดี่ยวพอ)</span>
+                        ) : (
+                          <span style={{ fontSize: 10, color: "var(--dx-text-muted)" }}>-</span>
+                        )}
+                      </ReqTd>
+                      <ReqTd align="center">
+                        <span style={{
+                          padding: "3px 10px", borderRadius: 999, fontSize: 10, fontWeight: 600,
+                          background: enough ? "rgba(0,255,136,0.12)" : "rgba(255,68,102,0.12)",
+                          color: enough ? "var(--dx-success)" : "var(--dx-danger)",
+                          border: `1px solid ${enough ? "rgba(0,255,136,0.3)" : "rgba(255,68,102,0.3)"}`,
+                        }}>
+                          {enough ? "พอ" : "ไม่พอ"}
+                        </span>
+                      </ReqTd>
+                      <ReqTd align="center">
+                        <div style={{ display: "inline-flex", gap: 4 }}>
+                          <button
+                            onClick={() => handleApprove(req)}
+                            disabled={!enough || isApproving || isRejecting}
+                            title="ยืนยันการเบิก"
+                            style={{
+                              padding: "5px 10px", borderRadius: 6, border: "none", fontSize: 11, fontWeight: 600,
+                              background: enough ? "var(--dx-success)" : "var(--dx-bg-page)",
+                              color: enough ? "#000" : "var(--dx-text-muted)",
+                              cursor: enough && !isApproving ? "pointer" : "not-allowed",
+                              display: "inline-flex", alignItems: "center", gap: 4,
+                              opacity: !enough ? 0.5 : 1,
+                            }}>
+                            {isApproving ? <Loader2 size={11} className="animate-spin"/> : <Check size={11}/>}
+                            ยืนยัน
+                          </button>
+                          <button
+                            onClick={() => handleReject(req)}
+                            disabled={isApproving || isRejecting}
+                            title="ปฏิเสธคำขอ"
+                            style={{
+                              padding: "5px 10px", borderRadius: 6, border: "1px solid var(--dx-border)", fontSize: 11,
+                              background: "transparent", color: "var(--dx-danger)",
+                              cursor: !isRejecting ? "pointer" : "not-allowed",
+                              display: "inline-flex", alignItems: "center", gap: 4,
+                            }}>
+                            {isRejecting ? <Loader2 size={11} className="animate-spin"/> : <Ban size={11}/>}
+                            ปฏิเสธ
+                          </button>
+                        </div>
+                      </ReqTd>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(420px, 1fr))", gap: 18 }}>
         {/* Form */}
@@ -393,6 +599,27 @@ export default function PageTransfer({ stockIn, stockOut, stockBalance, skus, tr
         </div>
       </div>
     </div>
+  )
+}
+
+function ReqTh({ children, align = "left", style }) {
+  return (
+    <th style={{
+      padding: "8px 10px", textAlign: align,
+      fontSize: 10, fontWeight: 500, letterSpacing: 0.5, textTransform: "uppercase",
+      color: "var(--dx-text-muted)",
+      ...style,
+    }}>{children}</th>
+  )
+}
+
+function ReqTd({ children, align = "left", muted, mono, style }) {
+  return (
+    <td className={mono ? "dx-mono" : undefined} style={{
+      padding: "9px 10px", textAlign: align, fontSize: 11,
+      color: muted ? "var(--dx-text-muted)" : "var(--dx-text-secondary)",
+      ...style,
+    }}>{children}</td>
   )
 }
 

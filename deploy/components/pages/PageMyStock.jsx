@@ -1,11 +1,11 @@
 // PageMyStock — Dark Theme
 import { useState } from "react"
-import { X, CheckCircle, Package, PlusCircle, Wallet, Loader2, Trash2 } from "lucide-react"
+import { X, CheckCircle, Package, PlusCircle, Wallet, Loader2, Trash2, Plus, Minus, Send, Clock, Ban, AlertCircle, RefreshCw } from "lucide-react"
 import { fmt, fmtB, fmtBoxPack, getSkuSeries } from "../shared/helpers"
 import { SKU_SERIES_ORDER } from "../shared/constants"
 import { Badge, KpiCard, SectionTitle } from "../shared/dx-components"
 
-export default function PageMyStock({ transfers, stockOut, stockIn = [], skus, profile, session, profiles, machines, machineAssignments, onDeleteTransfer }) {
+export default function PageMyStock({ transfers, stockOut, stockIn = [], skus, profile, session, profiles, machines, machineAssignments, stockBalance = [], withdrawalRequests = [], onDeleteTransfer, onAddRequest, onCancelRequest }) {
   const [tab, setTab] = useState("balance")
   const isAdmin = profile?.role === "admin"
   const userId = session?.user?.id
@@ -14,6 +14,9 @@ export default function PageMyStock({ transfers, stockOut, stockIn = [], skus, p
   const [deleteTransferId, setDeleteTransferId] = useState(null)
   const [deletingTransfer, setDeletingTransfer] = useState(false)
   const [toast, setToast] = useState(null)
+  const [reqQty, setReqQty] = useState({})           // { sku_id: { cotton: 0, box: 0 } }
+  const [submitting, setSubmitting] = useState(false)
+  const [cancellingId, setCancellingId] = useState(null)
   const showToast = (msg, type = "success") => { setToast({ msg, type }); setTimeout(() => setToast(null), 3000) }
 
   const handleDeleteTransfer = async (id) => {
@@ -130,10 +133,153 @@ export default function PageMyStock({ transfers, stockOut, stockIn = [], skus, p
     }, 0)
   }, 0) : 0
 
+  // ── Withdrawal Request logic ──────────────────────────────
+  const myRequests = (withdrawalRequests || []).filter(r => r.requester_id === userId)
+  const pendingMyRequests = myRequests.filter(r => r.status === "pending")
+
+  const mainBalanceMap = {}
+  ;(stockBalance || []).forEach(b => { mainBalanceMap[b.sku_id] = b.balance || 0 })
+
+  // หัก packs ที่มี pending request ของ user คนนี้ (เผื่อ user ไม่ขอซ้ำเกิน)
+  const pendingPacksMap = {}
+  pendingMyRequests.forEach(r => {
+    pendingPacksMap[r.sku_id] = (pendingPacksMap[r.sku_id] || 0) + (r.quantity_packs || 0)
+  })
+
+  const sortedSkus = (skus || [])
+    .filter(s => s.is_active !== false)
+    .sort((a, b) => {
+      const sa = SKU_SERIES_ORDER[getSkuSeries(a.sku_id)] ?? 9
+      const sb = SKU_SERIES_ORDER[getSkuSeries(b.sku_id)] ?? 9
+      return sa - sb || (a.sku_id || "").localeCompare(b.sku_id || "")
+    })
+
+  const skuPacksFromUnit = (sku, cotton, box) => {
+    const pPerBox = sku.packs_per_box || 24
+    const bPerCotton = sku.boxes_per_cotton || 12
+    return (cotton * bPerCotton * pPerBox) + (box * pPerBox)
+  }
+
+  const getReqRowAvailability = (sku) => {
+    const main = mainBalanceMap[sku.sku_id] || 0
+    const pending = pendingPacksMap[sku.sku_id] || 0
+    const q = reqQty[sku.sku_id] || { cotton: 0, box: 0 }
+    const usedPacks = skuPacksFromUnit(sku, q.cotton, q.box)
+    return {
+      mainPacks: main,
+      pendingPacks: pending,
+      availablePacks: Math.max(0, main - pending - usedPacks),
+      currentPacks: usedPacks,
+      cotton: q.cotton || 0,
+      box: q.box || 0,
+    }
+  }
+
+  const incQty = (sku, unit) => {
+    setReqQty(prev => {
+      const cur = (prev[sku.sku_id] || {})[unit] || 0
+      const q = prev[sku.sku_id] || { cotton: 0, box: 0 }
+      const next = { ...q, [unit]: cur + 1 }
+      const proposedPacks = skuPacksFromUnit(sku, next.cotton, next.box)
+      const main = mainBalanceMap[sku.sku_id] || 0
+      const pending = pendingPacksMap[sku.sku_id] || 0
+      if (proposedPacks > (main - pending)) return prev  // เกินสต็อก main
+      return { ...prev, [sku.sku_id]: next }
+    })
+  }
+
+  const decQty = (sku, unit) => {
+    setReqQty(prev => {
+      const cur = (prev[sku.sku_id] || {})[unit] || 0
+      if (cur <= 0) return prev
+      const q = prev[sku.sku_id] || { cotton: 0, box: 0 }
+      return { ...prev, [sku.sku_id]: { ...q, [unit]: cur - 1 } }
+    })
+  }
+
+  const setQty = (sku, unit, val) => {
+    const n = Math.max(0, parseInt(val) || 0)
+    setReqQty(prev => {
+      const q = prev[sku.sku_id] || { cotton: 0, box: 0 }
+      const next = { ...q, [unit]: n }
+      const proposedPacks = skuPacksFromUnit(sku, next.cotton, next.box)
+      const main = mainBalanceMap[sku.sku_id] || 0
+      const pending = pendingPacksMap[sku.sku_id] || 0
+      const cap = main - pending
+      if (proposedPacks > cap) {
+        // clamp: ลดค่าลงให้ไม่เกิน
+        const otherPacks = skuPacksFromUnit(sku, unit === "cotton" ? 0 : next.cotton, unit === "box" ? 0 : next.box)
+        const remaining = Math.max(0, cap - otherPacks)
+        const unitPacks = unit === "cotton" ? (sku.boxes_per_cotton || 12) * (sku.packs_per_box || 24) : (sku.packs_per_box || 24)
+        next[unit] = unitPacks > 0 ? Math.floor(remaining / unitPacks) : 0
+      }
+      return { ...prev, [sku.sku_id]: next }
+    })
+  }
+
+  const submitItems = sortedSkus
+    .map(s => {
+      const q = reqQty[s.sku_id] || { cotton: 0, box: 0 }
+      return { sku: s, cotton: q.cotton || 0, box: q.box || 0 }
+    })
+    .filter(it => it.cotton > 0 || it.box > 0)
+
+  const totalReqRows = submitItems.reduce((a, it) => a + (it.cotton > 0 ? 1 : 0) + (it.box > 0 ? 1 : 0), 0)
+  const totalReqPacks = submitItems.reduce((a, it) => a + skuPacksFromUnit(it.sku, it.cotton, it.box), 0)
+
+  const handleSubmitRequests = async () => {
+    if (submitItems.length === 0 || !onAddRequest) return
+    setSubmitting(true)
+    try {
+      for (const it of submitItems) {
+        if (it.cotton > 0) {
+          await onAddRequest({
+            requester_id:   userId,
+            sku_id:         it.sku.sku_id,
+            unit:           "cotton",
+            quantity:       it.cotton,
+            quantity_packs: skuPacksFromUnit(it.sku, it.cotton, 0),
+          })
+        }
+        if (it.box > 0) {
+          await onAddRequest({
+            requester_id:   userId,
+            sku_id:         it.sku.sku_id,
+            unit:           "box",
+            quantity:       it.box,
+            quantity_packs: skuPacksFromUnit(it.sku, 0, it.box),
+          })
+        }
+      }
+      setReqQty({})
+      showToast(`ส่งคำขอเบิก ${totalReqRows} รายการแล้ว · รอ T อนุมัติ`)
+      setTab("my_requests")
+    } catch (err) {
+      showToast("ส่งคำขอไม่สำเร็จ: " + err.message, "error")
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const handleCancelRequest = async (id) => {
+    if (!onCancelRequest) return
+    setCancellingId(id)
+    try {
+      await onCancelRequest(id)
+      showToast("ยกเลิกคำขอแล้ว")
+    } catch (err) {
+      showToast("ยกเลิกไม่สำเร็จ: " + err.message, "error")
+    } finally {
+      setCancellingId(null)
+    }
+  }
+
   const tabs = [
-    { v: "balance",     l: "ยอดคงเหลือ" },
-    { v: "history_in",  l: "ประวัติรับเข้า" },
-    { v: "history_out", l: "ประวัติเบิกออก" },
+    { v: "balance",      l: "ยอดคงเหลือ" },
+    { v: "request",      l: "ขอเบิกของ" },
+    { v: "my_requests",  l: `คำขอของฉัน${pendingMyRequests.length > 0 ? ` (${pendingMyRequests.length})` : ""}` },
+    { v: "history_in",   l: "ประวัติรับเข้า" },
+    { v: "history_out",  l: "ประวัติเบิกออก" },
   ]
 
   return (
@@ -307,6 +453,224 @@ export default function PageMyStock({ transfers, stockOut, stockIn = [], skus, p
         </div>
       )}
 
+      {/* Tab: ขอเบิกของ */}
+      {tab === "request" && (
+        <div className="dx-card" style={{ padding: 20 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14, gap: 10, flexWrap: "wrap" }}>
+            <div>
+              <h2 style={{ margin: 0, fontSize: 13, fontWeight: 600, color: "var(--dx-text)" }}>
+                ขอเบิกจากสต็อกหลัก
+              </h2>
+              <p style={{ margin: "4px 0 0", fontSize: 11, color: "var(--dx-text-muted)" }}>
+                เลือกจำนวนที่ต้องการเบิก (Cotton/Box) · ห้ามเกินสต็อกหลักที่มี · กดส่งคำขอแล้วรอ T อนุมัติ
+              </p>
+            </div>
+            {pendingMyRequests.length > 0 && (
+              <span style={{
+                padding: "5px 10px", borderRadius: 999, fontSize: 11, fontWeight: 500,
+                background: "rgba(255,193,7,0.12)", color: "var(--dx-warning)",
+                border: "1px solid rgba(255,193,7,0.3)",
+                display: "inline-flex", alignItems: "center", gap: 5,
+              }}>
+                <Clock size={11}/> มีคำขอรออนุมัติ {pendingMyRequests.length} รายการ
+              </span>
+            )}
+          </div>
+          {sortedSkus.length === 0 ? (
+            <p style={{ textAlign: "center", color: "var(--dx-text-muted)", padding: "40px 0", fontSize: 13 }}>
+              ยังไม่มี SKU ในระบบ
+            </p>
+          ) : (
+            <div style={{ overflowX: "auto" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+                <thead>
+                  <tr style={{ borderBottom: "1px solid var(--dx-border-strong)" }}>
+                    <Th align="left" style={{
+                      position: "sticky", left: 0, zIndex: 3,
+                      background: "var(--dx-bg-card)",
+                      boxShadow: "1px 0 0 var(--dx-border)",
+                    }}>SKU</Th>
+                    <Th align="right">สต็อกหลักเหลือ</Th>
+                    <Th align="center">Cotton (1 = {12} กล่อง)</Th>
+                    <Th align="center">Box</Th>
+                    <Th align="right">รวม (ซอง)</Th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {sortedSkus.map(s => {
+                    const a = getReqRowAvailability(s)
+                    const series = getSkuSeries(s.sku_id)
+                    const pPerBox = s.packs_per_box || 24
+                    const bPerCotton = s.boxes_per_cotton || 12
+                    const cottonPacks = bPerCotton * pPerBox
+                    const lowMain = a.mainPacks < pPerBox
+                    return (
+                      <tr key={s.sku_id} style={{ borderBottom: "1px solid var(--dx-border)" }}>
+                        <Td style={{
+                          position: "sticky", left: 0, zIndex: 1,
+                          background: "var(--dx-bg-card)",
+                          boxShadow: "1px 0 0 var(--dx-border)",
+                        }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                            <Badge series={series}/>
+                            <span className="dx-mono" style={{ fontSize: 12, fontWeight: 700, color: "var(--dx-text)" }}>{s.sku_id}</span>
+                            <span className="dx-hide-mobile" style={{ fontSize: 10, color: "var(--dx-text-muted)" }}>{s.name}</span>
+                          </div>
+                        </Td>
+                        <Td align="right">
+                          <div>
+                            <span className="dx-mono" style={{
+                              fontSize: 13, fontWeight: 700,
+                              color: a.mainPacks === 0 ? "var(--dx-danger)" : lowMain ? "var(--dx-warning)" : "var(--dx-cyan-bright)",
+                            }}>
+                              {fmt(a.mainPacks)}
+                            </span>
+                            <span style={{ fontSize: 10, color: "var(--dx-text-muted)", marginLeft: 4 }}>ซอง</span>
+                            {a.pendingPacks > 0 && (
+                              <div style={{ fontSize: 9, color: "var(--dx-warning)", marginTop: 2 }}>
+                                (ขอไปแล้ว {fmt(a.pendingPacks)})
+                              </div>
+                            )}
+                          </div>
+                        </Td>
+                        <Td align="center">
+                          <QtyStepper
+                            value={a.cotton}
+                            onDec={() => decQty(s, "cotton")}
+                            onInc={() => incQty(s, "cotton")}
+                            onChange={(v) => setQty(s, "cotton", v)}
+                            disabled={a.mainPacks < cottonPacks}
+                          />
+                        </Td>
+                        <Td align="center">
+                          <QtyStepper
+                            value={a.box}
+                            onDec={() => decQty(s, "box")}
+                            onInc={() => incQty(s, "box")}
+                            onChange={(v) => setQty(s, "box", v)}
+                            disabled={a.mainPacks < pPerBox}
+                          />
+                        </Td>
+                        <Td align="right">
+                          <span className="dx-mono" style={{
+                            fontSize: 12, fontWeight: 700,
+                            color: a.currentPacks > 0 ? "var(--dx-success)" : "var(--dx-text-muted)",
+                          }}>
+                            {a.currentPacks > 0 ? `+${fmt(a.currentPacks)}` : "—"}
+                          </span>
+                        </Td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {/* Submit footer */}
+          <div style={{
+            marginTop: 16, padding: "14px 16px", borderRadius: 12,
+            background: "var(--dx-bg-input)", border: "1px solid var(--dx-border-strong)",
+            display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap",
+          }}>
+            <div>
+              <p style={{ margin: 0, fontSize: 12, color: "var(--dx-text-muted)" }}>เบิกทั้งหมด</p>
+              <p className="dx-mono" style={{ margin: "2px 0 0", fontSize: 16, fontWeight: 700, color: "var(--dx-text)" }}>
+                {totalReqRows} รายการ · รวม {fmt(totalReqPacks)} ซอง
+              </p>
+            </div>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button
+                onClick={() => setReqQty({})}
+                disabled={submitItems.length === 0 || submitting}
+                className="dx-btn dx-btn-ghost"
+                style={{ padding: "8px 14px", fontSize: 12 }}
+              >
+                <RefreshCw size={12}/> รีเซ็ตยอด
+              </button>
+              <button
+                onClick={handleSubmitRequests}
+                disabled={submitItems.length === 0 || submitting}
+                className="dx-btn dx-btn-primary"
+                style={{ padding: "8px 16px", fontSize: 12 }}
+              >
+                {submitting ? <Loader2 size={12} className="animate-spin"/> : <Send size={12}/>}
+                ส่งคำขอเบิก
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Tab: คำขอของฉัน */}
+      {tab === "my_requests" && (
+        <div className="dx-card" style={{ padding: 20 }}>
+          <h2 style={{ margin: "0 0 14px", fontSize: 13, fontWeight: 600, color: "var(--dx-text)" }}>
+            คำขอของฉัน ({myRequests.length})
+          </h2>
+          {myRequests.length === 0 ? (
+            <p style={{ textAlign: "center", color: "var(--dx-text-muted)", padding: "40px 0", fontSize: 13 }}>
+              ยังไม่มีคำขอเบิก
+            </p>
+          ) : (
+            <div style={{ overflowX: "auto" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+                <thead>
+                  <tr style={{ borderBottom: "1px solid var(--dx-border-strong)" }}>
+                    <Th align="left">วันที่ขอ</Th>
+                    <Th align="left">SKU</Th>
+                    <Th align="right">จำนวน</Th>
+                    <Th align="right">= ซอง</Th>
+                    <Th align="center">สถานะ</Th>
+                    <Th align="left">ผู้อนุมัติ</Th>
+                    <Th align="center" style={{ width: 100 }}>จัดการ</Th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {[...myRequests].sort((a, b) => (b.requested_at || "").localeCompare(a.requested_at || "")).map(r => {
+                    const isPending = r.status === "pending"
+                    const isCancelling = cancellingId === r.id
+                    return (
+                      <tr key={r.id} style={{ borderBottom: "1px solid var(--dx-border)" }}>
+                        <Td muted mono>{(r.requested_at || "").slice(0, 16).replace("T", " ")}</Td>
+                        <Td><span className="dx-mono" style={{ fontSize: 11, fontWeight: 600, color: "var(--dx-text)" }}>{r.sku_id}</span></Td>
+                        <Td align="right">
+                          <span className="dx-mono" style={{ fontSize: 12, fontWeight: 600, color: "var(--dx-text)" }}>
+                            {fmt(r.quantity)} {r.unit === "cotton" ? "ลัง" : "กล่อง"}
+                          </span>
+                        </Td>
+                        <Td align="right" muted mono>{fmt(r.quantity_packs)}</Td>
+                        <Td align="center"><RequestStatusPill status={r.status}/></Td>
+                        <Td muted>{r.resolved_by || "-"}</Td>
+                        <Td align="center">
+                          {isPending ? (
+                            <button
+                              onClick={() => handleCancelRequest(r.id)}
+                              disabled={isCancelling}
+                              title="ยกเลิกคำขอ"
+                              style={{
+                                padding: "4px 10px", borderRadius: 6, border: "none", cursor: "pointer",
+                                background: "rgba(255,68,102,0.1)", color: "var(--dx-danger)", fontSize: 11,
+                                display: "inline-flex", alignItems: "center", gap: 4,
+                              }}
+                            >
+                              {isCancelling ? <Loader2 size={10} className="animate-spin"/> : <Ban size={10}/>}
+                              ยกเลิก
+                            </button>
+                          ) : (
+                            <span style={{ fontSize: 10, color: "var(--dx-text-muted)" }}>—</span>
+                          )}
+                        </Td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Tab: ประวัติรับเข้า */}
       {tab === "history_in" && (
         <div className="dx-card" style={{ padding: 20 }}>
@@ -469,6 +833,59 @@ function Td({ children, align = "left", muted, mono, style }) {
     }}>
       {children}
     </td>
+  )
+}
+
+function QtyStepper({ value, onDec, onInc, onChange, disabled = false }) {
+  const btnStyle = {
+    width: 26, height: 26, borderRadius: 6, border: "none",
+    display: "inline-flex", alignItems: "center", justifyContent: "center",
+    cursor: disabled ? "not-allowed" : "pointer",
+    background: disabled ? "var(--dx-bg-page)" : "var(--dx-bg-elevated)",
+    color: disabled ? "var(--dx-text-muted)" : "var(--dx-text)",
+    fontSize: 12,
+  }
+  return (
+    <div style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+      <button onClick={onDec} disabled={disabled || value <= 0} style={btnStyle}>
+        <Minus size={12}/>
+      </button>
+      <input
+        type="number"
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        disabled={disabled}
+        min={0}
+        className="dx-input dx-mono"
+        style={{
+          width: 50, padding: "4px 6px", textAlign: "center",
+          fontSize: 12, fontWeight: 600,
+          color: value > 0 ? "var(--dx-cyan-bright)" : "var(--dx-text-secondary)",
+        }}
+      />
+      <button onClick={onInc} disabled={disabled} style={btnStyle}>
+        <Plus size={12}/>
+      </button>
+    </div>
+  )
+}
+
+function RequestStatusPill({ status }) {
+  const config = {
+    pending:   { label: "รออนุมัติ",   bg: "rgba(255,193,7,0.12)",  color: "var(--dx-warning)", border: "rgba(255,193,7,0.3)" },
+    approved:  { label: "อนุมัติแล้ว", bg: "rgba(0,255,136,0.12)",  color: "var(--dx-success)", border: "rgba(0,255,136,0.3)" },
+    rejected:  { label: "ปฏิเสธ",      bg: "rgba(255,68,102,0.12)", color: "var(--dx-danger)",  border: "rgba(255,68,102,0.3)" },
+    cancelled: { label: "ยกเลิก",       bg: "var(--dx-bg-page)",     color: "var(--dx-text-muted)", border: "var(--dx-border)" },
+  }
+  const c = config[status] || config.pending
+  return (
+    <span style={{
+      padding: "3px 10px", borderRadius: 999, fontSize: 11, fontWeight: 500,
+      background: c.bg, color: c.color, border: `1px solid ${c.border}`,
+      display: "inline-block",
+    }}>
+      {c.label}
+    </span>
   )
 }
 

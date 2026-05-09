@@ -445,6 +445,11 @@ body.dx-theme input[type="month"]::-webkit-calendar-picker-indicator {
 /* Table row hover */
 body.dx-theme tr.hover\:bg-gray-50:hover { background-color: var(--dx-bg-elevated) !important; }
 
+/* Responsive utilities — ซ่อนใน mobile */
+@media (max-width: 640px) {
+  .dx-hide-mobile { display: none !important; }
+}
+
 /* ────────────────────────────────────────────────────
    Print (keep light theme — ประหยัดหมึก)
    ──────────────────────────────────────────────────── */
