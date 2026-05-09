@@ -554,7 +554,7 @@ export default function DivisionXApp() {
     }
 
     if (claim.product_status === "returned" && claim.managed_by_user_id) {
-      // คืนสต็อกให้ user (เช่น user ลืมหยิบของไป) → สร้าง transfer record คืน
+      // คืนสต็อกให้ user · มาจาก customer คืน · main ไม่ควรกระทบ → set from_claim_id
       await dbAddStockTransfer({
         sku_id:         claim.sku_id,
         quantity:       claim.quantity,
@@ -565,6 +565,7 @@ export default function DivisionXApp() {
         created_by:     adminName,
         note:           `คืนจากเคลม #${claim.id} (สถานะ: คืนสต็อก)`,
         lot_number:     null,
+        from_claim_id:  claim.id,
       })
       const [newClaims, newTransfers, newSB] = await Promise.all([getClaims(), getStockTransfers(), getStockBalance()])
       setClaims(newClaims); setTransfers(newTransfers); setStockBalance(newSB)
