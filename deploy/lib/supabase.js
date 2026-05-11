@@ -228,6 +228,14 @@ export async function deleteStockOut(id) {
   if (error) throw error
 }
 
+export async function deleteStockOutByClaim(claimId) {
+  const { error } = await supabase
+    .from("stock_out")
+    .delete()
+    .eq("from_claim_id", claimId)
+  if (error) throw error
+}
+
 // ── Machines ──────────────────────────────────────────────────
 export async function getMachines() {
   const { data, error } = await supabase
@@ -382,6 +390,14 @@ export async function deleteStockTransfer(id) {
     .from("stock_transfers")
     .delete()
     .eq("id", id)
+  if (error) throw error
+}
+
+export async function deleteStockTransfersByClaim(claimId) {
+  const { error } = await supabase
+    .from("stock_transfers")
+    .delete()
+    .eq("from_claim_id", claimId)
   if (error) throw error
 }
 

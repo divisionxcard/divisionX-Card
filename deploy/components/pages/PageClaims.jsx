@@ -1,5 +1,5 @@
 // PageClaims — Dark Theme
-import { useState, useEffect } from "react"
+import { useState, useEffect, Fragment } from "react"
 import { CheckCircle, AlertTriangle, Trash2, Loader2 } from "lucide-react"
 import { fmtB, sortSkus } from "../shared/helpers"
 import { SectionTitle } from "../shared/dx-components"
@@ -44,6 +44,7 @@ export default function PageClaims({ machines, skus, claims, onAddClaim, onConfi
   const [deleteId, setDeleteId] = useState(null)
   const [confirmId, setConfirmId] = useState(null)
   const [confirming, setConfirming] = useState(false)
+  const [confirmError, setConfirmError] = useState(null) // { id, msg } · inline error ใต้แถวเคลม
 
   const showToast = (msg, type = "success") => { setToast({ msg, type }); setTimeout(() => setToast(null), 3000) }
 
@@ -84,10 +85,15 @@ export default function PageClaims({ machines, skus, claims, onAddClaim, onConfi
   const handleConfirm = async (claim) => {
     try {
       setConfirming(true)
+      setConfirmError(null)
       await onConfirmClaim(claim)
       setConfirmId(null)
       showToast(`ยืนยันเคลมสำเร็จ: ${claim.sku_id} ${claim.quantity} ซอง`)
-    } catch (err) { showToast("ยืนยันไม่สำเร็จ: " + err.message, "error") }
+    } catch (err) {
+      setConfirmError({ id: claim.id, msg: err.message })
+      setConfirmId(null)
+      setTimeout(() => setConfirmError(prev => prev?.id === claim.id ? null : prev), 6000)
+    }
     finally { setConfirming(false) }
   }
 
@@ -268,8 +274,10 @@ export default function PageClaims({ machines, skus, claims, onAddClaim, onConfi
                   {myClaims.map(c => {
                     const m = machines.find(m => m.machine_id === c.machine_id)
                     const statusInfo = STATUS_OPTIONS.find(s => s.v === c.product_status) || STATUS_OPTIONS[0]
+                    const showError = confirmError?.id === c.id
                     return (
-                      <tr key={c.id} style={{ borderBottom: "1px solid var(--dx-border)" }}>
+                      <Fragment key={c.id}>
+                      <tr style={{ borderBottom: showError ? "none" : "1px solid var(--dx-border)" }}>
                         <td className="dx-mono" style={{ padding: "10px 8px", fontSize: 11, color: "var(--dx-text-muted)" }}>{c.claimed_at}</td>
                         <td style={{ padding: "10px 8px", fontSize: 11, fontWeight: 500, color: "var(--dx-text)" }}>{m?.name || c.machine_id}</td>
                         <td className="dx-mono" style={{ padding: "10px 8px", fontSize: 11, fontWeight: 600, color: "var(--dx-text)" }}>{c.sku_id}</td>
@@ -297,34 +305,42 @@ export default function PageClaims({ machines, skus, claims, onAddClaim, onConfi
                           {c.confirm_status === "confirmed" ? (
                             <span style={{ fontSize: 10, fontWeight: 600, color: "var(--dx-success)" }}>ตัดสต็อกแล้ว</span>
                           ) : c.confirm_status === "pending" ? (
-                            confirmId === c.id ? (
-                              <div style={{ display: "inline-flex", gap: 4 }}>
-                                <button onClick={() => handleConfirm(c)} disabled={confirming}
+                            isAdmin ? (
+                              confirmId === c.id ? (
+                                <div style={{ display: "inline-flex", gap: 4 }}>
+                                  <button onClick={() => handleConfirm(c)} disabled={confirming}
+                                    style={{
+                                      padding: "3px 8px", fontSize: 10, fontWeight: 600, borderRadius: 6,
+                                      background: "var(--dx-danger)", color: "#fff", border: "none",
+                                      cursor: confirming ? "not-allowed" : "pointer",
+                                      opacity: confirming ? 0.5 : 1,
+                                    }}>
+                                    {confirming ? "..." : "ยืนยันตัดสต็อก"}
+                                  </button>
+                                  <button onClick={() => setConfirmId(null)}
+                                    style={{ fontSize: 10, color: "var(--dx-text-muted)", background: "transparent", border: "none", cursor: "pointer" }}>
+                                    ยกเลิก
+                                  </button>
+                                </div>
+                              ) : (
+                                <button onClick={() => setConfirmId(c.id)}
                                   style={{
-                                    padding: "3px 8px", fontSize: 10, fontWeight: 600, borderRadius: 6,
-                                    background: "var(--dx-danger)", color: "#fff", border: "none",
-                                    cursor: confirming ? "not-allowed" : "pointer",
-                                    opacity: confirming ? 0.5 : 1,
-                                  }}>
-                                  {confirming ? "..." : "ยืนยันตัดสต็อก"}
+                                    fontSize: 10, fontWeight: 600, padding: "3px 10px", borderRadius: 6,
+                                    background: "rgba(255,200,87,0.12)", color: "var(--dx-warning)",
+                                    border: "1px solid rgba(255,200,87,0.3)",
+                                    cursor: "pointer",
+                                  }}
+                                  onMouseEnter={e => e.currentTarget.style.background = "rgba(255,200,87,0.2)"}
+                                  onMouseLeave={e => e.currentTarget.style.background = "rgba(255,200,87,0.12)"}>
+                                  รอยืนยัน
                                 </button>
-                                <button onClick={() => setConfirmId(null)}
-                                  style={{ fontSize: 10, color: "var(--dx-text-muted)", background: "transparent", border: "none", cursor: "pointer" }}>
-                                  ยกเลิก
-                                </button>
-                              </div>
+                              )
                             ) : (
-                              <button onClick={() => setConfirmId(c.id)}
-                                style={{
-                                  fontSize: 10, fontWeight: 600, padding: "3px 10px", borderRadius: 6,
-                                  background: "rgba(255,200,87,0.12)", color: "var(--dx-warning)",
-                                  border: "1px solid rgba(255,200,87,0.3)",
-                                  cursor: "pointer",
-                                }}
-                                onMouseEnter={e => e.currentTarget.style.background = "rgba(255,200,87,0.2)"}
-                                onMouseLeave={e => e.currentTarget.style.background = "rgba(255,200,87,0.12)"}>
-                                รอยืนยัน
-                              </button>
+                              <span style={{
+                                fontSize: 10, fontWeight: 600, padding: "2px 8px", borderRadius: 999,
+                                background: "rgba(255,200,87,0.12)", color: "var(--dx-warning)",
+                                border: "1px solid rgba(255,200,87,0.3)",
+                              }}>รอ admin ยืนยัน</span>
                             )
                           ) : (
                             <span style={{ fontSize: 10, color: "var(--dx-text-muted)" }}>—</span>
@@ -335,32 +351,36 @@ export default function PageClaims({ machines, skus, claims, onAddClaim, onConfi
                         </td>
                         {isAdmin && (
                           <td style={{ padding: "10px 8px", textAlign: "right" }}>
-                            {deleteId === c.id ? (
-                              <div style={{ display: "inline-flex", gap: 6 }}>
-                                <button onClick={() => handleDelete(c.id)}
-                                  style={{ fontSize: 10, fontWeight: 600, color: "var(--dx-danger)", background: "transparent", border: "none", cursor: "pointer" }}>
-                                  ลบ
-                                </button>
-                                <button onClick={() => setDeleteId(null)}
-                                  style={{ fontSize: 10, color: "var(--dx-text-muted)", background: "transparent", border: "none", cursor: "pointer" }}>
-                                  ยกเลิก
-                                </button>
-                              </div>
-                            ) : (
-                              <button onClick={() => setDeleteId(c.id)}
-                                style={{
-                                  padding: 4, borderRadius: 4, border: "none", cursor: "pointer",
-                                  background: "transparent", color: "var(--dx-text-muted)",
-                                  display: "inline-flex", alignItems: "center", justifyContent: "center",
-                                }}
-                                onMouseEnter={e => e.currentTarget.style.color = "var(--dx-danger)"}
-                                onMouseLeave={e => e.currentTarget.style.color = "var(--dx-text-muted)"}>
-                                <Trash2 size={13}/>
-                              </button>
-                            )}
+                            <button onClick={() => setDeleteId(c.id)}
+                              style={{
+                                padding: 4, borderRadius: 4, border: "none", cursor: "pointer",
+                                background: "transparent", color: "var(--dx-text-muted)",
+                                display: "inline-flex", alignItems: "center", justifyContent: "center",
+                              }}
+                              onMouseEnter={e => e.currentTarget.style.color = "var(--dx-danger)"}
+                              onMouseLeave={e => e.currentTarget.style.color = "var(--dx-text-muted)"}>
+                              <Trash2 size={13}/>
+                            </button>
                           </td>
                         )}
                       </tr>
+                      {showError && (
+                        <tr style={{ borderBottom: "1px solid var(--dx-border)" }}>
+                          <td colSpan={isAdmin ? 10 : 9} style={{ padding: "0 8px 10px" }}>
+                            <div style={{
+                              display: "flex", alignItems: "center", gap: 8,
+                              padding: "8px 12px", borderRadius: 8,
+                              background: "rgba(255,68,102,0.08)",
+                              border: "1px solid rgba(255,68,102,0.3)",
+                              fontSize: 11, color: "var(--dx-danger)",
+                            }}>
+                              <AlertTriangle size={14} style={{ flexShrink: 0 }}/>
+                              <span>ยืนยันไม่สำเร็จ: {confirmError.msg}</span>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                      </Fragment>
                     )
                   })}
                 </tbody>
@@ -369,6 +389,96 @@ export default function PageClaims({ machines, skus, claims, onAddClaim, onConfi
           )}
         </div>
       </div>
+
+      {deleteId && (() => {
+        const claim = myClaims.find(c => c.id === deleteId)
+        if (!claim) return null
+        const m = machines.find(mm => mm.machine_id === claim.machine_id)
+        const willRevertStock = claim.confirm_status === "confirmed"
+        const revertDirection = claim.product_status === "returned"
+          ? "ลด" // returned: ตอน confirm = user pocket +N · ตอน revert = -N
+          : "เพิ่ม" // damaged/lost: ตอน confirm = user pocket -N · ตอน revert = +N
+        const statusLabel = claim.product_status === "returned" ? "คืนสต็อก" : claim.product_status === "lost" ? "สูญหาย" : "ชำรุด"
+        const confirmLabel = claim.confirm_status === "confirmed" ? "ยืนยันแล้ว (ตัดสต็อก)" : claim.confirm_status === "pending" ? "รอยืนยัน" : "—"
+        return (
+          <div style={{
+            position: "fixed", inset: 0, zIndex: 50,
+            background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)",
+            display: "flex", alignItems: "center", justifyContent: "center", padding: 16,
+          }} onClick={() => setDeleteId(null)}>
+            <div onClick={e => e.stopPropagation()} style={{
+              background: "var(--dx-bg-card)", borderRadius: 16,
+              width: "100%", maxWidth: 440,
+              border: "1px solid var(--dx-border-glow)",
+              boxShadow: "0 30px 60px -10px rgba(0,0,0,0.7), 0 0 40px -10px var(--dx-glow)",
+              fontFamily: "var(--dx-font)",
+            }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, padding: 20, borderBottom: "1px solid var(--dx-border)" }}>
+                <AlertTriangle size={18} style={{ color: "var(--dx-danger)" }}/>
+                <h2 style={{ margin: 0, fontSize: 15, fontWeight: 600, color: "var(--dx-text)" }}>
+                  ยืนยันลบเคลม
+                </h2>
+              </div>
+
+              <div style={{ padding: 20, display: "flex", flexDirection: "column", gap: 12 }}>
+                <p style={{ margin: 0, fontSize: 12, color: "var(--dx-text-secondary)" }}>
+                  ลบเคลมต่อไปนี้ออกจากระบบ? <strong style={{ color: "var(--dx-danger)" }}>การกระทำนี้ย้อนกลับไม่ได้</strong>
+                </p>
+
+                <div style={{ display: "grid", gap: 6, padding: 12, background: "var(--dx-bg-elevated)", borderRadius: 10, fontSize: 12 }}>
+                  <Row label="วันที่" value={claim.claimed_at}/>
+                  <Row label="ตู้" value={m?.name || claim.machine_id}/>
+                  <Row label="สินค้า" value={`${claim.sku_id} · ${claim.quantity} ซอง`}/>
+                  <Row label="สถานะสินค้า" value={statusLabel}/>
+                  <Row label="ยอดคืนเงิน" value={fmtB(claim.refund_amount)}/>
+                  <Row label="การยืนยัน" value={confirmLabel}/>
+                </div>
+
+                {willRevertStock && (
+                  <div style={{
+                    display: "flex", gap: 10, padding: "10px 12px", borderRadius: 10,
+                    background: "rgba(255,200,87,0.08)", border: "1px solid rgba(255,200,87,0.3)",
+                    fontSize: 11, color: "var(--dx-warning)",
+                  }}>
+                    <AlertTriangle size={14} style={{ flexShrink: 0, marginTop: 1 }}/>
+                    <span>
+                      เคลมนี้ยืนยันแล้ว · ระบบจะ revert side-effect · สต็อกของผู้รับจะ <strong>{revertDirection === "ลด" ? "-" : "+"}{claim.quantity} ซอง</strong> กลับมาเท่าก่อนยืนยัน
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              <div style={{ display: "flex", gap: 10, padding: 16, borderTop: "1px solid var(--dx-border)", justifyContent: "flex-end" }}>
+                <button onClick={() => setDeleteId(null)}
+                  style={{
+                    padding: "8px 18px", fontSize: 12, fontWeight: 500, borderRadius: 8,
+                    background: "transparent", color: "var(--dx-text)",
+                    border: "1px solid var(--dx-border)", cursor: "pointer",
+                  }}>
+                  ยกเลิก
+                </button>
+                <button onClick={() => handleDelete(claim.id)}
+                  style={{
+                    padding: "8px 18px", fontSize: 12, fontWeight: 600, borderRadius: 8,
+                    background: "var(--dx-danger)", color: "#fff",
+                    border: "none", cursor: "pointer",
+                  }}>
+                  ลบเคลม
+                </button>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
+    </div>
+  )
+}
+
+function Row({ label, value }) {
+  return (
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
+      <span style={{ color: "var(--dx-text-muted)", fontSize: 10, textTransform: "uppercase", letterSpacing: 0.4 }}>{label}</span>
+      <span style={{ color: "var(--dx-text)", fontWeight: 500 }}>{value}</span>
     </div>
   )
 }

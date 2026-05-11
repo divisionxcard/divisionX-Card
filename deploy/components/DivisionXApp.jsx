@@ -19,12 +19,12 @@ import {
   updateStockIn as dbUpdateStockIn,
   updateStockOut as dbUpdateStockOut,
   deleteStockIn as dbDeleteStockIn,
-  deleteStockOut as dbDeleteStockOut,
+  deleteStockOut as dbDeleteStockOut, deleteStockOutByClaim as dbDeleteStockOutByClaim,
   getMachines, getSalesByMachine,
   getSkus, addSku as dbAddSku, deactivateSku as dbDeactivateSku, updateSkuAvgCost,
   signInWithUsername as authSignIn, signOut as authSignOut, getProfile, resetPasswordByUsername, updatePassword,
   getMachineStock,
-  getClaims, addClaim as dbAddClaim, updateClaim as dbUpdateClaim, deleteClaim as dbDeleteClaim,
+  getClaims, addClaim as dbAddClaim, updateClaim as dbUpdateClaim, deleteClaim as dbDeleteClaim, deleteStockTransfersByClaim as dbDeleteStockTransfersByClaim,
   logLoginEvent,
   getMachineAssignments, addMachineAssignment as dbAddMachineAssignment, deleteMachineAssignment as dbDeleteMachineAssignment,
   getStockTransfers, addStockTransfer as dbAddStockTransfer, deleteStockTransfer as dbDeleteStockTransfer,
@@ -537,6 +537,18 @@ export default function DivisionXApp() {
     const adminName = profile?.display_name || profile?.username || session?.user?.email || "admin"
 
     if ((claim.product_status === "damaged" || claim.product_status === "lost") && claim.managed_by_user_id) {
+      // Validate: ห้ามตัดเกินสต็อกผู้รับ (กัน balance ติดลบ)
+      const userReceived = transfers
+        .filter(t => t.to_user_id === claim.managed_by_user_id && t.sku_id === claim.sku_id)
+        .reduce((sum, t) => sum + (t.quantity_packs || 0), 0)
+      const userWithdrawn = stockOut
+        .filter(so => so.withdrawn_by_user_id === claim.managed_by_user_id && so.sku_id === claim.sku_id)
+        .reduce((sum, so) => sum + (so.quantity_packs || 0), 0)
+      const userBalance = userReceived - userWithdrawn
+      if (userBalance < claim.quantity) {
+        throw new Error(`สต็อกผู้รับ ${claim.sku_id} เหลือ ${userBalance} ซอง · ตัดไม่ได้ ${claim.quantity} ซอง`)
+      }
+
       const label = claim.product_status === "damaged" ? "ตัดชำรุด" : "ตัดสูญหาย"
       await dbAddStockOut({
         sku_id:               claim.sku_id,
@@ -547,6 +559,7 @@ export default function DivisionXApp() {
         created_by:           adminName,
         note:                 `${label} จากเคลม #${claim.id}`,
         lot_number:           null,
+        from_claim_id:        claim.id,
       })
       const [newClaims, newStockOut, newSB] = await Promise.all([getClaims(), getStockOut(), getStockBalance()])
       setClaims(newClaims); setStockOut(newStockOut); setStockBalance(newSB)
@@ -576,8 +589,25 @@ export default function DivisionXApp() {
   }
 
   const deleteClaim = async (id) => {
+    const claim = claims.find(c => c.id === id)
+
+    // ถ้า confirm แล้ว → revert side-effect ของ confirmClaim ก่อนลบ claim
+    //   returned       → ลบ stock_transfers (user pocket ลดตามจริง · main ไม่กระทบ)
+    //   damaged / lost → ลบ stock_out (user pocket คืน · main ไม่กระทบเพราะ withdrawn_by_user_id NOT NULL)
+    if (claim?.confirm_status === "confirmed") {
+      if (claim.product_status === "returned") {
+        await dbDeleteStockTransfersByClaim(id)
+      } else if (claim.product_status === "damaged" || claim.product_status === "lost") {
+        await dbDeleteStockOutByClaim(id)
+      }
+    }
+
     await dbDeleteClaim(id)
-    setClaims(await getClaims())
+
+    const [newClaims, newTransfers, newStockOut, newSB] = await Promise.all([
+      getClaims(), getStockTransfers(), getStockOut(), getStockBalance(),
+    ])
+    setClaims(newClaims); setTransfers(newTransfers); setStockOut(newStockOut); setStockBalance(newSB)
   }
 
   // ── Transfer Operations ──
