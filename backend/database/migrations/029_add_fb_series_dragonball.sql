@@ -1,14 +1,12 @@
 -- ═══════════════════════════════════════════════════════════════
--- Migration 029: เพิ่ม series 'FB' (Dragonball Fusion World) ใน sku_series ENUM
--- 2026-05-17 · พร้อม seed 9 SKU: FB 01-FB 08 + FB B29
+-- Migration 029: Seed FB series (Dragonball Fusion World) 9 SKU
+-- 2026-05-17 · FB 01-FB 08 + B29 (B29 ไม่มี prefix · series ยังเป็น FB)
 -- ═══════════════════════════════════════════════════════════════
 -- หมายเหตุ:
---   - ALTER TYPE ... ADD VALUE ต้อง commit ก่อนใช้ใน statement ถัดไป
---   - Supabase SQL Editor รัน auto-commit ต่อ statement → ใช้ได้ปกติ
---   - ถ้ารันใน psql transaction → ต้อง COMMIT ก่อน INSERT
+--   - Prod skus.series เปลี่ยน ENUM → TEXT แล้ว (refactor ผ่าน Supabase Console)
+--   - ไม่ต้อง ALTER TYPE · INSERT ค่าใหม่ได้เลย
+--   - sell_price/cost_price = 0 → user แก้ทีหลังผ่าน UI (PageStock)
 -- ═══════════════════════════════════════════════════════════════
-
-ALTER TYPE sku_series ADD VALUE IF NOT EXISTS 'FB';
 
 -- Seed 9 SKU (sell_price / cost_price = 0 → user แก้ทีหลังผ่าน UI)
 INSERT INTO skus (sku_id, name, series, packs_per_box, boxes_per_cotton, sell_price, cost_price, is_active)
