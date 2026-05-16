@@ -270,21 +270,22 @@ function SalesSkuByMachine({ sales, machines, skus }) {
 export default function PageSales({ machines, sales, skus, claims, onRefresh }) {
   const [viewMode, setViewMode] = useState("daily")
   const [machineSel, setMachineSel] = useState("all")
-  const [syncing, setSyncing] = useState(false)
+  const [syncingVms, setSyncingVms] = useState(false)
+  const [syncingWw,  setSyncingWw]  = useState(false)
   const [syncMsg, setSyncMsg] = useState(null)
 
-  const triggerSync = async () => {
-    setSyncing(true); setSyncMsg(null)
+  const triggerSync = async (endpoint, label, setBusy) => {
+    setBusy(true); setSyncMsg(null)
     try {
-      const res = await fetch("/api/vms-sync", { method: "POST" })
+      const res = await fetch(endpoint, { method: "POST" })
       const data = await res.json()
       if (data.success) {
-        setSyncMsg({ type: "success", text: "สั่งดึงข้อมูลย้อนหลัง 3 วันสำเร็จ — รอประมาณ 2-3 นาที แล้วกด refresh" })
+        setSyncMsg({ type: "success", text: `สั่งดึง ${label} ย้อนหลัง 3 วันสำเร็จ — รอประมาณ 2-3 นาที แล้วกด refresh` })
       } else {
         setSyncMsg({ type: "error", text: data.error || "เกิดข้อผิดพลาด" })
       }
     } catch (err) { setSyncMsg({ type: "error", text: err.message }) }
-    finally { setSyncing(false) }
+    finally { setBusy(false) }
   }
 
   const filtered = machineSel === "all" ? sales : sales.filter(r => r.machine_id === machineSel)
@@ -374,10 +375,15 @@ export default function PageSales({ machines, sales, skus, claims, onRefresh }) 
         subtitle="ข้อมูลธุรกรรมและยอดขายจาก VMS"
         actions={
           <>
-            <button onClick={triggerSync} disabled={syncing} className="dx-btn dx-btn-primary"
-              style={{ opacity: syncing ? 0.5 : 1, cursor: syncing ? "not-allowed" : "pointer" }}>
-              {syncing ? <Loader2 size={13} className="animate-spin"/> : <RefreshCw size={13}/>}
-              {syncing ? "กำลังสั่ง..." : "Sync VMS"}
+            <button onClick={() => triggerSync("/api/vms-sync", "VMS", setSyncingVms)} disabled={syncingVms} className="dx-btn dx-btn-primary"
+              style={{ opacity: syncingVms ? 0.5 : 1, cursor: syncingVms ? "not-allowed" : "pointer" }}>
+              {syncingVms ? <Loader2 size={13} className="animate-spin"/> : <RefreshCw size={13}/>}
+              {syncingVms ? "กำลังสั่ง..." : "Sync VMS"}
+            </button>
+            <button onClick={() => triggerSync("/api/worldwide-sync", "WW", setSyncingWw)} disabled={syncingWw} className="dx-btn dx-btn-primary"
+              style={{ opacity: syncingWw ? 0.5 : 1, cursor: syncingWw ? "not-allowed" : "pointer" }}>
+              {syncingWw ? <Loader2 size={13} className="animate-spin"/> : <RefreshCw size={13}/>}
+              {syncingWw ? "กำลังสั่ง..." : "Sync WW"}
             </button>
             <select value={machineSel} onChange={e => setMachineSel(e.target.value)}
               className="dx-input" style={{ width: "auto", padding: "9px 12px", fontSize: 12 }}>
