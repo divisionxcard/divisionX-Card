@@ -11,24 +11,25 @@ import { SectionTitle } from "../shared/dx-components"
 export default function PageMachineStockView({ machines, machineStock, skus, onRefresh }) {
   const [selectedMachine, setSelectedMachine] = useState("all")
   const [sortBy, setSortBy] = useState("slot")
-  const [syncing, setSyncing] = useState(false)
+  const [syncingVms, setSyncingVms] = useState(false)
+  const [syncingWw,  setSyncingWw]  = useState(false)
   const [syncMsg, setSyncMsg] = useState(null)
   const [showSkuDetail, setShowSkuDetail] = useState(false)
   const [showRefill, setShowRefill] = useState(false)
 
-  const triggerStockSync = async () => {
+  const triggerStockSync = async (endpoint, label, setBusy) => {
     try {
-      setSyncing(true); setSyncMsg(null)
-      const res = await fetch("/api/stock-sync", { method: "POST" })
+      setBusy(true); setSyncMsg(null)
+      const res = await fetch(endpoint, { method: "POST" })
       const data = await res.json()
       if (data.success) {
-        setSyncMsg({ type: "success", msg: "กำลังดึงข้อมูลสต็อกหน้าตู้... รอสักครู่แล้วกด Refresh" })
+        setSyncMsg({ type: "success", msg: `กำลังดึงข้อมูลสต็อก ${label}... รอสักครู่แล้วกด Refresh` })
         setTimeout(() => onRefresh?.(), 30000)
       } else {
         setSyncMsg({ type: "error", msg: data.error || "เกิดข้อผิดพลาด" })
       }
     } catch (err) { setSyncMsg({ type: "error", msg: err.message }) }
-    finally { setSyncing(false) }
+    finally { setBusy(false) }
   }
 
   const machineNames = {}
@@ -106,10 +107,15 @@ export default function PageMachineStockView({ machines, machineStock, skus, onR
         subtitle="ข้อมูลคงเหลือจริงที่หน้าตู้ขาย ดึงจากระบบ VMS"
         actions={
           <>
-            <button onClick={triggerStockSync} disabled={syncing} className="dx-btn dx-btn-primary"
-              style={{ opacity: syncing ? 0.5 : 1, cursor: syncing ? "not-allowed" : "pointer" }}>
-              <RefreshCw size={13} className={syncing ? "animate-spin" : ""}/>
-              {syncing ? "กำลังดึง..." : "ดึงข้อมูล VMS"}
+            <button onClick={() => triggerStockSync("/api/stock-sync", "VMS", setSyncingVms)} disabled={syncingVms} className="dx-btn dx-btn-primary"
+              style={{ opacity: syncingVms ? 0.5 : 1, cursor: syncingVms ? "not-allowed" : "pointer" }}>
+              <RefreshCw size={13} className={syncingVms ? "animate-spin" : ""}/>
+              {syncingVms ? "กำลังดึง..." : "ดึงข้อมูล VMS"}
+            </button>
+            <button onClick={() => triggerStockSync("/api/worldwide-stock-sync", "WW", setSyncingWw)} disabled={syncingWw} className="dx-btn dx-btn-primary"
+              style={{ opacity: syncingWw ? 0.5 : 1, cursor: syncingWw ? "not-allowed" : "pointer" }}>
+              <RefreshCw size={13} className={syncingWw ? "animate-spin" : ""}/>
+              {syncingWw ? "กำลังดึง..." : "ดึงข้อมูล WW"}
             </button>
             {machineStock.length > 0 && (
               <button onClick={() => setShowRefill(v => !v)}
