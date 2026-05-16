@@ -101,7 +101,11 @@ def fetch_machine_lookup(supabase) -> dict:
 
 
 def fetch_order_list_page(s, start_dt: str, end_dt: str, page: int, page_size: int = 100):
-    """POST /order/loadOrderList.do — return list of orderNum where status = Trade Success
+    """POST /order/loadOrderList.do — return (trade_success_ids, total_rows_in_page, total_items_overall)
+
+    - trade_success_ids: orderNum ที่ status = "Trade Success" เท่านั้น
+    - total_rows_in_page: จำนวน <tr> ในหน้านี้ (ไม่ filter status) — สำหรับ pagination
+    - total_items_overall: parse จาก "Total N Items" ใน HTML (None ถ้า parse ไม่ได้)
 
     start_dt / end_dt format: 'YYYY-MM-DD HH:MM'
     """
@@ -120,16 +124,22 @@ def fetch_order_list_page(s, start_dt: str, end_dt: str, page: int, page_size: i
 
     soup = BeautifulSoup(r.text, "html.parser")
     txn_ids = []
+    total_rows = 0
     for tr in soup.find_all("tr"):
         onclick = tr.get("onclick", "")
         m = re.search(r"searchDetail\(['\"]([^'\"]+)['\"]\)", onclick)
         if not m:
             continue
-        # Filter: เก็บเฉพาะ Trade Success (skip Wait Pay/Refund)
+        total_rows += 1
+        # Filter: เก็บเฉพาะ Trade Success (skip Wait Pay/Order Time Out/Ship Failed/Refund)
         if "Trade Success" not in tr.get_text():
             continue
         txn_ids.append(m.group(1))
-    return txn_ids
+
+    # Parse "Total N Items" จาก footer pagination
+    m_total = re.search(r'Total\s+\d+\s+Pages?\s*\|\s*(\d+)\s+Items?', r.text)
+    total_items = int(m_total.group(1)) if m_total else None
+    return txn_ids, total_rows, total_items
 
 
 def fetch_order_detail(s, order_num: str) -> dict | None:
@@ -244,26 +254,38 @@ def main():
     s = login()
 
     # ── Fetch all Trade Success transactions (pagination) ──
+    # ⚠ ห้าม break จาก len(trade_success_ids) — เพราะส่วนใหญ่จะเป็น Order Time Out/Wait Pay
+    # ใช้ total_rows_in_page (ทุก status) หรือ total_items จาก footer แทน
+    PAGE_SIZE = 100
     all_txn_ids = []
     page = 1
+    total_items_overall = None
+    rows_processed = 0
     while True:
         print(f"  📥 Order list page {page}...")
-        ids = fetch_order_list_page(s, start_dt, end_dt, page, page_size=100)
-        print(f"    found {len(ids)} Trade Success")
-        if not ids:
-            break
+        ids, page_rows, total_items = fetch_order_list_page(s, start_dt, end_dt, page, page_size=PAGE_SIZE)
+        if total_items_overall is None and total_items is not None:
+            total_items_overall = total_items
+            print(f"    📊 Total {total_items_overall} items overall")
+        rows_processed += page_rows
         all_txn_ids.extend(ids)
-        # Page เต็มถึง 100 → อาจมีต่อ; ถ้า < 100 = หน้าสุดท้าย
-        if len(ids) < 100:
+        print(f"    page rows={page_rows} · Trade Success={len(ids)} · processed={rows_processed}")
+        if page_rows == 0:
+            break
+        # หยุดเมื่อนับครบ total_items (วิธีที่แม่นยำสุด)
+        if total_items_overall and rows_processed >= total_items_overall:
+            break
+        # Fallback: ถ้า page นี้ < PAGE_SIZE → หน้าสุดท้าย
+        if page_rows < PAGE_SIZE:
             break
         page += 1
-        if page > 100:  # safety guard
-            print("  ⚠️ Reached 100 pages — stopping")
+        if page > 1000:  # safety guard (1000 pages × 100 = 100k items)
+            print("  ⚠️ Reached 1000 pages — stopping")
             break
 
     # Dedup (เผื่อ pagination ทับ)
     all_txn_ids = list(dict.fromkeys(all_txn_ids))
-    print(f"\n📊 รวม {len(all_txn_ids)} Trade Success transactions")
+    print(f"\n📊 รวม {len(all_txn_ids)} Trade Success transactions (จาก {rows_processed} total rows)")
 
     # ── Fetch detail per transaction ──
     records = []
