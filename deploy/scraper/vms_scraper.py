@@ -25,6 +25,9 @@ PACKS_PER_BOX = {
     "OP 11": 24, "OP 12": 24, "OP 13": 24, "OP 14": 24, "OP 15": 24,
     "PRB 01": 10, "PRB 02": 10,
     "EB 01": 24, "EB 02": 24, "EB 03": 24, "EB 04": 24,
+    "FB 01": 24, "FB 02": 24, "FB 03": 24, "FB 04": 24,
+    "FB 05": 24, "FB 06": 24, "FB 07": 24, "FB 08": 24,
+    "B29": 24,
 }
 
 # ── VMS Product Name → SKU ID Mapping ───────────────────────────
@@ -101,6 +104,9 @@ def map_sku(product_name: str) -> str | None:
     import re
     key = normalize(product_name)
 
+    # B29 standalone (Dragonball special) — check ก่อน
+    if re.search(r'\bb29\b', key):
+        return "B29"
     # Regex-based: รองรับ "OP - 01", "OP-01", "op  -  1", "OP - 13 PRO", "OP - 15 Box" ฯลฯ
     m = re.search(r'op\s*[-–]\s*(\d+)', key)
     if m: return f"OP {m.group(1).zfill(2)}"
@@ -108,6 +114,8 @@ def map_sku(product_name: str) -> str | None:
     if m: return f"PRB {m.group(1).zfill(2)}"
     m = re.search(r'eb\s*[-–]\s*(\d+)', key)
     if m: return f"EB {m.group(1).zfill(2)}"
+    m = re.search(r'fb\s*[-–]?\s*(\d+)', key)
+    if m: return f"FB {m.group(1).zfill(2)}"
 
     # Fallback: hardcoded SKU_MAP (กรณี format ที่ regex จับไม่ได้)
     if key in SKU_MAP:

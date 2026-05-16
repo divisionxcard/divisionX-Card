@@ -756,6 +756,7 @@ function SkuManager({ skus, onAddSku, onDeactivateSku, showToast }) {
                 <option value="OP">OP — One Piece</option>
                 <option value="PRB">PRB — Premium Booster</option>
                 <option value="EB">EB — Extra Booster</option>
+                <option value="FB">FB — Dragonball Fusion World</option>
               </select>
             </div>
           </div>

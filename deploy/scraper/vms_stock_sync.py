@@ -30,8 +30,11 @@ def map_product_to_sku(product_name: str) -> str | None:
     if not product_name:
         return None
     name = product_name.lower().strip()
-    # OP series: "one piece op - 01 pack" / "one piece op - 01 (box)"
     import re
+    # B29 standalone (Dragonball special, ไม่มี prefix) — check ก่อน
+    if re.search(r'\bb29\b', name):
+        return "B29"
+    # OP series: "one piece op - 01 pack" / "one piece op - 01 (box)"
     m = re.search(r'op\s*[-–]\s*(\d+)', name)
     if m: return f"OP {m.group(1).zfill(2)}"
     # PRB series: "prb - 01 (pack)"
@@ -40,6 +43,9 @@ def map_product_to_sku(product_name: str) -> str | None:
     # EB series: "one piece eb - 01 pack"
     m = re.search(r'eb\s*[-–]\s*(\d+)', name)
     if m: return f"EB {m.group(1).zfill(2)}"
+    # FB (Dragonball Fusion World) — "fb - 01"
+    m = re.search(r'fb\s*[-–]?\s*(\d+)', name)
+    if m: return f"FB {m.group(1).zfill(2)}"
     return None
 
 def login() -> str:

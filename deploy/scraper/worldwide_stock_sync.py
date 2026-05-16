@@ -30,10 +30,13 @@ UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
 
 
 def map_goods_to_sku(goods_name: str) -> str | None:
+    """OP/EB/PRB/FB + เลข · หรือ B29 standalone (Dragonball special)"""
     if not goods_name:
         return None
     upper = goods_name.upper().strip()
-    m = re.match(r'(OP|EB|PRB)\s*[-]?\s*(\d+)', upper)
+    if re.search(r'\bB29\b', upper):
+        return "B29"
+    m = re.match(r'(OP|EB|PRB|FB)\s*[-]?\s*(\d+)', upper)
     if m:
         return f"{m.group(1)} {m.group(2).zfill(2)}"
     return None

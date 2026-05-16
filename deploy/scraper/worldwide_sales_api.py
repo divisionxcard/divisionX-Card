@@ -34,6 +34,9 @@ PACKS_PER_BOX = {
     "OP 11": 24, "OP 12": 24, "OP 13": 24, "OP 14": 24, "OP 15": 24,
     "PRB 01": 10, "PRB 02": 10,
     "EB 01": 24, "EB 02": 24, "EB 03": 24, "EB 04": 24,
+    "FB 01": 24, "FB 02": 24, "FB 03": 24, "FB 04": 24,
+    "FB 05": 24, "FB 06": 24, "FB 07": 24, "FB 08": 24,
+    "B29": 24,
 }
 
 UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
@@ -42,11 +45,14 @@ UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
 
 # ── Helpers ───────────────────────────────────────────────────
 def map_goods_to_sku(goods_name: str) -> str | None:
-    """แปลงชื่อสินค้า WorldWide เช่น 'OP 15 BOX' / 'OP 15 ซอง' → 'OP 15'"""
+    """แปลงชื่อสินค้า WorldWide เช่น 'OP 15 BOX' / 'B29 ซอง' → 'OP 15' / 'B29'"""
     if not goods_name:
         return None
     upper = goods_name.upper().strip()
-    m = re.match(r'(OP|EB|PRB)\s*[-]?\s*(\d+)', upper)
+    # B29 standalone (Dragonball special — ไม่มี prefix FB ข้างหน้า)
+    if re.search(r'\bB29\b', upper):
+        return "B29"
+    m = re.match(r'(OP|EB|PRB|FB)\s*[-]?\s*(\d+)', upper)
     if m:
         return f"{m.group(1)} {m.group(2).zfill(2)}"
     return None

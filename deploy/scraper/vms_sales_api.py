@@ -22,17 +22,25 @@ PACKS_PER_BOX = {
     "OP 11": 24, "OP 12": 24, "OP 13": 24, "OP 14": 24, "OP 15": 24,
     "PRB 01": 10, "PRB 02": 10,
     "EB 01": 24, "EB 02": 24, "EB 03": 24, "EB 04": 24,
+    "FB 01": 24, "FB 02": 24, "FB 03": 24, "FB 04": 24,
+    "FB 05": 24, "FB 06": 24, "FB 07": 24, "FB 08": 24,
+    "B29": 24,
 }
 
 def map_product_to_sku(product_name: str) -> str | None:
     if not product_name: return None
     name = product_name.lower().strip()
+    # B29 standalone (Dragonball special) — check ก่อน เพื่อกัน FB pattern match ผิด
+    if re.search(r'\bb29\b', name):
+        return "B29"
     m = re.search(r'op\s*[-–]\s*(\d+)', name)
     if m: return f"OP {m.group(1).zfill(2)}"
     m = re.search(r'prb\s*[-–]\s*(\d+)', name)
     if m: return f"PRB {m.group(1).zfill(2)}"
     m = re.search(r'eb\s*[-–]\s*(\d+)', name)
     if m: return f"EB {m.group(1).zfill(2)}"
+    m = re.search(r'fb\s*[-–]?\s*(\d+)', name)
+    if m: return f"FB {m.group(1).zfill(2)}"
     return None
 
 def normalize(text: str) -> str:
