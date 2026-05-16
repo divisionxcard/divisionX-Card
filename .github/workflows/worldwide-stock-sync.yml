@@ -1,0 +1,32 @@
+name: WorldWide Stock Sync
+
+on:
+  schedule:
+    # รันทุกวัน เวลา 00:15 น. ไทย (17:15 UTC วันก่อน)
+    - cron: "15 17 * * *"
+  workflow_dispatch:
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install requests supabase beautifulsoup4
+
+      - name: Sync WorldWide Stock
+        env:
+          WW_USERNAME:          ${{ secrets.WW_USERNAME }}
+          WW_PASSWORD:          ${{ secrets.WW_PASSWORD }}
+          SUPABASE_URL:         ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: python deploy/scraper/worldwide_stock_sync.py

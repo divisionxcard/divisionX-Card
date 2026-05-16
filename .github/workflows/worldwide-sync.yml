@@ -1,0 +1,57 @@
+name: WorldWide Daily Sales Sync
+
+on:
+  schedule:
+    # รันทุกวัน เวลา 00:10 น. ไทย (17:10 UTC วันก่อน)
+    - cron: "10 17 * * *"
+  workflow_dispatch:
+    inputs:
+      days:
+        description: "จำนวนวันย้อนหลัง (default: 1 = เมื่อวาน)"
+        required: false
+        default: "1"
+      from_date:
+        description: "วันเริ่มต้น (YYYY-MM-DD) สำหรับ backfill"
+        required: false
+      to_date:
+        description: "วันสิ้นสุด (YYYY-MM-DD) สำหรับ backfill"
+        required: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install requests supabase beautifulsoup4
+
+      - name: Run WorldWide Sales Sync
+        env:
+          WW_USERNAME:          ${{ secrets.WW_USERNAME }}
+          WW_PASSWORD:          ${{ secrets.WW_PASSWORD }}
+          SUPABASE_URL:         ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          IN_DAYS:      ${{ inputs.days }}
+          IN_FROM_DATE: ${{ inputs.from_date }}
+          IN_TO_DATE:   ${{ inputs.to_date }}
+        run: |
+          ARGS=()
+          if [ -n "$IN_FROM_DATE" ] && [ -n "$IN_TO_DATE" ]; then
+            ARGS+=(--from-date "$IN_FROM_DATE" --to-date "$IN_TO_DATE")
+            echo "🗓  Backfill: $IN_FROM_DATE → $IN_TO_DATE"
+          elif [ -n "$IN_DAYS" ]; then
+            ARGS+=(--days "$IN_DAYS")
+            echo "📅 Days back: $IN_DAYS"
+          else
+            echo "📅 Default: --days 1"
+          fi
+          python deploy/scraper/worldwide_sales_api.py "${ARGS[@]}"
