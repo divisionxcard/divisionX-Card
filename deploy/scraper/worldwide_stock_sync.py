@@ -13,7 +13,7 @@ Schema: machine_stock(machine_id, slot_number, product_name, sku_id, remain,
                      max_capacity, is_occupied, status, synced_at, kiosk_record_id)
 """
 
-import os, re, requests
+import os, re, sys, argparse, requests
 from datetime import datetime, timedelta
 from bs4 import BeautifulSoup
 from supabase import create_client
@@ -22,8 +22,8 @@ from supabase import create_client
 WW_BASE      = "https://www.worldwidevending-vms.com"
 WW_USER      = os.environ["WW_USERNAME"]
 WW_PASS      = os.environ["WW_PASSWORD"]
-SUPABASE_URL = os.environ["SUPABASE_URL"]
-SUPABASE_KEY = os.environ["SUPABASE_SERVICE_KEY"]
+SUPABASE_URL = os.environ.get("SUPABASE_URL", "")
+SUPABASE_KEY = os.environ.get("SUPABASE_SERVICE_KEY", "")
 
 UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
       "(KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36")
@@ -122,16 +122,26 @@ def save_to_supabase(supabase, records: list[dict]):
 
 
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--dry-run", action="store_true",
+                        help="Login + fetch + parse แต่ไม่ติด Supabase + ไม่ save")
+    args = parser.parse_args()
+
     now_bkk = datetime.utcnow() + timedelta(hours=7)
     print(f"\n{'=' * 50}")
     print(f"DivisionX Card — WorldWide Stock Sync")
     print(f"เวลาไทย: {now_bkk.strftime('%Y-%m-%d %H:%M')}")
     print(f"{'=' * 50}\n")
 
-    supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
-    machines = fetch_worldwide_machines(supabase)
-    if not machines:
-        raise SystemExit("❌ ไม่พบ machine brand=worldwide ใน DB")
+    if args.dry_run:
+        print("🧪 DRY-RUN mode: skip Supabase")
+        supabase = None
+        machines = [{"machine_id": "wwv01", "vendor_id": "VCM350CKC25090606"}]
+    else:
+        supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+        machines = fetch_worldwide_machines(supabase)
+        if not machines:
+            raise SystemExit("❌ ไม่พบ machine brand=worldwide ใน DB")
     print(f"ตู้ทั้งหมด: {len(machines)} ตู้")
 
     s = login()
@@ -173,7 +183,14 @@ def main():
             "อาจ login fail หรือ portal เปลี่ยน HTML structure"
         )
 
-    save_to_supabase(supabase, all_records)
+    if args.dry_run:
+        print("\n🧪 DRY-RUN: ไม่ save ลง Supabase · sample 5 records:")
+        for r in all_records[:5]:
+            print(f"  slot={r['slot_number']} product={r['product_name']!r} sku={r['sku_id']} "
+                  f"remain={r['remain']}/{r['max_capacity']} status={r['status']}")
+        print(f"  ... (total {len(all_records)} slots)")
+    else:
+        save_to_supabase(supabase, all_records)
 
 
 if __name__ == "__main__":

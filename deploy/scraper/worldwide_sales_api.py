@@ -24,8 +24,8 @@ from supabase import create_client
 WW_BASE      = "https://www.worldwidevending-vms.com"
 WW_USER      = os.environ["WW_USERNAME"]
 WW_PASS      = os.environ["WW_PASSWORD"]
-SUPABASE_URL = os.environ["SUPABASE_URL"]
-SUPABASE_KEY = os.environ["SUPABASE_SERVICE_KEY"]
+SUPABASE_URL = os.environ.get("SUPABASE_URL", "")
+SUPABASE_KEY = os.environ.get("SUPABASE_SERVICE_KEY", "")
 
 # ── จำนวนซองต่อกล่อง (ตรงกับ VMS scraper) ─────────────────────
 PACKS_PER_BOX = {
@@ -200,6 +200,8 @@ def main():
     parser.add_argument("--days", type=int, default=1)
     parser.add_argument("--from-date", type=str, default=None)
     parser.add_argument("--to-date",   type=str, default=None)
+    parser.add_argument("--dry-run",   action="store_true",
+                        help="Login + fetch + parse แต่ไม่ติด Supabase + ไม่ save")
     args = parser.parse_args()
 
     now_bkk = datetime.utcnow() + timedelta(hours=7)
@@ -221,10 +223,15 @@ def main():
     print(f"ดึงข้อมูล: {start_dt} → {end_dt}")
     print(f"{'=' * 50}\n")
 
-    supabase       = create_client(SUPABASE_URL, SUPABASE_KEY)
-    machine_lookup = fetch_machine_lookup(supabase)
-    if not machine_lookup:
-        raise SystemExit("❌ ไม่พบ machine brand=worldwide ใน DB — INSERT machines ก่อน sync")
+    if args.dry_run:
+        print("🧪 DRY-RUN mode: skip Supabase · ใช้ hardcoded machine lookup")
+        supabase = None
+        machine_lookup = {"VCM350CKC25090606": "wwv01"}
+    else:
+        supabase       = create_client(SUPABASE_URL, SUPABASE_KEY)
+        machine_lookup = fetch_machine_lookup(supabase)
+        if not machine_lookup:
+            raise SystemExit("❌ ไม่พบ machine brand=worldwide ใน DB — INSERT machines ก่อน sync")
 
     s = login()
 
@@ -273,7 +280,13 @@ def main():
             "schema searchDetail อาจเปลี่ยน หรือ machine_id_vendor mapping ผิด"
         )
 
-    save_to_supabase(supabase, records)
+    if args.dry_run:
+        print("\n🧪 DRY-RUN: ไม่ save ลง Supabase · sample 3 records:")
+        for r in records[:3]:
+            print(f"  {r}")
+        print(f"  ... (total {len(records)} records)")
+    else:
+        save_to_supabase(supabase, records)
 
 
 if __name__ == "__main__":
