@@ -59,6 +59,14 @@ def is_box(goods_name: str) -> bool:
     return "BOX" in goods_name.upper().split()
 
 
+def bkk_to_iso(dt_str: str) -> str | None:
+    """Portal ส่ง 'YYYY-MM-DD HH:MM:SS' เวลาไทย (ไม่มี TZ)
+    Postgres จะตีเป็น UTC ถ้าไม่ tag → shift +7 ชม. · append +07:00 ให้ตรง"""
+    if not dt_str:
+        return None
+    return dt_str.replace(" ", "T") + "+07:00"
+
+
 # ── Worldwide portal ───────────────────────────────────────────
 def login() -> requests.Session:
     """Login → return Session with JSESSIONID cookie"""
@@ -149,8 +157,8 @@ def detail_to_records(detail: dict, machine_lookup: dict) -> list[dict]:
         return records
 
     order_num = detail.get("orderNum", "")
-    # ใช้ paymentTime ถ้ามี (เวลาตัดเงินจริง) · fallback createTime
-    sold_at = detail.get("paymentTime") or detail.get("createTime")
+    # ใช้ paymentTime ถ้ามี (เวลาตัดเงินจริง) · fallback createTime · tag TZ Bangkok
+    sold_at = bkk_to_iso(detail.get("paymentTime") or detail.get("createTime"))
 
     for idx, item in enumerate(detail.get("detailList") or []):
         # Per-item filter: เก็บเฉพาะ shippingStatus=1 + refundStatus=1
