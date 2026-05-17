@@ -20,6 +20,13 @@ VALUES
   ('FB 06',  'Dragonball Fusion World FB-06',         'FB', 24, 12, 0, 0, true),
   ('FB 07',  'Dragonball Fusion World FB-07',         'FB', 24, 12, 0, 0, true),
   ('FB 08',  'Dragonball Fusion World FB-08',         'FB', 24, 12, 0, 0, true),
+  ('FB 09',  'Dragonball Fusion World FB-09',         'FB', 24, 12, 0, 0, true),
+  ('FB 10',  'Dragonball Fusion World FB-10',         'FB', 24, 12, 0, 0, true),
+  ('FB 11',  'Dragonball Fusion World FB-11',         'FB', 24, 12, 0, 0, true),
+  ('FB 12',  'Dragonball Fusion World FB-12',         'FB', 24, 12, 0, 0, true),
+  ('FB 13',  'Dragonball Fusion World FB-13',         'FB', 24, 12, 0, 0, true),
+  ('FB 14',  'Dragonball Fusion World FB-14',         'FB', 24, 12, 0, 0, true),
+  ('FB 15',  'Dragonball Fusion World FB-15',         'FB', 24, 12, 0, 0, true),
   ('B29',    'Dragonball UB02 — Fearsome Rivals',     'UB', 24, 12, 0, 0, true)
 ON CONFLICT (sku_id) DO NOTHING;
 
