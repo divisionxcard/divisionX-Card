@@ -98,7 +98,7 @@ export default function PageMachineHistory({ machine, stockOut, skus, hideHeader
             style={{ width: "auto", minWidth: 120, padding: "9px 12px" }}>
             <option value="">ทุก SKU</option>
             {skus.filter(s => s.is_active !== false).sort((a, b) => {
-              const order = { OP: 1, PRB: 2, EB: 3 }
+              const order = { OP: 1, PRB: 2, EB: 3, FB: 4, UB: 5, OTHER: 6 }
               return (order[a.series] || 9) - (order[b.series] || 9) || a.sku_id.localeCompare(b.sku_id)
             }).map(s => <option key={s.sku_id} value={s.sku_id}>{s.sku_id}</option>)}
           </select>

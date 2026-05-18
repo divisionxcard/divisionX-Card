@@ -213,7 +213,7 @@ export default function PageStock({ stockIn, stockBalance, onAddStockIn, onUpdat
                 placeholder="ค้นหา SKU..." className="dx-input" style={{ paddingLeft: 36 }}/>
             </div>
             <div style={{ display: "flex", gap: 4 }}>
-              {["ทั้งหมด", "OP", "PRB", "EB"].map(s => (
+              {["ทั้งหมด", "OP", "PRB", "EB", "FB", "UB", "OTHER"].map(s => (
                 <button key={s} onClick={() => setSeriesSel(s)}
                   className={`dx-chip ${seriesSel === s ? "dx-chip-active" : ""}`}>
                   {s}
@@ -376,7 +376,7 @@ export default function PageStock({ stockIn, stockBalance, onAddStockIn, onUpdat
                   className="dx-input" style={{ width: "auto", padding: "5px 10px", fontSize: 11 }}>
                   <option value="">ทุก SKU</option>
                   {skus.filter(s => s.is_active !== false).sort((a, b) => {
-                    const order = { OP: 1, PRB: 2, EB: 3 }
+                    const order = { OP: 1, PRB: 2, EB: 3, FB: 4, UB: 5, OTHER: 6 }
                     return (order[a.series] || 9) - (order[b.series] || 9) || a.sku_id.localeCompare(b.sku_id)
                   }).map(s => <option key={s.sku_id} value={s.sku_id}>{s.sku_id}</option>)}
                 </select>
@@ -496,7 +496,7 @@ export default function PageStock({ stockIn, stockBalance, onAddStockIn, onUpdat
                 className="dx-input" style={{ width: "auto", padding: "5px 10px", fontSize: 11 }}>
                 <option value="">ทุก SKU</option>
                 {skus.filter(s => s.is_active !== false).sort((a, b) => {
-                  const order = { OP: 1, PRB: 2, EB: 3 }
+                  const order = { OP: 1, PRB: 2, EB: 3, FB: 4, UB: 5, OTHER: 6 }
                   return (order[a.series] || 9) - (order[b.series] || 9) || a.sku_id.localeCompare(b.sku_id)
                 }).map(s => <option key={s.sku_id} value={s.sku_id}>{s.sku_id}</option>)}
               </select>
@@ -595,7 +595,7 @@ export default function PageStock({ stockIn, stockBalance, onAddStockIn, onUpdat
                     style={{ paddingLeft: 32, padding: "5px 10px 5px 32px", fontSize: 11, width: "auto" }}/>
                 </div>
                 <div style={{ display: "flex", gap: 4 }}>
-                  {["ทั้งหมด", "OP", "PRB", "EB"].map(s => (
+                  {["ทั้งหมด", "OP", "PRB", "EB", "FB", "UB", "OTHER"].map(s => (
                     <button key={s} onClick={() => setSeriesSel(s)}
                       className={`dx-chip ${seriesSel === s ? "dx-chip-active" : ""}`}
                       style={{ padding: "5px 10px", fontSize: 11 }}>

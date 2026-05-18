@@ -205,9 +205,12 @@ body.dx-theme ::-webkit-scrollbar-thumb:hover { background: #2A4472; }
   font-family: var(--dx-mono);
   border: 1px solid;
 }
-.dx-badge-OP  { color: #4FC3F7; background: rgba(79,195,247,0.12);  border-color: rgba(79,195,247,0.3); }
-.dx-badge-PRB { color: #B794F6; background: rgba(183,148,246,0.12); border-color: rgba(183,148,246,0.3); }
-.dx-badge-EB  { color: #68D391; background: rgba(104,211,145,0.12); border-color: rgba(104,211,145,0.3); }
+.dx-badge-OP    { color: #4FC3F7; background: rgba(79,195,247,0.12);  border-color: rgba(79,195,247,0.3); }
+.dx-badge-PRB   { color: #B794F6; background: rgba(183,148,246,0.12); border-color: rgba(183,148,246,0.3); }
+.dx-badge-EB    { color: #68D391; background: rgba(104,211,145,0.12); border-color: rgba(104,211,145,0.3); }
+.dx-badge-FB    { color: #F6AD55; background: rgba(246,173,85,0.12);  border-color: rgba(246,173,85,0.3); }
+.dx-badge-UB    { color: #FC8181; background: rgba(252,129,129,0.12); border-color: rgba(252,129,129,0.3); }
+.dx-badge-OTHER { color: #A0AEC0; background: rgba(160,174,192,0.12); border-color: rgba(160,174,192,0.3); }
 
 /* Pulse (status dots) */
 @keyframes dx-pulse {

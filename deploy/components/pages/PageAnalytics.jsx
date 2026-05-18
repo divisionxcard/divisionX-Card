@@ -39,7 +39,7 @@ export default function PageAnalytics({ sales, skus }) {
     return row
   })
 
-  const seriesData = ["OP", "PRB", "EB"].map(s => {
+  const seriesData = ["OP", "PRB", "EB", "FB", "UB", "OTHER"].map(s => {
     const rows = sales.filter(r => skus.find(sk => sk.sku_id === r.sku_id)?.series === s)
     return { name: s, ยอดขาย: rows.reduce((a, r) => a + r.revenue, 0), ซอง: rows.reduce((a, r) => a + r.quantity_sold, 0) }
   })

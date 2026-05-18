@@ -258,7 +258,7 @@ export default function PageDashboardDX({ stockIn, stockOut, stockBalance, skus,
           />
         </div>
         <div style={{ display: "flex", gap: 6 }}>
-          {["ทั้งหมด", "OP", "PRB", "EB"].map(s => (
+          {["ทั้งหมด", "OP", "PRB", "EB", "FB", "UB", "OTHER"].map(s => (
             <button
               key={s}
               className={`dx-chip ${seriesSel === s ? "dx-chip-active" : ""}`}
