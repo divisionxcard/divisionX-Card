@@ -610,11 +610,20 @@ export default function PageMachineStockView({ machines, machineStock, skus, onR
                                     display: "flex", alignItems: "center", justifyContent: "center",
                                     background: "var(--dx-bg-page)",
                                   }}>
-                                    {/* DEBUG: scale 2.0 ทุกรูป (ไม่มี condition) — ทดสอบว่า transform ทำงานไหม */}
-                                    <img src={imgUrl} alt={s.product_name}
-                                      style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center", transform: "scale(2.0)" }}
-                                      loading="lazy"
-                                      onError={e => { e.target.onerror = null; e.target.style.display = "none" }}/>
+                                    {/* OP/PRB/EB จาก VMS มี whitespace ในรูป → cover + scale 1.6 · อื่นๆ → contain */}
+                                    {(() => {
+                                      const isCustom = imgUrl.includes("supabase.co/storage")
+                                      const isLegacy = ["OP", "PRB", "EB"].includes(matchedSku?.series)
+                                      const useCover = !isCustom && isLegacy
+                                      return (
+                                        <img src={imgUrl} alt={s.product_name}
+                                          style={useCover
+                                            ? { width: "100%", height: "100%", objectFit: "cover", objectPosition: "center", transform: "scale(1.6)" }
+                                            : { maxHeight: "100%", maxWidth: "100%", objectFit: "contain", padding: 4 }}
+                                          loading="lazy"
+                                          onError={e => { e.target.onerror = null; e.target.style.display = "none" }}/>
+                                      )
+                                    })()}
                                   </div>
                                 ) : (
                                   <div style={{
