@@ -5,7 +5,80 @@ DivisionX Card — VMS Machine Stock Sync
 
 import os, requests
 from datetime import datetime, timedelta
+from urllib.parse import urlparse
 from supabase import create_client
+
+# ── Image cache (memory) — กัน re-upload product_id เดิมหลายรอบใน run นี้ ──
+_image_cache: dict = {}
+# Cache lookup ใน Supabase Storage (1 list call ต่อ run · กัน list ซ้ำ)
+_existing_files: set | None = None
+
+def cache_vms_image(supabase, product_id, vms_url: str | None) -> str | None:
+    """Download VMS image + upload Supabase Storage · return permanent public URL
+
+    - return None ถ้า product_id หรือ vms_url ว่าง
+    - in-memory cache สำหรับ run นี้
+    - skip download ถ้าไฟล์อยู่ใน bucket อยู่แล้ว (one-time list)
+    - bucket: vms-product-images (public read)
+    """
+    global _existing_files
+    if not product_id or not vms_url:
+        return None
+    if product_id in _image_cache:
+        return _image_cache[product_id]
+
+    BUCKET = "vms-product-images"
+
+    # ตรวจ ext จาก URL path (signed URL อาจไม่มี ext ตรง — fallback jpg)
+    path = urlparse(vms_url).path.lower()
+    ext = "jpg"
+    for e in ("jpg", "jpeg", "png", "webp"):
+        if path.endswith("." + e):
+            ext = e
+            break
+    filename = f"{product_id}.{ext}"
+
+    # List bucket ครั้งเดียวต่อ run · cache filename set
+    if _existing_files is None:
+        try:
+            items = supabase.storage.from_(BUCKET).list("", {"limit": 10000})
+            _existing_files = {it["name"] for it in items}
+            print(f"  📦 Image cache: พบ {len(_existing_files)} ไฟล์ใน bucket")
+        except Exception as e:
+            print(f"  ⚠️  List bucket failed: {e} (treat as empty)")
+            _existing_files = set()
+
+    if filename in _existing_files:
+        url = supabase.storage.from_(BUCKET).get_public_url(filename)
+        _image_cache[product_id] = url
+        return url
+
+    # Download จาก VMS
+    try:
+        r = requests.get(vms_url, timeout=30)
+        if r.status_code != 200:
+            print(f"  ⚠️  Download {product_id}: HTTP {r.status_code}")
+            return None
+        image_bytes = r.content
+    except Exception as e:
+        print(f"  ⚠️  Download {product_id}: {e}")
+        return None
+
+    # Upload Supabase Storage
+    try:
+        content_type = "image/jpeg" if ext in ("jpg", "jpeg") else f"image/{ext}"
+        supabase.storage.from_(BUCKET).upload(
+            filename, image_bytes,
+            file_options={"content-type": content_type, "upsert": "true"}
+        )
+        url = supabase.storage.from_(BUCKET).get_public_url(filename)
+        _image_cache[product_id] = url
+        _existing_files.add(filename)
+        print(f"  ✅ Cached image product_id={product_id} ({len(image_bytes)//1024}KB)")
+        return url
+    except Exception as e:
+        print(f"  ⚠️  Upload {product_id}: {e}")
+        return None
 
 # ── Config ────────────────────────────────────────────────────
 VMS_API_BASE = "https://api.inboxcorp.co.th/internal/v1"
@@ -120,6 +193,7 @@ def main():
 
     token = login()
     synced_at = datetime.utcnow().isoformat()
+    supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
     all_records = []
     machines_with_data = 0
 
@@ -134,13 +208,17 @@ def main():
 
         for slot in slots:
             product_name = slot.get("product_name") or None
+            product_id   = slot.get("product_id")
+            vms_img      = slot.get("product_img") or None
+            # Re-host VMS image เป็น permanent URL (ไม่ expire)
+            permanent_img = cache_vms_image(supabase, product_id, vms_img) or vms_img
             all_records.append({
                 "machine_id":      machine_id,
                 "kiosk_record_id": record_id,
                 "slot_number":     slot.get("slot_number") or "",
-                "product_id":      slot.get("product_id"),
+                "product_id":      product_id,
                 "product_name":    product_name,
-                "product_img":     slot.get("product_img") or None,
+                "product_img":     permanent_img,
                 "sku_id":          map_product_to_sku(product_name),
                 "remain":          slot.get("remain") or 0,
                 "max_capacity":    slot.get("max_capacity") or 0,
