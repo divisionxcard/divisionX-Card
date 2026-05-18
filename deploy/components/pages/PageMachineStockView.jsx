@@ -620,8 +620,8 @@ export default function PageMachineStockView({ machines, machineStock, skus, onR
                                       return (
                                         <img src={imgUrl} alt={s.product_name}
                                           style={useCover
-                                            ? { width: "100%", height: "100%", objectFit: "cover", objectPosition: "center", transform: "scale(2.0)" }
-                                            : { maxHeight: "100%", maxWidth: "100%", objectFit: "contain", padding: 4 }}
+                                            ? { width: "100%", height: "100%", objectFit: "cover", objectPosition: "center", transform: "scale(2.0)", outline: "3px solid lime" }
+                                            : { maxHeight: "100%", maxWidth: "100%", objectFit: "contain", padding: 4, outline: "3px solid red" }}
                                           loading="lazy"
                                           onError={e => { e.target.onerror = null; e.target.style.display = "none" }}/>
                                       )
