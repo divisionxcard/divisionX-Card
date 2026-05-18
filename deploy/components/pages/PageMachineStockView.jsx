@@ -610,16 +610,18 @@ export default function PageMachineStockView({ machines, machineStock, skus, onR
                                     display: "flex", alignItems: "center", justifyContent: "center",
                                     background: "var(--dx-bg-page)",
                                   }}>
-                                    {/* OP/PRB/EB จาก VMS มี whitespace ในรูป → cover + scale 1.6 · อื่นๆ → contain */}
+                                    {/* OP/PRB/EB จาก VMS มี whitespace ในรูป → cover + scale · อื่นๆ → contain
+                                        เช็คจาก product_name โดยตรง (เผื่อ matchedSku.series ไม่ตรง) */}
                                     {(() => {
                                       const isCustom = imgUrl.includes("supabase.co/storage")
-                                      const isLegacy = ["OP", "PRB", "EB"].includes(matchedSku?.series)
-                                      const useCover = !isCustom && isLegacy
+                                      const name = (s.product_name || "").toUpperCase()
+                                      const isLegacyName = /\b(OP|PRB|EB)\b/.test(name) && !/\bFB\b/.test(name)
+                                      const useCover = !isCustom && isLegacyName
                                       return (
                                         <img src={imgUrl} alt={s.product_name}
                                           style={useCover
-                                            ? { width: "100%", height: "100%", objectFit: "cover", objectPosition: "center", transform: "scale(1.9)", outline: "3px solid lime" }
-                                            : { maxHeight: "100%", maxWidth: "100%", objectFit: "contain", padding: 4, outline: "3px solid red" }}
+                                            ? { width: "100%", height: "100%", objectFit: "cover", objectPosition: "center", transform: "scale(1.9)" }
+                                            : { maxHeight: "100%", maxWidth: "100%", objectFit: "contain", padding: 4 }}
                                           loading="lazy"
                                           onError={e => { e.target.onerror = null; e.target.style.display = "none" }}/>
                                       )
