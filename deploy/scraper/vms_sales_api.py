@@ -34,7 +34,7 @@ def map_product_to_sku(product_name: str) -> str | None:
     # B29 standalone (Dragonball special) — check ก่อน เพื่อกัน FB pattern match ผิด
     if re.search(r'\bb29\b', name):
         return "B29"
-    m = re.search(r'op\s*[-–]\s*(\d+)', name)
+    m = re.search(r'\bop\s*[-–]?\s*(\d+)', name)
     if m: return f"OP {m.group(1).zfill(2)}"
     m = re.search(r'prb\s*[-–]\s*(\d+)', name)
     if m: return f"PRB {m.group(1).zfill(2)}"

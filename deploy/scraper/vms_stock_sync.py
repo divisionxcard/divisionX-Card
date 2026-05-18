@@ -35,7 +35,7 @@ def map_product_to_sku(product_name: str) -> str | None:
     if re.search(r'\bb29\b', name):
         return "B29"
     # OP series: "one piece op - 01 pack" / "one piece op - 01 (box)"
-    m = re.search(r'op\s*[-–]\s*(\d+)', name)
+    m = re.search(r'\bop\s*[-–]?\s*(\d+)', name)
     if m: return f"OP {m.group(1).zfill(2)}"
     # PRB series: "prb - 01 (pack)"
     m = re.search(r'prb\s*[-–]\s*(\d+)', name)

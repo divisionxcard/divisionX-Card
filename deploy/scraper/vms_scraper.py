@@ -108,8 +108,8 @@ def map_sku(product_name: str) -> str | None:
     # B29 standalone (Dragonball special) — check ก่อน
     if re.search(r'\bb29\b', key):
         return "B29"
-    # Regex-based: รองรับ "OP - 01", "OP-01", "op  -  1", "OP - 13 PRO", "OP - 15 Box" ฯลฯ
-    m = re.search(r'op\s*[-–]\s*(\d+)', key)
+    # Regex-based: รองรับ "OP - 01", "OP-01", "OP 10 Box" (no dash), "op  -  1", "OP - 13 PRO" ฯลฯ
+    m = re.search(r'\bop\s*[-–]?\s*(\d+)', key)
     if m: return f"OP {m.group(1).zfill(2)}"
     m = re.search(r'prb\s*[-–]?\s*(\d+)', key)
     if m: return f"PRB {m.group(1).zfill(2)}"
