@@ -567,8 +567,11 @@ export default function PageMachineStockView({ machines, machineStock, skus, onR
                         const isZero = s.remain === 0 && !isEmpty
                         const matchedSku = skus.find(sk => sk.sku_id === s.sku_id)
                         const isBoxSlot = /\bbox\b/i.test(s.product_name || "")
+                        // Fallback chain: custom Box/Pack image → VMS image (expire 1ชม. หลัง sync) → placeholder
                         const imgUrl = (isBoxSlot ? matchedSku?.image_url_box : matchedSku?.image_url)
-                          || matchedSku?.image_url || null
+                          || matchedSku?.image_url
+                          || s.product_img
+                          || null
                         return (
                           <div key={s.slot_number} style={{
                             borderRadius: 10, overflow: "hidden",
