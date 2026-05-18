@@ -610,10 +610,20 @@ export default function PageMachineStockView({ machines, machineStock, skus, onR
                                     display: "flex", alignItems: "center", justifyContent: "center",
                                     background: "var(--dx-bg-page)",
                                   }}>
-                                    <img src={imgUrl} alt={s.product_name}
-                                      style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center" }}
-                                      loading="lazy"
-                                      onError={e => { e.target.onerror = null; e.target.style.display = "none" }}/>
+                                    {/* OP/PRB/EB จาก VMS มี whitespace ในรูป → cover · อื่นๆ → contain */}
+                                    {(() => {
+                                      const isCustom = imgUrl.includes("supabase.co/storage")
+                                      const isLegacy = ["OP", "PRB", "EB"].includes(matchedSku?.series)
+                                      const useCover = !isCustom && isLegacy
+                                      return (
+                                        <img src={imgUrl} alt={s.product_name}
+                                          style={useCover
+                                            ? { width: "100%", height: "100%", objectFit: "cover", objectPosition: "center" }
+                                            : { maxHeight: "100%", maxWidth: "100%", objectFit: "contain", padding: 4 }}
+                                          loading="lazy"
+                                          onError={e => { e.target.onerror = null; e.target.style.display = "none" }}/>
+                                      )
+                                    })()}
                                   </div>
                                 ) : (
                                   <div style={{
