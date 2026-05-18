@@ -561,12 +561,14 @@ export default function PageMachineStockView({ machines, machineStock, skus, onR
                   </div>
                 ) : (
                   <div style={{ padding: 20 }}>
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(120px, 1fr))", gap: 8 }}>
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))", gap: 10 }}>
                       {slots.map(s => {
                         const isEmpty = !s.product_name
                         const isZero = s.remain === 0 && !isEmpty
                         const matchedSku = skus.find(sk => sk.sku_id === s.sku_id)
-                        const imgUrl = matchedSku?.image_url || null
+                        const isBoxSlot = /\bbox\b/i.test(s.product_name || "")
+                        const imgUrl = (isBoxSlot ? matchedSku?.image_url_box : matchedSku?.image_url)
+                          || matchedSku?.image_url || null
                         return (
                           <div key={s.slot_number} style={{
                             borderRadius: 10, overflow: "hidden",
@@ -601,22 +603,22 @@ export default function PageMachineStockView({ machines, machineStock, skus, onR
                               <div style={{ padding: "0 8px 8px" }}>
                                 {imgUrl ? (
                                   <div style={{
-                                    height: 76, borderRadius: 6, overflow: "hidden", marginBottom: 6,
+                                    height: 140, borderRadius: 6, overflow: "hidden", marginBottom: 6,
                                     display: "flex", alignItems: "center", justifyContent: "center",
                                     background: "var(--dx-bg-page)",
                                   }}>
                                     <img src={imgUrl} alt={s.product_name}
-                                      style={{ height: "100%", width: "auto", objectFit: "contain", padding: 4 }}
+                                      style={{ maxHeight: "100%", maxWidth: "100%", objectFit: "contain", padding: 4 }}
                                       loading="lazy"
                                       onError={e => { e.target.onerror = null; e.target.style.display = "none" }}/>
                                   </div>
                                 ) : (
                                   <div style={{
-                                    height: 76, borderRadius: 6, marginBottom: 6,
+                                    height: 140, borderRadius: 6, marginBottom: 6,
                                     background: "linear-gradient(180deg, rgba(0,212,255,0.08) 0%, transparent 100%)",
                                     display: "flex", alignItems: "center", justifyContent: "center",
                                   }}>
-                                    <Package size={24} style={{ color: "rgba(0,212,255,0.3)" }}/>
+                                    <Package size={32} style={{ color: "rgba(0,212,255,0.3)" }}/>
                                   </div>
                                 )}
                                 <p style={{

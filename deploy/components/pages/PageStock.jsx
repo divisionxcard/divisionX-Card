@@ -813,7 +813,14 @@ function SkuManager({ skus, onAddSku, onDeactivateSku, onSkuRefresh, showToast }
               border: "1px solid var(--dx-border)",
             }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
-                <SkuImageManager sku={s} onChange={onSkuRefresh}/>
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
+                  <SkuImageManager sku={s} onChange={onSkuRefresh} variant="pack"/>
+                  <span style={{ fontSize: 9, color: "var(--dx-text-muted)", fontWeight: 500 }}>ซอง</span>
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
+                  <SkuImageManager sku={s} onChange={onSkuRefresh} variant="box"/>
+                  <span style={{ fontSize: 9, color: "var(--dx-text-muted)", fontWeight: 500 }}>กล่อง</span>
+                </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                     <span className="dx-mono" style={{ fontSize: 12, fontWeight: 700, color: "var(--dx-text)" }}>{s.sku_id}</span>

@@ -286,12 +286,14 @@ export async function deactivateSku(skuId) {
   if (error) throw error
 }
 
-// ── Upload รูป SKU เข้า Storage + UPDATE skus.image_url ──────
-// path = "{sku_id sanitized}-{timestamp}.{ext}" — timestamp กัน browser cache รูปเก่า
-export async function uploadSkuImage(skuId, file, currentUrl = null) {
+// ── Upload รูป SKU เข้า Storage + UPDATE column ที่ระบุ ─────
+// column = "image_url" (pack) หรือ "image_url_box" (box)
+// path = "{sku_id sanitized}-{variant}-{timestamp}.{ext}" — กัน browser cache + แยก pack/box
+export async function uploadSkuImage(skuId, file, currentUrl = null, column = "image_url") {
   const ext = (file.name.split(".").pop() || "jpg").toLowerCase()
   const safeName = skuId.replace(/[^\w\s-]/g, "").trim().replace(/\s+/g, "_")
-  const path = `${safeName}-${Date.now()}.${ext}`
+  const variant = column === "image_url_box" ? "box" : "pack"
+  const path = `${safeName}-${variant}-${Date.now()}.${ext}`
 
   const { error: upErr } = await supabase.storage
     .from("sku-images")
@@ -304,7 +306,7 @@ export async function uploadSkuImage(skuId, file, currentUrl = null) {
 
   const { error: updErr } = await supabase
     .from("skus")
-    .update({ image_url: publicUrl })
+    .update({ [column]: publicUrl })
     .eq("sku_id", skuId)
   if (updErr) throw updErr
 
@@ -322,8 +324,8 @@ export async function uploadSkuImage(skuId, file, currentUrl = null) {
   return publicUrl
 }
 
-// ── ลบรูป SKU — clear image_url + remove file ────────────────
-export async function deleteSkuImage(skuId, currentUrl = null) {
+// ── ลบรูป SKU — clear column + remove file ───────────────────
+export async function deleteSkuImage(skuId, currentUrl = null, column = "image_url") {
   if (currentUrl) {
     const m = currentUrl.match(/\/sku-images\/(.+)$/)
     if (m) {
@@ -333,7 +335,7 @@ export async function deleteSkuImage(skuId, currentUrl = null) {
   }
   const { error } = await supabase
     .from("skus")
-    .update({ image_url: null })
+    .update({ [column]: null })
     .eq("sku_id", skuId)
   if (error) throw error
 }

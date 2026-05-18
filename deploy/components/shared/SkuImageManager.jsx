@@ -57,7 +57,11 @@ const fmtSize = (bytes) => bytes < 1024 * 1024
   ? `${(bytes / 1024).toFixed(0)}KB`
   : `${(bytes / 1024 / 1024).toFixed(2)}MB`
 
-export default function SkuImageManager({ sku, onChange }) {
+// variant: "pack" (default, อ่าน/เขียน image_url) | "box" (image_url_box)
+export default function SkuImageManager({ sku, onChange, variant = "pack" }) {
+  const column = variant === "box" ? "image_url_box" : "image_url"
+  const currentUrl = sku[column] || null
+  const label = variant === "box" ? "กล่อง" : "ซอง"
   const [open, setOpen] = useState(false)
   const [origFile, setOrigFile] = useState(null)
   const [compressedFile, setCompressedFile] = useState(null)
@@ -108,7 +112,7 @@ export default function SkuImageManager({ sku, onChange }) {
     setSaving(true)
     setError("")
     try {
-      const newUrl = await uploadSkuImage(sku.sku_id, compressedFile, sku.image_url)
+      const newUrl = await uploadSkuImage(sku.sku_id, compressedFile, currentUrl, column)
       onChange?.(sku.sku_id, newUrl)
       close()
     } catch (err) {
@@ -119,11 +123,11 @@ export default function SkuImageManager({ sku, onChange }) {
   }
 
   const onDelete = async () => {
-    if (!confirm(`ลบรูปของ ${sku.sku_id}?`)) return
+    if (!confirm(`ลบรูป ${label}ของ ${sku.sku_id}?`)) return
     setDeleting(true)
     setError("")
     try {
-      await deleteSkuImage(sku.sku_id, sku.image_url)
+      await deleteSkuImage(sku.sku_id, currentUrl, column)
       onChange?.(sku.sku_id, null)
       close()
     } catch (err) {
@@ -133,13 +137,13 @@ export default function SkuImageManager({ sku, onChange }) {
     }
   }
 
-  const displayUrl = previewUrl || sku.image_url
+  const displayUrl = previewUrl || currentUrl
 
   return (
     <>
       <button
         onClick={() => setOpen(true)}
-        title={sku.image_url ? "เปลี่ยน/ลบรูป" : "อัปโหลดรูป"}
+        title={currentUrl ? `เปลี่ยน/ลบรูป${label}` : `อัปโหลดรูป${label}`}
         style={{
           width: 44, height: 44, flexShrink: 0,
           borderRadius: 8, overflow: "hidden",
@@ -148,8 +152,8 @@ export default function SkuImageManager({ sku, onChange }) {
           cursor: "pointer", padding: 0,
           display: "flex", alignItems: "center", justifyContent: "center",
         }}>
-        {sku.image_url ? (
-          <img src={sku.image_url} alt={sku.sku_id}
+        {currentUrl ? (
+          <img src={currentUrl} alt={sku.sku_id}
             style={{ width: "100%", height: "100%", objectFit: "cover" }}/>
         ) : (
           <ImageIcon size={18} color="var(--dx-text-muted)"/>
@@ -171,7 +175,7 @@ export default function SkuImageManager({ sku, onChange }) {
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
               <div>
                 <h3 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: "var(--dx-text)" }}>
-                  รูปสินค้า {sku.sku_id}
+                  รูปสินค้า {sku.sku_id} — {label}
                 </h3>
                 <p style={{ margin: "2px 0 0", fontSize: 11, color: "var(--dx-text-muted)" }}>
                   JPG / PNG / WebP · ไม่เกิน 20MB · ระบบบีบอัดให้อัตโนมัติ
@@ -229,7 +233,7 @@ export default function SkuImageManager({ sku, onChange }) {
                 disabled={saving || deleting || compressing}
                 className="dx-btn dx-btn-ghost"
                 style={{ flex: 1, minWidth: 130, padding: 10, fontSize: 12, justifyContent: "center" }}>
-                <Upload size={14}/> เลือกรูป{sku.image_url ? "ใหม่" : ""}
+                <Upload size={14}/> เลือกรูป{currentUrl ? "ใหม่" : ""}
               </button>
 
               {compressedFile && (
@@ -241,7 +245,7 @@ export default function SkuImageManager({ sku, onChange }) {
                 </button>
               )}
 
-              {sku.image_url && !compressedFile && !compressing && (
+              {currentUrl && !compressedFile && !compressing && (
                 <button onClick={onDelete} disabled={saving || deleting}
                   style={{
                     flex: 1, minWidth: 130, padding: 10, fontSize: 12,
