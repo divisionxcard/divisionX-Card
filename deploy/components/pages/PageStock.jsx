@@ -685,7 +685,7 @@ export default function PageStock({ stockIn, stockBalance, onAddStockIn, onUpdat
 
       {/* ── Tab: Manage SKUs ── */}
       {tab === "skus" && (
-        <SkuManager skus={skus} onAddSku={onAddSku} onDeactivateSku={onDeactivateSku} showToast={showToast}/>
+        <SkuManager skus={skus} onAddSku={onAddSku} onDeactivateSku={onDeactivateSku} onSkuRefresh={onSkuRefresh} showToast={showToast}/>
       )}
     </div>
   )
@@ -694,7 +694,7 @@ export default function PageStock({ stockIn, stockBalance, onAddStockIn, onUpdat
 // ─────────────────────────────────────────────
 // SkuManager (sub-component — inline because only used by PageStock)
 // ─────────────────────────────────────────────
-function SkuManager({ skus, onAddSku, onDeactivateSku, showToast }) {
+function SkuManager({ skus, onAddSku, onDeactivateSku, onSkuRefresh, showToast }) {
   const [saving, setSaving] = useState(false)
   const [deactId, setDeactId] = useState(null)
   const [deacting, setDeacting] = useState(false)
