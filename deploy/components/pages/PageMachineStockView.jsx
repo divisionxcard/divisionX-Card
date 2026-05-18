@@ -617,7 +617,7 @@ export default function PageMachineStockView({ machines, machineStock, skus, onR
                                       return (
                                         <img src={imgUrl} alt={s.product_name}
                                           style={isLegacyName
-                                            ? { width: "100%", height: "100%", objectFit: "cover", objectPosition: "center", transform: "scale(1.5)" }
+                                            ? { width: "100%", height: "100%", objectFit: "cover", objectPosition: "center", transform: "scale(1.3)" }
                                             : { maxHeight: "100%", maxWidth: "100%", objectFit: "contain", padding: 4 }}
                                           loading="lazy"
                                           onError={e => { e.target.onerror = null; e.target.style.display = "none" }}/>
