@@ -2,13 +2,60 @@ import { useState, useRef } from "react"
 import { Image as ImageIcon, Upload, Trash2, X, Loader2 } from "lucide-react"
 import { uploadSkuImage, deleteSkuImage } from "../../lib/supabase"
 
-const MAX_SIZE = 2 * 1024 * 1024
+const MAX_SIZE = 20 * 1024 * 1024
 const ACCEPT = "image/jpeg,image/png,image/webp"
+const MAX_DIM = 1024
+const JPEG_QUALITY = 0.85
+
+// Resize + convert to JPG ผ่าน Canvas — 15MB PNG → ~300-500KB JPG
+async function compressImage(file) {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file)
+    const img = new window.Image()
+    img.onload = () => {
+      URL.revokeObjectURL(url)
+      const ratio = Math.min(MAX_DIM / img.width, MAX_DIM / img.height, 1)
+      const w = Math.round(img.width * ratio)
+      const h = Math.round(img.height * ratio)
+      const canvas = document.createElement("canvas")
+      canvas.width = w
+      canvas.height = h
+      const ctx = canvas.getContext("2d")
+      ctx.fillStyle = "#ffffff"  // กัน transparent → ดำใน JPG
+      ctx.fillRect(0, 0, w, h)
+      ctx.drawImage(img, 0, 0, w, h)
+      canvas.toBlob(
+        (blob) => {
+          if (!blob) return reject(new Error("Compression failed"))
+          const compressed = new File(
+            [blob],
+            file.name.replace(/\.\w+$/, ".jpg"),
+            { type: "image/jpeg", lastModified: Date.now() }
+          )
+          resolve(compressed)
+        },
+        "image/jpeg",
+        JPEG_QUALITY
+      )
+    }
+    img.onerror = () => {
+      URL.revokeObjectURL(url)
+      reject(new Error("ไม่สามารถอ่านรูปได้"))
+    }
+    img.src = url
+  })
+}
+
+const fmtSize = (bytes) => bytes < 1024 * 1024
+  ? `${(bytes / 1024).toFixed(0)}KB`
+  : `${(bytes / 1024 / 1024).toFixed(2)}MB`
 
 export default function SkuImageManager({ sku, onChange }) {
   const [open, setOpen] = useState(false)
-  const [selectedFile, setSelectedFile] = useState(null)
+  const [origFile, setOrigFile] = useState(null)
+  const [compressedFile, setCompressedFile] = useState(null)
   const [previewUrl, setPreviewUrl] = useState(null)
+  const [compressing, setCompressing] = useState(false)
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [error, setError] = useState("")
@@ -16,12 +63,14 @@ export default function SkuImageManager({ sku, onChange }) {
 
   const close = () => {
     setOpen(false)
-    setSelectedFile(null)
+    setOrigFile(null)
+    setCompressedFile(null)
+    if (previewUrl) URL.revokeObjectURL(previewUrl)
     setPreviewUrl(null)
     setError("")
   }
 
-  const onPick = (e) => {
+  const onPick = async (e) => {
     const f = e.target.files?.[0]
     if (!f) return
     if (!ACCEPT.includes(f.type)) {
@@ -29,20 +78,30 @@ export default function SkuImageManager({ sku, onChange }) {
       return
     }
     if (f.size > MAX_SIZE) {
-      setError(`ไฟล์ใหญ่เกิน 2MB (ปัจจุบัน ${(f.size / 1024 / 1024).toFixed(2)}MB)`)
+      setError(`ไฟล์ใหญ่เกิน 20MB (ปัจจุบัน ${fmtSize(f.size)})`)
       return
     }
     setError("")
-    setSelectedFile(f)
-    setPreviewUrl(URL.createObjectURL(f))
+    setOrigFile(f)
+    setCompressing(true)
+    try {
+      const compressed = await compressImage(f)
+      setCompressedFile(compressed)
+      setPreviewUrl(URL.createObjectURL(compressed))
+    } catch (err) {
+      setError(err.message || "บีบอัดไม่สำเร็จ")
+      setOrigFile(null)
+    } finally {
+      setCompressing(false)
+    }
   }
 
   const onSave = async () => {
-    if (!selectedFile) return
+    if (!compressedFile) return
     setSaving(true)
     setError("")
     try {
-      const newUrl = await uploadSkuImage(sku.sku_id, selectedFile, sku.image_url)
+      const newUrl = await uploadSkuImage(sku.sku_id, compressedFile, sku.image_url)
       onChange?.(sku.sku_id, newUrl)
       close()
     } catch (err) {
@@ -108,7 +167,7 @@ export default function SkuImageManager({ sku, onChange }) {
                   รูปสินค้า {sku.sku_id}
                 </h3>
                 <p style={{ margin: "2px 0 0", fontSize: 11, color: "var(--dx-text-muted)" }}>
-                  JPG / PNG / WebP · ไม่เกิน 2MB
+                  JPG / PNG / WebP · ไม่เกิน 20MB · ระบบบีบอัดให้อัตโนมัติ
                 </p>
               </div>
               <button onClick={close} style={{
@@ -122,9 +181,14 @@ export default function SkuImageManager({ sku, onChange }) {
               background: "var(--dx-bg-input)",
               borderRadius: 10, border: "1px solid var(--dx-border)",
               display: "flex", alignItems: "center", justifyContent: "center",
-              overflow: "hidden", marginBottom: 14,
+              overflow: "hidden", marginBottom: 10, position: "relative",
             }}>
-              {displayUrl ? (
+              {compressing ? (
+                <div style={{ textAlign: "center", color: "var(--dx-text-muted)" }}>
+                  <Loader2 size={32} className="animate-spin" style={{ marginBottom: 8 }}/>
+                  <p style={{ margin: 0, fontSize: 12 }}>กำลังบีบอัด...</p>
+                </div>
+              ) : displayUrl ? (
                 <img src={displayUrl} alt={sku.sku_id}
                   style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain" }}/>
               ) : (
@@ -134,6 +198,13 @@ export default function SkuImageManager({ sku, onChange }) {
                 </div>
               )}
             </div>
+
+            {origFile && compressedFile && !compressing && (
+              <p style={{ margin: "0 0 10px", fontSize: 10, color: "var(--dx-text-muted)", textAlign: "center" }}>
+                บีบอัด: <span className="dx-mono">{fmtSize(origFile.size)} → {fmtSize(compressedFile.size)}</span>
+                {" "}({Math.round((1 - compressedFile.size / origFile.size) * 100)}% เล็กลง)
+              </p>
+            )}
 
             {error && (
               <div style={{
@@ -148,14 +219,14 @@ export default function SkuImageManager({ sku, onChange }) {
 
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
               <button onClick={() => fileRef.current?.click()}
-                disabled={saving || deleting}
+                disabled={saving || deleting || compressing}
                 className="dx-btn dx-btn-ghost"
                 style={{ flex: 1, minWidth: 130, padding: 10, fontSize: 12, justifyContent: "center" }}>
                 <Upload size={14}/> เลือกรูป{sku.image_url ? "ใหม่" : ""}
               </button>
 
-              {selectedFile && (
-                <button onClick={onSave} disabled={saving || deleting}
+              {compressedFile && (
+                <button onClick={onSave} disabled={saving || deleting || compressing}
                   className="dx-btn dx-btn-primary"
                   style={{ flex: 1, minWidth: 130, padding: 10, fontSize: 12, justifyContent: "center" }}>
                   {saving ? <Loader2 size={14} className="animate-spin"/> : <Upload size={14}/>}
@@ -163,7 +234,7 @@ export default function SkuImageManager({ sku, onChange }) {
                 </button>
               )}
 
-              {sku.image_url && !selectedFile && (
+              {sku.image_url && !compressedFile && !compressing && (
                 <button onClick={onDelete} disabled={saving || deleting}
                   style={{
                     flex: 1, minWidth: 130, padding: 10, fontSize: 12,
