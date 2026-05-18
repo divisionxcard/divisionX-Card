@@ -611,7 +611,7 @@ export default function PageMachineStockView({ machines, machineStock, skus, onR
                                     background: "var(--dx-bg-page)",
                                   }}>
                                     <img src={imgUrl} alt={s.product_name}
-                                      style={{ maxHeight: "100%", maxWidth: "100%", objectFit: "contain", padding: 4 }}
+                                      style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center" }}
                                       loading="lazy"
                                       onError={e => { e.target.onerror = null; e.target.style.display = "none" }}/>
                                   </div>
