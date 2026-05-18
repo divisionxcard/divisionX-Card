@@ -6,6 +6,7 @@ import {
 import { fmt, fmtB, today, sortSkus, sortByDateThenSku, convertToPacks } from "../shared/helpers"
 import { Badge, SectionTitle } from "../shared/dx-components"
 import EditStockInModal from "./EditStockInModal"
+import SkuImageManager from "../shared/SkuImageManager"
 
 function genLotNumber() {
   const d = new Date()
@@ -14,7 +15,7 @@ function genLotNumber() {
   return `LOT-${ymd}-${hm}`
 }
 
-export default function PageStock({ stockIn, stockBalance, onAddStockIn, onUpdateStockIn, onDeleteStockIn, skus, onAddSku, onDeactivateSku, onRecalcAvgCost, initialTab, profile }) {
+export default function PageStock({ stockIn, stockBalance, onAddStockIn, onUpdateStockIn, onDeleteStockIn, skus, onAddSku, onDeactivateSku, onSkuRefresh, onRecalcAvgCost, initialTab, profile }) {
   const isAdmin = profile?.role === "admin"
   const [tab, setTab] = useState(initialTab || "balance")
   const [search, setSearch] = useState("")
@@ -812,6 +813,7 @@ function SkuManager({ skus, onAddSku, onDeactivateSku, showToast }) {
               border: "1px solid var(--dx-border)",
             }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+                <SkuImageManager sku={s} onChange={onSkuRefresh}/>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                     <span className="dx-mono" style={{ fontSize: 12, fontWeight: 700, color: "var(--dx-text)" }}>{s.sku_id}</span>

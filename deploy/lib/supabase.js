@@ -286,6 +286,58 @@ export async function deactivateSku(skuId) {
   if (error) throw error
 }
 
+// ── Upload รูป SKU เข้า Storage + UPDATE skus.image_url ──────
+// path = "{sku_id sanitized}-{timestamp}.{ext}" — timestamp กัน browser cache รูปเก่า
+export async function uploadSkuImage(skuId, file, currentUrl = null) {
+  const ext = (file.name.split(".").pop() || "jpg").toLowerCase()
+  const safeName = skuId.replace(/[^\w\s-]/g, "").trim().replace(/\s+/g, "_")
+  const path = `${safeName}-${Date.now()}.${ext}`
+
+  const { error: upErr } = await supabase.storage
+    .from("sku-images")
+    .upload(path, file, { upsert: true, contentType: file.type || `image/${ext}` })
+  if (upErr) throw upErr
+
+  const { data: { publicUrl } } = supabase.storage
+    .from("sku-images")
+    .getPublicUrl(path)
+
+  const { error: updErr } = await supabase
+    .from("skus")
+    .update({ image_url: publicUrl })
+    .eq("sku_id", skuId)
+  if (updErr) throw updErr
+
+  // ลบไฟล์เก่า (best-effort — ถ้าลบไม่ได้ไม่ throw)
+  if (currentUrl) {
+    const m = currentUrl.match(/\/sku-images\/(.+)$/)
+    if (m) {
+      const oldPath = decodeURIComponent(m[1].split("?")[0])
+      if (oldPath !== path) {
+        await supabase.storage.from("sku-images").remove([oldPath]).catch(() => {})
+      }
+    }
+  }
+
+  return publicUrl
+}
+
+// ── ลบรูป SKU — clear image_url + remove file ────────────────
+export async function deleteSkuImage(skuId, currentUrl = null) {
+  if (currentUrl) {
+    const m = currentUrl.match(/\/sku-images\/(.+)$/)
+    if (m) {
+      const path = decodeURIComponent(m[1].split("?")[0])
+      await supabase.storage.from("sku-images").remove([path]).catch(() => {})
+    }
+  }
+  const { error } = await supabase
+    .from("skus")
+    .update({ image_url: null })
+    .eq("sku_id", skuId)
+  if (error) throw error
+}
+
 // ── Claims (เคลม/คืนเงิน) ────────────────────────────────────
 export async function getClaims() {
   const { data, error } = await supabase
