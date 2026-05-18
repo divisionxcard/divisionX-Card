@@ -46,6 +46,18 @@ def map_product_to_sku(product_name: str) -> str | None:
     # FB (Dragonball Fusion World) — "fb - 01"
     m = re.search(r'fb\s*[-–]?\s*(\d+)', name)
     if m: return f"FB {m.group(1).zfill(2)}"
+    # Fallback: direct map สำหรับ Naruto/Pokemon/SOLO (ชื่อไม่เป็น pattern prefix+number)
+    # key = substring lowercase · check series2 ก่อน series1 กัน prefix collision
+    for key, sku in (
+        ("naruto series2",  "Naruto Series2"),
+        ("naruto series1",  "Naruto Series1"),
+        ("naruto jin1",     "Naruto Jin1"),
+        ("pokemon maga ex", "POKEMON MAGA EX"),
+        ("pokemon ninja",   "POKEMON NINJA"),
+        ("solo leveling",   "SOLO Leveling"),
+    ):
+        if key in name:
+            return sku
     return None
 
 def login() -> str:

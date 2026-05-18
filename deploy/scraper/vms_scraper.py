@@ -29,6 +29,9 @@ PACKS_PER_BOX = {
     "FB 06": 24, "FB 07": 24, "FB 08": 24, "FB 09": 24, "FB 10": 24,
     "FB 11": 24, "FB 12": 24, "FB 13": 24, "FB 14": 24, "FB 15": 24,
     "B29": 24,
+    "Naruto Series1": 30, "Naruto Series2": 30, "Naruto Jin1": 10,
+    "POKEMON MAGA EX": 30, "POKEMON NINJA": 30,
+    "SOLO Leveling": 16,
 }
 
 # ── VMS Product Name → SKU ID Mapping ───────────────────────────
@@ -117,6 +120,19 @@ def map_sku(product_name: str) -> str | None:
     if m: return f"EB {m.group(1).zfill(2)}"
     m = re.search(r'fb\s*[-–]?\s*(\d+)', key)
     if m: return f"FB {m.group(1).zfill(2)}"
+
+    # Naruto/Pokemon/SOLO — direct substring match (ไม่เป็น pattern prefix+number)
+    # check series2 ก่อน series1 กัน prefix collision
+    for sub, sku in (
+        ("naruto series2",  "Naruto Series2"),
+        ("naruto series1",  "Naruto Series1"),
+        ("naruto jin1",     "Naruto Jin1"),
+        ("pokemon maga ex", "POKEMON MAGA EX"),
+        ("pokemon ninja",   "POKEMON NINJA"),
+        ("solo leveling",   "SOLO Leveling"),
+    ):
+        if sub in key:
+            return sku
 
     # Fallback: hardcoded SKU_MAP (กรณี format ที่ regex จับไม่ได้)
     if key in SKU_MAP:

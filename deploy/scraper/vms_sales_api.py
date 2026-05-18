@@ -26,6 +26,20 @@ PACKS_PER_BOX = {
     "FB 06": 24, "FB 07": 24, "FB 08": 24, "FB 09": 24, "FB 10": 24,
     "FB 11": 24, "FB 12": 24, "FB 13": 24, "FB 14": 24, "FB 15": 24,
     "B29": 24,
+    "Naruto Series1": 30, "Naruto Series2": 30, "Naruto Jin1": 10,
+    "POKEMON MAGA EX": 30, "POKEMON NINJA": 30,
+    "SOLO Leveling": 16,
+}
+
+# Direct mapping สำหรับ SKU ที่ไม่มี pattern prefix+number (Naruto/Pokemon/SOLO)
+# key = substring ตรวจใน lowercase name · value = sku_id ตรงตาม VMS product_name
+DIRECT_MAP = {
+    "naruto series2":  "Naruto Series2",   # check ก่อน series1 กัน prefix collision
+    "naruto series1":  "Naruto Series1",
+    "naruto jin1":     "Naruto Jin1",
+    "pokemon maga ex": "POKEMON MAGA EX",
+    "pokemon ninja":   "POKEMON NINJA",
+    "solo leveling":   "SOLO Leveling",
 }
 
 def map_product_to_sku(product_name: str) -> str | None:
@@ -42,6 +56,10 @@ def map_product_to_sku(product_name: str) -> str | None:
     if m: return f"EB {m.group(1).zfill(2)}"
     m = re.search(r'fb\s*[-–]?\s*(\d+)', name)
     if m: return f"FB {m.group(1).zfill(2)}"
+    # Fallback: direct map สำหรับ Naruto/Pokemon/SOLO (ชื่อไม่เป็น pattern)
+    for key, sku in DIRECT_MAP.items():
+        if key in name:
+            return sku
     return None
 
 def normalize(text: str) -> str:

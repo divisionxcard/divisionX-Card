@@ -39,6 +39,18 @@ def map_goods_to_sku(goods_name: str) -> str | None:
     m = re.match(r'(OP|EB|PRB|FB)\s*[-]?\s*(\d+)', upper)
     if m:
         return f"{m.group(1)} {m.group(2).zfill(2)}"
+    # Fallback: direct map สำหรับ Naruto/Pokemon/SOLO
+    lower = goods_name.lower().strip()
+    for sub, sku in (
+        ("naruto series2",  "Naruto Series2"),
+        ("naruto series1",  "Naruto Series1"),
+        ("naruto jin1",     "Naruto Jin1"),
+        ("pokemon maga ex", "POKEMON MAGA EX"),
+        ("pokemon ninja",   "POKEMON NINJA"),
+        ("solo leveling",   "SOLO Leveling"),
+    ):
+        if sub in lower:
+            return sku
     return None
 
 
