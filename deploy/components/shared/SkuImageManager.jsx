@@ -5,10 +5,15 @@ import { uploadSkuImage, deleteSkuImage } from "../../lib/supabase"
 const MAX_SIZE = 20 * 1024 * 1024
 const ACCEPT = "image/jpeg,image/png,image/webp"
 const MAX_DIM = 1024
-const JPEG_QUALITY = 0.85
+const QUALITY = 0.9   // WebP/JPG quality
 
-// Resize + convert to JPG ผ่าน Canvas — 15MB PNG → ~300-500KB JPG
+// Resize + convert ผ่าน Canvas
+// PNG/WebP (มีโอกาส transparent) → WebP รักษา alpha + เล็กกว่า PNG เยอะ
+// JPG → JPG (เดิมไม่ transparent อยู่แล้ว)
 async function compressImage(file) {
+  const preserveAlpha = file.type === "image/png" || file.type === "image/webp"
+  const outType = preserveAlpha ? "image/webp" : "image/jpeg"
+  const outExt = preserveAlpha ? "webp" : "jpg"
   return new Promise((resolve, reject) => {
     const url = URL.createObjectURL(file)
     const img = new window.Image()
@@ -21,21 +26,23 @@ async function compressImage(file) {
       canvas.width = w
       canvas.height = h
       const ctx = canvas.getContext("2d")
-      ctx.fillStyle = "#ffffff"  // กัน transparent → ดำใน JPG
-      ctx.fillRect(0, 0, w, h)
+      if (!preserveAlpha) {
+        ctx.fillStyle = "#ffffff"  // JPG ไม่รองรับ transparent → fill ขาว
+        ctx.fillRect(0, 0, w, h)
+      }
       ctx.drawImage(img, 0, 0, w, h)
       canvas.toBlob(
         (blob) => {
           if (!blob) return reject(new Error("Compression failed"))
           const compressed = new File(
             [blob],
-            file.name.replace(/\.\w+$/, ".jpg"),
-            { type: "image/jpeg", lastModified: Date.now() }
+            file.name.replace(/\.\w+$/, `.${outExt}`),
+            { type: outType, lastModified: Date.now() }
           )
           resolve(compressed)
         },
-        "image/jpeg",
-        JPEG_QUALITY
+        outType,
+        QUALITY
       )
     }
     img.onerror = () => {
