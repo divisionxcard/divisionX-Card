@@ -122,12 +122,19 @@ def map_product_to_sku(product_name: str) -> str | None:
     # Fallback: direct map สำหรับ Naruto/Pokemon/SOLO (ชื่อไม่เป็น pattern prefix+number)
     # key = substring lowercase · check series2 ก่อน series1 กัน prefix collision
     for key, sku in (
-        ("naruto series2",  "Naruto Series2"),
-        ("naruto series1",  "Naruto Series1"),
-        ("naruto jin1",     "Naruto Jin1"),
-        ("pokemon maga ex", "POKEMON MAGA EX"),
-        ("pokemon ninja",   "POKEMON NINJA"),
-        ("solo leveling",   "SOLO Leveling"),
+        # canonical names (หลัง admin rename) — check ก่อน
+        ("naruto series - 02", "NRT Series - 02"),
+        ("naruto series - 01", "NRT Series - 01"),
+        ("naruto jin - 1",     "NRT Jin - 1"),
+        ("pokemon dream ex",   "PKM Dream EX"),
+        ("pokemon ninja",      "PKM Ninja"),
+        ("solo leveling ua 51","SLL UA 51"),
+        # legacy names — fallback
+        ("naruto series2",  "NRT Series - 02"),
+        ("naruto series1",  "NRT Series - 01"),
+        ("naruto jin1",     "NRT Jin - 1"),
+        ("pokemon maga ex", "PKM Dream EX"),
+        ("solo leveling",   "SLL UA 51"),
     ):
         if key in name:
             return sku

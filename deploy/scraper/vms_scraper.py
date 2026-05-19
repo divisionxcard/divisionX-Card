@@ -29,9 +29,10 @@ PACKS_PER_BOX = {
     "FB 06": 24, "FB 07": 24, "FB 08": 24, "FB 09": 24, "FB 10": 24,
     "FB 11": 24, "FB 12": 24, "FB 13": 24, "FB 14": 24, "FB 15": 24,
     "B29": 24,
-    "Naruto Series1": 30, "Naruto Series2": 30, "Naruto Jin1": 10,
-    "POKEMON MAGA EX": 30, "POKEMON NINJA": 30,
-    "SOLO Leveling": 16,
+    # Naming Contract 2026-05-19: short code (NRT/SLL/PKM)
+    "NRT Series - 01": 30, "NRT Series - 02": 30, "NRT Jin - 1": 10,
+    "PKM Dream EX": 10, "PKM Ninja": 30,
+    "SLL UA 51": 16,
 }
 
 # ── VMS Product Name → SKU ID Mapping ───────────────────────────
@@ -124,12 +125,19 @@ def map_sku(product_name: str) -> str | None:
     # Naruto/Pokemon/SOLO — direct substring match (ไม่เป็น pattern prefix+number)
     # check series2 ก่อน series1 กัน prefix collision
     for sub, sku in (
-        ("naruto series2",  "Naruto Series2"),
-        ("naruto series1",  "Naruto Series1"),
-        ("naruto jin1",     "Naruto Jin1"),
-        ("pokemon maga ex", "POKEMON MAGA EX"),
-        ("pokemon ninja",   "POKEMON NINJA"),
-        ("solo leveling",   "SOLO Leveling"),
+        # canonical names (หลัง admin rename) — check ก่อน
+        ("naruto series - 02", "NRT Series - 02"),
+        ("naruto series - 01", "NRT Series - 01"),
+        ("naruto jin - 1",     "NRT Jin - 1"),
+        ("pokemon dream ex",   "PKM Dream EX"),
+        ("pokemon ninja",      "PKM Ninja"),
+        ("solo leveling ua 51","SLL UA 51"),
+        # legacy names (ก่อน admin rename) — fallback
+        ("naruto series2",  "NRT Series - 02"),
+        ("naruto series1",  "NRT Series - 01"),
+        ("naruto jin1",     "NRT Jin - 1"),
+        ("pokemon maga ex", "PKM Dream EX"),
+        ("solo leveling",   "SLL UA 51"),
     ):
         if sub in key:
             return sku

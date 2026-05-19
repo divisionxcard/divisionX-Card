@@ -38,9 +38,10 @@ PACKS_PER_BOX = {
     "FB 06": 24, "FB 07": 24, "FB 08": 24, "FB 09": 24, "FB 10": 24,
     "FB 11": 24, "FB 12": 24, "FB 13": 24, "FB 14": 24, "FB 15": 24,
     "B29": 24,
-    "Naruto Series1": 30, "Naruto Series2": 30, "Naruto Jin1": 10,
-    "POKEMON MAGA EX": 30, "POKEMON NINJA": 30,
-    "SOLO Leveling": 16,
+    # Naming Contract 2026-05-19: short code (NRT/SLL/PKM)
+    "NRT Series - 01": 30, "NRT Series - 02": 30, "NRT Jin - 1": 10,
+    "PKM Dream EX": 10, "PKM Ninja": 30,
+    "SLL UA 51": 16,
 }
 
 UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
@@ -49,26 +50,40 @@ UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
 
 # ── Helpers ───────────────────────────────────────────────────
 def map_goods_to_sku(goods_name: str) -> str | None:
-    """แปลงชื่อสินค้า WorldWide เช่น 'OP 15 BOX' / 'B29 ซอง' → 'OP 15' / 'B29'"""
+    """แปลงชื่อสินค้า WorldWide → sku_id
+
+    รองรับ 2 format:
+      1. WW legacy: 'OP 15 BOX' / 'B29 ซอง' / 'PRB 01 BOX'
+      2. Canonical (หลัง admin rename): 'One Piece OP - 15 Box' / 'Dragonball FB - 01'
+    """
     if not goods_name:
         return None
     upper = goods_name.upper().strip()
     # B29 standalone (Dragonball special — ไม่มี prefix FB ข้างหน้า)
     if re.search(r'\bB29\b', upper):
         return "B29"
-    m = re.match(r'(OP|EB|PRB|FB)\s*[-]?\s*(\d+)', upper)
+    # ใช้ \b + re.search (ไม่ใช่ re.match) เพื่อรองรับ canonical
+    # "One Piece OP - 15 Box" → \bOP\s*-?\s*15 → match
+    m = re.search(r'\b(OP|EB|PRB|FB)\s*[-]?\s*(\d+)', upper)
     if m:
         return f"{m.group(1)} {m.group(2).zfill(2)}"
     # Fallback: direct map สำหรับ Naruto/Pokemon/SOLO (ชื่อไม่เป็น pattern)
     # check series2 ก่อน series1 กัน prefix collision
     lower = goods_name.lower().strip()
     for sub, sku in (
-        ("naruto series2",  "Naruto Series2"),
-        ("naruto series1",  "Naruto Series1"),
-        ("naruto jin1",     "Naruto Jin1"),
-        ("pokemon maga ex", "POKEMON MAGA EX"),
-        ("pokemon ninja",   "POKEMON NINJA"),
-        ("solo leveling",   "SOLO Leveling"),
+        # canonical names — check ก่อน
+        ("naruto series - 02", "NRT Series - 02"),
+        ("naruto series - 01", "NRT Series - 01"),
+        ("naruto jin - 1",     "NRT Jin - 1"),
+        ("pokemon dream ex",   "PKM Dream EX"),
+        ("pokemon ninja",      "PKM Ninja"),
+        ("solo leveling ua 51","SLL UA 51"),
+        # legacy
+        ("naruto series2",  "NRT Series - 02"),
+        ("naruto series1",  "NRT Series - 01"),
+        ("naruto jin1",     "NRT Jin - 1"),
+        ("pokemon maga ex", "PKM Dream EX"),
+        ("solo leveling",   "SLL UA 51"),
     ):
         if sub in lower:
             return sku
