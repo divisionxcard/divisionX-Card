@@ -3,6 +3,7 @@ import { useState, useEffect, Fragment } from "react"
 import { CheckCircle, AlertTriangle, Trash2, Loader2 } from "lucide-react"
 import { fmtB, sortSkus } from "../shared/helpers"
 import { SectionTitle } from "../shared/dx-components"
+import ShipFailsSection from "./ShipFailsSection"
 
 const STATUS_OPTIONS = [
   { v: "returned", l: "คืนสต็อก", desc: "สภาพดี / ไม่ได้หยิบ — คืนเข้าสต็อก",  accent: { text: "var(--dx-success)", bg: "rgba(0,255,136,0.08)", border: "rgba(0,255,136,0.35)" } },
@@ -45,6 +46,7 @@ export default function PageClaims({ machines, skus, claims, onAddClaim, onConfi
   const [confirmId, setConfirmId] = useState(null)
   const [confirming, setConfirming] = useState(false)
   const [confirmError, setConfirmError] = useState(null) // { id, msg } · inline error ใต้แถวเคลม
+  const [tab, setTab] = useState("claims")  // claims | shipfails
 
   const showToast = (msg, type = "success") => { setToast({ msg, type }); setTimeout(() => setToast(null), 3000) }
 
@@ -106,8 +108,31 @@ export default function PageClaims({ machines, skus, claims, onAddClaim, onConfi
 
   return (
     <div style={{ padding: 24, display: "flex", flexDirection: "column", gap: 20 }}>
-      <SectionTitle pill="Claims · Refunds" title="เคลม / คืนเงิน" subtitle="บันทึกรายการเคลม · คืนสต็อก · ตัดชำรุด · สูญหาย"/>
+      <SectionTitle pill="Claims · Refunds" title="เคลม / คืนเงิน" subtitle="บันทึกรายการเคลม · คืนสต็อก · ตัดชำรุด · สูญหาย · Ship Fail จาก WW"/>
 
+      {/* Tab switch */}
+      <div style={{ display: "flex", gap: 6, borderBottom: "1px solid var(--dx-border)", paddingBottom: 0 }}>
+        {[
+          { v: "claims", l: "เคลม / คืนเงิน" },
+          ...(isAdmin ? [{ v: "shipfails", l: "Ship Fail (WW)" }] : []),
+        ].map(t => (
+          <button key={t.v} onClick={() => setTab(t.v)}
+            style={{
+              padding: "10px 16px", fontSize: 12, fontWeight: 600,
+              background: "transparent", border: "none", cursor: "pointer",
+              color: tab === t.v ? "var(--dx-cyan-bright)" : "var(--dx-text-muted)",
+              borderBottom: `2px solid ${tab === t.v ? "var(--dx-cyan-bright)" : "transparent"}`,
+              marginBottom: -1,
+            }}>
+            {t.l}
+          </button>
+        ))}
+      </div>
+
+      {tab === "shipfails" && isAdmin && <ShipFailsSection session={session}/>}
+
+      {tab === "claims" && (
+      <>
       {toast && (
         <div style={{
           display: "flex", alignItems: "center", gap: 10, padding: "12px 16px", borderRadius: 10, fontSize: 12,
@@ -389,6 +414,9 @@ export default function PageClaims({ machines, skus, claims, onAddClaim, onConfi
           )}
         </div>
       </div>
+
+      </>
+      )}
 
       {deleteId && (() => {
         const claim = myClaims.find(c => c.id === deleteId)

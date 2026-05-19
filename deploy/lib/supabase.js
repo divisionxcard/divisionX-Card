@@ -526,3 +526,60 @@ export async function cancelWithdrawalRequest(requestId) {
   if (error) throw error
   return data
 }
+
+// ── Ship Fails (ลูกค้าจ่ายเงินแต่เครื่องไม่ดันสินค้า) ─────────
+export async function getShipFails() {
+  const { data, error } = await supabase
+    .from("ship_fails")
+    .select("*")
+    .order("sold_at", { ascending: false })
+  if (error) throw error
+  return data
+}
+
+export async function getPendingShipFailCount() {
+  const { count, error } = await supabase
+    .from("ship_fails")
+    .select("*", { count: "exact", head: true })
+    .eq("status", "pending")
+  if (error) throw error
+  return count || 0
+}
+
+// Mark Ship Fail as resolved + บันทึก refunded_amount + note
+export async function resolveShipFail(id, { refundedAmount, note, userId }) {
+  const { data, error } = await supabase
+    .from("ship_fails")
+    .update({
+      status: "resolved",
+      verified_at: new Date().toISOString(),
+      verified_by: userId || null,
+      refunded_amount: refundedAmount ?? null,
+      refunded_at: refundedAmount != null ? new Date().toISOString() : null,
+      refunded_note: note || null,
+    })
+    .eq("id", id)
+    .select()
+    .single()
+  if (error) throw error
+  return data
+}
+
+// Re-open: กลับเป็น pending (เผื่อแก้ผิด)
+export async function reopenShipFail(id) {
+  const { data, error } = await supabase
+    .from("ship_fails")
+    .update({
+      status: "pending",
+      verified_at: null,
+      verified_by: null,
+      refunded_amount: null,
+      refunded_at: null,
+      refunded_note: null,
+    })
+    .eq("id", id)
+    .select()
+    .single()
+  if (error) throw error
+  return data
+}

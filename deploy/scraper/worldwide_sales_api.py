@@ -180,45 +180,58 @@ def fetch_order_detail(s, order_num: str) -> dict | None:
     return j.get("data")
 
 
-def detail_to_records(detail: dict, machine_lookup: dict) -> list[dict]:
-    """แปลง searchDetail response → sales records"""
-    records = []
+def detail_to_records(detail: dict, machine_lookup: dict) -> tuple[list[dict], list[dict]]:
+    """แปลง searchDetail response → (sales_records, ship_fail_records)
+
+    sales: shippingStatus=1 + refundStatus=1 (ส่งของสำเร็จ ยังไม่ refund)
+    ship_fails: shippingStatus!=1 + amount > 0 (จ่ายเงินแต่ไม่ได้ของ · WW จะ refund)
+    """
+    sales_records = []
+    ship_fail_records = []
     vendor_id  = detail.get("machineNum", "")
     machine_id = machine_lookup.get(vendor_id)
     if not machine_id:
-        # ตู้ใหม่ที่ยังไม่ INSERT ใน DB — skip + log
-        return records
+        return sales_records, ship_fail_records
 
     order_num = detail.get("orderNum", "")
-    # ใช้ paymentTime ถ้ามี (เวลาตัดเงินจริง) · fallback createTime · tag TZ Bangkok
     sold_at = bkk_to_iso(detail.get("paymentTime") or detail.get("createTime"))
 
     for idx, item in enumerate(detail.get("detailList") or []):
-        # Per-item filter: เก็บเฉพาะ shippingStatus=1 + refundStatus=1
-        if item.get("shippingStatus") != 1:
-            continue
-        if item.get("refundStatus") != 1:
-            continue
-
         goods_name = item.get("goodsName", "")
-        sku_id = map_goods_to_sku(goods_name)
-        if not sku_id:
-            continue
+        sku_id     = map_goods_to_sku(goods_name)
+        amount     = float(item.get("dealPrice") or 0)
+        ship_ok    = item.get("shippingStatus") == 1
+        refund_ok  = item.get("refundStatus") == 1   # 1 = ยังไม่ refund
 
-        box = is_box(goods_name)
-        qty = PACKS_PER_BOX.get(sku_id, 24) if box else 1
+        if ship_ok and refund_ok:
+            # ── Successful sale ──
+            if not sku_id:
+                continue
+            box = is_box(goods_name)
+            qty = PACKS_PER_BOX.get(sku_id, 24) if box else 1
+            sales_records.append({
+                "sale_key":         f"{order_num}-{idx}",
+                "transaction_id":   order_num,
+                "machine_id":       machine_id,
+                "sku_id":           sku_id,
+                "product_name_raw": goods_name,
+                "quantity_sold":    qty,
+                "grand_total":      amount,
+                "sold_at":          sold_at,
+            })
+        elif not ship_ok and amount > 0:
+            # ── Ship Fail — ลูกค้าจ่ายเงินแต่เครื่องไม่ดันสินค้า ──
+            # WW จัดการ refund · DVX แค่ track เพื่อ verify ภายหลัง
+            ship_fail_records.append({
+                "machine_id":       machine_id,
+                "sku_id":           sku_id,   # may be None ถ้า map ไม่ออก
+                "product_name_raw": goods_name,
+                "amount":           amount,
+                "sold_at":          sold_at,
+                "order_number":     f"{order_num}-{idx}",
+            })
 
-        records.append({
-            "sale_key":         f"{order_num}-{idx}",
-            "transaction_id":   order_num,
-            "machine_id":       machine_id,
-            "sku_id":           sku_id,
-            "product_name_raw": goods_name,
-            "quantity_sold":    qty,
-            "grand_total":      float(item.get("dealPrice") or 0),
-            "sold_at":          sold_at,
-        })
-    return records
+    return sales_records, ship_fail_records
 
 
 def save_to_supabase(supabase, records: list[dict]):
@@ -234,6 +247,21 @@ def save_to_supabase(supabase, records: list[dict]):
         saved += len(batch)
         print(f"  ✅ batch {i // batch_size + 1}: {len(batch)} รายการ")
     print(f"🎉 บันทึกทั้งหมด {saved} รายการ")
+
+
+def save_ship_fails(supabase, ship_fails: list[dict]):
+    """Insert Ship Fail rows · on_conflict ON order_number (กัน sync ซ้ำ)"""
+    if not ship_fails:
+        return
+    print(f"⚠️ Ship Fails: {len(ship_fails)} รายการ · บันทึกลง ship_fails...")
+    for sf in ship_fails:
+        try:
+            supabase.table("ship_fails").upsert(
+                sf, on_conflict="order_number"
+            ).execute()
+        except Exception as e:
+            print(f"  ❌ ship_fail upsert error ({sf.get('order_number')}): {e}")
+    print(f"  ✅ บันทึก ship_fails เสร็จ")
 
 
 def main():
@@ -312,6 +340,7 @@ def main():
 
     # ── Fetch detail per transaction ──
     records = []
+    ship_fails = []
     skipped_machine = 0
     for i, txn_id in enumerate(all_txn_ids, 1):
         if i % 50 == 0:
@@ -319,15 +348,16 @@ def main():
         detail = fetch_order_detail(s, txn_id)
         if not detail:
             continue
-        rows = detail_to_records(detail, machine_lookup)
-        if not rows and detail.get("machineNum") not in machine_lookup:
+        sales_rows, ship_fail_rows = detail_to_records(detail, machine_lookup)
+        if not sales_rows and not ship_fail_rows and detail.get("machineNum") not in machine_lookup:
             skipped_machine += 1
-        records.extend(rows)
+        records.extend(sales_rows)
+        ship_fails.extend(ship_fail_rows)
 
-    print(f"📋 แปลงได้ {len(records)} records ({skipped_machine} txn skip: ตู้ไม่อยู่ใน DB)")
+    print(f"📋 แปลงได้ {len(records)} sales · {len(ship_fails)} ship_fails ({skipped_machine} txn skip: ตู้ไม่อยู่ใน DB)")
 
     # Fail loud: ถ้าดึง txn ได้แต่แปลงไม่ออก → schema/mapping เปลี่ยน
-    if len(all_txn_ids) > 0 and len(records) == 0:
+    if len(all_txn_ids) > 0 and len(records) == 0 and len(ship_fails) == 0:
         raise SystemExit(
             f"ERROR: ดึง {len(all_txn_ids)} transactions แต่ parse ไม่ออกเลย · "
             "schema searchDetail อาจเปลี่ยน หรือ machine_id_vendor mapping ผิด"
@@ -337,9 +367,12 @@ def main():
         print("\n🧪 DRY-RUN: ไม่ save ลง Supabase · sample 3 records:")
         for r in records[:3]:
             print(f"  {r}")
-        print(f"  ... (total {len(records)} records)")
+        print(f"  ... (total {len(records)} sales · {len(ship_fails)} ship_fails)")
+        for sf in ship_fails[:3]:
+            print(f"  SHIP FAIL: {sf}")
     else:
         save_to_supabase(supabase, records)
+        save_ship_fails(supabase, ship_fails)
 
 
 if __name__ == "__main__":
