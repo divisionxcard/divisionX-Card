@@ -154,8 +154,11 @@ def fetch_order_list_page(s, start_dt: str, end_dt: str, page: int, page_size: i
         if not m:
             continue
         total_rows += 1
-        # Filter: เก็บเฉพาะ Trade Success (skip Wait Pay/Order Time Out/Ship Failed/Refund)
-        if "Trade Success" not in tr.get_text():
+        # Filter: เก็บ "Trade Success" + "Ship Failed" (skip Wait Pay/Order Time Out/Refund)
+        # "Ship Failed" = ลูกค้าจ่ายเงินแต่เครื่องไม่ดันสินค้า → ต้อง track ship_fails
+        # "Refund" = WW คืนเงินแล้ว · ไม่ต้องเก็บ (สมดุล)
+        text = tr.get_text()
+        if "Trade Success" not in text and "Ship Failed" not in text:
             continue
         txn_ids.append(m.group(1))
 
