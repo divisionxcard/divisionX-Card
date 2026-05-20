@@ -133,11 +133,11 @@ def fetch_sales(token: str, date_from: str, date_to: str) -> list[dict]:
     return all_sales
 
 def fetch_slot_lookup(supabase) -> dict:
-    """ดึง machine_stock จาก Supabase เพื่อ build lookup (machine_id, slot) → (sku_id, product_name)
+    """ดึง machine_stock จาก Supabase เพื่อ build lookup (machine_id, slot) → (sku_id, product_name, product_id)
     ⚠ หลัง VMS rebuild · API ไม่ส่ง products+name แล้ว · ต้อง lookup จาก DB
     """
     res = supabase.table("machine_stock").select(
-        "machine_id, slot_number, sku_id, product_name"
+        "machine_id, slot_number, sku_id, product_name, product_id"
     ).execute()
     lookup = {}
     for r in (res.data or []):
@@ -146,7 +146,7 @@ def fetch_slot_lookup(supabase) -> dict:
         # ถ้า DB ไม่มี sku_id แต่มี product_name → ลอง regex
         if not sku_id and r.get("product_name"):
             sku_id = map_product_to_sku(r["product_name"])
-        lookup[key] = (sku_id, r.get("product_name") or "")
+        lookup[key] = (sku_id, r.get("product_name") or "", r.get("product_id"))
     print(f"🗺  Slot lookup: {len(lookup)} slots ({sum(1 for v in lookup.values() if v[0])} mapped)")
     return lookup
 
@@ -211,6 +211,8 @@ def parse_api_sales(api_rows: list[dict], slot_lookup: dict | None = None) -> li
                     "quantity_sold": qty,
                     "grand_total": prod_price,
                     "sold_at": sold_at,
+                    "slot_number": prod.get("slot") or prod.get("slot_number") or None,
+                    "product_id":  prod.get("product_id") or prod.get("id") or None,
                 })
             continue
 
@@ -224,7 +226,7 @@ def parse_api_sales(api_rows: list[dict], slot_lookup: dict | None = None) -> li
         per_item_price = total_price / n_items if n_items else 0
         for slot_code in cart_slot:
             slot_str = str(slot_code) if slot_code is not None else ""
-            sku_id, product_name = slot_lookup.get((machine_id, slot_str), (None, ""))
+            sku_id, product_name, product_id_val = slot_lookup.get((machine_id, slot_str), (None, "", None))
             if not sku_id:
                 skipped_no_lookup += 1
                 continue
@@ -242,6 +244,8 @@ def parse_api_sales(api_rows: list[dict], slot_lookup: dict | None = None) -> li
                 "quantity_sold": qty,
                 "grand_total": per_item_price,
                 "sold_at": sold_at,
+                "slot_number": slot_str if slot_str else None,
+                "product_id":  product_id_val,
             })
 
     if skipped_no_lookup:
