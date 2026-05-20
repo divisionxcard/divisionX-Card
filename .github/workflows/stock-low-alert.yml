@@ -1,15 +1,15 @@
-name: VMS Stock Sync
+name: Daily Stock Low Alert
 
 on:
   schedule:
-    # รันทุกวัน เวลา 00:05 น. ไทย (17:05 UTC วันก่อน)
-    - cron: "5 17 * * *"
-  workflow_dispatch:  # กดรันมือได้
+    # ทุกวัน 09:00 น. ไทย (02:00 UTC)
+    - cron: "0 2 * * *"
+  workflow_dispatch:
 
 jobs:
-  sync:
+  alert:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 3
 
     steps:
       - name: Checkout code
@@ -21,18 +21,16 @@ jobs:
           python-version: "3.11"
 
       - name: Install dependencies
-        run: pip install requests supabase
+        run: pip install supabase
 
-      - name: Sync Machine Stock
+      - name: Run stock-low check
         env:
-          VMS_USERNAME:           ${{ secrets.VMS_USERNAME }}
-          VMS_PASSWORD:           ${{ secrets.VMS_PASSWORD }}
           SUPABASE_URL:           ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY:   ${{ secrets.SUPABASE_SERVICE_KEY }}
           TELEGRAM_BOT_TOKEN:     ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_ADMIN_CHAT_ID: ${{ secrets.TELEGRAM_ADMIN_CHAT_ID }}
           TELEGRAM_OWNER_CHAT_ID: ${{ secrets.TELEGRAM_OWNER_CHAT_ID }}
-        run: python deploy/scraper/vms_stock_sync.py
+        run: python deploy/scraper/stock_low_alert.py
 
       - name: Telegram alert on failure
         if: failure()
@@ -44,5 +42,5 @@ jobs:
             RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
             curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
               -H "Content-Type: application/json" \
-              -d "{\"chat_id\":\"$TELEGRAM_OWNER_CHAT_ID\",\"parse_mode\":\"HTML\",\"text\":\"🚨 <b>Cron Scraper FAIL</b>\\n\\nJob: <code>VMS Stock Sync</code>\\n<a href=\\\"$RUN_URL\\\">ดู log บน GitHub</a>\"}"
+              -d "{\"chat_id\":\"$TELEGRAM_OWNER_CHAT_ID\",\"parse_mode\":\"HTML\",\"text\":\"🚨 <b>Cron Scraper FAIL</b>\\n\\nJob: <code>Daily Stock Low Alert</code>\\n<a href=\\\"$RUN_URL\\\">ดู log บน GitHub</a>\"}"
           fi

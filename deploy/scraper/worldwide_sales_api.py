@@ -269,10 +269,24 @@ def save_to_supabase(supabase, records: list[dict]):
 
 
 def save_ship_fails(supabase, ship_fails: list[dict]):
-    """Insert Ship Fail rows · on_conflict ON order_number (กัน sync ซ้ำ)"""
+    """Insert Ship Fail rows · on_conflict ON order_number (กัน sync ซ้ำ) · ส่ง Telegram alert เฉพาะ row ใหม่"""
     if not ship_fails:
         return
     print(f"⚠️ Ship Fails: {len(ship_fails)} รายการ · บันทึกลง ship_fails...")
+
+    # 1. Pre-query: หา order_number ที่มีอยู่แล้ว → จะ skip alert (อันใหม่จริงเท่านั้นที่ alert)
+    order_nums = [sf.get("order_number") for sf in ship_fails if sf.get("order_number")]
+    existing_orders = set()
+    if order_nums:
+        try:
+            res = supabase.table("ship_fails").select("order_number").in_(
+                "order_number", order_nums
+            ).execute()
+            existing_orders = {r["order_number"] for r in (res.data or [])}
+        except Exception as e:
+            print(f"  ⚠️  pre-query existing failed: {e}")
+
+    # 2. Upsert ทั้งหมด
     for sf in ship_fails:
         try:
             supabase.table("ship_fails").upsert(
@@ -281,6 +295,37 @@ def save_ship_fails(supabase, ship_fails: list[dict]):
         except Exception as e:
             print(f"  ❌ ship_fail upsert error ({sf.get('order_number')}): {e}")
     print(f"  ✅ บันทึก ship_fails เสร็จ")
+
+    # 3. ส่ง Telegram alert เฉพาะ row ที่ไม่เคยมีก่อน (new fails จริง)
+    new_orders = [sf for sf in ship_fails
+                  if sf.get("order_number") and sf["order_number"] not in existing_orders]
+    if not new_orders:
+        return
+    try:
+        from telegram_alert import alert_ship_fail
+        # Fetch IDs + machine names สำหรับ alert
+        new_order_nums = [sf["order_number"] for sf in new_orders]
+        sf_res = supabase.table("ship_fails").select(
+            "id, order_number, machine_id, sku_id, qty, sold_at"
+        ).in_("order_number", new_order_nums).execute()
+        try:
+            mres = supabase.table("machines").select("machine_id, name").execute()
+            machine_names = {m["machine_id"]: m.get("name") for m in (mres.data or [])}
+        except Exception:
+            machine_names = {}
+        for sf_row in (sf_res.data or []):
+            alert_ship_fail(
+                ship_fail_id=sf_row["id"],
+                machine_id=sf_row["machine_id"],
+                machine_name=machine_names.get(sf_row["machine_id"]),
+                sku_id=sf_row.get("sku_id") or "—",
+                qty=sf_row.get("qty") or 1,
+                order_id=sf_row.get("order_number"),
+                sold_at=sf_row.get("sold_at"),
+            )
+        print(f"📱 Telegram: sent {len(sf_res.data or [])} ship_fail alerts")
+    except Exception as e:
+        print(f"⚠️  Telegram alert failed: {e}")
 
 
 def main():

@@ -36,11 +36,14 @@ jobs:
 
       - name: Run VMS Sales Sync (API first, fallback to Playwright)
         env:
-          VMS_URL:              ${{ secrets.VMS_URL }}
-          VMS_USERNAME:         ${{ secrets.VMS_USERNAME }}
-          VMS_PASSWORD:         ${{ secrets.VMS_PASSWORD }}
-          SUPABASE_URL:         ${{ secrets.SUPABASE_URL }}
-          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          VMS_URL:                ${{ secrets.VMS_URL }}
+          VMS_USERNAME:           ${{ secrets.VMS_USERNAME }}
+          VMS_PASSWORD:           ${{ secrets.VMS_PASSWORD }}
+          SUPABASE_URL:           ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY:   ${{ secrets.SUPABASE_SERVICE_KEY }}
+          TELEGRAM_BOT_TOKEN:     ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_ADMIN_CHAT_ID: ${{ secrets.TELEGRAM_ADMIN_CHAT_ID }}
+          TELEGRAM_OWNER_CHAT_ID: ${{ secrets.TELEGRAM_OWNER_CHAT_ID }}
           # ใช้ env vars แทน inline ${{ }} เพื่อกัน shell substitution edge cases
           IN_DAYS:      ${{ inputs.days }}
           IN_FROM_DATE: ${{ inputs.from_date }}
@@ -71,3 +74,16 @@ jobs:
           name: debug-screenshots
           path: /tmp/*.png
           if-no-files-found: ignore
+
+      - name: Telegram alert on failure
+        if: failure()
+        env:
+          TELEGRAM_BOT_TOKEN:     ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_OWNER_CHAT_ID: ${{ secrets.TELEGRAM_OWNER_CHAT_ID }}
+        run: |
+          if [ -n "$TELEGRAM_BOT_TOKEN" ] && [ -n "$TELEGRAM_OWNER_CHAT_ID" ]; then
+            RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+              -H "Content-Type: application/json" \
+              -d "{\"chat_id\":\"$TELEGRAM_OWNER_CHAT_ID\",\"parse_mode\":\"HTML\",\"text\":\"🚨 <b>Cron Scraper FAIL</b>\\n\\nJob: <code>VMS Daily Sync</code>\\n<a href=\\\"$RUN_URL\\\">ดู log บน GitHub</a>\"}"
+          fi

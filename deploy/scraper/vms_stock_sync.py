@@ -192,26 +192,34 @@ def save_to_supabase(records: list[dict]):
 
 
 def detect_slot_changes(supabase, current_records: list[dict], synced_at: str):
-    """ตรวจ slot product เปลี่ยน · update slot_products_history
+    """ตรวจ slot product เปลี่ยน · update slot_products_history + ส่ง Telegram alert
 
     Logic:
       - สำหรับแต่ละ slot ในรอบ sync นี้:
         - ดู active record ใน slot_products_history (effective_to IS NULL)
-        - ถ้าไม่มี → INSERT new active record
+        - ถ้าไม่มี → INSERT new active record (ไม่ alert · เป็น initial seed)
         - ถ้ามี + product_id ตรงกัน → ไม่ทำอะไร
-        - ถ้ามี + product_id ต่างกัน → ปิด old (set effective_to) + INSERT new
+        - ถ้ามี + product_id ต่างกัน → ปิด old (set effective_to) + INSERT new + alert
     """
     if not current_records:
         return
 
-    # 1. โหลด active history ทั้งหมด
+    # 1. โหลด active history ทั้งหมด (รวม product_name สำหรับ alert)
     res = supabase.table("slot_products_history").select(
-        "id, machine_id, slot_number, product_id"
+        "id, machine_id, slot_number, product_id, product_name, sku_id"
     ).is_("effective_to", "null").execute()
     active = {(r["machine_id"], r["slot_number"]): r for r in (res.data or [])}
 
+    # โหลด machine names ครั้งเดียว สำหรับ alert
+    try:
+        mres = supabase.table("machines").select("machine_id, name").execute()
+        machine_names = {m["machine_id"]: m.get("name") for m in (mres.data or [])}
+    except Exception:
+        machine_names = {}
+
     to_close = []  # id ของ records ที่ต้อง close
     to_insert = []
+    change_events = []  # list of (old_row, new_record) สำหรับ alert · ไม่รวม initial seed
     changes = 0
 
     for rec in current_records:
@@ -222,7 +230,7 @@ def detect_slot_changes(supabase, current_records: list[dict], synced_at: str):
             continue
         existing = active.get(key)
         if existing is None:
-            # New slot · INSERT
+            # New slot · INSERT (ไม่ alert · เป็น initial seed)
             to_insert.append({
                 "machine_id":     rec["machine_id"],
                 "slot_number":    rec["slot_number"],
@@ -234,7 +242,7 @@ def detect_slot_changes(supabase, current_records: list[dict], synced_at: str):
             })
             changes += 1
         elif existing["product_id"] != pid_new:
-            # Product changed · close old + insert new
+            # Product changed · close old + insert new + queue alert
             to_close.append(existing["id"])
             to_insert.append({
                 "machine_id":     rec["machine_id"],
@@ -245,6 +253,7 @@ def detect_slot_changes(supabase, current_records: list[dict], synced_at: str):
                 "effective_from": synced_at,
                 "detected_by":    "vms_stock_sync",
             })
+            change_events.append((existing, rec))
             changes += 1
         # else: same product · skip
 
@@ -265,6 +274,23 @@ def detect_slot_changes(supabase, current_records: list[dict], synced_at: str):
         print(f"📜 slot_products_history: {changes} changes · {len(to_close)} closed · {len(to_insert)} inserted")
     else:
         print(f"📜 slot_products_history: no changes")
+
+    # 2. ส่ง Telegram alert (ไม่ fail workflow ถ้า alert error)
+    if change_events:
+        try:
+            from telegram_alert import alert_slot_change
+            for old_row, new_rec in change_events:
+                alert_slot_change(
+                    history_id=old_row["id"],
+                    machine_id=old_row["machine_id"],
+                    machine_name=machine_names.get(old_row["machine_id"]),
+                    slot_number=old_row["slot_number"],
+                    old_product=old_row.get("product_name") or "—",
+                    new_product=new_rec.get("product_name") or "—",
+                )
+            print(f"📱 Telegram: sent {len(change_events)} slot-change alerts")
+        except Exception as e:
+            print(f"⚠️  Telegram alert failed: {e}")
 
 def main():
     now_bkk = datetime.utcnow() + timedelta(hours=7)

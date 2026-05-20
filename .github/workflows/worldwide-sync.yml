@@ -36,10 +36,13 @@ jobs:
 
       - name: Run WorldWide Sales Sync
         env:
-          WW_USERNAME:          ${{ secrets.WW_USERNAME }}
-          WW_PASSWORD:          ${{ secrets.WW_PASSWORD }}
-          SUPABASE_URL:         ${{ secrets.SUPABASE_URL }}
-          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          WW_USERNAME:            ${{ secrets.WW_USERNAME }}
+          WW_PASSWORD:            ${{ secrets.WW_PASSWORD }}
+          SUPABASE_URL:           ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY:   ${{ secrets.SUPABASE_SERVICE_KEY }}
+          TELEGRAM_BOT_TOKEN:     ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_ADMIN_CHAT_ID: ${{ secrets.TELEGRAM_ADMIN_CHAT_ID }}
+          TELEGRAM_OWNER_CHAT_ID: ${{ secrets.TELEGRAM_OWNER_CHAT_ID }}
           IN_DAYS:      ${{ inputs.days }}
           IN_FROM_DATE: ${{ inputs.from_date }}
           IN_TO_DATE:   ${{ inputs.to_date }}
@@ -55,3 +58,16 @@ jobs:
             echo "📅 Default: --days 1"
           fi
           python deploy/scraper/worldwide_sales_api.py "${ARGS[@]}"
+
+      - name: Telegram alert on failure
+        if: failure()
+        env:
+          TELEGRAM_BOT_TOKEN:     ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_OWNER_CHAT_ID: ${{ secrets.TELEGRAM_OWNER_CHAT_ID }}
+        run: |
+          if [ -n "$TELEGRAM_BOT_TOKEN" ] && [ -n "$TELEGRAM_OWNER_CHAT_ID" ]; then
+            RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+              -H "Content-Type: application/json" \
+              -d "{\"chat_id\":\"$TELEGRAM_OWNER_CHAT_ID\",\"parse_mode\":\"HTML\",\"text\":\"🚨 <b>Cron Scraper FAIL</b>\\n\\nJob: <code>WorldWide Daily Sales Sync</code>\\n<a href=\\\"$RUN_URL\\\">ดู log บน GitHub</a>\"}"
+          fi
