@@ -48,3 +48,5 @@ scripts/vms-scraper/*.har
 # ─── Database dumps ──────────────────────────────────────────
 *.sql.gz
 *.dump
+
+.vercel
