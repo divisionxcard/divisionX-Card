@@ -583,3 +583,58 @@ export async function reopenShipFail(id) {
   if (error) throw error
   return data
 }
+
+// ── Slot Products History (Layer 3-4) ────────────────────────
+// Recent slot product changes (last N days · default 7)
+// Returns "change events": pairs of closed period → newer period per slot
+export async function getRecentSlotChanges(days = 7) {
+  const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString()
+  const { data, error } = await supabase
+    .from("slot_products_history")
+    .select("*")
+    .or(`effective_to.gte.${since},effective_from.gte.${since}`)
+    .order("machine_id", { ascending: true })
+    .order("slot_number", { ascending: true })
+    .order("effective_from", { ascending: false })
+  if (error) throw error
+  // Group by (machine_id, slot_number) → list of periods desc
+  const grouped = {}
+  for (const r of data || []) {
+    const key = `${r.machine_id}::${r.slot_number}`
+    if (!grouped[key]) grouped[key] = []
+    grouped[key].push(r)
+  }
+  const changes = []
+  for (const key in grouped) {
+    const periods = grouped[key]
+    for (let i = 0; i < periods.length - 1; i++) {
+      const newer = periods[i]
+      const older = periods[i + 1]
+      if (older.effective_to) {
+        changes.push({
+          machine_id:       older.machine_id,
+          slot_number:      older.slot_number,
+          changed_at:       older.effective_to,
+          old_product_name: older.product_name,
+          old_sku_id:       older.sku_id,
+          old_product_id:   older.product_id,
+          new_product_name: newer.product_name,
+          new_sku_id:       newer.sku_id,
+          new_product_id:   newer.product_id,
+        })
+      }
+    }
+  }
+  changes.sort((a, b) => (b.changed_at || "").localeCompare(a.changed_at || ""))
+  return changes
+}
+
+export async function getRecentSlotChangeCount(days = 7) {
+  const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString()
+  const { count, error } = await supabase
+    .from("slot_products_history")
+    .select("*", { count: "exact", head: true })
+    .gte("effective_to", since)
+  if (error) throw error
+  return count || 0
+}

@@ -11,6 +11,7 @@ import {
 } from "lucide-react"
 import { fmt, fmtB, today, toBkkDate, fmtDayLabel } from "../shared/helpers"
 import { Badge, StatusDot, KpiCard, SectionTitle, BoosterPH } from "../shared/dx-components"
+import SlotChangesAlert from "../shared/SlotChangesAlert"
 
 export default function PageDashboardDX({ stockIn, stockOut, stockBalance, skus, transfers = [], machineStock = [], sales = [], machines = [], onAddLot, profile }) {
   const isAdmin = profile?.role === "admin"
@@ -150,6 +151,9 @@ export default function PageDashboardDX({ stockIn, stockOut, stockBalance, skus,
           </>
         ) : null}
       />
+
+      {/* Layer 4: Slot Changes Alert (admin only · auto-hide ถ้าไม่มี change) */}
+      {isAdmin && <SlotChangesAlert days={7}/>}
 
       {/* KPI Grid — admin: 4 cols w/ tall card #4; user: simple 2 cards */}
       {isAdmin ? (
