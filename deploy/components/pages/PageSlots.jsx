@@ -319,9 +319,11 @@ function ManualChangeModal({ machine_id, slot_number, current, machineName, skus
   const [err, setErr] = useState(null)
 
   const selectedSku = useMemo(() => skus.find(s => s.sku_id === skuId), [skus, skuId])
+  const canonicalName = selectedSku?.canonical_sku || selectedSku?.name || selectedSku?.sku_id || ""
+  // อัพเดทชื่อทุกครั้งที่เปลี่ยน SKU (ไม่ guard !productName) → ค่าจะตรงกับ Naming Contract เสมอ
   useEffect(() => {
-    if (selectedSku && !productName) setProductName(selectedSku.canonical_sku || selectedSku.product_name || selectedSku.sku_id)
-  }, [selectedSku])
+    if (selectedSku) setProductName(canonicalName)
+  }, [skuId])
 
   const save = async () => {
     if (!skuId && !productName) { setErr("กรุณาเลือก SKU หรือกรอกชื่อสินค้า"); return }
@@ -331,7 +333,7 @@ function ManualChangeModal({ machine_id, slot_number, current, machineName, skus
         machine_id, slot_number,
         new_sku_id:      skuId || null,
         new_product_id:  null,                // ไม่ทราบจาก UI (จะ sync จาก scraper รอบถัดไป)
-        new_product_name: productName || (selectedSku?.product_name) || skuId,
+        new_product_name: productName || canonicalName || skuId,
         note: note || null,
       })
       onSaved?.()
@@ -349,14 +351,33 @@ function ManualChangeModal({ machine_id, slot_number, current, machineName, skus
       <label style={{ display: "block", fontSize: 11, color: "var(--dx-text-muted)", marginBottom: 4 }}>SKU ใหม่</label>
       <select value={skuId} onChange={e => setSkuId(e.target.value)} className="dx-input" style={{ width: "100%", marginBottom: 10 }}>
         <option value="">— เลือก SKU —</option>
-        {skus.filter(s => s.active !== false).map(s => (
-          <option key={s.sku_id} value={s.sku_id}>{s.sku_id} · {s.canonical_sku || s.product_name}</option>
+        {skus.filter(s => s.is_active !== false).map(s => (
+          <option key={s.sku_id} value={s.sku_id}>{s.sku_id} · {s.canonical_sku || s.name}</option>
         ))}
       </select>
 
-      <label style={{ display: "block", fontSize: 11, color: "var(--dx-text-muted)", marginBottom: 4 }}>ชื่อสินค้าตามที่แสดงในตู้ (optional)</label>
+      <label style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 11, color: "var(--dx-text-muted)", marginBottom: 4 }}>
+        <span>ชื่อมาตรฐาน (canonical) — ใช้แสดงบนตู้ VMS</span>
+        {selectedSku && productName !== canonicalName && (
+          <button type="button" onClick={() => setProductName(canonicalName)}
+            style={{ background: "transparent", border: "none", color: "var(--dx-cyan-soft)", fontSize: 10, cursor: "pointer", padding: 0 }}>
+            ↺ reset เป็นค่ามาตรฐาน
+          </button>
+        )}
+      </label>
       <input value={productName} onChange={e => setProductName(e.target.value)} className="dx-input"
-        placeholder="เช่น One Piece OP - 15 Pack" style={{ width: "100%", marginBottom: 10 }}/>
+        placeholder="เลือก SKU ด้านบนเพื่อให้ระบบเติมชื่อมาตรฐานอัตโนมัติ"
+        style={{
+          width: "100%", marginBottom: 4,
+          ...(selectedSku && productName !== canonicalName ? { borderColor: "var(--dx-warning)" } : {})
+        }}/>
+      <div style={{ fontSize: 10, color: "var(--dx-text-muted)", marginBottom: 10 }}>
+        {selectedSku && productName === canonicalName
+          ? "✓ ตรงกับ Naming Contract (canonical_sku)"
+          : selectedSku && productName !== canonicalName
+            ? "⚠ ค่าไม่ตรงกับ canonical · admin VMS ต้องตั้งชื่อบนตู้ให้เหมือนช่องนี้"
+            : "ระบบจะเติมจาก SKU ที่เลือก · อิง Naming Contract"}
+      </div>
 
       <label style={{ display: "block", fontSize: 11, color: "var(--dx-text-muted)", marginBottom: 4 }}>หมายเหตุ (optional)</label>
       <textarea value={note} onChange={e => setNote(e.target.value)} className="dx-input" rows={2}
