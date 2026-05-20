@@ -261,7 +261,8 @@ def save_to_supabase(supabase, records: list[dict]):
     saved = 0
     for i in range(0, len(records), batch_size):
         batch = records[i:i + batch_size]
-        supabase.table("sales").upsert(batch, on_conflict="sale_key").execute()
+        # ⚠ ignore_duplicates=True · กัน overwrite product_name + sku_id หลัง admin เปลี่ยนสินค้า slot
+        supabase.table("sales").upsert(batch, on_conflict="sale_key", ignore_duplicates=True).execute()
         saved += len(batch)
         print(f"  ✅ batch {i // batch_size + 1}: {len(batch)} รายการ")
     print(f"🎉 บันทึกทั้งหมด {saved} รายการ")
