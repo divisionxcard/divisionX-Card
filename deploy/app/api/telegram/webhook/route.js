@@ -7,7 +7,7 @@ import { tgAnswerCallback, tgEditMessage } from "../../../../lib/telegram"
 
 const WEBHOOK_SECRET = process.env.TELEGRAM_WEBHOOK_SECRET // ตั้งตอน setWebhook
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL
-const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY
+const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
 
 function svc() {
   return createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY, {
