@@ -190,6 +190,82 @@ def save_to_supabase(records: list[dict]):
         saved += len(batch)
     print(f"🎉 บันทึกสำเร็จ {saved} slots")
 
+
+def detect_slot_changes(supabase, current_records: list[dict], synced_at: str):
+    """ตรวจ slot product เปลี่ยน · update slot_products_history
+
+    Logic:
+      - สำหรับแต่ละ slot ในรอบ sync นี้:
+        - ดู active record ใน slot_products_history (effective_to IS NULL)
+        - ถ้าไม่มี → INSERT new active record
+        - ถ้ามี + product_id ตรงกัน → ไม่ทำอะไร
+        - ถ้ามี + product_id ต่างกัน → ปิด old (set effective_to) + INSERT new
+    """
+    if not current_records:
+        return
+
+    # 1. โหลด active history ทั้งหมด
+    res = supabase.table("slot_products_history").select(
+        "id, machine_id, slot_number, product_id"
+    ).is_("effective_to", "null").execute()
+    active = {(r["machine_id"], r["slot_number"]): r for r in (res.data or [])}
+
+    to_close = []  # id ของ records ที่ต้อง close
+    to_insert = []
+    changes = 0
+
+    for rec in current_records:
+        key = (rec["machine_id"], rec["slot_number"])
+        pid_new = rec.get("product_id")
+        # skip empty slots ที่ไม่เคยมีของ
+        if pid_new is None and key not in active:
+            continue
+        existing = active.get(key)
+        if existing is None:
+            # New slot · INSERT
+            to_insert.append({
+                "machine_id":     rec["machine_id"],
+                "slot_number":    rec["slot_number"],
+                "product_id":     pid_new,
+                "product_name":   rec.get("product_name"),
+                "sku_id":         rec.get("sku_id"),
+                "effective_from": synced_at,
+                "detected_by":    "vms_stock_sync",
+            })
+            changes += 1
+        elif existing["product_id"] != pid_new:
+            # Product changed · close old + insert new
+            to_close.append(existing["id"])
+            to_insert.append({
+                "machine_id":     rec["machine_id"],
+                "slot_number":    rec["slot_number"],
+                "product_id":     pid_new,
+                "product_name":   rec.get("product_name"),
+                "sku_id":         rec.get("sku_id"),
+                "effective_from": synced_at,
+                "detected_by":    "vms_stock_sync",
+            })
+            changes += 1
+        # else: same product · skip
+
+    if to_close:
+        # ปิด period เก่า · batch update
+        for cid in to_close:
+            supabase.table("slot_products_history").update(
+                {"effective_to": synced_at}
+            ).eq("id", cid).execute()
+
+    if to_insert:
+        # Insert new periods · ignore duplicates (กัน race condition)
+        supabase.table("slot_products_history").upsert(
+            to_insert, ignore_duplicates=True
+        ).execute()
+
+    if changes:
+        print(f"📜 slot_products_history: {changes} changes · {len(to_close)} closed · {len(to_insert)} inserted")
+    else:
+        print(f"📜 slot_products_history: no changes")
+
 def main():
     now_bkk = datetime.utcnow() + timedelta(hours=7)
     print(f"\n{'='*50}")
@@ -246,6 +322,13 @@ def main():
         )
 
     save_to_supabase(all_records)
+
+    # Layer 3: Track slot product changes
+    try:
+        detect_slot_changes(supabase, all_records, synced_at)
+    except Exception as e:
+        # ไม่ fail workflow ถ้า history tracking error · core sync ยัง work
+        print(f"⚠️  slot_products_history update failed: {e}")
 
 if __name__ == "__main__":
     main()
