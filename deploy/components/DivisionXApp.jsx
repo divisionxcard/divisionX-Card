@@ -56,6 +56,7 @@ import PageMachineStockView from "./pages/PageMachineStockView"
 import PageTransfer from "./pages/PageTransfer"
 import PageWithdrawal from "./pages/PageWithdrawal"
 import PageStock from "./pages/PageStock"
+import PageSlots from "./pages/PageSlots"
 
 // ─────────────────────────────────────────────
 // SMALL COMPONENTS
@@ -311,6 +312,7 @@ const NAV_BASE = [
   { id:"analytics",  label:"วิเคราะห์ SKU",  icon:BarChart2     },
 ]
 const NAV_ADMIN_ITEMS = [
+  { id:"slots",     label:"จัดการ Slot",   icon:Layers },
   { id:"users",     label:"จัดการผู้ใช้",  icon:Users },
 ]
 
@@ -825,6 +827,7 @@ export default function DivisionXApp() {
           {page === "claims"     && <PageClaims    machines={machines} skus={skus} claims={claims} onAddClaim={addClaim} onConfirmClaim={confirmClaim} onDeleteClaim={deleteClaim} machineAssignments={machineAssignments} session={session} profile={profile}/>}
           {page === "analytics"  && <PageAnalytics sales={sales} skus={skus}/>}
           {page === "users"      && <PageUsers     currentProfile={profile} machines={machines} machineAssignments={machineAssignments} allProfiles={allProfiles} onAddAssignment={addAssignment} onRemoveAssignment={removeAssignment}/>}
+          {page === "slots"      && <PageSlots     machines={machines} skus={skus}/>}
           {page.startsWith("machine_") && (() => {
             const m = machines.find(mc => `machine_${mc.machine_id}` === page)
             return m ? <PageMachineHistory machine={m} stockOut={stockOut} skus={skus} machines={machines} session={session} profile={profile} onUpdateStockOut={updateStockOut} onDeleteStockOut={deleteStockOut}/> : null

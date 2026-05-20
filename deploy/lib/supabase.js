@@ -587,7 +587,7 @@ export async function reopenShipFail(id) {
 // ── Slot Products History (Layer 3-4) ────────────────────────
 // Recent slot product changes (last N days · default 7)
 // Returns "change events": pairs of closed period → newer period per slot
-export async function getRecentSlotChanges(days = 7) {
+export async function getRecentSlotChanges(days = 7, { includeReviewed = false } = {}) {
   const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString()
   const { data, error } = await supabase
     .from("slot_products_history")
@@ -611,7 +611,9 @@ export async function getRecentSlotChanges(days = 7) {
       const newer = periods[i]
       const older = periods[i + 1]
       if (older.effective_to) {
+        if (!includeReviewed && older.review_status === "confirmed") continue
         changes.push({
+          history_id:       older.id,                // ID ของ row "closed period" (สำหรับ review)
           machine_id:       older.machine_id,
           slot_number:      older.slot_number,
           changed_at:       older.effective_to,
@@ -621,6 +623,9 @@ export async function getRecentSlotChanges(days = 7) {
           new_product_name: newer.product_name,
           new_sku_id:       newer.sku_id,
           new_product_id:   newer.product_id,
+          review_status:    older.review_status || "pending",
+          review_note:      older.review_note,
+          reviewed_at:      older.reviewed_at,
         })
       }
     }
@@ -635,6 +640,100 @@ export async function getRecentSlotChangeCount(days = 7) {
     .from("slot_products_history")
     .select("*", { count: "exact", head: true })
     .gte("effective_to", since)
+    .eq("review_status", "pending")
   if (error) throw error
   return count || 0
+}
+
+// ── Active slot mappings + history (Layer 5) ─────────────────────
+// คืน mapping ปัจจุบัน (effective_to IS NULL) ของทุกตู้ หรือเฉพาะตู้
+export async function getActiveSlotMappings(machineId = null) {
+  let q = supabase
+    .from("slot_products_history")
+    .select("*")
+    .is("effective_to", null)
+    .order("machine_id", { ascending: true })
+    .order("slot_number", { ascending: true })
+  if (machineId) q = q.eq("machine_id", machineId)
+  const { data, error } = await q
+  if (error) throw error
+  return data || []
+}
+
+// คืน history เต็มของ slot ใดตู้ใด (ทั้งปิดและ active)
+export async function getSlotHistory(machineId, slotNumber) {
+  const { data, error } = await supabase
+    .from("slot_products_history")
+    .select("*")
+    .eq("machine_id", machineId)
+    .eq("slot_number", slotNumber)
+    .order("effective_from", { ascending: false })
+  if (error) throw error
+  return data || []
+}
+
+// Admin บันทึก slot change ด้วยตนเอง (ก่อน scraper ตรวจพบ)
+//   - ปิด active row เดิม (effective_to = now)
+//   - INSERT row ใหม่ (effective_from = now · status = confirmed · detected_by = 'manual')
+export async function recordSlotChangeManual({
+  machine_id, slot_number,
+  new_product_id, new_product_name, new_sku_id, note,
+}) {
+  const now = new Date().toISOString()
+  const { data: active } = await supabase
+    .from("slot_products_history")
+    .select("id")
+    .eq("machine_id", machine_id)
+    .eq("slot_number", slot_number)
+    .is("effective_to", null)
+    .maybeSingle()
+  if (active) {
+    const { error: upErr } = await supabase
+      .from("slot_products_history")
+      .update({
+        effective_to:  now,
+        review_status: "confirmed",
+        review_note:   note || "Manual change by admin",
+        reviewed_at:   now,
+      })
+      .eq("id", active.id)
+    if (upErr) throw upErr
+  }
+  const { data, error } = await supabase
+    .from("slot_products_history")
+    .insert({
+      machine_id, slot_number,
+      product_id:    new_product_id,
+      product_name:  new_product_name,
+      sku_id:        new_sku_id,
+      effective_from: now,
+      detected_by:   "manual",
+      review_status: "confirmed",
+      review_note:   note || "Manual change by admin",
+      reviewed_at:   now,
+    })
+    .select()
+    .single()
+  if (error) throw error
+  return data
+}
+
+// Review slot change event (อิงกับ row "closed period" — history_id)
+//   status: 'confirmed' | 'flagged'
+export async function reviewSlotChange(historyId, status, note = null) {
+  if (!["confirmed", "flagged"].includes(status)) throw new Error("invalid review status")
+  const { data: { user } } = await supabase.auth.getUser()
+  const { data, error } = await supabase
+    .from("slot_products_history")
+    .update({
+      review_status: status,
+      review_note:   note,
+      reviewed_at:   new Date().toISOString(),
+      reviewed_by:   user?.id || null,
+    })
+    .eq("id", historyId)
+    .select()
+    .single()
+  if (error) throw error
+  return data
 }
