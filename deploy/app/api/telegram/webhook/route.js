@@ -73,11 +73,17 @@ export async function POST(req) {
         if (e2) throw e2
         const newBySlot = Object.fromEntries((active || []).map(r => [r.slot_number, r.product_name]))
 
-        // 3) Build full message
+        // 3) Machine display name (จาก machines.name · ไม่ parse จาก message text เพราะ HTML หาย)
+        const { data: machRow } = await client
+          .from("machines")
+          .select("name")
+          .eq("machine_id", machineId)
+          .maybeSingle()
+        const machineDisplay = machRow?.name || machineId
+
+        // 4) Build full message
         const total = (closed || []).length
         const escHtml = (s) => String(s ?? "—").replace(/[&<>]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]))
-        const machineLineMatch = /ตู้ <b>([^<]+)<\/b>/.exec(cb.message?.text || "")
-        const machineDisplay = machineLineMatch ? machineLineMatch[1] : machineId
         let body = `🔄 <b>Slot Product เปลี่ยน ${total} รายการ</b>\nตู้ <b>${escHtml(machineDisplay)}</b>\n`
         const cap = 25
         for (const r of (closed || []).slice(0, cap)) {
