@@ -82,8 +82,9 @@ def alert_slot_change(history_id, machine_id, machine_name, slot_number,
     return send_message(ADMIN_CHAT_ID, text, reply_markup=keyboard)
 
 
-PAGESLOTS_URL = os.environ.get("DVX_BASE_URL", "https://division-x-card.vercel.app") + "/"
-MAX_DETAIL_LINES = 25
+PAGESLOTS_URL = os.environ.get("DVX_BASE_URL", "https://division-x-card.vercel.app") + "/?page=slots"
+INITIAL_DETAIL_LINES = 5  # initial alert แสดง · ที่เหลือซ่อนหลังปุ่ม "ดูทั้งหมด"
+MAX_DETAIL_LINES = 25     # expanded message limit (กัน Telegram 4096 char cap)
 
 
 def alert_slot_changes_batch(machine_id, machine_name, changes, synced_at_unix):
@@ -107,23 +108,24 @@ def alert_slot_changes_batch(machine_id, machine_name, changes, synced_at_unix):
         f"🔄 <b>Slot Product เปลี่ยน {total} รายการ</b>\n"
         f"ตู้ <b>{_esc(machine_name or machine_id)}</b>\n"
     )
+    initial = min(INITIAL_DETAIL_LINES, total)
     lines = []
-    for c in changes_sorted[:MAX_DETAIL_LINES]:
+    for c in changes_sorted[:initial]:
         lines.append(
             f"\nช่อง <code>{_esc(c.get('slot_number'))}</code>\n"
             f"จาก: {_esc(c.get('old_product') or '—')} → เป็น: <b>{_esc(c.get('new_product') or '—')}</b>"
         )
     text = header + "".join(lines)
-    if total > MAX_DETAIL_LINES:
-        text += f"\n\n<i>...อีก {total - MAX_DETAIL_LINES} รายการ (ดูเต็มใน PageSlots)</i>"
+    has_more = total > initial
+    if has_more:
+        text += f"\n\n<i>...อีก {total - initial} รายการ (กด \"ดูทั้งหมด\")</i>"
 
-    keyboard = {
-        "inline_keyboard": [
-            [{"text": f"✅ ยืนยันทั้ง {total} รายการ", "callback_data": f"slot_confirm_batch:{machine_id}:{synced_at_unix}"}],
-            [{"text": "📋 ดูในหน้าจัดการ Slot", "url": PAGESLOTS_URL}],
-        ]
-    }
-    return send_message(ADMIN_CHAT_ID, text, reply_markup=keyboard)
+    buttons = []
+    if has_more:
+        buttons.append([{"text": f"📜 ดูทั้งหมด {total} รายการ", "callback_data": f"slot_expand:{machine_id}:{synced_at_unix}"}])
+    buttons.append([{"text": f"✅ ยืนยันทั้ง {total} รายการ", "callback_data": f"slot_confirm_batch:{machine_id}:{synced_at_unix}"}])
+    buttons.append([{"text": "📋 ดูในหน้าจัดการ Slot", "url": PAGESLOTS_URL}])
+    return send_message(ADMIN_CHAT_ID, text, reply_markup={"inline_keyboard": buttons})
 
 
 def alert_ship_fail(ship_fail_id, machine_id, machine_name, sku_id, qty,

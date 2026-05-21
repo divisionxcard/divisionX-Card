@@ -319,8 +319,19 @@ const NAV_ADMIN_ITEMS = [
 // ─────────────────────────────────────────────
 // APP ROOT
 // ─────────────────────────────────────────────
+// Deep-link · อ่าน ?page= จาก URL ตอน mount (Telegram alerts ใช้ /?page=slots)
+const VALID_PAGES = new Set([
+  "dashboard","stock","withdrawal","transfer","mystock","refillprep",
+  "claims","machstock","sales","analytics","slots","users",
+])
+function initialPageFromURL() {
+  if (typeof window === "undefined") return "dashboard"
+  const p = new URLSearchParams(window.location.search).get("page")
+  return p && VALID_PAGES.has(p) ? p : "dashboard"
+}
+
 export default function DivisionXApp() {
-  const [page, setPage]         = useState("dashboard")
+  const [page, setPage]         = useState(initialPageFromURL)
   const [sideOpen, setSideOpen] = useState(false)
   const [withdrawalExpanded, setWithdrawalExpanded] = useState(false)
   const [stockInitialTab, setStockInitialTab] = useState(null)

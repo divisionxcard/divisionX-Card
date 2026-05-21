@@ -38,6 +38,68 @@ export async function POST(req) {
     const messageId = cb.message?.message_id
 
     try {
+      // ── Expand list: slot_expand:<machine_id>:<unix_synced_at> ──
+      if (action === "slot_expand") {
+        const machineId  = parts[1]
+        const syncedUnix = parseInt(parts[2], 10)
+        if (!machineId || !syncedUnix) {
+          await tgAnswerCallback({ callbackQueryId: cb.id, text: "❌ callback_data ไม่ถูกต้อง", alert: true })
+          return NextResponse.json({ ok: false }, { status: 400 })
+        }
+        const windowSec = 600
+        const fromIso = new Date((syncedUnix - windowSec) * 1000).toISOString()
+        const toIso   = new Date((syncedUnix + windowSec) * 1000).toISOString()
+
+        const client = svc()
+        // 1) Closed pending events in window (old products)
+        const { data: closed, error: e1 } = await client
+          .from("slot_products_history")
+          .select("slot_number, product_name, effective_to")
+          .eq("machine_id", machineId)
+          .not("effective_to", "is", null)
+          .gte("effective_to", fromIso)
+          .lte("effective_to", toIso)
+          .order("slot_number", { ascending: true })
+        if (e1) throw e1
+
+        // 2) Current active rows for those slots (new products)
+        const slotNums = [...new Set((closed || []).map(r => r.slot_number))]
+        const { data: active, error: e2 } = await client
+          .from("slot_products_history")
+          .select("slot_number, product_name")
+          .eq("machine_id", machineId)
+          .is("effective_to", null)
+          .in("slot_number", slotNums.length ? slotNums : ["__none__"])
+        if (e2) throw e2
+        const newBySlot = Object.fromEntries((active || []).map(r => [r.slot_number, r.product_name]))
+
+        // 3) Build full message
+        const total = (closed || []).length
+        const escHtml = (s) => String(s ?? "—").replace(/[&<>]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]))
+        const machineLineMatch = /ตู้ <b>([^<]+)<\/b>/.exec(cb.message?.text || "")
+        const machineDisplay = machineLineMatch ? machineLineMatch[1] : machineId
+        let body = `🔄 <b>Slot Product เปลี่ยน ${total} รายการ</b>\nตู้ <b>${escHtml(machineDisplay)}</b>\n`
+        const cap = 25
+        for (const r of (closed || []).slice(0, cap)) {
+          body += `\nช่อง <code>${escHtml(r.slot_number)}</code>\nจาก: ${escHtml(r.product_name)} → เป็น: <b>${escHtml(newBySlot[r.slot_number] || "—")}</b>\n`
+        }
+        if (total > cap) body += `\n<i>...แสดง ${cap} แรก · ที่เหลือดูใน PageSlots</i>`
+
+        const buttons = [
+          [{ text: `✅ ยืนยันทั้ง ${total} รายการ`, callback_data: `slot_confirm_batch:${machineId}:${syncedUnix}` }],
+          [{ text: "📋 ดูในหน้าจัดการ Slot", url: "https://division-x-card.vercel.app/?page=slots" }],
+        ]
+
+        await tgAnswerCallback({ callbackQueryId: cb.id, text: `แสดง ${total} รายการ` })
+        await tgEditMessage({
+          chatId, messageId,
+          text: body,
+          parseMode: "HTML",
+          replyMarkup: { inline_keyboard: buttons },
+        })
+        return NextResponse.json({ ok: true, total })
+      }
+
       // ── Batch confirm: slot_confirm_batch:<machine_id>:<unix_synced_at> ──
       if (action === "slot_confirm_batch") {
         const machineId  = parts[1]
