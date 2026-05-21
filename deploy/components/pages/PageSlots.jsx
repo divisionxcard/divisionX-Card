@@ -117,7 +117,7 @@ export default function PageSlots({ machines = [], skus = [] }) {
         </div>
       ) : machineIds.length === 0 ? (
         <div className="dx-card" style={{ padding: 30, textAlign: "center", color: "var(--dx-text-muted)", fontSize: 12 }}>
-          ยังไม่มีข้อมูล slot mapping · รอ scraper รันรอบถัดไป
+          ยังไม่มีข้อมูล mapping ช่อง · รอ scraper รันรอบถัดไป
         </div>
       ) : machineIds.map(mid => (
         <div key={mid} className="dx-card" style={{ marginBottom: 16, padding: 16 }}>
@@ -135,7 +135,7 @@ export default function PageSlots({ machines = [], skus = [] }) {
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
               <thead>
                 <tr style={{ background: "var(--dx-bg-input)", color: "var(--dx-text-muted)", fontSize: 10, textTransform: "uppercase", letterSpacing: 0.5 }}>
-                  <th style={{ padding: "8px 10px", textAlign: "center", width: 60 }}>Slot</th>
+                  <th style={{ padding: "8px 10px", textAlign: "center", width: 60 }}>ช่อง</th>
                   <th style={{ padding: "8px 10px", textAlign: "left" }}>สินค้าปัจจุบัน</th>
                   <th style={{ padding: "8px 10px", textAlign: "left", width: 120 }}>SKU</th>
                   <th style={{ padding: "8px 10px", textAlign: "left", width: 140 }}>เริ่มขายเมื่อ</th>
@@ -207,7 +207,7 @@ export default function PageSlots({ machines = [], skus = [] }) {
                       </td>
                       <td style={{ padding: "8px 10px" }}>
                         <div style={{ fontFamily: "var(--dx-mono)", fontSize: 11 }}>{machineNames[c.machine_id] || c.machine_id}</div>
-                        <div style={{ fontSize: 10, color: "var(--dx-text-muted)" }}>slot {c.slot_number}</div>
+                        <div style={{ fontSize: 10, color: "var(--dx-text-muted)" }}>ช่อง {c.slot_number}</div>
                       </td>
                       <td style={{ padding: "8px 10px", fontSize: 11 }}>
                         <span style={{ color: "var(--dx-text-secondary)" }}>{c.old_product_name || "—"}</span>
@@ -274,7 +274,7 @@ function HistoryModal({ machine_id, slot_number, machineName, onClose }) {
   }, [machine_id, slot_number])
 
   return (
-    <ModalShell title={`ประวัติ Slot ${slot_number}`} subtitle={`${machineName || machine_id} · slot ${slot_number}`} onClose={onClose}>
+    <ModalShell title={`ประวัติช่อง ${slot_number}`} subtitle={`${machineName || machine_id} · ช่อง ${slot_number}`} onClose={onClose}>
       {loading ? <Loader2 size={20} className="animate-spin" style={{ color: "var(--dx-text-muted)" }}/>
        : rows.length === 0 ? <div style={{ textAlign: "center", color: "var(--dx-text-muted)", fontSize: 12, padding: 20 }}>ไม่มีประวัติ</div>
        : (
@@ -342,7 +342,7 @@ function ManualChangeModal({ machine_id, slot_number, current, machineName, skus
   }
 
   return (
-    <ModalShell title={`เปลี่ยนสินค้า Slot ${slot_number}`} subtitle={`${machineName || machine_id} · slot ${slot_number}`} onClose={onClose}>
+    <ModalShell title={`เปลี่ยนสินค้าช่อง ${slot_number}`} subtitle={`${machineName || machine_id} · ช่อง ${slot_number}`} onClose={onClose}>
       <div style={{ marginBottom: 12, padding: 10, background: "var(--dx-bg-input)", borderRadius: 6, fontSize: 11 }}>
         <div style={{ color: "var(--dx-text-muted)", marginBottom: 2 }}>สินค้าปัจจุบัน</div>
         <div style={{ color: "var(--dx-text)" }}>{current?.product_name || "—"} {current?.sku_id && <span style={{ color: "var(--dx-text-muted)", fontFamily: "var(--dx-mono)" }}>({current.sku_id})</span>}</div>

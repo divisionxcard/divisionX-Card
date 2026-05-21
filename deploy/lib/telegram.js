@@ -51,7 +51,7 @@ export const adminChat = () => TELEGRAM_ADMIN_CHAT_ID
 export async function alertSlotChange({ historyId, machineId, machineName, slotNumber, oldProduct, newProduct, qtyRemain }) {
   const text =
     `🔄 <b>Slot Product เปลี่ยน</b>\n\n` +
-    `<b>${esc(machineName || machineId)}</b> · slot <code>${esc(slotNumber)}</code>\n` +
+    `<b>${esc(machineName || machineId)}</b> · ช่อง <code>${esc(slotNumber)}</code>\n` +
     `จาก: <s>${esc(oldProduct || "—")}</s>\n` +
     `เป็น: <b>${esc(newProduct || "—")}</b>\n` +
     (qtyRemain != null ? `สต็อกเก่าค้าง: <b>${qtyRemain}</b> packs\n` : "") +
@@ -96,7 +96,7 @@ export async function alertCronFail({ jobName, errorMessage, runUrl }) {
 export async function alertStockLow({ items }) {
   if (!items || items.length === 0) return null
   const lines = items.map(i =>
-    `• <b>${esc(i.machine_name || i.machine_id)}</b> slot <code>${esc(i.slot_number)}</code> · ${esc(i.product_name || i.sku_id)} · เหลือ <b>${i.remain}</b>/${i.max_capacity || "?"}`
+    `• <b>${esc(i.machine_name || i.machine_id)}</b> ช่อง <code>${esc(i.slot_number)}</code> · ${esc(i.product_name || i.sku_id)} · เหลือ <b>${i.remain}</b>/${i.max_capacity || "?"}`
   )
   const text =
     `⚠️ <b>Stock หน้าตู้ต่ำ (${items.length} ช่อง)</b>\n\n` +

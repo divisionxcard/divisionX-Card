@@ -40,7 +40,7 @@ export default function SlotChangesAlert({ days = 7 }) {
           cursor: "pointer",
         }}>
         <AlertTriangle size={14}/>
-        <span style={{ fontWeight: 600 }}>พบ slot product เปลี่ยน {changes.length} รายการ ในช่วง {days} วันล่าสุด</span>
+        <span style={{ fontWeight: 600 }}>พบสินค้าในช่องเปลี่ยน {changes.length} รายการ ในช่วง {days} วันล่าสุด</span>
         <span style={{ marginLeft: "auto", fontSize: 11, opacity: 0.8 }}>คลิกดูรายละเอียด →</span>
       </button>
 
@@ -58,10 +58,10 @@ export default function SlotChangesAlert({ days = 7 }) {
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: 20, borderBottom: "1px solid var(--dx-border)" }}>
               <div>
                 <h3 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: "var(--dx-text)" }}>
-                  Slot Product Changes (ช่วง {days} วันล่าสุด)
+                  สินค้าในช่องที่เปลี่ยน (ช่วง {days} วันล่าสุด)
                 </h3>
                 <p style={{ margin: "2px 0 0", fontSize: 11, color: "var(--dx-text-muted)" }}>
-                  ตู้ admin เปลี่ยนสินค้าใน slot · DvX scraper ตรวจอัตโนมัติทุกวัน 00:05 น.
+                  ตู้ admin เปลี่ยนสินค้าในช่อง · DvX scraper ตรวจอัตโนมัติทุกวัน 00:05 น.
                 </p>
               </div>
               <div style={{ display: "flex", gap: 8 }}>
@@ -81,7 +81,7 @@ export default function SlotChangesAlert({ days = 7 }) {
                 </div>
               ) : changes.length === 0 ? (
                 <div style={{ textAlign: "center", padding: 30, color: "var(--dx-text-muted)", fontSize: 12 }}>
-                  ไม่มี slot changes ในช่วงนี้
+                  ไม่มีการเปลี่ยนสินค้าในช่อง ในช่วงนี้
                 </div>
               ) : (
                 <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
@@ -89,7 +89,7 @@ export default function SlotChangesAlert({ days = 7 }) {
                     <tr style={{ background: "var(--dx-bg-input)", color: "var(--dx-text-muted)", fontSize: 10, textTransform: "uppercase", letterSpacing: 0.5 }}>
                       <th style={{ padding: "10px 12px", textAlign: "left" }}>เวลาเปลี่ยน</th>
                       <th style={{ padding: "10px 12px", textAlign: "left" }}>ตู้</th>
-                      <th style={{ padding: "10px 12px", textAlign: "center" }}>Slot</th>
+                      <th style={{ padding: "10px 12px", textAlign: "center" }}>ช่อง</th>
                       <th style={{ padding: "10px 12px", textAlign: "left" }}>จากสินค้า</th>
                       <th style={{ padding: "10px 12px", textAlign: "center" }}>→</th>
                       <th style={{ padding: "10px 12px", textAlign: "left" }}>เป็นสินค้า</th>

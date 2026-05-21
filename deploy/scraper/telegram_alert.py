@@ -65,7 +65,7 @@ def alert_slot_change(history_id, machine_id, machine_name, slot_number,
     """ส่งไปกลุ่ม Admin · มี inline button ยืนยัน/Bug (single-event · legacy)"""
     text = (
         f"🔄 <b>Slot Product เปลี่ยน</b>\n\n"
-        f"<b>{_esc(machine_name or machine_id)}</b> · slot <code>{_esc(slot_number)}</code>\n"
+        f"<b>{_esc(machine_name or machine_id)}</b> · ช่อง <code>{_esc(slot_number)}</code>\n"
         f"จาก: <s>{_esc(old_product)}</s>\n"
         f"เป็น: <b>{_esc(new_product)}</b>\n"
     )
@@ -110,7 +110,7 @@ def alert_slot_changes_batch(machine_id, machine_name, changes, synced_at_unix):
     lines = []
     for c in changes_sorted[:MAX_DETAIL_LINES]:
         lines.append(
-            f"\nslot <code>{_esc(c.get('slot_number'))}</code>\n"
+            f"\nช่อง <code>{_esc(c.get('slot_number'))}</code>\n"
             f"จาก: {_esc(c.get('old_product') or '—')} → เป็น: <b>{_esc(c.get('new_product') or '—')}</b>"
         )
     text = header + "".join(lines)
@@ -171,13 +171,13 @@ def alert_stock_low(items):
     for i in items[:25]:
         m = i.get("machine_name") or i.get("machine_id")
         lines.append(
-            f"• <b>{_esc(m)}</b> slot <code>{_esc(i.get('slot_number'))}</code> · "
+            f"• <b>{_esc(m)}</b> ช่อง <code>{_esc(i.get('slot_number'))}</code> · "
             f"{_esc(i.get('product_name') or i.get('sku_id'))} · "
             f"เหลือ <b>{i.get('remain', 0)}</b>/{i.get('max_capacity') or '?'}"
         )
     text = f"⚠️ <b>Stock หน้าตู้ต่ำ ({len(items)} ช่อง)</b>\n\n" + "\n".join(lines)
     if len(items) > 25:
-        text += f"\n\n<i>...และอีก {len(items) - 25} รายการ</i>"
+        text += f"\n\n<i>...และอีก {len(items) - 25} ช่อง</i>"
     return send_message(ADMIN_CHAT_ID, text)
 
 
