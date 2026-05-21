@@ -275,20 +275,36 @@ def detect_slot_changes(supabase, current_records: list[dict], synced_at: str):
     else:
         print(f"📜 slot_products_history: no changes")
 
-    # 2. ส่ง Telegram alert (ไม่ fail workflow ถ้า alert error)
+    # 2. ส่ง Telegram alert · batch ตาม machine_id (1 ข้อความ/ตู้/sync)
     if change_events:
         try:
-            from telegram_alert import alert_slot_change
+            from telegram_alert import alert_slot_changes_batch
+            from datetime import datetime as _dt
+            # parse synced_at เป็น unix epoch สำหรับ batch callback window
+            try:
+                synced_dt = _dt.fromisoformat(synced_at.replace("Z", "+00:00"))
+                synced_unix = int(synced_dt.timestamp())
+            except Exception:
+                synced_unix = int(_dt.utcnow().timestamp())
+
+            # group by machine_id
+            by_machine = {}
             for old_row, new_rec in change_events:
-                alert_slot_change(
-                    history_id=old_row["id"],
-                    machine_id=old_row["machine_id"],
-                    machine_name=machine_names.get(old_row["machine_id"]),
-                    slot_number=old_row["slot_number"],
-                    old_product=old_row.get("product_name") or "—",
-                    new_product=new_rec.get("product_name") or "—",
+                mid = old_row["machine_id"]
+                by_machine.setdefault(mid, []).append({
+                    "slot_number": old_row["slot_number"],
+                    "old_product": old_row.get("product_name") or "—",
+                    "new_product": new_rec.get("product_name") or "—",
+                    "history_id":  old_row["id"],
+                })
+            for mid, ch_list in by_machine.items():
+                alert_slot_changes_batch(
+                    machine_id=mid,
+                    machine_name=machine_names.get(mid),
+                    changes=ch_list,
+                    synced_at_unix=synced_unix,
                 )
-            print(f"📱 Telegram: sent {len(change_events)} slot-change alerts")
+            print(f"📱 Telegram: sent {len(by_machine)} batch alerts covering {len(change_events)} slot changes")
         except Exception as e:
             print(f"⚠️  Telegram alert failed: {e}")
 

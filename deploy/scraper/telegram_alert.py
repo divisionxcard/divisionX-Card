@@ -62,7 +62,7 @@ def send_message(chat_id, text, reply_markup=None, parse_mode="HTML"):
 
 def alert_slot_change(history_id, machine_id, machine_name, slot_number,
                       old_product, new_product, qty_remain=None):
-    """ส่งไปกลุ่ม Admin · มี inline button ยืนยัน/Bug"""
+    """ส่งไปกลุ่ม Admin · มี inline button ยืนยัน/Bug (single-event · legacy)"""
     text = (
         f"🔄 <b>Slot Product เปลี่ยน</b>\n\n"
         f"<b>{_esc(machine_name or machine_id)}</b> · slot <code>{_esc(slot_number)}</code>\n"
@@ -78,6 +78,50 @@ def alert_slot_change(history_id, machine_id, machine_name, slot_number,
             {"text": "✅ ยืนยัน (ตั้งใจ)", "callback_data": f"slot_confirm:{history_id}"},
             {"text": "🚩 Bug",            "callback_data": f"slot_flag:{history_id}"},
         ]]
+    }
+    return send_message(ADMIN_CHAT_ID, text, reply_markup=keyboard)
+
+
+PAGESLOTS_URL = os.environ.get("DVX_BASE_URL", "https://division-x-card.vercel.app") + "/"
+MAX_DETAIL_LINES = 25
+
+
+def alert_slot_changes_batch(machine_id, machine_name, changes, synced_at_unix):
+    """ส่ง 1 ข้อความรวมการเปลี่ยน slot ทั้งหมดของ machine นี้ใน 1 sync
+    changes: list of dict {slot_number, old_product, new_product, history_id}
+    synced_at_unix: int (unix epoch · ใช้ใน callback batch window)
+    """
+    if not changes:
+        return None
+    total = len(changes)
+    # เรียงตาม slot_number ascending (numeric-aware)
+    def slot_key(c):
+        s = str(c.get("slot_number") or "")
+        try:
+            return (0, int(s))
+        except ValueError:
+            return (1, s)
+    changes_sorted = sorted(changes, key=slot_key)
+
+    header = (
+        f"🔄 <b>Slot Product เปลี่ยน {total} รายการ</b>\n"
+        f"ตู้ <b>{_esc(machine_name or machine_id)}</b>\n"
+    )
+    lines = []
+    for c in changes_sorted[:MAX_DETAIL_LINES]:
+        lines.append(
+            f"\nslot <code>{_esc(c.get('slot_number'))}</code>\n"
+            f"จาก: {_esc(c.get('old_product') or '—')} → เป็น: <b>{_esc(c.get('new_product') or '—')}</b>"
+        )
+    text = header + "".join(lines)
+    if total > MAX_DETAIL_LINES:
+        text += f"\n\n<i>...อีก {total - MAX_DETAIL_LINES} รายการ (ดูเต็มใน PageSlots)</i>"
+
+    keyboard = {
+        "inline_keyboard": [
+            [{"text": f"✅ ยืนยันทั้ง {total} รายการ", "callback_data": f"slot_confirm_batch:{machine_id}:{synced_at_unix}"}],
+            [{"text": "📋 ดูในหน้าจัดการ Slot", "url": PAGESLOTS_URL}],
+        ]
     }
     return send_message(ADMIN_CHAT_ID, text, reply_markup=keyboard)
 
