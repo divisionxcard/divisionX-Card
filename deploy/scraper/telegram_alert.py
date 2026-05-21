@@ -104,9 +104,11 @@ def alert_slot_changes_batch(machine_id, machine_name, changes, synced_at_unix):
             return (1, s)
     changes_sorted = sorted(changes, key=slot_key)
 
+    # machines.name มี "ตู้" prefix แล้ว · ห้ามใส่ "ตู้ " ซ้ำ
+    machine_label = machine_name if machine_name else f"ตู้ {machine_id}"
     header = (
         f"🔄 <b>Slot Product เปลี่ยน {total} รายการ</b>\n"
-        f"ตู้ <b>{_esc(machine_name or machine_id)}</b>\n"
+        f"<b>{_esc(machine_label)}</b>\n"
     )
     initial = min(INITIAL_DETAIL_LINES, total)
     lines = []

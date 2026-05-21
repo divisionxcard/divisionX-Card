@@ -79,12 +79,13 @@ export async function POST(req) {
           .select("name")
           .eq("machine_id", machineId)
           .maybeSingle()
-        const machineDisplay = machRow?.name || machineId
+        // machines.name มี "ตู้" prefix แล้ว · ใส่ตรง · ถ้าไม่มี fallback ใส่ "ตู้ {id}"
+        const machineDisplay = machRow?.name || `ตู้ ${machineId}`
 
         // 4) Build full message
         const total = (closed || []).length
         const escHtml = (s) => String(s ?? "—").replace(/[&<>]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]))
-        let body = `🔄 <b>Slot Product เปลี่ยน ${total} รายการ</b>\nตู้ <b>${escHtml(machineDisplay)}</b>\n`
+        let body = `🔄 <b>Slot Product เปลี่ยน ${total} รายการ</b>\n<b>${escHtml(machineDisplay)}</b>\n`
         const cap = 25
         for (const r of (closed || []).slice(0, cap)) {
           body += `\nช่อง <code>${escHtml(r.slot_number)}</code>\nจาก: ${escHtml(r.product_name)} → เป็น: <b>${escHtml(newBySlot[r.slot_number] || "—")}</b>\n`
