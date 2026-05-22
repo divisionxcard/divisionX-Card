@@ -513,7 +513,6 @@ function ReconcileModal({ change, machineName, machines, allProfiles, onClose, o
         style={{ width: "100%", marginBottom: 12 }}>
         <option value="returned">↩ คืนเข้าสต็อกกลาง (สินค้ายังอยู่ดี · นำกลับเข้ากลาง)</option>
         <option value="transferred_to_admin">👤 แอดมินถือไว้ (โอนเข้าสต็อกย่อยของแอดมิน)</option>
-        <option value="moved_to_machine">→ ย้ายไปตู้อื่น (โหลดลงตู้อื่นแล้ว)</option>
         <option value="lost">✕ สูญหาย/เคลม (สินค้าหายหรือเสียหาย)</option>
         <option value="unknown">? ไม่ทราบ · ปิด review เฉยๆ (ไม่สร้าง stock movement)</option>
       </select>
