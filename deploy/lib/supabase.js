@@ -915,3 +915,80 @@ export async function undoReconcile(historyId) {
   if (eUpd) throw eUpd
   return updated
 }
+
+// ── Slot Swap (Phase 2) ───────────────────────────────────────
+// swapSlots(machineId, slotA, slotB)
+//   admin สลับสินค้าระหว่าง 2 ช่องในตู้เดียวกัน (ไม่มี stock movement)
+//   - Close active history rows ของ 2 slots (disposition='swapped')
+//   - INSERT active history rows ใหม่ ที่ product swapped
+//   - ไม่แตะ machine_stock (scraper รอบถัดไป sync เอง)
+//   - scraper detect_slot_changes จะ match → ไม่ขึ้น banner
+export async function swapSlots(machineId, slotA, slotB) {
+  if (!machineId || !slotA || !slotB) throw new Error("ต้องระบุ machineId + slotA + slotB")
+  if (slotA === slotB) throw new Error("เลือก 2 ช่องที่ต่างกัน")
+
+  // 1) อ่าน active rows ของ 2 slots
+  const { data: actives, error: e0 } = await supabase
+    .from("slot_products_history")
+    .select("id, slot_number, product_id, product_name, sku_id")
+    .eq("machine_id", machineId)
+    .is("effective_to", null)
+    .in("slot_number", [slotA, slotB])
+  if (e0) throw e0
+  const rowA = (actives || []).find(r => r.slot_number === slotA)
+  const rowB = (actives || []).find(r => r.slot_number === slotB)
+  if (!rowA) throw new Error(`ไม่พบ active row ที่ช่อง ${slotA}`)
+  if (!rowB) throw new Error(`ไม่พบ active row ที่ช่อง ${slotB}`)
+
+  const now = new Date().toISOString()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  // 2) Close 2 active rows · disposition='swapped'
+  const closePayloadA = {
+    effective_to:        now,
+    disposition:         "swapped",
+    disposition_target:  { swapped_with_slot: slotB, swapped_product: rowB.product_name },
+    reconciled_at:       now,
+    reconciled_by:       user?.id || null,
+  }
+  const closePayloadB = {
+    effective_to:        now,
+    disposition:         "swapped",
+    disposition_target:  { swapped_with_slot: slotA, swapped_product: rowA.product_name },
+    reconciled_at:       now,
+    reconciled_by:       user?.id || null,
+  }
+  const { error: eCloseA } = await supabase.from("slot_products_history").update(closePayloadA).eq("id", rowA.id)
+  if (eCloseA) throw eCloseA
+  const { error: eCloseB } = await supabase.from("slot_products_history").update(closePayloadB).eq("id", rowB.id)
+  if (eCloseB) throw eCloseB
+
+  // 3) Insert 2 new active rows · product swapped
+  const inserts = [
+    {
+      machine_id:    machineId,
+      slot_number:   slotA,
+      product_id:    rowB.product_id,
+      product_name:  rowB.product_name,
+      sku_id:        rowB.sku_id,
+      effective_from: now,
+      detected_by:   "manual_swap",
+    },
+    {
+      machine_id:    machineId,
+      slot_number:   slotB,
+      product_id:    rowA.product_id,
+      product_name:  rowA.product_name,
+      sku_id:        rowA.sku_id,
+      effective_from: now,
+      detected_by:   "manual_swap",
+    },
+  ]
+  const { data: newRows, error: eInsert } = await supabase
+    .from("slot_products_history")
+    .insert(inserts)
+    .select()
+  if (eInsert) throw eInsert
+
+  return { closed: [rowA.id, rowB.id], opened: (newRows || []).map(r => r.id) }
+}

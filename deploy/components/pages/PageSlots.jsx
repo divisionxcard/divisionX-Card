@@ -9,6 +9,7 @@ import { SectionTitle } from "../shared/dx-components"
 import {
   getActiveSlotMappings, getSlotHistory, getRecentSlotChanges,
   recordSlotChangeManual, reviewSlotChange, reconcileSlotChange, undoReconcile,
+  swapSlots,
 } from "../../lib/supabase"
 
 const STATUS_BADGE = {
@@ -33,6 +34,7 @@ export default function PageSlots({ machines = [], skus = [], allProfiles = [] }
   const [historyModal, setHistoryModal] = useState(null)   // { machine_id, slot_number }
   const [manualModal, setManualModal] = useState(null)     // { machine_id, slot_number, current }
   const [reconcileModal, setReconcileModal] = useState(null) // change event object
+  const [swapModal, setSwapModal] = useState(false)
   const [reviewDays, setReviewDays] = useState(30)
 
   const machineNames = useMemo(() => {
@@ -105,6 +107,9 @@ export default function PageSlots({ machines = [], skus = [], allProfiles = [] }
               <option value="all">ทุกตู้</option>
               {machines.map(m => <option key={m.machine_id} value={m.machine_id}>{m.name || m.machine_id}</option>)}
             </select>
+            <button onClick={() => setSwapModal(true)} className="dx-btn dx-btn-ghost">
+              <Repeat size={14}/>สลับ Slot
+            </button>
             <button onClick={load} className="dx-btn dx-btn-ghost" disabled={loading}>
               {loading ? <Loader2 size={14} className="animate-spin"/> : <RefreshCw size={14}/>}
               Refresh
@@ -308,6 +313,13 @@ export default function PageSlots({ machines = [], skus = [], allProfiles = [] }
           machines={machines} allProfiles={allProfiles}
           onClose={() => setReconcileModal(null)}
           onSaved={async () => { setReconcileModal(null); await load() }}/>
+      )}
+      {/* Slot Swap modal (Phase 2) */}
+      {swapModal && (
+        <SwapSlotModal machines={machines} slotsByMachine={slotsByMachine}
+          defaultMachineId={selectedMachine !== "all" ? selectedMachine : ""}
+          onClose={() => setSwapModal(false)}
+          onSaved={async () => { setSwapModal(false); await load() }}/>
       )}
     </>
   )
@@ -567,6 +579,91 @@ function ReconcileModal({ change, machineName, machines, allProfiles, onClose, o
         <button onClick={save} className="dx-btn dx-btn-primary" disabled={saving}>
           {saving ? <Loader2 size={12} className="animate-spin"/> : <Repeat size={12}/>}
           บันทึก
+        </button>
+      </div>
+    </ModalShell>
+  )
+}
+
+// ── Slot Swap modal (Phase 2) ─────────────────────────────────
+function SwapSlotModal({ machines, slotsByMachine, defaultMachineId, onClose, onSaved }) {
+  const [machineId, setMachineId] = useState(defaultMachineId || "")
+  const [slotA, setSlotA] = useState("")
+  const [slotB, setSlotB] = useState("")
+  const [saving, setSaving] = useState(false)
+  const [err, setErr] = useState(null)
+
+  const slots = useMemo(() => slotsByMachine?.[machineId] || [], [slotsByMachine, machineId])
+  const rowA = useMemo(() => slots.find(s => s.slot_number === slotA), [slots, slotA])
+  const rowB = useMemo(() => slots.find(s => s.slot_number === slotB), [slots, slotB])
+
+  const save = async () => {
+    setErr(null)
+    if (!machineId) { setErr("เลือกตู้"); return }
+    if (!slotA || !slotB) { setErr("เลือก 2 ช่อง"); return }
+    if (slotA === slotB) { setErr("เลือก 2 ช่องที่ต่างกัน"); return }
+    if (!confirm(`สลับ ${rowA?.product_name || slotA} ↔ ${rowB?.product_name || slotB}?`)) return
+    try {
+      setSaving(true)
+      await swapSlots(machineId, slotA, slotB)
+      onSaved?.()
+    } catch (e) { setErr(e.message) }
+    finally { setSaving(false) }
+  }
+
+  return (
+    <ModalShell title="🔄 สลับสินค้าระหว่าง 2 ช่อง" subtitle="ภายในตู้เดียวกัน · ไม่มี stock movement" onClose={onClose}>
+      <label style={{ display: "block", fontSize: 11, color: "var(--dx-text-muted)", marginBottom: 4 }}>ตู้</label>
+      <select value={machineId} onChange={e => { setMachineId(e.target.value); setSlotA(""); setSlotB("") }}
+        className="dx-input" style={{ width: "100%", marginBottom: 12 }}>
+        <option value="">— เลือกตู้ —</option>
+        {machines.map(m => <option key={m.machine_id} value={m.machine_id}>{m.name || m.machine_id}</option>)}
+      </select>
+
+      <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", gap: 12, alignItems: "end", marginBottom: 14 }}>
+        <div>
+          <label style={{ display: "block", fontSize: 11, color: "var(--dx-text-muted)", marginBottom: 4 }}>ช่อง A</label>
+          <select value={slotA} onChange={e => setSlotA(e.target.value)} className="dx-input" style={{ width: "100%" }} disabled={!machineId}>
+            <option value="">— เลือก —</option>
+            {slots.filter(s => s.slot_number !== slotB).map(s => (
+              <option key={s.slot_number} value={s.slot_number}>
+                {s.slot_number} · {s.product_name || "—"}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div style={{ fontSize: 18, paddingBottom: 8, color: "var(--dx-warning)" }}>⇄</div>
+        <div>
+          <label style={{ display: "block", fontSize: 11, color: "var(--dx-text-muted)", marginBottom: 4 }}>ช่อง B</label>
+          <select value={slotB} onChange={e => setSlotB(e.target.value)} className="dx-input" style={{ width: "100%" }} disabled={!machineId}>
+            <option value="">— เลือก —</option>
+            {slots.filter(s => s.slot_number !== slotA).map(s => (
+              <option key={s.slot_number} value={s.slot_number}>
+                {s.slot_number} · {s.product_name || "—"}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      {rowA && rowB && (
+        <div style={{ marginBottom: 14, padding: 10, background: "var(--dx-bg-input)", borderRadius: 6, fontSize: 11 }}>
+          <div style={{ color: "var(--dx-text-muted)", marginBottom: 6, fontWeight: 600 }}>Preview หลังสลับ</div>
+          <div>ช่อง <b>{slotA}</b>: <s>{rowA.product_name}</s> → <b style={{ color: "var(--dx-success)" }}>{rowB.product_name}</b></div>
+          <div style={{ marginTop: 4 }}>ช่อง <b>{slotB}</b>: <s>{rowB.product_name}</s> → <b style={{ color: "var(--dx-success)" }}>{rowA.product_name}</b></div>
+          <div style={{ marginTop: 8, fontSize: 10, color: "var(--dx-text-muted)" }}>
+            ⓘ ไม่กระทบ stock_balance · scraper รอบถัดไปจะ sync machine_stock อัตโนมัติ
+          </div>
+        </div>
+      )}
+
+      {err && <div style={{ color: "var(--dx-danger)", fontSize: 11, marginBottom: 10 }}>{err}</div>}
+
+      <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+        <button onClick={onClose} className="dx-btn dx-btn-ghost" disabled={saving}>ยกเลิก</button>
+        <button onClick={save} className="dx-btn dx-btn-primary" disabled={saving || !slotA || !slotB}>
+          {saving ? <Loader2 size={12} className="animate-spin"/> : <Repeat size={12}/>}
+          สลับ
         </button>
       </div>
     </ModalShell>
