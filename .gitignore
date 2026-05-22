@@ -39,6 +39,12 @@ Thumbs.db
 *.swp
 *.swo
 
+# ─── Obsidian (commit wiki/ แต่ไม่ commit user workspace) ────
+wiki/.obsidian/workspace*
+wiki/.obsidian/cache
+wiki/.obsidian/graph.json
+wiki/.trash/
+
 # ─── VMS Scraper ─────────────────────────────────────────────
 scripts/vms-scraper/cookies.json
 scripts/vms-scraper/session.json
