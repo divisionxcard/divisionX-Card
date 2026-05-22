@@ -395,7 +395,7 @@ def main():
     print(f"🤖 Reconciliation Agent")
     print(f"   วันที่: {target_date}")
     print(f"   ตู้: {', '.join(machines)}")
-    print(f"   Mode: {'DRY-RUN' if args.dry_run else 'LIVE (Claude API)'}")
+    print(f"   Mode: {'DRY-RUN' if args.dry_run else f'LIVE (Ollama · {OLLAMA_MODEL})'}")
     print(f"   Output: {output_dir}")
     print()
 
