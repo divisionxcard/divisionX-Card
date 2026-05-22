@@ -943,13 +943,18 @@ export async function swapSlots(machineId, slotA, slotB) {
   const now = new Date().toISOString()
   const { data: { user } } = await supabase.auth.getUser()
 
-  // 2) Close 2 active rows · disposition='swapped'
+  // 2) Close 2 active rows · disposition='swapped' · auto-confirm review (ไม่ขึ้น banner)
+  const swapNote = `Auto-confirmed: slot swap ${slotA} ↔ ${slotB}`
   const closePayloadA = {
     effective_to:        now,
     disposition:         "swapped",
     disposition_target:  { swapped_with_slot: slotB, swapped_product: rowB.product_name },
     reconciled_at:       now,
     reconciled_by:       user?.id || null,
+    review_status:       "confirmed",
+    review_note:         swapNote,
+    reviewed_at:         now,
+    reviewed_by:         user?.id || null,
   }
   const closePayloadB = {
     effective_to:        now,
@@ -957,6 +962,10 @@ export async function swapSlots(machineId, slotA, slotB) {
     disposition_target:  { swapped_with_slot: slotA, swapped_product: rowA.product_name },
     reconciled_at:       now,
     reconciled_by:       user?.id || null,
+    review_status:       "confirmed",
+    review_note:         swapNote,
+    reviewed_at:         now,
+    reviewed_by:         user?.id || null,
   }
   const { error: eCloseA } = await supabase.from("slot_products_history").update(closePayloadA).eq("id", rowA.id)
   if (eCloseA) throw eCloseA
