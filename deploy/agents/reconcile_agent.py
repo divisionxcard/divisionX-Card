@@ -33,13 +33,15 @@ from collections import defaultdict
 from dotenv import load_dotenv
 from supabase import create_client, Client
 
+from shared import get_active_machines
+
 # ── Config ────────────────────────────────────────────────────────────
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 WIKI_DIR = PROJECT_ROOT / "wiki"
 DISCREPANCY_DIR = WIKI_DIR / "discrepancies"
 
-ACTIVE_MACHINES = ["chukes01", "chukes02", "chukes04"]  # chukes03 ยังไม่เปิด
+# ACTIVE_MACHINES: ใช้ get_active_machines(sb) ใน main() — ไม่ hardcode อีกต่อไป
 
 # Ollama config (override ผ่าน env)
 OLLAMA_HOST = os.environ.get("OLLAMA_HOST", "http://localhost:11434")
@@ -365,8 +367,8 @@ def parse_args() -> argparse.Namespace:
         help="วันที่ต้องการ reconcile (YYYY-MM-DD) ค่า default = เมื่อวาน"
     )
     parser.add_argument(
-        "--machines", type=str, default=",".join(ACTIVE_MACHINES),
-        help="ตู้ที่ต้องการ (comma-separated) เช่น chukes01,chukes02"
+        "--machines", type=str, default=None,
+        help="ตู้ที่ต้องการ (comma-separated) default = ทุกตู้ active จาก database"
     )
     parser.add_argument(
         "--dry-run", action="store_true",
@@ -388,7 +390,13 @@ def main():
     else:
         target_date = date.today() - timedelta(days=1)
 
-    machines = [m.strip() for m in args.machines.split(",") if m.strip()]
+    sb = get_supabase()
+
+    if args.machines:
+        machines = [m.strip() for m in args.machines.split(",") if m.strip()]
+    else:
+        machines = get_active_machines(sb)
+
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -398,8 +406,6 @@ def main():
     print(f"   Mode: {'DRY-RUN' if args.dry_run else f'LIVE (Ollama · {OLLAMA_MODEL})'}")
     print(f"   Output: {output_dir}")
     print()
-
-    sb = get_supabase()
 
     for machine_id in machines:
         print(f"📦 {machine_id}...")

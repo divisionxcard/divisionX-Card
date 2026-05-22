@@ -40,6 +40,8 @@ if sys.stdout.encoding and sys.stdout.encoding.lower() != "utf-8":
 from dotenv import load_dotenv
 from supabase import create_client, Client
 
+from shared import map_product_to_sku, is_box_slot, get_active_machines
+
 # ── Config ────────────────────────────────────────────────────────────
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -47,7 +49,7 @@ WIKI_DIR = PROJECT_ROOT / "wiki"
 SKU_DIR = WIKI_DIR / "skus"
 DISCREPANCY_DIR = WIKI_DIR / "discrepancies"
 
-ACTIVE_MACHINES = ["chukes01", "chukes02", "chukes04"]
+# ACTIVE_MACHINES: query จาก database แทน hardcode (ดูใน main())
 
 OLLAMA_HOST = os.environ.get("OLLAMA_HOST", "http://localhost:11434")
 OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "qwen2.5:7b")
@@ -195,20 +197,26 @@ def build_profile(sb: Client, sku_row: dict, end_date: date) -> SkuProfile:
             profile.sales_qty_prev_7d += qty
 
     # ── Current machine_stock ──
+    # ใช้ map_product_to_sku() canonical จาก vms_stock_sync (ผ่าน shared.py)
+    # นับเป็นซองเสมอ: ถ้า slot เป็น "Box" → remain × packs_per_box
     stock_rows = sb.table("machine_stock").select(
         "machine_id, product_name, remain"
     ).execute().data
 
-    # ใช้ regex match SKU จาก product_name (ตามตัวอย่าง vms_stock_sync.map_product_to_sku)
-    # ที่นี่ใช้วิธีง่าย: หา sku_id ใน product_name
-    sku_in_name = profile.sku_id.replace(" ", "")  # "OP01"
     for row in stock_rows:
-        pname = (row.get("product_name") or "").replace(" ", "").upper()
-        if sku_in_name.upper() in pname:
-            mid = row["machine_id"]
-            if mid not in profile.machines:
-                profile.machines[mid] = MachineBreakdown(machine_id=mid)
-            profile.machines[mid].current_stock += row["remain"]
+        pname = row.get("product_name") or ""
+        matched_sku = map_product_to_sku(pname)
+        if matched_sku != profile.sku_id:
+            continue
+
+        units = row["remain"]
+        if is_box_slot(pname):
+            units = units * profile.packs_per_box  # แปลงเป็นซอง
+
+        mid = row["machine_id"]
+        if mid not in profile.machines:
+            profile.machines[mid] = MachineBreakdown(machine_id=mid)
+        profile.machines[mid].current_stock += units
 
     # ── Linked discrepancies ──
     if DISCREPANCY_DIR.exists():
