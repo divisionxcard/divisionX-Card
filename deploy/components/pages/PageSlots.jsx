@@ -3,12 +3,12 @@
 import { useEffect, useMemo, useState } from "react"
 import {
   Monitor, RefreshCw, History, Edit3, CheckCircle, Flag, X,
-  AlertTriangle, Loader2, ArrowRight, Save,
+  AlertTriangle, Loader2, ArrowRight, Save, Repeat,
 } from "lucide-react"
 import { SectionTitle } from "../shared/dx-components"
 import {
   getActiveSlotMappings, getSlotHistory, getRecentSlotChanges,
-  recordSlotChangeManual, reviewSlotChange,
+  recordSlotChangeManual, reviewSlotChange, reconcileSlotChange,
 } from "../../lib/supabase"
 
 const STATUS_BADGE = {
@@ -17,13 +17,22 @@ const STATUS_BADGE = {
   flagged:   { color: "var(--dx-danger)",  bg: "rgba(239,68,68,0.12)",  label: "ติดธง" },
 }
 
-export default function PageSlots({ machines = [], skus = [] }) {
+const DISPOSITION_LABELS = {
+  returned:             { label: "คืนกลาง",     color: "var(--dx-success)", icon: "↩" },
+  transferred_to_admin: { label: "แอดมินถือ",  color: "var(--dx-cyan-soft)", icon: "👤" },
+  moved_to_machine:     { label: "ตู้อื่น",     color: "var(--dx-warning)", icon: "→" },
+  lost:                 { label: "สูญหาย/เคลม", color: "var(--dx-danger)",  icon: "✕" },
+  unknown:              { label: "ไม่ทราบ",    color: "var(--dx-text-muted)", icon: "?" },
+}
+
+export default function PageSlots({ machines = [], skus = [], allProfiles = [] }) {
   const [active, setActive] = useState([])
   const [changes, setChanges] = useState([])
   const [loading, setLoading] = useState(true)
   const [selectedMachine, setSelectedMachine] = useState("all")
   const [historyModal, setHistoryModal] = useState(null)   // { machine_id, slot_number }
   const [manualModal, setManualModal] = useState(null)     // { machine_id, slot_number, current }
+  const [reconcileModal, setReconcileModal] = useState(null) // change event object
   const [reviewDays, setReviewDays] = useState(30)
 
   const machineNames = useMemo(() => {
@@ -191,10 +200,11 @@ export default function PageSlots({ machines = [], skus = [] }) {
               <thead>
                 <tr style={{ background: "var(--dx-bg-input)", color: "var(--dx-text-muted)", fontSize: 10, textTransform: "uppercase", letterSpacing: 0.5 }}>
                   <th style={{ padding: "8px 10px", textAlign: "left" }}>เวลา</th>
-                  <th style={{ padding: "8px 10px", textAlign: "left" }}>ตู้ / Slot</th>
+                  <th style={{ padding: "8px 10px", textAlign: "left" }}>ตู้ / ช่อง</th>
                   <th style={{ padding: "8px 10px", textAlign: "left" }}>จาก → เป็น</th>
-                  <th style={{ padding: "8px 10px", textAlign: "center" }}>สถานะ</th>
-                  <th style={{ padding: "8px 10px", textAlign: "center", width: 180 }}>Review</th>
+                  <th style={{ padding: "8px 10px", textAlign: "center" }}>Review</th>
+                  <th style={{ padding: "8px 10px", textAlign: "center" }}>สินค้าเก่าไปไหน</th>
+                  <th style={{ padding: "8px 10px", textAlign: "center", width: 200 }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -221,7 +231,26 @@ export default function PageSlots({ machines = [], skus = [] }) {
                         {c.review_note && <div style={{ fontSize: 9, color: "var(--dx-text-muted)", marginTop: 2 }}>{c.review_note}</div>}
                       </td>
                       <td style={{ padding: "8px 10px", textAlign: "center" }}>
-                        {c.review_status === "pending" ? (
+                        {c.disposition ? (() => {
+                          const d = DISPOSITION_LABELS[c.disposition] || DISPOSITION_LABELS.unknown
+                          return (
+                            <>
+                              <span style={{ display: "inline-block", padding: "2px 8px", borderRadius: 6, fontSize: 10, fontWeight: 600, color: d.color, background: "var(--dx-bg-input)" }}>
+                                {d.icon} {d.label}
+                              </span>
+                              {c.disposition_target?.qty != null && (
+                                <div style={{ fontSize: 9, color: "var(--dx-text-muted)", marginTop: 2 }}>{c.disposition_target.qty} packs</div>
+                              )}
+                            </>
+                          )
+                        })() : (
+                          <span style={{ fontSize: 10, color: "var(--dx-text-muted)" }}>
+                            {c.pending_qty != null ? `${c.pending_qty} packs · ` : ""}ยังไม่ reconcile
+                          </span>
+                        )}
+                      </td>
+                      <td style={{ padding: "8px 10px", textAlign: "center" }}>
+                        {c.review_status === "pending" && (
                           <>
                             <button onClick={() => onReview(c.history_id, "confirmed")}
                               className="dx-btn dx-btn-ghost" style={{ padding: "4px 8px", fontSize: 11, color: "var(--dx-success)", marginRight: 4 }}>
@@ -232,11 +261,15 @@ export default function PageSlots({ machines = [], skus = [] }) {
                               <Flag size={11}/>Bug
                             </button>
                           </>
-                        ) : (
-                          <button onClick={() => onReview(c.history_id, "pending")}
-                            className="dx-btn dx-btn-ghost" style={{ padding: "4px 8px", fontSize: 10, color: "var(--dx-text-muted)" }}>
-                            reset
+                        )}
+                        {c.review_status !== "pending" && !c.disposition && (
+                          <button onClick={() => setReconcileModal(c)}
+                            className="dx-btn dx-btn-primary" style={{ padding: "4px 8px", fontSize: 11 }}>
+                            <Repeat size={11}/>Reconcile
                           </button>
+                        )}
+                        {c.review_status !== "pending" && c.disposition && (
+                          <span style={{ fontSize: 10, color: "var(--dx-text-muted)" }}>เสร็จ</span>
                         )}
                       </td>
                     </tr>
@@ -257,6 +290,13 @@ export default function PageSlots({ machines = [], skus = [] }) {
         <ManualChangeModal {...manualModal} machineName={machineNames[manualModal.machine_id]} skus={skus}
           onClose={() => setManualModal(null)}
           onSaved={async () => { setManualModal(null); await load() }}/>
+      )}
+      {/* Reconcile modal (Layer 6) */}
+      {reconcileModal && (
+        <ReconcileModal change={reconcileModal} machineName={machineNames[reconcileModal.machine_id]}
+          machines={machines} allProfiles={allProfiles}
+          onClose={() => setReconcileModal(null)}
+          onSaved={async () => { setReconcileModal(null); await load() }}/>
       )}
     </>
   )
@@ -390,6 +430,132 @@ function ManualChangeModal({ machine_id, slot_number, current, machineName, skus
         <button onClick={onClose} className="dx-btn dx-btn-ghost" disabled={saving}>ยกเลิก</button>
         <button onClick={save} className="dx-btn dx-btn-primary" disabled={saving}>
           {saving ? <Loader2 size={12} className="animate-spin"/> : <Save size={12}/>}
+          บันทึก
+        </button>
+      </div>
+    </ModalShell>
+  )
+}
+
+// ── Reconcile modal (Layer 6) ─────────────────────────────────
+function ReconcileModal({ change, machineName, machines, allProfiles, onClose, onSaved }) {
+  const [disposition, setDisposition] = useState("returned")
+  const [qty, setQty] = useState(change?.pending_qty ?? "")
+  const [targetMachineId, setTargetMachineId] = useState("")
+  const [targetSlotNumber, setTargetSlotNumber] = useState("")
+  const [targetAdminId, setTargetAdminId] = useState("")
+  const [note, setNote] = useState("")
+  const [saving, setSaving] = useState(false)
+  const [err, setErr] = useState(null)
+
+  const adminProfiles = useMemo(
+    () => (allProfiles || []).filter(p => p.role === "admin" || p.role === "owner"),
+    [allProfiles]
+  )
+  const otherMachines = useMemo(
+    () => (machines || []).filter(m => m.machine_id !== change?.machine_id),
+    [machines, change]
+  )
+
+  const save = async () => {
+    setErr(null)
+    const finalQty = parseInt(qty, 10) || 0
+    if (disposition !== "unknown" && finalQty <= 0) { setErr("ระบุจำนวนที่มากกว่า 0"); return }
+    if (disposition === "transferred_to_admin" && !targetAdminId) { setErr("เลือกแอดมินที่ถือไว้"); return }
+    if (disposition === "moved_to_machine" && !targetMachineId) { setErr("เลือกตู้ปลายทาง"); return }
+    try {
+      setSaving(true)
+      await reconcileSlotChange(change.history_id, {
+        disposition, qty: finalQty,
+        targetMachineId:    disposition === "moved_to_machine" ? targetMachineId : null,
+        targetSlotNumber:   disposition === "moved_to_machine" ? (targetSlotNumber || null) : null,
+        targetAdminId:      disposition === "transferred_to_admin" ? targetAdminId : null,
+        note:               note || null,
+      })
+      onSaved?.()
+    } catch (e) { setErr(e.message) }
+    finally { setSaving(false) }
+  }
+
+  return (
+    <ModalShell
+      title={`Reconcile · สินค้าเก่าไปไหน?`}
+      subtitle={`${machineName || change.machine_id} · ช่อง ${change.slot_number} · ${change.old_product_name || "—"}`}
+      onClose={onClose}
+    >
+      <div style={{ marginBottom: 14, padding: 10, background: "var(--dx-bg-input)", borderRadius: 6, fontSize: 11 }}>
+        <div style={{ color: "var(--dx-text-muted)", marginBottom: 4 }}>การเปลี่ยน</div>
+        <div>
+          <s style={{ color: "var(--dx-text-secondary)" }}>{change.old_product_name || "—"}</s>
+          <ArrowRight size={11} style={{ margin: "0 6px", color: "var(--dx-warning)", verticalAlign: "middle" }}/>
+          <b style={{ color: "var(--dx-success)" }}>{change.new_product_name || "—"}</b>
+        </div>
+        <div style={{ marginTop: 6, color: "var(--dx-text-muted)" }}>
+          จำนวนที่ตรวจพบในช่องตอนเปลี่ยน: <b>{change.pending_qty ?? "—"}</b> packs
+        </div>
+      </div>
+
+      <label style={{ display: "block", fontSize: 11, color: "var(--dx-text-muted)", marginBottom: 4 }}>
+        สินค้าเก่า ({change.old_product_name}) ไปที่ไหน?
+      </label>
+      <select value={disposition} onChange={e => setDisposition(e.target.value)} className="dx-input"
+        style={{ width: "100%", marginBottom: 12 }}>
+        <option value="returned">↩ คืนเข้าสต็อกกลาง (สินค้ายังอยู่ดี · นำกลับเข้ากลาง)</option>
+        <option value="transferred_to_admin">👤 แอดมินถือไว้ (โอนเข้าสต็อกย่อยของแอดมิน)</option>
+        <option value="moved_to_machine">→ ย้ายไปตู้อื่น (โหลดลงตู้อื่นแล้ว)</option>
+        <option value="lost">✕ สูญหาย/เคลม (สินค้าหายหรือเสียหาย)</option>
+        <option value="unknown">? ไม่ทราบ · ปิด review เฉยๆ (ไม่สร้าง stock movement)</option>
+      </select>
+
+      {disposition !== "unknown" && (
+        <>
+          <label style={{ display: "block", fontSize: 11, color: "var(--dx-text-muted)", marginBottom: 4 }}>จำนวน (packs)</label>
+          <input type="number" value={qty} onChange={e => setQty(e.target.value)} className="dx-input"
+            placeholder={`default ${change.pending_qty ?? 0}`}
+            style={{ width: "100%", marginBottom: 12 }}/>
+        </>
+      )}
+
+      {disposition === "transferred_to_admin" && (
+        <>
+          <label style={{ display: "block", fontSize: 11, color: "var(--dx-text-muted)", marginBottom: 4 }}>แอดมินที่ถือไว้</label>
+          <select value={targetAdminId} onChange={e => setTargetAdminId(e.target.value)} className="dx-input"
+            style={{ width: "100%", marginBottom: 12 }}>
+            <option value="">— เลือกแอดมิน —</option>
+            {adminProfiles.map(p => (
+              <option key={p.id} value={p.id}>{p.full_name || p.username || p.email} ({p.role})</option>
+            ))}
+          </select>
+        </>
+      )}
+
+      {disposition === "moved_to_machine" && (
+        <>
+          <label style={{ display: "block", fontSize: 11, color: "var(--dx-text-muted)", marginBottom: 4 }}>ตู้ปลายทาง</label>
+          <select value={targetMachineId} onChange={e => setTargetMachineId(e.target.value)} className="dx-input"
+            style={{ width: "100%", marginBottom: 8 }}>
+            <option value="">— เลือกตู้ —</option>
+            {otherMachines.map(m => (
+              <option key={m.machine_id} value={m.machine_id}>{m.name || m.machine_id}</option>
+            ))}
+          </select>
+          <label style={{ display: "block", fontSize: 11, color: "var(--dx-text-muted)", marginBottom: 4 }}>ช่องปลายทาง (optional)</label>
+          <input value={targetSlotNumber} onChange={e => setTargetSlotNumber(e.target.value)} className="dx-input"
+            placeholder="เช่น 015" style={{ width: "100%", marginBottom: 12 }}/>
+        </>
+      )}
+
+      <label style={{ display: "block", fontSize: 11, color: "var(--dx-text-muted)", marginBottom: 4 }}>หมายเหตุ (optional)</label>
+      <textarea value={note} onChange={e => setNote(e.target.value)} className="dx-input" rows={2}
+        placeholder="เช่น คืนกลางครบทุก pack · ไม่ชำรุด"
+        style={{ width: "100%", marginBottom: 14, resize: "vertical" }}/>
+
+      {err && <div style={{ color: "var(--dx-danger)", fontSize: 11, marginBottom: 10 }}>{err}</div>}
+
+      <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+        <button onClick={onClose} className="dx-btn dx-btn-ghost" disabled={saving}>ยกเลิก</button>
+        <button onClick={save} className="dx-btn dx-btn-primary" disabled={saving}>
+          {saving ? <Loader2 size={12} className="animate-spin"/> : <Repeat size={12}/>}
           บันทึก
         </button>
       </div>

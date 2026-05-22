@@ -199,10 +199,23 @@ def detect_slot_changes(supabase, current_records: list[dict], synced_at: str):
         - ดู active record ใน slot_products_history (effective_to IS NULL)
         - ถ้าไม่มี → INSERT new active record (ไม่ alert · เป็น initial seed)
         - ถ้ามี + product_id ตรงกัน → ไม่ทำอะไร
-        - ถ้ามี + product_id ต่างกัน → ปิด old (set effective_to) + INSERT new + alert
+        - ถ้ามี + product_id ต่างกัน → ปิด old (set effective_to + pending_qty) + INSERT new + alert
+
+    IMPORTANT: ต้องเรียกฟังก์ชันนี้ "ก่อน" save_to_supabase
+              เพื่อให้ machine_stock.remain ยังเป็นค่าของ "สินค้าเก่า" (ใช้เป็น pending_qty)
     """
     if not current_records:
         return
+
+    # 0. Snapshot machine_stock.remain ก่อนที่จะถูก save_to_supabase ทับ
+    #    เก็บไว้เป็น pending_qty ของ closed period (= สินค้าเก่าเหลือกี่ packs ใน slot นั้น)
+    try:
+        ms_res = supabase.table("machine_stock").select(
+            "machine_id, slot_number, remain"
+        ).execute()
+        remain_map = {(r["machine_id"], r["slot_number"]): r.get("remain") for r in (ms_res.data or [])}
+    except Exception:
+        remain_map = {}
 
     # 1. โหลด active history ทั้งหมด (รวม product_name สำหรับ alert)
     res = supabase.table("slot_products_history").select(
@@ -243,7 +256,8 @@ def detect_slot_changes(supabase, current_records: list[dict], synced_at: str):
             changes += 1
         elif existing["product_id"] != pid_new:
             # Product changed · close old + insert new + queue alert
-            to_close.append(existing["id"])
+            # pending_qty = machine_stock.remain ก่อน save = จำนวน "สินค้าเก่า" ที่เหลืออยู่
+            to_close.append({"id": existing["id"], "pending_qty": remain_map.get(key)})
             to_insert.append({
                 "machine_id":     rec["machine_id"],
                 "slot_number":    rec["slot_number"],
@@ -258,11 +272,13 @@ def detect_slot_changes(supabase, current_records: list[dict], synced_at: str):
         # else: same product · skip
 
     if to_close:
-        # ปิด period เก่า · batch update
-        for cid in to_close:
-            supabase.table("slot_products_history").update(
-                {"effective_to": synced_at}
-            ).eq("id", cid).execute()
+        # ปิด period เก่า · batch update · เก็บ pending_qty (snapshot ก่อน save_to_supabase)
+        for cid_info in to_close:
+            cid = cid_info["id"] if isinstance(cid_info, dict) else cid_info
+            payload = {"effective_to": synced_at}
+            if isinstance(cid_info, dict) and cid_info.get("pending_qty") is not None:
+                payload["pending_qty"] = cid_info["pending_qty"]
+            supabase.table("slot_products_history").update(payload).eq("id", cid).execute()
 
     if to_insert:
         # Insert new periods · ignore duplicates (กัน race condition)
@@ -363,14 +379,14 @@ def main():
             "ตรวจ KIOSKS ใน deploy/scraper/vms_stock_sync.py และ workflow log"
         )
 
-    save_to_supabase(all_records)
-
-    # Layer 3: Track slot product changes
+    # Layer 3: Track slot product changes (ก่อน save_to_supabase เพื่อ snapshot remain ของสินค้าเก่า)
     try:
         detect_slot_changes(supabase, all_records, synced_at)
     except Exception as e:
         # ไม่ fail workflow ถ้า history tracking error · core sync ยัง work
         print(f"⚠️  slot_products_history update failed: {e}")
+
+    save_to_supabase(all_records)
 
 if __name__ == "__main__":
     main()

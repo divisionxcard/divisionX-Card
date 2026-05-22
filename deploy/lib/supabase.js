@@ -613,19 +613,24 @@ export async function getRecentSlotChanges(days = 7, { includeReviewed = false }
       if (older.effective_to) {
         if (!includeReviewed && older.review_status === "confirmed") continue
         changes.push({
-          history_id:       older.id,                // ID ของ row "closed period" (สำหรับ review)
-          machine_id:       older.machine_id,
-          slot_number:      older.slot_number,
-          changed_at:       older.effective_to,
-          old_product_name: older.product_name,
-          old_sku_id:       older.sku_id,
-          old_product_id:   older.product_id,
-          new_product_name: newer.product_name,
-          new_sku_id:       newer.sku_id,
-          new_product_id:   newer.product_id,
-          review_status:    older.review_status || "pending",
-          review_note:      older.review_note,
-          reviewed_at:      older.reviewed_at,
+          history_id:        older.id,                // ID ของ row "closed period" (สำหรับ review)
+          machine_id:        older.machine_id,
+          slot_number:       older.slot_number,
+          changed_at:        older.effective_to,
+          old_product_name:  older.product_name,
+          old_sku_id:        older.sku_id,
+          old_product_id:    older.product_id,
+          new_product_name:  newer.product_name,
+          new_sku_id:        newer.sku_id,
+          new_product_id:    newer.product_id,
+          review_status:     older.review_status || "pending",
+          review_note:       older.review_note,
+          reviewed_at:       older.reviewed_at,
+          // Layer 6 · Reconcile
+          pending_qty:       older.pending_qty,
+          disposition:       older.disposition,
+          disposition_target: older.disposition_target,
+          reconciled_at:     older.reconciled_at,
         })
       }
     }
@@ -736,4 +741,131 @@ export async function reviewSlotChange(historyId, status, note = null) {
     .single()
   if (error) throw error
   return data
+}
+
+// ── Slot Reconciliation (Layer 6 · Migration 038) ─────────────────
+// reconcileSlotChange(historyId, options)
+//   options.disposition: 'returned' | 'transferred_to_admin' | 'moved_to_machine' | 'lost' | 'unknown'
+//   options.qty: number (default = row.pending_qty)
+//   options.targetMachineId, options.targetSlotNumber: สำหรับ moved_to_machine
+//   options.targetAdminId (UUID): สำหรับ transferred_to_admin
+//   options.note: optional string
+//   options.lotNumber: optional (for transferred_to_admin)
+//
+// ฟังก์ชันจะ:
+//   1) Insert stock movement (stock_in/stock_out/stock_transfers/claims) ตาม disposition
+//   2) Update slot_products_history (disposition, disposition_target, reconciled_at)
+export async function reconcileSlotChange(historyId, options = {}) {
+  const { disposition, qty, targetMachineId, targetSlotNumber, targetAdminId, note, lotNumber } = options
+  const validDispositions = ["returned","transferred_to_admin","moved_to_machine","lost","unknown"]
+  if (!validDispositions.includes(disposition)) throw new Error("invalid disposition: " + disposition)
+
+  // 1. Get history row
+  const { data: row, error: e0 } = await supabase
+    .from("slot_products_history")
+    .select("id, machine_id, slot_number, sku_id, product_name, pending_qty, effective_to, disposition")
+    .eq("id", historyId)
+    .single()
+  if (e0) throw e0
+  if (!row.effective_to) throw new Error("ไม่สามารถ reconcile active row ได้ (effective_to=NULL)")
+  if (row.disposition) throw new Error(`reconcile แล้ว · disposition='${row.disposition}'`)
+
+  const { data: { user } } = await supabase.auth.getUser()
+  const createdBy = user?.email || "system"
+  const finalQty = (typeof qty === "number" && qty > 0) ? qty : (row.pending_qty || 0)
+
+  // disposition='unknown' หรือ qty=0 → ไม่สร้าง movement · แค่ mark
+  let movementRef = {}
+
+  if (disposition !== "unknown" && finalQty > 0) {
+    if (!row.sku_id) throw new Error("row ไม่มี sku_id · ไม่สามารถสร้าง stock movement ได้")
+
+    if (disposition === "returned") {
+      const { data, error } = await supabase
+        .from("stock_in")
+        .insert({
+          sku_id:         row.sku_id,
+          source:         `machine_return: ${row.machine_id} ช่อง ${row.slot_number}`,
+          unit:           "pack",
+          quantity:       finalQty,
+          quantity_packs: finalQty,
+          unit_cost:      0,
+          total_cost:     0,
+          note:           note || `Reconcile slot history #${historyId} → คืนกลาง`,
+          created_by:     createdBy,
+        })
+        .select("id").single()
+      if (error) throw error
+      movementRef = { stock_in_id: data.id }
+    }
+
+    else if (disposition === "transferred_to_admin") {
+      if (!targetAdminId) throw new Error("transferred_to_admin ต้องระบุ targetAdminId")
+      const { data, error } = await supabase
+        .from("stock_transfers")
+        .insert({
+          sku_id:         row.sku_id,
+          lot_number:     lotNumber || null,
+          to_user_id:     targetAdminId,
+          unit:           "pack",
+          quantity:       finalQty,
+          quantity_packs: finalQty,
+          note:           note || `Reconcile slot history #${historyId} → ถือไว้`,
+          created_by:     createdBy,
+        })
+        .select("id").single()
+      if (error) throw error
+      movementRef = { stock_transfer_id: data.id, to_user_id: targetAdminId }
+    }
+
+    else if (disposition === "moved_to_machine") {
+      if (!targetMachineId) throw new Error("moved_to_machine ต้องระบุ targetMachineId")
+      const { data, error } = await supabase
+        .from("stock_out")
+        .insert({
+          sku_id:         row.sku_id,
+          machine_id:     targetMachineId,
+          quantity_packs: finalQty,
+          note:           note || `Reconcile slot history #${historyId} → ${targetMachineId}${targetSlotNumber ? " ช่อง " + targetSlotNumber : ""}`,
+          created_by:     createdBy,
+        })
+        .select("id").single()
+      if (error) throw error
+      movementRef = { stock_out_id: data.id, target_machine_id: targetMachineId, target_slot_number: targetSlotNumber || null }
+    }
+
+    else if (disposition === "lost") {
+      const { data, error } = await supabase
+        .from("claims")
+        .insert({
+          machine_id:     row.machine_id,
+          sku_id:         row.sku_id,
+          quantity:       finalQty,
+          refund_amount:  0,
+          product_status: "damaged",
+          reason:         "machine_loss_on_slot_change",
+          note:           note || `Reconcile slot history #${historyId} → สูญหาย`,
+          created_by:     createdBy,
+        })
+        .select("id").single()
+      if (error) throw error
+      movementRef = { claim_id: data.id }
+    }
+  }
+
+  // 2. Update slot_products_history
+  const { data: updated, error: eUpd } = await supabase
+    .from("slot_products_history")
+    .update({
+      disposition,
+      disposition_target: { ...movementRef, qty: finalQty, note: note || null },
+      reconciled_at: new Date().toISOString(),
+      reconciled_by: user?.id || null,
+    })
+    .eq("id", historyId)
+    .select()
+    .single()
+  if (eUpd) throw eUpd
+
+  return { history: updated, movement: movementRef, qty: finalQty }
 }
