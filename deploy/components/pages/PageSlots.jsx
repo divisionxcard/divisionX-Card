@@ -8,7 +8,7 @@ import {
 import { SectionTitle } from "../shared/dx-components"
 import {
   getActiveSlotMappings, getSlotHistory, getRecentSlotChanges,
-  recordSlotChangeManual, reviewSlotChange, reconcileSlotChange,
+  recordSlotChangeManual, reviewSlotChange, reconcileSlotChange, undoReconcile,
 } from "../../lib/supabase"
 
 const STATUS_BADGE = {
@@ -83,6 +83,14 @@ export default function PageSlots({ machines = [], skus = [], allProfiles = [] }
       await reviewSlotChange(historyId, status, note)
       await load()
     } catch (e) { alert("Review ล้มเหลว: " + e.message) }
+  }
+
+  const onUndoReconcile = async (historyId) => {
+    if (!confirm("ย้อน reconcile? · stock movement ที่สร้างจะถูกลบ · แล้ว reconcile ใหม่ได้")) return
+    try {
+      await undoReconcile(historyId)
+      await load()
+    } catch (e) { alert("ย้อน reconcile ล้มเหลว: " + e.message) }
   }
 
   return (
@@ -269,7 +277,10 @@ export default function PageSlots({ machines = [], skus = [], allProfiles = [] }
                           </button>
                         )}
                         {c.review_status !== "pending" && c.disposition && (
-                          <span style={{ fontSize: 10, color: "var(--dx-text-muted)" }}>เสร็จ</span>
+                          <button onClick={() => onUndoReconcile(c.history_id)}
+                            className="dx-btn dx-btn-ghost" style={{ padding: "4px 8px", fontSize: 10, color: "var(--dx-text-muted)" }}>
+                            ↶ ย้อน
+                          </button>
                         )}
                       </td>
                     </tr>

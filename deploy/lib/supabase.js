@@ -869,3 +869,49 @@ export async function reconcileSlotChange(historyId, options = {}) {
 
   return { history: updated, movement: movementRef, qty: finalQty }
 }
+
+// undoReconcile(historyId)
+//   ลบ stock movement ที่สร้างไว้ + reset disposition=NULL ใน slot_products_history
+//   ใช้กรณี admin reconcile ผิด · ต้องการแก้ไข
+export async function undoReconcile(historyId) {
+  const { data: row, error: e0 } = await supabase
+    .from("slot_products_history")
+    .select("id, disposition, disposition_target")
+    .eq("id", historyId)
+    .single()
+  if (e0) throw e0
+  if (!row.disposition) throw new Error("ยัง reconcile ไม่ได้ทำ · ไม่มีอะไรให้ย้อน")
+
+  const t = row.disposition_target || {}
+  // ลบ stock movement ตาม ref ที่เก็บไว้
+  if (t.stock_in_id) {
+    const { error } = await supabase.from("stock_in").delete().eq("id", t.stock_in_id)
+    if (error) throw new Error(`ลบ stock_in #${t.stock_in_id} ล้มเหลว: ${error.message}`)
+  }
+  if (t.stock_transfer_id) {
+    const { error } = await supabase.from("stock_transfers").delete().eq("id", t.stock_transfer_id)
+    if (error) throw new Error(`ลบ stock_transfer #${t.stock_transfer_id} ล้มเหลว: ${error.message}`)
+  }
+  if (t.stock_out_id) {
+    const { error } = await supabase.from("stock_out").delete().eq("id", t.stock_out_id)
+    if (error) throw new Error(`ลบ stock_out #${t.stock_out_id} ล้มเหลว: ${error.message}`)
+  }
+  if (t.claim_id) {
+    const { error } = await supabase.from("claims").delete().eq("id", t.claim_id)
+    if (error) throw new Error(`ลบ claim #${t.claim_id} ล้มเหลว: ${error.message}`)
+  }
+
+  const { data: updated, error: eUpd } = await supabase
+    .from("slot_products_history")
+    .update({
+      disposition:        null,
+      disposition_target: null,
+      reconciled_at:      null,
+      reconciled_by:      null,
+    })
+    .eq("id", historyId)
+    .select()
+    .single()
+  if (eUpd) throw eUpd
+  return updated
+}
