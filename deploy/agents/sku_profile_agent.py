@@ -40,7 +40,10 @@ if sys.stdout.encoding and sys.stdout.encoding.lower() != "utf-8":
 from dotenv import load_dotenv
 from supabase import create_client, Client
 
-from shared import map_product_to_sku, is_box_slot, get_active_machines
+from shared import (
+    map_product_to_sku, is_box_slot, get_active_machines,
+    get_machine_brands, calc_ksher_fee, ksher_fee_pct,
+)
 
 # ── Config ────────────────────────────────────────────────────────────
 
@@ -67,9 +70,15 @@ def normalize_sku_id(sku_id: str) -> str:
 @dataclass
 class MachineBreakdown:
     machine_id: str
+    brand: str = "vms"             # vms | worldwide
     sales_qty: int = 0
-    sales_revenue: float = 0.0
+    sales_revenue: float = 0.0     # gross (ก่อนหัก Ksher)
+    ksher_fee: float = 0.0
     current_stock: int = 0
+
+    @property
+    def net_revenue(self) -> float:
+        return self.sales_revenue - self.ksher_fee
 
 
 @dataclass
@@ -82,9 +91,10 @@ class SkuProfile:
     packs_per_box: int
     boxes_per_cotton: int
 
-    # 30-day stats
+    # 30-day stats (gross — ก่อนหัก Ksher fee)
     sales_qty_30d: int = 0
     sales_revenue_30d: float = 0.0
+    ksher_fees_30d: float = 0.0    # ค่าธรรมเนียมรวม
     # Trend (7d vs prev 7d)
     sales_qty_7d: int = 0
     sales_qty_prev_7d: int = 0
@@ -98,14 +108,36 @@ class SkuProfile:
         return normalize_sku_id(self.sku_id)
 
     @property
+    def cogs_30d(self) -> float:
+        """ต้นทุนขายตามทฤษฎี = qty × avg_cost"""
+        return self.sales_qty_30d * self.cost_price
+
+    @property
     def gross_profit_30d(self) -> float:
-        return self.sales_revenue_30d - (self.sales_qty_30d * self.cost_price)
+        """กำไรขั้นต้น (ก่อนหัก Ksher) = revenue − COGS"""
+        return self.sales_revenue_30d - self.cogs_30d
 
     @property
     def gross_margin_pct(self) -> float:
         if self.sales_revenue_30d == 0:
             return 0.0
         return (self.gross_profit_30d / self.sales_revenue_30d) * 100
+
+    @property
+    def net_revenue_30d(self) -> float:
+        """รายได้สุทธิ (หลังหัก Ksher fee แล้ว)"""
+        return self.sales_revenue_30d - self.ksher_fees_30d
+
+    @property
+    def net_profit_30d(self) -> float:
+        """กำไรสุทธิ = net revenue − COGS (ยังไม่รวม claims)"""
+        return self.net_revenue_30d - self.cogs_30d
+
+    @property
+    def net_margin_pct(self) -> float:
+        if self.net_revenue_30d == 0:
+            return 0.0
+        return (self.net_profit_30d / self.net_revenue_30d) * 100
 
     @property
     def velocity_per_day(self) -> float:
@@ -148,8 +180,8 @@ def fetch_active_skus(sb: Client) -> list[dict]:
     ).eq("is_active", True).execute().data
 
 
-def build_profile(sb: Client, sku_row: dict, end_date: date) -> SkuProfile:
-    """รวบรวมข้อมูลของ 1 SKU"""
+def build_profile(sb: Client, sku_row: dict, end_date: date, machine_brands: dict[str, str]) -> SkuProfile:
+    """รวบรวมข้อมูลของ 1 SKU (ต้องส่ง machine_brands → ใช้คำนวณ Ksher fee)"""
     profile = SkuProfile(
         sku_id=sku_row["sku_id"],
         name=sku_row["name"],
@@ -180,14 +212,18 @@ def build_profile(sb: Client, sku_row: dict, end_date: date) -> SkuProfile:
         qty = row["quantity_sold"]
         rev = float(row["grand_total"])
         mid = row["machine_id"]
+        brand = machine_brands.get(mid, "vms")
+        fee = calc_ksher_fee(rev, brand)
 
         profile.sales_qty_30d += qty
         profile.sales_revenue_30d += rev
+        profile.ksher_fees_30d += fee
 
         if mid not in profile.machines:
-            profile.machines[mid] = MachineBreakdown(machine_id=mid)
+            profile.machines[mid] = MachineBreakdown(machine_id=mid, brand=brand)
         profile.machines[mid].sales_qty += qty
         profile.machines[mid].sales_revenue += rev
+        profile.machines[mid].ksher_fee += fee
 
         # Trend buckets
         sold_at = datetime.fromisoformat(row["sold_at"].replace("Z", "+00:00"))
@@ -215,7 +251,9 @@ def build_profile(sb: Client, sku_row: dict, end_date: date) -> SkuProfile:
 
         mid = row["machine_id"]
         if mid not in profile.machines:
-            profile.machines[mid] = MachineBreakdown(machine_id=mid)
+            profile.machines[mid] = MachineBreakdown(
+                machine_id=mid, brand=machine_brands.get(mid, "vms"),
+            )
         profile.machines[mid].current_stock += units
 
     # ── Linked discrepancies ──
@@ -249,13 +287,17 @@ def render_machine_table(profile: SkuProfile) -> str:
     if not profile.machines:
         return "_ไม่มีข้อมูลขายในตู้ใดเลย_"
     lines = [
-        "| ตู้ | ขาย 30 วัน | รายได้ | คงเหลือ |",
-        "|-----|-----------|--------|---------|",
+        "| ตู้ | Brand | ขาย 30 วัน | รายได้ (gross) | Ksher fee | รายได้ (net) | คงเหลือ |",
+        "|-----|-------|-----------|---------------|-----------|--------------|---------|",
     ]
     for mid in sorted(profile.machines.keys()):
         m = profile.machines[mid]
+        fee_pct = ksher_fee_pct(m.brand) * 100
         lines.append(
-            f"| [[{mid}]] | {m.sales_qty} ซอง | {m.sales_revenue:,.0f} | {m.current_stock} |"
+            f"| [[{mid}]] | {m.brand} | {m.sales_qty} ซอง | "
+            f"{m.sales_revenue:,.0f} | "
+            f"{m.ksher_fee:,.0f} ({fee_pct:.1f}%) | "
+            f"{m.net_revenue:,.0f} | {m.current_stock} |"
         )
     return "\n".join(lines)
 
@@ -274,7 +316,10 @@ sell_price: {profile.sell_price}
 cost_price: {profile.cost_price}
 sales_qty_30d: {profile.sales_qty_30d}
 sales_revenue_30d: {profile.sales_revenue_30d:.2f}
+ksher_fees_30d: {profile.ksher_fees_30d:.2f}
+net_revenue_30d: {profile.net_revenue_30d:.2f}
 gross_margin_pct: {profile.gross_margin_pct:.1f}
+net_margin_pct: {profile.net_margin_pct:.1f}
 velocity_per_day: {profile.velocity_per_day:.2f}
 trend_pct: {profile.trend_pct:.1f}
 current_stock_total: {profile.total_current_stock}
@@ -294,8 +339,11 @@ last_updated: {datetime.now().isoformat()}
 | Metric | ค่า |
 |--------|----|
 | ยอดขาย | **{profile.sales_qty_30d} ซอง** |
-| รายได้ | **{profile.sales_revenue_30d:,.0f} บาท** |
-| กำไรขั้นต้น | {profile.gross_profit_30d:,.0f} บาท ({profile.gross_margin_pct:.1f}%) |
+| รายได้ (gross) | {profile.sales_revenue_30d:,.0f} บาท |
+| ค่าธรรมเนียม Ksher | −{profile.ksher_fees_30d:,.0f} บาท |
+| **รายได้ (net)** | **{profile.net_revenue_30d:,.0f} บาท** |
+| ต้นทุน (COGS) | −{profile.cogs_30d:,.0f} บาท |
+| **กำไรสุทธิ** | **{profile.net_profit_30d:,.0f} บาท ({profile.net_margin_pct:.1f}%)** |
 | Velocity | {profile.velocity_per_day:.1f} ซอง/วัน |
 | **Trend (7d vs prev 7d)** | {trend} **{profile.trend_pct:+.0f}%** ({profile.sales_qty_prev_7d} → {profile.sales_qty_7d}) |
 
@@ -318,19 +366,27 @@ SYSTEM_PROMPT = """คุณเป็น AI analyst ของระบบ Divisi
 
 หน้าที่: เขียน SKU profile เป็น Markdown ที่ผู้บริหารใช้ตัดสินใจได้
 
+บริบทสำคัญ:
+- DivisionX มี 2 brand: VMS (ตู้ chukes01-04) และ Worldwide (ตู้ wwv01-02)
+- Payment gateway = Ksher · ค่าธรรมเนียม: VMS 1.5%, WW 0.5%
+- "Net revenue" = รายได้สุทธิหลังหัก Ksher (เงินจริงที่ได้)
+- "Net profit" = Net revenue − COGS (ต้นทุน avg_cost × qty)
+- เวลาวิเคราะห์ "กำไร" → ใช้ **net** ไม่ใช่ gross
+
 กฎเข้มงวด:
-1. ใช้ **ภาษาไทย** ทั้งหมด รวมถึง section headers — ห้ามใช้ "Summary", "SKU Analysis", "Top Selling" เป็นภาษาอังกฤษ
+1. ใช้ **ภาษาไทย** ทั้งหมด รวมถึง section headers — ห้ามใช้ "Summary", "SKU Analysis" เป็นภาษาอังกฤษ
 2. ใช้คำว่า "เคลม" ไม่ใช่ "คำเรียกร้อง"
 3. ใช้คำว่า "เพิ่มสต็อก" ไม่ใช่ "เรียกเก็บสินค้า"
-4. ใช้ [[backlinks]] ของ Obsidian เชื่อมโยงตู้: [[chukes01]], [[chukes02]], [[chukes04]]
+4. ใช้ [[backlinks]] เชื่อมโยงตู้: [[chukes01]], [[chukes04]], [[wwv01]], ...
 5. ระบุ insight ที่ actionable — ไม่ใช่แค่ list ตัวเลข
+6. เมื่อพูดถึง "กำไร" → ใช้ net_margin_pct (หลังหัก Ksher) ไม่ใช่ gross_margin_pct
 
 โครงสร้างรายงานที่ต้องการ:
 ## 📝 ภาพรวม
-(2-3 บรรทัด: SKU นี้สุขภาพดีไหม + จุดเด่นจุดเสี่ยง)
+(2-3 บรรทัด: SKU นี้สุขภาพดีไหม + จุดเด่นจุดเสี่ยง · ใช้ net margin)
 
 ## 🔍 ข้อสังเกต
-(จุดที่น่าสนใจ: ตู้ไหนขายดี/ไม่ดี, trend, stock health, anomaly)
+(จุดที่น่าสนใจ: ตู้ไหนขายดี/ไม่ดี, trend, stock health, anomaly · เปรียบเทียบ VMS vs WW ถ้ามี)
 
 ## ✅ Action ที่แนะนำ
 (2-3 ข้อ ที่นำไปทำได้จริง)
@@ -353,9 +409,13 @@ def call_ollama(profile: SkuProfile) -> str:
         "cost_price_baht": profile.cost_price,
         "stats_30d": {
             "sales_qty": profile.sales_qty_30d,
-            "sales_revenue_baht": round(profile.sales_revenue_30d, 2),
-            "gross_profit_baht": round(profile.gross_profit_30d, 2),
-            "gross_margin_pct": round(profile.gross_margin_pct, 1),
+            "sales_revenue_gross_baht": round(profile.sales_revenue_30d, 2),
+            "ksher_fees_baht": round(profile.ksher_fees_30d, 2),
+            "net_revenue_baht": round(profile.net_revenue_30d, 2),
+            "cogs_baht": round(profile.cogs_30d, 2),
+            "net_profit_baht": round(profile.net_profit_30d, 2),
+            "net_margin_pct": round(profile.net_margin_pct, 1),
+            "gross_margin_pct_FYI_only": round(profile.gross_margin_pct, 1),
             "velocity_per_day": round(profile.velocity_per_day, 2),
         },
         "trend": {
@@ -366,8 +426,12 @@ def call_ollama(profile: SkuProfile) -> str:
         "per_machine": [
             {
                 "machine_id": m.machine_id,
+                "brand": m.brand,
+                "ksher_fee_pct": ksher_fee_pct(m.brand) * 100,
                 "sales_qty_30d": m.sales_qty,
-                "sales_revenue_30d": round(m.sales_revenue, 2),
+                "sales_revenue_gross": round(m.sales_revenue, 2),
+                "ksher_fee": round(m.ksher_fee, 2),
+                "net_revenue": round(m.net_revenue, 2),
                 "current_stock": m.current_stock,
             }
             for m in profile.machines.values()
@@ -410,7 +474,10 @@ sell_price: {profile.sell_price}
 cost_price: {profile.cost_price}
 sales_qty_30d: {profile.sales_qty_30d}
 sales_revenue_30d: {profile.sales_revenue_30d:.2f}
+ksher_fees_30d: {profile.ksher_fees_30d:.2f}
+net_revenue_30d: {profile.net_revenue_30d:.2f}
 gross_margin_pct: {profile.gross_margin_pct:.1f}
+net_margin_pct: {profile.net_margin_pct:.1f}
 velocity_per_day: {profile.velocity_per_day:.2f}
 trend_pct: {profile.trend_pct:.1f}
 current_stock_total: {profile.total_current_stock}
@@ -432,8 +499,11 @@ last_updated: {datetime.now().isoformat()}
 | Metric | ค่า |
 |--------|----|
 | ยอดขาย | **{profile.sales_qty_30d} ซอง** |
-| รายได้ | **{profile.sales_revenue_30d:,.0f} บาท** |
-| กำไรขั้นต้น | {profile.gross_profit_30d:,.0f} บาท ({profile.gross_margin_pct:.1f}%) |
+| รายได้ (gross) | {profile.sales_revenue_30d:,.0f} บาท |
+| ค่าธรรมเนียม Ksher | −{profile.ksher_fees_30d:,.0f} บาท |
+| **รายได้ (net)** | **{profile.net_revenue_30d:,.0f} บาท** |
+| ต้นทุน (COGS) | −{profile.cogs_30d:,.0f} บาท |
+| **กำไรสุทธิ** | **{profile.net_profit_30d:,.0f} บาท ({profile.net_margin_pct:.1f}%)** |
 | Velocity | {profile.velocity_per_day:.1f} ซอง/วัน |
 | Trend (7d vs prev 7d) | {trend} **{profile.trend_pct:+.0f}%** ({profile.sales_qty_prev_7d} → {profile.sales_qty_7d}) |
 | คงเหลือรวมทุกตู้ | {profile.total_current_stock} ซอง |
@@ -478,6 +548,10 @@ def main():
 
     sb = get_supabase()
 
+    # โหลด machine brands ครั้งเดียว (ใช้คำนวณ Ksher fee)
+    machine_brands = get_machine_brands(sb)
+    print(f"🏪 Machine brands: {machine_brands}")
+
     # โหลด SKU list
     all_skus = fetch_active_skus(sb)
     print(f"📦 พบ active SKU: {len(all_skus)} ตัว")
@@ -515,7 +589,7 @@ def main():
         sku_id = sku_row["sku_id"]
         print(f"[{i}/{len(skus)}] 🎴 {sku_id}...")
 
-        profile = build_profile(sb, sku_row, end_date)
+        profile = build_profile(sb, sku_row, end_date, machine_brands)
 
         print(f"   📊 ขาย 30 วัน: {profile.sales_qty_30d} ซอง · "
               f"รายได้ {profile.sales_revenue_30d:,.0f} · "

@@ -69,3 +69,29 @@ def get_active_machines(sb: Client) -> list[str]:
     """ดึง machine_id ของตู้ active ทั้งหมด"""
     rows = sb.table("machines").select("machine_id").eq("status", "active").execute().data
     return [r["machine_id"] for r in rows]
+
+
+# ── Ksher Payment Gateway Fees ────────────────────────────────────────
+# DivisionX ใช้ Ksher เป็น payment gateway สำหรับทั้ง 2 brand
+# ค่าธรรมเนียมต่างกันเพราะสัญญาแยกกัน
+KSHER_FEE_BY_BRAND: dict[str, float] = {
+    "vms":       0.015,  # 1.5% สำหรับตู้ chukes (Inboxcorp VMS)
+    "worldwide": 0.005,  # 0.5% สำหรับตู้ wwv (Worldwide Vending)
+}
+DEFAULT_KSHER_FEE = 0.015  # default conservative ถ้าไม่รู้ brand
+
+
+def get_machine_brands(sb: Client) -> dict[str, str]:
+    """ดึง mapping machine_id → brand เช่น {'chukes01': 'vms', 'wwv01': 'worldwide'}"""
+    rows = sb.table("machines").select("machine_id, brand").execute().data
+    return {r["machine_id"]: (r.get("brand") or "vms") for r in rows}
+
+
+def ksher_fee_pct(brand: str) -> float:
+    """คืนค่าธรรมเนียม Ksher ตาม brand (เป็นสัดส่วน เช่น 0.015 = 1.5%)"""
+    return KSHER_FEE_BY_BRAND.get(brand, DEFAULT_KSHER_FEE)
+
+
+def calc_ksher_fee(gross_amount: float, brand: str) -> float:
+    """คำนวณค่าธรรมเนียม Ksher จากยอด gross"""
+    return gross_amount * ksher_fee_pct(brand)
