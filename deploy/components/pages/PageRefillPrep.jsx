@@ -279,6 +279,14 @@ export default function PageRefillPrep({ machines, machineStock, machineAssignme
   const handlePrint = () => {
     showToast(`กำลังเตรียม PDF · ${picks.length} รายการ`, "success")
     if (picks.length === 0) { showToast("ยังไม่มีรายการที่จะเตรียม", "error"); return }
+    try { _doPrint() }
+    catch (err) {
+      console.error("Export PDF failed:", err)
+      showToast(`Export PDF ล้มเหลว: ${err.message}`, "error")
+    }
+  }
+
+  const _doPrint = () => {
 
     const today = new Date()
     const dateStr = today.toLocaleDateString("th-TH", { year: "numeric", month: "long", day: "numeric" })
@@ -367,7 +375,7 @@ export default function PageRefillPrep({ machines, machineStock, machineAssignme
 <button class="print-btn" onclick="window.print()">🖨️ Print / Save PDF</button>
 <div class="header">
   <h1>DivisionX Card — เตรียมของเติมตู้</h1>
-  <div>${dateStr} เวลา ${timeStr} น. · ผู้ใช้: ${userName}</div>
+  <div>${dateStr} เวลา ${timeStr} น.</div>
 </div>
 ${machineBlocks}
 <div style="margin-top:12px;padding-top:8px;border-top:2px solid #333;font-size:12px;display:flex;justify-content:space-between">
