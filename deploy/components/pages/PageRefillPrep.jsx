@@ -295,10 +295,6 @@ export default function PageRefillPrep({ machines, machineStock, machineAssignme
     const today = new Date()
     const dateStr = today.toLocaleDateString("th-TH", { year: "numeric", month: "long", day: "numeric" })
     const timeStr = today.toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" })
-    // ผู้จ่ายสินค้า = logged-in user · ผู้รับสินค้า = activeProfile (เผื่อ admin เตรียมให้คนอื่น)
-    const dispenserName = profile?.display_name || profile?.username || profile?.email || "?"
-    const receiverName  = activeProfile?.display_name || activeProfile?.username || activeProfile?.email || ""
-    const showReceiverPreFill = receiverName && receiverName !== dispenserName
 
     // grand totals จาก pdfPicks (ไม่ filter myBalMap)
     const totalPacksAll = pdfPicks.reduce((a, r) => {
@@ -403,12 +399,12 @@ ${machineBlocks}
 </div>
 <div class="signatures">
   <div class="sig-block">
-    <div class="sig-line">${dispenserName}</div>
-    <div class="sig-label">ผู้จ่ายสินค้า</div>
-    <div class="sig-date">วันที่ ${dateStr}</div>
+    <div class="sig-line">&nbsp;</div>
+    <div class="sig-label">ผู้จ่ายสินค้า / ลงชื่อจ่าย</div>
+    <div class="sig-date">วันที่ ........../........../..........</div>
   </div>
   <div class="sig-block">
-    <div class="sig-line">${showReceiverPreFill ? receiverName : "&nbsp;"}</div>
+    <div class="sig-line">&nbsp;</div>
     <div class="sig-label">ผู้รับสินค้า / ลงชื่อรับ</div>
     <div class="sig-date">วันที่ ........../........../..........</div>
   </div>
