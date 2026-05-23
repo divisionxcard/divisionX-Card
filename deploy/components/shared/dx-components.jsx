@@ -63,6 +63,12 @@ export function KpiCard({ icon: Icon, label, value, sub, accent = "cyan", glow =
   const c = KPI_ACCENT_COLORS[accent] || KPI_ACCENT_COLORS.cyan
   const P = compact ? { pad: 12, valSize: 20, iconBox: 32, iconSize: 15, gap: 4, subGap: 2 }
                     : { pad: 18, valSize: 26, iconBox: 40, iconSize: 18, gap: 6, subGap: 4 }
+  // Auto-shrink value font when text is long (โดยเฉพาะตัวเลขเงิน 7 หลักขึ้นไป)
+  const valLen = String(value ?? "").length
+  const valSize = valLen >= 13 ? Math.round(P.valSize * 0.65)
+                : valLen >= 11 ? Math.round(P.valSize * 0.75)
+                : valLen >= 9  ? Math.round(P.valSize * 0.85)
+                : P.valSize
   const baseClass = glow ? "dx-card dx-card-glow" : "dx-card"
   return (
     <div className={`${baseClass} ${className}`.trim()} style={{ padding: P.pad, position: "relative", overflow: "hidden" }}>
@@ -71,7 +77,7 @@ export function KpiCard({ icon: Icon, label, value, sub, accent = "cyan", glow =
           <p style={{ margin: 0, fontSize: 11, fontWeight: 500, color: "var(--dx-text-muted)", letterSpacing: 0.5, textTransform: "uppercase" }}>
             {label}
           </p>
-          <p className="dx-mono" style={{ margin: `${P.gap}px 0 0`, fontSize: P.valSize, fontWeight: 700, color: "var(--dx-text)", lineHeight: 1.1, letterSpacing: -0.5 }}>
+          <p className="dx-mono" style={{ margin: `${P.gap}px 0 0`, fontSize: valSize, fontWeight: 700, color: "var(--dx-text)", lineHeight: 1.1, letterSpacing: -0.5, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
             {value}
           </p>
           {sub && <p style={{ margin: `${P.subGap}px 0 0`, fontSize: 10, color: "var(--dx-text-muted)" }}>{sub}</p>}
