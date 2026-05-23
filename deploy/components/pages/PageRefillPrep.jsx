@@ -277,13 +277,82 @@ export default function PageRefillPrep({ machines, machineStock, machineAssignme
   })()
 
   const handlePrint = () => {
+    showToast(`กำลังเตรียม PDF · ${picks.length} รายการ`, "success")
     if (picks.length === 0) { showToast("ยังไม่มีรายการที่จะเตรียม", "error"); return }
-    // ใช้ setTimeout เพื่อให้ React paint DOM ของ #refill-prep-report เสร็จก่อน
-    // (บางทีถ้า paint ยังไม่จบ window.print() เปิด dialog แต่ snapshot ไม่มีอะไร → user เห็นหน้าเปล่า)
-    setTimeout(() => {
-      try { window.print() }
-      catch (err) { showToast("เปิด print dialog ไม่ได้: " + err.message, "error") }
-    }, 50)
+
+    // เปิดหน้าต่างใหม่ + render เนื้อหา + ให้มัน print ตัวเอง
+    // หลีกเลี่ยงปัญหา window.print() ของหน้าหลัก เช่น CSS @media print ทับซ้อน /
+    // dev server overlay / Tailwind hot-reload ที่ค้าง
+    const printWin = window.open("", "_blank", "width=900,height=1000")
+    if (!printWin) {
+      showToast("เปิดหน้าต่างใหม่ไม่ได้ — browser block popup?", "error")
+      return
+    }
+
+    const today = new Date()
+    const dateStr = today.toLocaleDateString("th-TH", { year: "numeric", month: "long", day: "numeric" })
+    const timeStr = today.toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" })
+    const userName = activeProfile?.display_name || activeProfile?.username || activeProfile?.email || "?"
+
+    const machineBlocks = printableByMachine.map(({ machId, name, items, totalPacks }) => {
+      const rows = items.map(r => {
+        const sku = skus.find(s => s.sku_id === r.sku_id)
+        const qty = getQty(r)
+        const packs = r.isBox ? qty * (sku?.packs_per_box || 24) : qty
+        const unit = r.isBox ? "กล่อง" : "ซอง"
+        return `<tr>
+          <td style="font-family:monospace;font-weight:700">${r.sku_id}</td>
+          <td style="text-align:center">${r.slotNums.join(", ")}</td>
+          <td style="text-align:right;font-family:monospace">${r.remain} / ${r.capacity}</td>
+          <td style="text-align:right;font-family:monospace;font-weight:700">${qty}</td>
+          <td style="text-align:center">${unit}</td>
+          <td style="text-align:right;font-family:monospace">${packs}</td>
+          <td style="text-align:center;width:30px">☐</td>
+        </tr>`
+      }).join("")
+      return `<div class="machine">
+        <h3>${name} <span style="font-weight:400;font-size:11px">· ${items.length} รายการ · ${fmt(totalPacks)} ซอง</span></h3>
+        <table>
+          <thead><tr>
+            <th>SKU</th><th>ช่อง</th><th>คงเหลือ/ความจุ</th><th>เบิก</th><th>หน่วย</th><th>= ซอง</th><th>✓</th>
+          </tr></thead>
+          <tbody>${rows}</tbody>
+          <tfoot><tr><td colspan="5" style="text-align:right;font-weight:700">รวม ${name}</td>
+            <td style="text-align:right;font-family:monospace;font-weight:700">${fmt(totalPacks)}</td><td></td></tr></tfoot>
+        </table>
+      </div>`
+    }).join("")
+
+    printWin.document.write(`<!DOCTYPE html>
+<html><head>
+<meta charset="utf-8">
+<title>เตรียมของเติมตู้ · ${dateStr}</title>
+<style>
+  @page { size: A4 portrait; margin: 8mm; }
+  body { font-family: Tahoma, "Sarabun", "Noto Sans Thai", "Leelawadee UI", sans-serif; color: #000; margin: 0; padding: 6mm 8mm; }
+  .header { text-align: center; margin-bottom: 12px; font-size: 11px; }
+  .header h1 { margin: 0; font-size: 14px; }
+  .machine { margin-bottom: 16px; page-break-inside: auto; }
+  .machine:not(:first-of-type) { page-break-before: always; }
+  h3 { margin: 0 0 6px; font-size: 13px; border-bottom: 2px solid #333; padding-bottom: 3px; }
+  table { width: 100%; border-collapse: collapse; font-size: 11px; }
+  th, td { padding: 4px 6px; border: 1px solid #999; }
+  thead tr, tfoot tr { background: #f0f0f0; }
+  thead th { font-weight: 700; text-align: left; }
+</style>
+</head><body>
+<div class="header">
+  <h1>DivisionX Card — เตรียมของเติมตู้</h1>
+  <div>${dateStr} เวลา ${timeStr} น. · ผู้ใช้: ${userName}</div>
+</div>
+${machineBlocks}
+<div style="margin-top:12px;padding-top:8px;border-top:2px solid #333;font-size:12px;display:flex;justify-content:space-between">
+  <span>รวม ${printableByMachine.length} ตู้ · ${picks.length} รายการ</span>
+  <span style="font-weight:700">รวมทั้งหมด ${fmt(totalPacksSelected)} ซอง</span>
+</div>
+<script>setTimeout(() => { window.print(); }, 300);</script>
+</body></html>`)
+    printWin.document.close()
   }
 
   return (
