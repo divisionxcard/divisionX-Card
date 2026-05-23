@@ -5,7 +5,7 @@ import {
   ChevronUp, ChevronDown,
 } from "lucide-react"
 import { CHART_COLORS } from "../shared/constants"
-import { fmt } from "../shared/helpers"
+import { fmt, sortSkus } from "../shared/helpers"
 import { SectionTitle } from "../shared/dx-components"
 
 export default function PageMachineStockView({ machines, machineStock, skus, onRefresh }) {
@@ -57,7 +57,10 @@ export default function PageMachineStockView({ machines, machineStock, skus, onR
       map[skuId].capacity += s.max_capacity || 0
       map[skuId].slots += 1
     })
-    return Object.values(map).sort((a, b) => sortBy === "remain" ? b.remain - a.remain : a.sku_id.localeCompare(b.sku_id))
+    const values = Object.values(map)
+    return sortBy === "remain"
+      ? values.sort((a, b) => b.remain - a.remain)
+      : sortSkus(values)
   }
 
   const lastSync = machineStock.length > 0
@@ -90,7 +93,7 @@ export default function PageMachineStockView({ machines, machineStock, skus, onR
         skuRefill[key].slots += 1
         if (refill > 0) skuRefill[key].slotNums.push(s.slot_number)
       })
-      const list = Object.values(skuRefill).sort((a, b) => a.sku_id.localeCompare(b.sku_id))
+      const list = sortSkus(Object.values(skuRefill))
       return {
         machId, mInfo, list,
         totalBox: list.filter(r => r.isBox).reduce((a, r) => a + r.refill, 0),
