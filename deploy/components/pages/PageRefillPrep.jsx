@@ -334,6 +334,10 @@ export default function PageRefillPrep({ machines, machineStock, machineAssignme
         </tr>`
       }).join("")
       return `<div class="machine">
+        <div class="header">
+          <h1>DivisionX Card — เตรียมของเติมตู้</h1>
+          <div>${dateStr} เวลา ${timeStr} น.</div>
+        </div>
         <h3>${name} <span style="font-weight:400;font-size:11px">· ${enriched.length} รายการ · ${fmt(sumPacks)} ซอง</span></h3>
         <table>
           <thead><tr>
@@ -373,10 +377,6 @@ export default function PageRefillPrep({ machines, machineStock, machineAssignme
 </style>
 </head><body>
 <button class="print-btn" onclick="window.print()">🖨️ Print / Save PDF</button>
-<div class="header">
-  <h1>DivisionX Card — เตรียมของเติมตู้</h1>
-  <div>${dateStr} เวลา ${timeStr} น.</div>
-</div>
 ${machineBlocks}
 <div style="margin-top:12px;padding-top:8px;border-top:2px solid #333;font-size:12px;display:flex;justify-content:space-between">
   <span>รวม ${printableByMachine.length} ตู้ · ${picks.length} รายการ</span>
