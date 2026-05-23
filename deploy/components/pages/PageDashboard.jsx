@@ -156,9 +156,6 @@ export default function PageDashboardDX({ stockIn, stockOut, stockBalance, skus,
       {/* Layer 4: Slot Changes Alert (admin only · auto-hide ถ้าไม่มี change) */}
       {isAdmin && <SlotChangesAlert days={7}/>}
 
-      {/* AI Insights — ดึงจาก wiki/skus/*.md (อัปเดตทุกคืนโดย agent) */}
-      {isAdmin && <AIInsightWidget limit={3} />}
-
       {/* KPI Grid — admin: 4 cols w/ tall card #4; user: simple 2 cards */}
       {isAdmin ? (
         <div className="grid grid-cols-1 md:grid-cols-4 gap-3.5">
@@ -315,6 +312,9 @@ export default function PageDashboardDX({ stockIn, stockOut, stockBalance, skus,
         machines={machines}
         skus={skus}
       />
+
+      {/* AI Insights — ดึงจาก wiki/skus/*.md (อัปเดตทุกคืนโดย agent) */}
+      {isAdmin && <AIInsightWidget limit={3} />}
     </div>
   )
 }
