@@ -280,15 +280,6 @@ export default function PageRefillPrep({ machines, machineStock, machineAssignme
     showToast(`กำลังเตรียม PDF · ${picks.length} รายการ`, "success")
     if (picks.length === 0) { showToast("ยังไม่มีรายการที่จะเตรียม", "error"); return }
 
-    // เปิดหน้าต่างใหม่ + render เนื้อหา + ให้มัน print ตัวเอง
-    // หลีกเลี่ยงปัญหา window.print() ของหน้าหลัก เช่น CSS @media print ทับซ้อน /
-    // dev server overlay / Tailwind hot-reload ที่ค้าง
-    const printWin = window.open("", "_blank", "width=900,height=1000")
-    if (!printWin) {
-      showToast("เปิดหน้าต่างใหม่ไม่ได้ — browser block popup?", "error")
-      return
-    }
-
     const today = new Date()
     const dateStr = today.toLocaleDateString("th-TH", { year: "numeric", month: "long", day: "numeric" })
     const timeStr = today.toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" })
@@ -323,7 +314,7 @@ export default function PageRefillPrep({ machines, machineStock, machineAssignme
       </div>`
     }).join("")
 
-    printWin.document.write(`<!DOCTYPE html>
+    const html = `<!DOCTYPE html>
 <html><head>
 <meta charset="utf-8">
 <title>เตรียมของเติมตู้ · ${dateStr}</title>
@@ -339,8 +330,11 @@ export default function PageRefillPrep({ machines, machineStock, machineAssignme
   th, td { padding: 4px 6px; border: 1px solid #999; }
   thead tr, tfoot tr { background: #f0f0f0; }
   thead th { font-weight: 700; text-align: left; }
+  .print-btn { position: fixed; top: 10px; right: 10px; padding: 10px 20px; background: #00d4ff; color: #000; border: none; border-radius: 6px; font-size: 14px; font-weight: 700; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
+  @media print { .print-btn { display: none; } }
 </style>
 </head><body>
+<button class="print-btn" onclick="window.print()">🖨️ Print / Save PDF</button>
 <div class="header">
   <h1>DivisionX Card — เตรียมของเติมตู้</h1>
   <div>${dateStr} เวลา ${timeStr} น. · ผู้ใช้: ${userName}</div>
@@ -350,9 +344,23 @@ ${machineBlocks}
   <span>รวม ${printableByMachine.length} ตู้ · ${picks.length} รายการ</span>
   <span style="font-weight:700">รวมทั้งหมด ${fmt(totalPacksSelected)} ซอง</span>
 </div>
-<script>setTimeout(() => { window.print(); }, 300);</script>
-</body></html>`)
-    printWin.document.close()
+<script>window.addEventListener("load", () => setTimeout(() => window.print(), 400));</script>
+</body></html>`
+
+    const blob = new Blob([html], { type: "text/html;charset=utf-8" })
+    const url = URL.createObjectURL(blob)
+    const printWin = window.open(url, "_blank")
+    if (!printWin) {
+      // popup ถูก block → fallback ให้ user download HTML ไปเปิดเอง
+      const a = document.createElement("a")
+      a.href = url
+      a.download = `refill-prep-${dateStr.replace(/\s/g, "-")}.html`
+      a.click()
+      showToast("Popup ถูก block · ดาวน์โหลด HTML ให้แทน · เปิดแล้วกด Print", "error")
+      return
+    }
+    // cleanup blob URL หลังหน้าต่างเปิดเสร็จ
+    setTimeout(() => URL.revokeObjectURL(url), 60000)
   }
 
   return (
