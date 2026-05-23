@@ -7,8 +7,7 @@
 UPDATE machines
 SET
   name     = REPLACE(name,     'เซนทรัล', 'เซ็นทรัล'),
-  location = REPLACE(location, 'เซนทรัล', 'เซ็นทรัล'),
-  updated_at = NOW()
+  location = REPLACE(location, 'เซนทรัล', 'เซ็นทรัล')
 WHERE name LIKE '%เซนทรัล%' OR location LIKE '%เซนทรัล%';
 
 -- ตรวจสอบผลลัพธ์
