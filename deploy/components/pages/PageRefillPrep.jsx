@@ -252,10 +252,14 @@ export default function PageRefillPrep({ machines, machineStock, machineAssignme
     return a + (r.isBox ? getQty(r) * (sku?.packs_per_box || 24) : getQty(r))
   }, 0)
 
-  // จัดกลุ่ม picks ตามตู้ สำหรับ Export PDF
+  // pdfPicks = ทุกรายการที่ต้องเติม (qty>0) ไม่สน stock หลัก · ใช้กับ Export PDF
+  // (picks ด้านบนใช้กับ withdrawal ที่ต้องเช็คสต็อกจริง)
+  const pdfPicks = visibleItems.filter(r => getQty(r) > 0)
+
+  // จัดกลุ่ม pdfPicks ตามตู้ สำหรับ Export PDF
   const printableByMachine = (() => {
     const byMach = {}
-    picks.forEach(r => {
+    pdfPicks.forEach(r => {
       if (!byMach[r.machine_id]) byMach[r.machine_id] = []
       byMach[r.machine_id].push(r)
     })
@@ -277,8 +281,8 @@ export default function PageRefillPrep({ machines, machineStock, machineAssignme
   })()
 
   const handlePrint = () => {
-    showToast(`กำลังเตรียม PDF · ${picks.length} รายการ`, "success")
-    if (picks.length === 0) { showToast("ยังไม่มีรายการที่จะเตรียม", "error"); return }
+    showToast(`กำลังเตรียม PDF · ${pdfPicks.length} รายการ`, "success")
+    if (pdfPicks.length === 0) { showToast("ยังไม่มีรายการที่จะเตรียม", "error"); return }
     try { _doPrint() }
     catch (err) {
       console.error("Export PDF failed:", err)
@@ -296,21 +300,27 @@ export default function PageRefillPrep({ machines, machineStock, machineAssignme
     const receiverName  = activeProfile?.display_name || activeProfile?.username || activeProfile?.email || ""
     const showReceiverPreFill = receiverName && receiverName !== dispenserName
 
-    // sort + cap qty + filter row 0 · ต่อตู้
+    // grand totals จาก pdfPicks (ไม่ filter myBalMap)
+    const totalPacksAll = pdfPicks.reduce((a, r) => {
+      const sku = skus.find(s => s.sku_id === r.sku_id)
+      return a + (r.isBox ? getQty(r) * (sku?.packs_per_box || 24) : getQty(r))
+    }, 0)
+    const totalBoxesAll = pdfPicks.filter(r => r.isBox).reduce((a, r) => a + getQty(r), 0)
+    const totalLoosePacksAll = pdfPicks.filter(r => !r.isBox).reduce((a, r) => a + getQty(r), 0)
+    const grandTotalLabel = [
+      totalBoxesAll > 0 ? `${fmt(totalBoxesAll)} กล่อง` : "",
+      totalLoosePacksAll > 0 ? `${fmt(totalLoosePacksAll)} ซอง` : "",
+    ].filter(Boolean).join(" / ") || "0"
+
+    // sort row · ต่อตู้ (ไม่ cap สต็อก · แสดงทุกรายการที่ต้องเติม)
     const machineBlocks = printableByMachine.map(({ machId, name, items, totalPacks: _origTotal }) => {
-      // cap ต่อ row · ไม่เกินสต็อกของผู้ใช้
       const enriched = items.map(r => {
         const sku = skus.find(s => s.sku_id === r.sku_id)
-        const userStock = myBalMap[r.sku_id] || 0
-        const requested = getQty(r)
         const ppb = sku?.packs_per_box || 24
-        const maxByStock = r.isBox ? Math.floor(userStock / ppb) : userStock
-        const cappedQty = Math.max(0, Math.min(requested, maxByStock))
-        const cappedPacks = r.isBox ? cappedQty * ppb : cappedQty
-        return { ...r, cappedQty, cappedPacks }
+        const qty = getQty(r)
+        const packs = r.isBox ? qty * ppb : qty
+        return { ...r, qty, packs }
       })
-      // ตัดรายการที่ cap แล้ว = 0 (เติมไม่ได้เพราะสต็อกไม่พอ)
-      .filter(r => r.cappedQty > 0)
       // sort · pack ก่อน, box ล่างสุด · ในแต่ละ type: series + sku_id
       .sort((a, b) => {
         if (a.isBox !== b.isBox) return a.isBox ? 1 : -1
@@ -319,11 +329,11 @@ export default function PageRefillPrep({ machines, machineStock, machineAssignme
         return sa - sb || (a.sku_id || "").localeCompare(b.sku_id || "")
       })
 
-      if (enriched.length === 0) return ""  // ตู้นี้ไม่มีอะไรเติมได้เลย
+      if (enriched.length === 0) return ""
 
-      const sumPacks = enriched.reduce((a, r) => a + r.cappedPacks, 0)
-      const sumBoxes = enriched.filter(r => r.isBox).reduce((a, r) => a + r.cappedQty, 0)
-      const sumLoosePacks = enriched.filter(r => !r.isBox).reduce((a, r) => a + r.cappedQty, 0)
+      const sumPacks = enriched.reduce((a, r) => a + r.packs, 0)
+      const sumBoxes = enriched.filter(r => r.isBox).reduce((a, r) => a + r.qty, 0)
+      const sumLoosePacks = enriched.filter(r => !r.isBox).reduce((a, r) => a + r.qty, 0)
       const totalLabel = [
         sumBoxes > 0 ? `${fmt(sumBoxes)} กล่อง` : "",
         sumLoosePacks > 0 ? `${fmt(sumLoosePacks)} ซอง` : "",
@@ -335,7 +345,7 @@ export default function PageRefillPrep({ machines, machineStock, machineAssignme
         const unit = r.isBox ? "กล่อง" : "ซอง"
         return `<tr>
           <td>${fullName}</td>
-          <td style="text-align:right;font-family:monospace;font-weight:700">${r.cappedQty} ${unit}</td>
+          <td style="text-align:right;font-family:monospace;font-weight:700">${r.qty} ${unit}</td>
           <td style="text-align:right;font-family:monospace">${r.remain}</td>
           <td style="text-align:right;font-family:monospace">${r.capacity}</td>
           <td style="text-align:center;width:60px">☐</td>
@@ -388,8 +398,8 @@ export default function PageRefillPrep({ machines, machineStock, machineAssignme
 <button class="print-btn" onclick="window.print()">🖨️ Print / Save PDF</button>
 ${machineBlocks}
 <div style="margin-top:12px;padding-top:8px;border-top:2px solid #333;font-size:12px;display:flex;justify-content:space-between">
-  <span>รวม ${printableByMachine.length} ตู้ · ${picks.length} รายการ</span>
-  <span style="font-weight:700">รวมทั้งหมด ${fmt(totalPacksSelected)} ซอง</span>
+  <span>รวม ${printableByMachine.length} ตู้ · ${pdfPicks.length} รายการ</span>
+  <span style="font-weight:700">รวมทั้งหมด ${grandTotalLabel}</span>
 </div>
 <div class="signatures">
   <div class="sig-block">
@@ -506,9 +516,9 @@ ${machineBlocks}
           <button
             type="button"
             onClick={handlePrint}
-            disabled={picks.length === 0}
+            disabled={pdfPicks.length === 0}
             className="dx-btn dx-btn-ghost"
-            style={{ fontSize: 11, opacity: picks.length === 0 ? 0.5 : 1 }}
+            style={{ fontSize: 11, opacity: pdfPicks.length === 0 ? 0.5 : 1 }}
             title="พิมพ์ / บันทึก PDF">
             <Printer size={12}/> Export PDF
           </button>
