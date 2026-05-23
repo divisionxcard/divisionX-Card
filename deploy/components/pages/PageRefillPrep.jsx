@@ -278,7 +278,12 @@ export default function PageRefillPrep({ machines, machineStock, machineAssignme
 
   const handlePrint = () => {
     if (picks.length === 0) { showToast("ยังไม่มีรายการที่จะเตรียม", "error"); return }
-    window.print()
+    // ใช้ setTimeout เพื่อให้ React paint DOM ของ #refill-prep-report เสร็จก่อน
+    // (บางทีถ้า paint ยังไม่จบ window.print() เปิด dialog แต่ snapshot ไม่มีอะไร → user เห็นหน้าเปล่า)
+    setTimeout(() => {
+      try { window.print() }
+      catch (err) { showToast("เปิด print dialog ไม่ได้: " + err.message, "error") }
+    }, 50)
   }
 
   return (
@@ -363,6 +368,7 @@ export default function PageRefillPrep({ machines, machineStock, machineAssignme
             </span>
           </h2>
           <button
+            type="button"
             onClick={handlePrint}
             disabled={picks.length === 0}
             className="dx-btn dx-btn-ghost"
