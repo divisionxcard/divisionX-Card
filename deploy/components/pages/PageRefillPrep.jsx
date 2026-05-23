@@ -534,16 +534,6 @@ export default function PageRefillPrep({ machines, machineStock, machineAssignme
         background: "white", color: "black", pointerEvents: "none",
       }}>
         <div style={{ padding: "6mm 8mm", fontFamily: "system-ui, -apple-system, sans-serif" }}>
-          <div style={{ textAlign: "center", marginBottom: 12 }}>
-            <p style={{ margin: 0, fontWeight: 700, fontSize: 14 }}>DivisionX Card — เตรียมของเติมตู้</p>
-            <p style={{ margin: "2px 0 0", fontSize: 11 }}>
-              {new Date().toLocaleDateString("th-TH", { year: "numeric", month: "long", day: "numeric" })}
-              {" เวลา "}
-              {new Date().toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" })}{" น."}
-              {" · ผู้ใช้: "}{activeProfile?.display_name || activeProfile?.username || activeProfile?.email || "?"}
-            </p>
-          </div>
-
           {printableByMachine.map(({ machId, name, items, totalPacks }) => (
             <div key={machId} className="refill-prep-machine" style={{ marginBottom: 16 }}>
               <h3 style={{
