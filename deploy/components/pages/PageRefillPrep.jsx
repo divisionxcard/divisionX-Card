@@ -363,6 +363,18 @@ export default function PageRefillPrep({ machines, machineStock, machineAssignme
             <td style="text-align:right;font-family:monospace;font-weight:700">${totalLabel}</td>
             <td colspan="4"></td></tr></tfoot>
         </table>
+        <div class="signatures">
+          <div class="sig-block">
+            <div class="sig-line">&nbsp;</div>
+            <div class="sig-label">ผู้จ่ายสินค้า / ลงชื่อจ่าย</div>
+            <div class="sig-date">วันที่ ........../........../..........</div>
+          </div>
+          <div class="sig-block">
+            <div class="sig-line">&nbsp;</div>
+            <div class="sig-label">ผู้รับสินค้า / ลงชื่อรับ</div>
+            <div class="sig-date">วันที่ ........../........../..........</div>
+          </div>
+        </div>
       </div>`
     }).filter(Boolean).join("")
 
@@ -393,22 +405,6 @@ export default function PageRefillPrep({ machines, machineStock, machineAssignme
 </head><body>
 <button class="print-btn" onclick="window.print()">🖨️ Print / Save PDF</button>
 ${machineBlocks}
-<div style="margin-top:12px;padding-top:8px;border-top:2px solid #333;font-size:12px;display:flex;justify-content:space-between">
-  <span>รวม ${printableByMachine.length} ตู้ · ${pdfPicks.length} รายการ</span>
-  <span style="font-weight:700">รวมทั้งหมด ${grandTotalLabel}</span>
-</div>
-<div class="signatures">
-  <div class="sig-block">
-    <div class="sig-line">&nbsp;</div>
-    <div class="sig-label">ผู้จ่ายสินค้า / ลงชื่อจ่าย</div>
-    <div class="sig-date">วันที่ ........../........../..........</div>
-  </div>
-  <div class="sig-block">
-    <div class="sig-line">&nbsp;</div>
-    <div class="sig-label">ผู้รับสินค้า / ลงชื่อรับ</div>
-    <div class="sig-date">วันที่ ........../........../..........</div>
-  </div>
-</div>
 <script>window.addEventListener("load", () => setTimeout(() => window.print(), 400));</script>
 </body></html>`
 
