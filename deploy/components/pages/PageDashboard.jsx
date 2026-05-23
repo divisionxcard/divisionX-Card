@@ -305,13 +305,15 @@ export default function PageDashboardDX({ stockIn, stockOut, stockBalance, skus,
         </div>
       )}
 
-      {/* Section: เทียบยอดเติม vs ขาย รายวัน */}
-      <SalesVsRefillSection
-        sales={sales}
-        stockOut={stockOut}
-        machines={machines}
-        skus={skus}
-      />
+      {/* Section: เทียบยอดเติม vs ขาย รายวัน — ซ่อนไว้ก่อน */}
+      {false && (
+        <SalesVsRefillSection
+          sales={sales}
+          stockOut={stockOut}
+          machines={machines}
+          skus={skus}
+        />
+      )}
 
       {/* AI Insights — ดึงจาก wiki/skus/*.md (อัปเดตทุกคืนโดย agent) */}
       {isAdmin && <AIInsightWidget limit={3} />}
