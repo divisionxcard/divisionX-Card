@@ -458,26 +458,33 @@ body.dx-theme tr.hover\:bg-gray-50:hover { background-color: var(--dx-bg-elevate
    ──────────────────────────────────────────────────── */
 @media print {
   body * { visibility: hidden; }
-  #refill-report, #refill-report * { visibility: visible; }
-  #refill-report {
-    position: absolute;
-    left: 0; top: 0;
-    width: 100%;
+  #refill-report, #refill-report *,
+  #refill-prep-report, #refill-prep-report * { visibility: visible; }
+  #refill-report,
+  #refill-prep-report {
+    position: absolute !important;
+    left: 0 !important; top: 0 !important;
+    width: 100% !important;
     border: none !important;
     box-shadow: none !important;
     padding: 0 !important;
     margin: 0 !important;
   }
-  /* header ของรายงานไม่ขึ้นหน้าใหม่ */
-  #refill-report > div:first-child { margin-bottom: 4px !important; }
+  /* header ของรายงานไม่ขึ้นหน้าใหม่ + ระยะห่างจาก content ใกล้ขึ้น */
+  #refill-report > div:first-child,
+  #refill-prep-report > div > div:first-child { margin-bottom: 4px !important; }
   /* แต่ละตู้ขึ้นหน้าใหม่ (ยกเว้นตู้แรกอยู่หน้าเดียวกับ header) */
   .refill-machine { page-break-inside: avoid; }
-  .refill-machine:not(:first-of-type) { page-break-before: always; }
+  .refill-machine:not(:first-of-type),
+  .refill-prep-machine:not(:first-of-type) { page-break-before: always; }
+  /* prep variant: ไม่ avoid break ภายใน ไม่งั้น first machine ที่ยาวเกินจะถูกเด้งไปหน้า 2
+     ทำให้หน้า 1 เป็นหน้าเปล่ามีแค่ header */
   /* จัด A4 */
   @page { size: A4 portrait; margin: 8mm; }
   table { font-size: 9px !important; }
   th, td { padding: 2px 4px !important; }
-  .refill-machine { margin-bottom: 0 !important; }
+  .refill-machine,
+  .refill-prep-machine { margin-bottom: 0 !important; }
   /* Force light theme in print (in case dx-theme is on) */
   body, .dx-card, .dx-btn, * { background: white !important; color: black !important; box-shadow: none !important; }
 }
