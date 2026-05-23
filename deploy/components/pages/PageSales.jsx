@@ -302,7 +302,6 @@ export default function PageSales({ machines, sales, skus, claims, onRefresh }) 
 
   const totalRev = filtered.reduce((a, r) => a + r.revenue, 0)
   const totalKsherFee = filtered.reduce((a, r) => a + (r.revenue || 0) * ksherFeePct(brandMap[r.machine_id]), 0)
-  const totalNetRev = totalRev - totalKsherFee
   const totalQty = filtered.reduce((a, r) => a + r.quantity_sold, 0)
   const totalTxn = new Set(filtered.map(r => r.transaction_id).filter(Boolean)).size
   const dayCount = Math.max(1, [...new Set(filtered.map(r => r.sold_at))].length)
@@ -429,11 +428,9 @@ export default function PageSales({ machines, sales, skus, claims, onRefresh }) 
         <>
           {/* KPIs */}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 14 }}>
-            <KpiCard icon={TrendingUp} label="ยอดขายรวม (gross)" value={fmtB(totalRev)} accent="success" glow/>
-            <KpiCard icon={ShoppingCart} label="จำนวนธุรกรรม" value={fmt(totalTxn)} sub="ครั้ง" accent="cyan"/>
+            <KpiCard icon={TrendingUp} label="ยอดขายรวม (gross)" value={fmtB(totalRev)} sub={`${fmt(totalTxn)} ธุรกรรม`} accent="success" glow/>
             <KpiCard icon={Layers} label="ซองที่ขาย" value={fmt(totalQty)} sub="ซอง" accent="purple"/>
             <KpiCard icon={TrendingUp} label="ค่าธรรมเนียม Ksher" value={`−${fmtB(totalKsherFee)}`} sub="VMS 1.5% · WW 0.5%" accent="danger"/>
-            <KpiCard icon={TrendingUp} label="รายรับสุทธิ" value={fmtB(totalNetRev)} sub="หลังหัก Ksher" accent="cyan"/>
             <KpiCard icon={Clock} label="เฉลี่ยต่อวัน" value={fmtB(Math.round(totalRev / dayCount))} accent="cyan"/>
             <KpiCard icon={TrendingUp} label="กำไรสุทธิ" value={fmtB(profit)} sub="หลัง Ksher + ต้นทุน + refund" accent="warning"/>
           </div>
