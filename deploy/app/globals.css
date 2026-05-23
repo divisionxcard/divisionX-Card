@@ -460,6 +460,11 @@ body.dx-theme tr.hover\:bg-gray-50:hover { background-color: var(--dx-bg-elevate
   body * { visibility: hidden; }
   #refill-report, #refill-report *,
   #refill-prep-report, #refill-prep-report * { visibility: visible; }
+  /* บังคับใช้ font ที่ shape ภาษาไทยถูก · system-ui บน Chrome print preview ทำให้สระแตก */
+  #refill-report, #refill-report *,
+  #refill-prep-report, #refill-prep-report * {
+    font-family: "Sarabun", "Tahoma", "Noto Sans Thai", "Leelawadee UI", "TH Sarabun New", sans-serif !important;
+  }
   #refill-report,
   #refill-prep-report {
     position: absolute !important;
