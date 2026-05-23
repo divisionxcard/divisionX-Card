@@ -344,7 +344,7 @@ export default function PageRefillPrep({ machines, machineStock, machineAssignme
       }).join("")
       return `<div class="machine">
         <div class="header">
-          <h1>DivisionX Card — เตรียมของเติมตู้</h1>
+          <h1>รายการเตรียมของเติมตู้ — DivisionX Card</h1>
           <div>${dateStr} เวลา ${timeStr} น.</div>
         </div>
         <h3>${name} <span style="font-weight:400;font-size:11px">· ${enriched.length} รายการ · ${fmt(sumPacks)} ซอง</span></h3>
