@@ -460,6 +460,10 @@ body.dx-theme tr.hover\:bg-gray-50:hover { background-color: var(--dx-bg-elevate
   body * { visibility: hidden; }
   #refill-report, #refill-report *,
   #refill-prep-report, #refill-prep-report * { visibility: visible; }
+  /* ใน print: ซ่อน element ที่มี class print-hide หรือ Tailwind print:hidden
+     บังคับ !important เพื่อชนะ inline style เช่น style={{display:"flex"}} */
+  .print\:hidden,
+  [class~="print:hidden"] { display: none !important; }
   /* บังคับใช้ font ที่ shape ภาษาไทยถูก · system-ui บน Chrome print preview ทำให้สระแตก */
   #refill-report, #refill-report *,
   #refill-prep-report, #refill-prep-report * {
