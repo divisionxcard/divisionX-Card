@@ -283,36 +283,61 @@ export default function PageRefillPrep({ machines, machineStock, machineAssignme
     const today = new Date()
     const dateStr = today.toLocaleDateString("th-TH", { year: "numeric", month: "long", day: "numeric" })
     const timeStr = today.toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" })
-    const userName = activeProfile?.display_name || activeProfile?.username || activeProfile?.email || "?"
+    // ผู้จ่ายสินค้า = logged-in user · ผู้รับสินค้า = activeProfile (เผื่อ admin เตรียมให้คนอื่น)
+    const dispenserName = profile?.display_name || profile?.username || profile?.email || "?"
+    const receiverName  = activeProfile?.display_name || activeProfile?.username || activeProfile?.email || ""
+    const showReceiverPreFill = receiverName && receiverName !== dispenserName
 
-    const machineBlocks = printableByMachine.map(({ machId, name, items, totalPacks }) => {
-      const rows = items.map(r => {
+    // sort + cap qty + filter row 0 · ต่อตู้
+    const machineBlocks = printableByMachine.map(({ machId, name, items, totalPacks: _origTotal }) => {
+      // cap ต่อ row · ไม่เกินสต็อกของผู้ใช้
+      const enriched = items.map(r => {
         const sku = skus.find(s => s.sku_id === r.sku_id)
-        const qty = getQty(r)
-        const packs = r.isBox ? qty * (sku?.packs_per_box || 24) : qty
+        const userStock = myBalMap[r.sku_id] || 0
+        const requested = getQty(r)
+        const ppb = sku?.packs_per_box || 24
+        const maxByStock = r.isBox ? Math.floor(userStock / ppb) : userStock
+        const cappedQty = Math.max(0, Math.min(requested, maxByStock))
+        const cappedPacks = r.isBox ? cappedQty * ppb : cappedQty
+        return { ...r, cappedQty, cappedPacks }
+      })
+      // ตัดรายการที่ cap แล้ว = 0 (เติมไม่ได้เพราะสต็อกไม่พอ)
+      .filter(r => r.cappedQty > 0)
+      // sort · pack ก่อน, box ล่างสุด · ในแต่ละ type: series + sku_id
+      .sort((a, b) => {
+        if (a.isBox !== b.isBox) return a.isBox ? 1 : -1
+        const sa = SKU_SERIES_ORDER[getSkuSeries(a.sku_id)] ?? 9
+        const sb = SKU_SERIES_ORDER[getSkuSeries(b.sku_id)] ?? 9
+        return sa - sb || (a.sku_id || "").localeCompare(b.sku_id || "")
+      })
+
+      if (enriched.length === 0) return ""  // ตู้นี้ไม่มีอะไรเติมได้เลย
+
+      const sumPacks = enriched.reduce((a, r) => a + r.cappedPacks, 0)
+      const rows = enriched.map(r => {
         const unit = r.isBox ? "กล่อง" : "ซอง"
         return `<tr>
-          <td style="font-family:monospace;font-weight:700">${r.sku_id}</td>
-          <td style="text-align:center">${r.slotNums.join(", ")}</td>
-          <td style="text-align:right;font-family:monospace">${r.remain} / ${r.capacity}</td>
-          <td style="text-align:right;font-family:monospace;font-weight:700">${qty}</td>
-          <td style="text-align:center">${unit}</td>
-          <td style="text-align:right;font-family:monospace">${packs}</td>
-          <td style="text-align:center;width:30px">☐</td>
+          <td style="font-family:monospace;font-weight:700">${r.sku_id}${r.isBox ? ' <span style="font-size:9px;color:#666">(กล่อง)</span>' : ''}</td>
+          <td style="text-align:right;font-family:monospace;font-weight:700">${r.cappedQty} ${unit}</td>
+          <td style="text-align:right;font-family:monospace">${r.remain}</td>
+          <td style="text-align:right;font-family:monospace">${r.capacity}</td>
+          <td style="text-align:center;width:60px">☐</td>
+          <td style="width:25%"></td>
         </tr>`
       }).join("")
       return `<div class="machine">
-        <h3>${name} <span style="font-weight:400;font-size:11px">· ${items.length} รายการ · ${fmt(totalPacks)} ซอง</span></h3>
+        <h3>${name} <span style="font-weight:400;font-size:11px">· ${enriched.length} รายการ · ${fmt(sumPacks)} ซอง</span></h3>
         <table>
           <thead><tr>
-            <th>SKU</th><th>ช่อง</th><th>คงเหลือ/ความจุ</th><th>เบิก</th><th>หน่วย</th><th>= ซอง</th><th>✓</th>
+            <th>สินค้า</th><th style="text-align:right">ต้องเติม</th><th style="text-align:right">คงเหลือ</th><th style="text-align:right">ความจุ</th><th style="text-align:center">ตรวจสอบสินค้า</th><th>หมายเหตุ</th>
           </tr></thead>
           <tbody>${rows}</tbody>
-          <tfoot><tr><td colspan="5" style="text-align:right;font-weight:700">รวม ${name}</td>
-            <td style="text-align:right;font-family:monospace;font-weight:700">${fmt(totalPacks)}</td><td></td></tr></tfoot>
+          <tfoot><tr><td style="text-align:right;font-weight:700">รวม ${name}</td>
+            <td style="text-align:right;font-family:monospace;font-weight:700">${fmt(sumPacks)} ซอง</td>
+            <td colspan="4"></td></tr></tfoot>
         </table>
       </div>`
-    }).join("")
+    }).filter(Boolean).join("")
 
     const html = `<!DOCTYPE html>
 <html><head>
@@ -332,6 +357,11 @@ export default function PageRefillPrep({ machines, machineStock, machineAssignme
   thead th { font-weight: 700; text-align: left; }
   .print-btn { position: fixed; top: 10px; right: 10px; padding: 10px 20px; background: #00d4ff; color: #000; border: none; border-radius: 6px; font-size: 14px; font-weight: 700; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
   @media print { .print-btn { display: none; } }
+  .signatures { margin-top: 28px; display: flex; justify-content: space-between; gap: 40px; page-break-inside: avoid; }
+  .sig-block { flex: 1; text-align: center; }
+  .sig-line { padding: 18px 12px 4px; border-bottom: 1px solid #000; font-weight: 700; font-size: 12px; min-height: 18px; }
+  .sig-label { margin-top: 4px; font-size: 11px; font-weight: 700; }
+  .sig-date { margin-top: 4px; font-size: 10px; color: #444; }
 </style>
 </head><body>
 <button class="print-btn" onclick="window.print()">🖨️ Print / Save PDF</button>
@@ -343,6 +373,18 @@ ${machineBlocks}
 <div style="margin-top:12px;padding-top:8px;border-top:2px solid #333;font-size:12px;display:flex;justify-content:space-between">
   <span>รวม ${printableByMachine.length} ตู้ · ${picks.length} รายการ</span>
   <span style="font-weight:700">รวมทั้งหมด ${fmt(totalPacksSelected)} ซอง</span>
+</div>
+<div class="signatures">
+  <div class="sig-block">
+    <div class="sig-line">${dispenserName}</div>
+    <div class="sig-label">ผู้จ่ายสินค้า</div>
+    <div class="sig-date">วันที่ ${dateStr}</div>
+  </div>
+  <div class="sig-block">
+    <div class="sig-line">${showReceiverPreFill ? receiverName : "&nbsp;"}</div>
+    <div class="sig-label">ผู้รับสินค้า / ลงชื่อรับ</div>
+    <div class="sig-date">วันที่ ........../........../..........</div>
+  </div>
 </div>
 <script>window.addEventListener("load", () => setTimeout(() => window.print(), 400));</script>
 </body></html>`
