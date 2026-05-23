@@ -8,7 +8,7 @@ import {
   ResponsiveContainer, BarChart, Bar, CartesianGrid, XAxis, YAxis, Tooltip, Legend,
 } from "recharts"
 import { CHART_COLORS } from "../shared/constants"
-import { fmt, fmtB, getLastNDays, fmtDayLabel, today } from "../shared/helpers"
+import { fmt, fmtB, getLastNDays, fmtDayLabel, today, buildBrandMap, ksherFeePct } from "../shared/helpers"
 import { Badge, KpiCard, SectionTitle } from "../shared/dx-components"
 
 // ─────────────────────────────────────────────
@@ -289,6 +289,7 @@ export default function PageSales({ machines, sales, skus, claims, onRefresh }) 
   }
 
   const filtered = machineSel === "all" ? sales : sales.filter(r => r.machine_id === machineSel)
+  const brandMap = buildBrandMap(machines)
   const last7 = getLastNDays(7)
   const dailyData = last7.map(d => {
     const row = { day: fmtDayLabel(d) }
@@ -300,6 +301,8 @@ export default function PageSales({ machines, sales, skus, claims, onRefresh }) 
   })
 
   const totalRev = filtered.reduce((a, r) => a + r.revenue, 0)
+  const totalKsherFee = filtered.reduce((a, r) => a + (r.revenue || 0) * ksherFeePct(brandMap[r.machine_id]), 0)
+  const totalNetRev = totalRev - totalKsherFee
   const totalQty = filtered.reduce((a, r) => a + r.quantity_sold, 0)
   const totalTxn = new Set(filtered.map(r => r.transaction_id).filter(Boolean)).size
   const dayCount = Math.max(1, [...new Set(filtered.map(r => r.sold_at))].length)
@@ -327,10 +330,13 @@ export default function PageSales({ machines, sales, skus, claims, onRefresh }) 
       return d >= minDate && d <= maxDate
     })
     .reduce((a, c) => a + (parseFloat(c.refund_amount) || 0), 0)
+  // Net profit = (revenue − Ksher fee) − COGS − refunds
   const profit = filtered.reduce((a, r) => {
     const s = skus.find(sk => sk.sku_id === r.sku_id)
+    const gross = r.revenue || 0
+    const fee = gross * ksherFeePct(brandMap[r.machine_id])
     const cost = (s?.avg_cost || s?.cost_price || 0) * (r.quantity_sold || 0)
-    return a + (r.revenue || 0) - cost
+    return a + gross - fee - cost
   }, 0) - totalRefund
 
   const chartTooltipStyle = {
@@ -423,11 +429,13 @@ export default function PageSales({ machines, sales, skus, claims, onRefresh }) 
         <>
           {/* KPIs */}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 14 }}>
-            <KpiCard icon={TrendingUp} label="ยอดขายรวม (ตั้งแต่ 1 พ.ค.)" value={fmtB(totalRev)} accent="success" glow/>
+            <KpiCard icon={TrendingUp} label="ยอดขายรวม (gross)" value={fmtB(totalRev)} accent="success" glow/>
             <KpiCard icon={ShoppingCart} label="จำนวนธุรกรรม" value={fmt(totalTxn)} sub="ครั้ง" accent="cyan"/>
             <KpiCard icon={Layers} label="ซองที่ขาย" value={fmt(totalQty)} sub="ซอง" accent="purple"/>
+            <KpiCard icon={TrendingUp} label="ค่าธรรมเนียม Ksher" value={`−${fmtB(totalKsherFee)}`} sub="VMS 1.5% · WW 0.5%" accent="danger"/>
+            <KpiCard icon={TrendingUp} label="รายรับสุทธิ" value={fmtB(totalNetRev)} sub="หลังหัก Ksher" accent="cyan"/>
             <KpiCard icon={Clock} label="เฉลี่ยต่อวัน" value={fmtB(Math.round(totalRev / dayCount))} accent="cyan"/>
-            <KpiCard icon={TrendingUp} label="กำไรโดยประมาณ" value={fmtB(profit)} sub="หลังต้นทุน" accent="warning"/>
+            <KpiCard icon={TrendingUp} label="กำไรสุทธิ" value={fmtB(profit)} sub="หลัง Ksher + ต้นทุน + refund" accent="warning"/>
           </div>
 
           {/* รายการขายแยก SKU ต่อตู้ */}

@@ -836,7 +836,7 @@ export default function DivisionXApp() {
           {page === "machstock"  && <PageMachineStockView machines={machines} machineStock={machineStock} skus={skus} onRefresh={loadAll}/>}
           {page === "sales"      && <PageSales     machines={machines} sales={sales} skus={skus} claims={claims} onRefresh={loadAll}/>}
           {page === "claims"     && <PageClaims    machines={machines} skus={skus} claims={claims} onAddClaim={addClaim} onConfirmClaim={confirmClaim} onDeleteClaim={deleteClaim} machineAssignments={machineAssignments} session={session} profile={profile}/>}
-          {page === "analytics"  && <PageAnalytics sales={sales} skus={skus}/>}
+          {page === "analytics"  && <PageAnalytics sales={sales} skus={skus} machines={machines}/>}
           {page === "users"      && <PageUsers     currentProfile={profile} machines={machines} machineAssignments={machineAssignments} allProfiles={allProfiles} onAddAssignment={addAssignment} onRemoveAssignment={removeAssignment}/>}
           {page === "slots"      && <PageSlots     machines={machines} skus={skus} allProfiles={allProfiles}/>}
           {page.startsWith("machine_") && (() => {

@@ -5,26 +5,29 @@ import {
   ResponsiveContainer, LineChart, Line, CartesianGrid, XAxis, YAxis, Tooltip, Legend,
 } from "recharts"
 import { CHART_COLORS } from "../shared/constants"
-import { fmt, fmtB, getLastNDays, fmtDayLabel } from "../shared/helpers"
+import { fmt, fmtB, getLastNDays, fmtDayLabel, buildBrandMap, ksherFeePct } from "../shared/helpers"
 import { Badge, SectionTitle } from "../shared/dx-components"
 
 const SERIES_DARK = { OP: "#4FC3F7", PRB: "#B794F6", EB: "#68D391" }
 
-export default function PageAnalytics({ sales, skus }) {
+export default function PageAnalytics({ sales, skus, machines = [] }) {
   const [metric, setMetric] = useState("revenue")
+  const brandMap = buildBrandMap(machines)
 
   const skuMap = {}
   sales.forEach(r => {
-    if (!skuMap[r.sku_id]) skuMap[r.sku_id] = { qty: 0, rev: 0 }
+    if (!skuMap[r.sku_id]) skuMap[r.sku_id] = { qty: 0, rev: 0, ksherFee: 0 }
     skuMap[r.sku_id].qty += r.quantity_sold
     skuMap[r.sku_id].rev += r.revenue
+    skuMap[r.sku_id].ksherFee += (r.revenue || 0) * ksherFeePct(brandMap[r.machine_id])
   })
 
   const ranked = Object.entries(skuMap)
     .map(([id, v]) => {
       const s = skus.find(sk => sk.sku_id === id)
-      return { sku_id: id, series: s?.series || "OP", ...v,
-        profit: v.rev - v.qty * (s?.avg_cost || s?.cost_price || 0) }
+      const netRev = v.rev - v.ksherFee
+      return { sku_id: id, series: s?.series || "OP", ...v, netRev,
+        profit: netRev - v.qty * (s?.avg_cost || s?.cost_price || 0) }
     })
     .sort((a, b) => metric === "revenue" ? b.rev - a.rev : metric === "qty" ? b.qty - a.qty : b.profit - a.profit)
 

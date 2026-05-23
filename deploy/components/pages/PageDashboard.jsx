@@ -12,6 +12,7 @@ import {
 import { fmt, fmtB, today, toBkkDate, fmtDayLabel } from "../shared/helpers"
 import { Badge, StatusDot, KpiCard, SectionTitle, BoosterPH } from "../shared/dx-components"
 import SlotChangesAlert from "../shared/SlotChangesAlert"
+import AIInsightWidget from "../shared/AIInsightWidget"
 
 export default function PageDashboardDX({ stockIn, stockOut, stockBalance, skus, transfers = [], machineStock = [], sales = [], machines = [], onAddLot, profile }) {
   const isAdmin = profile?.role === "admin"
@@ -154,6 +155,9 @@ export default function PageDashboardDX({ stockIn, stockOut, stockBalance, skus,
 
       {/* Layer 4: Slot Changes Alert (admin only · auto-hide ถ้าไม่มี change) */}
       {isAdmin && <SlotChangesAlert days={7}/>}
+
+      {/* AI Insights — ดึงจาก wiki/skus/*.md (อัปเดตทุกคืนโดย agent) */}
+      {isAdmin && <AIInsightWidget limit={3} />}
 
       {/* KPI Grid — admin: 4 cols w/ tall card #4; user: simple 2 cards */}
       {isAdmin ? (

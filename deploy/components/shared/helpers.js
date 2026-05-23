@@ -71,3 +71,23 @@ export function convertToPacks(qty, unit, sku) {
   if (unit === "cotton") return qty * (sku.boxes_per_cotton || 12) * sku.packs_per_box
   return qty
 }
+
+// ── Ksher Payment Gateway Fees ─────────────────────────────────────────
+// VMS contract: 1.5% · WW contract: 0.5% (default = vms if brand unknown)
+export const KSHER_FEE_BY_BRAND = { vms: 0.015, worldwide: 0.005 }
+const DEFAULT_KSHER_FEE = 0.015
+
+export function ksherFeePct(brand) {
+  return KSHER_FEE_BY_BRAND[brand] ?? DEFAULT_KSHER_FEE
+}
+
+export function calcKsherFee(gross, brand) {
+  return (gross || 0) * ksherFeePct(brand)
+}
+
+// สร้าง map { machine_id → brand } จาก machines list
+export function buildBrandMap(machines) {
+  const map = {}
+  for (const m of machines || []) map[m.machine_id] = m.brand || "vms"
+  return map
+}
