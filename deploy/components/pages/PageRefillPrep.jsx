@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react"
 import {
   AlertTriangle, CheckCircle, X, Monitor,
-  Boxes, Package, RefreshCw, Loader2,
+  Boxes, Package, RefreshCw, Loader2, Printer,
 } from "lucide-react"
 import { fmt, getSkuSeries } from "../shared/helpers"
 import { SKU_SERIES_ORDER } from "../shared/constants"
@@ -252,6 +252,35 @@ export default function PageRefillPrep({ machines, machineStock, machineAssignme
     return a + (r.isBox ? getQty(r) * (sku?.packs_per_box || 24) : getQty(r))
   }, 0)
 
+  // จัดกลุ่ม picks ตามตู้ สำหรับ Export PDF
+  const printableByMachine = (() => {
+    const byMach = {}
+    picks.forEach(r => {
+      if (!byMach[r.machine_id]) byMach[r.machine_id] = []
+      byMach[r.machine_id].push(r)
+    })
+    return Object.entries(byMach)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([machId, items]) => ({
+        machId,
+        name: machineNameMap[machId] || machId,
+        items: items.sort((a, b) => {
+          const sa = SKU_SERIES_ORDER[getSkuSeries(a.sku_id)] ?? 9
+          const sb = SKU_SERIES_ORDER[getSkuSeries(b.sku_id)] ?? 9
+          return sa - sb || (a.sku_id || "").localeCompare(b.sku_id || "")
+        }),
+        totalPacks: items.reduce((a, r) => {
+          const sku = skus.find(s => s.sku_id === r.sku_id)
+          return a + (r.isBox ? getQty(r) * (sku?.packs_per_box || 24) : getQty(r))
+        }, 0),
+      }))
+  })()
+
+  const handlePrint = () => {
+    if (picks.length === 0) { showToast("ยังไม่มีรายการที่จะเตรียม", "error"); return }
+    window.print()
+  }
+
   return (
     <div style={{ padding: 24, display: "flex", flexDirection: "column", gap: 20 }}>
       {toast && <Toast toast={toast}/>}
@@ -326,12 +355,22 @@ export default function PageRefillPrep({ machines, machineStock, machineAssignme
 
       {/* Refill table */}
       <div className="dx-card" style={{ padding: 20 }}>
-        <h2 style={{ margin: "0 0 14px", fontSize: 13, fontWeight: 600, color: "var(--dx-text)" }}>
-          สรุปสินค้าที่ต้องเตรียม
-          <span style={{ marginLeft: 8, fontSize: 11, fontWeight: 400, color: "var(--dx-text-muted)" }}>
-            · ตู้ที่เลือก {selectedMachines.size} ตู้
-          </span>
-        </h2>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14, flexWrap: "wrap", gap: 10 }}>
+          <h2 style={{ margin: 0, fontSize: 13, fontWeight: 600, color: "var(--dx-text)" }}>
+            สรุปสินค้าที่ต้องเตรียม
+            <span style={{ marginLeft: 8, fontSize: 11, fontWeight: 400, color: "var(--dx-text-muted)" }}>
+              · ตู้ที่เลือก {selectedMachines.size} ตู้
+            </span>
+          </h2>
+          <button
+            onClick={handlePrint}
+            disabled={picks.length === 0}
+            className="dx-btn dx-btn-ghost"
+            style={{ fontSize: 11, opacity: picks.length === 0 ? 0.5 : 1 }}
+            title="พิมพ์ / บันทึก PDF">
+            <Printer size={12}/> Export PDF
+          </button>
+        </div>
         {selectedMachines.size === 0 ? (
           <p style={{ textAlign: "center", color: "var(--dx-warning)", padding: "40px 0", fontSize: 13 }}>
             <AlertTriangle size={16} style={{ display: "inline", verticalAlign: "middle", marginRight: 6 }}/>
@@ -487,6 +526,84 @@ export default function PageRefillPrep({ machines, machineStock, machineAssignme
             )}
           </>
         )}
+      </div>
+
+      {/* Hidden printable report — แสดงเฉพาะตอน Print/PDF (อยู่ใน CSS @media print) */}
+      <div id="refill-prep-report" aria-hidden="true" style={{
+        position: "fixed", left: -99999, top: 0, width: "210mm",
+        background: "white", color: "black", pointerEvents: "none",
+      }}>
+        <div style={{ padding: "6mm 8mm", fontFamily: "system-ui, -apple-system, sans-serif" }}>
+          <div style={{ textAlign: "center", marginBottom: 12 }}>
+            <p style={{ margin: 0, fontWeight: 700, fontSize: 14 }}>DivisionX Card — เตรียมของเติมตู้</p>
+            <p style={{ margin: "2px 0 0", fontSize: 11 }}>
+              {new Date().toLocaleDateString("th-TH", { year: "numeric", month: "long", day: "numeric" })}
+              {" เวลา "}
+              {new Date().toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" })}{" น."}
+              {" · ผู้ใช้: "}{activeProfile?.display_name || activeProfile?.username || activeProfile?.email || "?"}
+            </p>
+          </div>
+
+          {printableByMachine.map(({ machId, name, items, totalPacks }) => (
+            <div key={machId} className="refill-prep-machine" style={{ marginBottom: 16 }}>
+              <h3 style={{
+                margin: "0 0 6px", fontSize: 13, fontWeight: 700,
+                borderBottom: "2px solid #333", paddingBottom: 3,
+              }}>
+                {name}
+                <span style={{ marginLeft: 8, fontSize: 11, fontWeight: 400 }}>
+                  · {items.length} รายการ · {fmt(totalPacks)} ซอง
+                </span>
+              </h3>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11 }}>
+                <thead>
+                  <tr style={{ background: "#f0f0f0" }}>
+                    <th style={{ padding: "4px 6px", textAlign: "left", border: "1px solid #999", fontWeight: 700 }}>SKU</th>
+                    <th style={{ padding: "4px 6px", textAlign: "center", border: "1px solid #999", fontWeight: 700 }}>ช่อง</th>
+                    <th style={{ padding: "4px 6px", textAlign: "right", border: "1px solid #999", fontWeight: 700 }}>คงเหลือ/ความจุ</th>
+                    <th style={{ padding: "4px 6px", textAlign: "right", border: "1px solid #999", fontWeight: 700 }}>เบิก</th>
+                    <th style={{ padding: "4px 6px", textAlign: "center", border: "1px solid #999", fontWeight: 700 }}>หน่วย</th>
+                    <th style={{ padding: "4px 6px", textAlign: "right", border: "1px solid #999", fontWeight: 700 }}>= ซอง</th>
+                    <th style={{ padding: "4px 6px", textAlign: "center", border: "1px solid #999", fontWeight: 700, width: 30 }}>✓</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {items.map(r => {
+                    const sku = skus.find(s => s.sku_id === r.sku_id)
+                    const qty = getQty(r)
+                    const packs = r.isBox ? qty * (sku?.packs_per_box || 24) : qty
+                    const unit = r.isBox ? "กล่อง" : "ซอง"
+                    return (
+                      <tr key={r.sku_id + (r.isBox ? "_b" : "_p")}>
+                        <td style={{ padding: "4px 6px", border: "1px solid #999", fontFamily: "monospace", fontWeight: 700 }}>{r.sku_id}</td>
+                        <td style={{ padding: "4px 6px", border: "1px solid #999", textAlign: "center" }}>{r.slotNums.join(", ")}</td>
+                        <td style={{ padding: "4px 6px", border: "1px solid #999", textAlign: "right", fontFamily: "monospace" }}>{r.remain} / {r.capacity}</td>
+                        <td style={{ padding: "4px 6px", border: "1px solid #999", textAlign: "right", fontFamily: "monospace", fontWeight: 700 }}>{qty}</td>
+                        <td style={{ padding: "4px 6px", border: "1px solid #999", textAlign: "center" }}>{unit}</td>
+                        <td style={{ padding: "4px 6px", border: "1px solid #999", textAlign: "right", fontFamily: "monospace" }}>{packs}</td>
+                        <td style={{ padding: "4px 6px", border: "1px solid #999", textAlign: "center" }}>☐</td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+                <tfoot>
+                  <tr style={{ background: "#f0f0f0", fontWeight: 700 }}>
+                    <td colSpan={5} style={{ padding: "4px 6px", border: "1px solid #999", textAlign: "right" }}>รวมยอด {name}</td>
+                    <td style={{ padding: "4px 6px", border: "1px solid #999", textAlign: "right", fontFamily: "monospace" }}>{fmt(totalPacks)}</td>
+                    <td style={{ padding: "4px 6px", border: "1px solid #999" }}></td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          ))}
+
+          {printableByMachine.length > 0 && (
+            <div style={{ marginTop: 12, paddingTop: 8, borderTop: "2px solid #333", fontSize: 12, display: "flex", justifyContent: "space-between" }}>
+              <span>รวม {printableByMachine.length} ตู้ · {picks.length} รายการ</span>
+              <span style={{ fontWeight: 700 }}>รวมทั้งหมด {fmt(totalPacksSelected)} ซอง</span>
+            </div>
+          )}
+        </div>
       </div>
 
     </div>
