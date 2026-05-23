@@ -193,13 +193,6 @@ export default function PageMachineStockView({ machines, machineStock, skus, onR
           </div>
           {getRefillData().filter(d => d.list.length > 0).map(({ machId, mInfo, list, totalBox, totalPack }) => (
             <div key={machId} className="refill-machine" style={{ marginBottom: 24 }}>
-              <div className="hidden print:block" style={{ textAlign: "center", marginBottom: 8 }}>
-                <p style={{ margin: 0, fontWeight: 700, fontSize: 14 }}>DivisionX Card — รายงานเติมสินค้า</p>
-                <p style={{ margin: 0, fontSize: 11 }}>
-                  {new Date().toLocaleDateString("th-TH", { year: "numeric", month: "long", day: "numeric" })}
-                  {" เวลา "}{new Date().toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" })}{" น."}
-                </p>
-              </div>
               <h3 style={{
                 margin: "0 0 8px", fontSize: 13, fontWeight: 700, color: "var(--dx-text)",
                 borderBottom: "2px solid var(--dx-border-strong)", paddingBottom: 4,
