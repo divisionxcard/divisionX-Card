@@ -322,10 +322,19 @@ export default function PageRefillPrep({ machines, machineStock, machineAssignme
       if (enriched.length === 0) return ""  // ตู้นี้ไม่มีอะไรเติมได้เลย
 
       const sumPacks = enriched.reduce((a, r) => a + r.cappedPacks, 0)
+      const sumBoxes = enriched.filter(r => r.isBox).reduce((a, r) => a + r.cappedQty, 0)
+      const sumLoosePacks = enriched.filter(r => !r.isBox).reduce((a, r) => a + r.cappedQty, 0)
+      const totalLabel = [
+        sumBoxes > 0 ? `${fmt(sumBoxes)} กล่อง` : "",
+        sumLoosePacks > 0 ? `${fmt(sumLoosePacks)} ซอง` : "",
+      ].filter(Boolean).join(" / ") || "0"
+
       const rows = enriched.map(r => {
+        const sku = skus.find(s => s.sku_id === r.sku_id)
+        const fullName = (sku?.name || r.sku_id) + (r.isBox ? " Box" : "")
         const unit = r.isBox ? "กล่อง" : "ซอง"
         return `<tr>
-          <td style="font-family:monospace;font-weight:700">${r.sku_id}${r.isBox ? ' <span style="font-size:9px;color:#666">(กล่อง)</span>' : ''}</td>
+          <td>${fullName}</td>
           <td style="text-align:right;font-family:monospace;font-weight:700">${r.cappedQty} ${unit}</td>
           <td style="text-align:right;font-family:monospace">${r.remain}</td>
           <td style="text-align:right;font-family:monospace">${r.capacity}</td>
@@ -345,7 +354,7 @@ export default function PageRefillPrep({ machines, machineStock, machineAssignme
           </tr></thead>
           <tbody>${rows}</tbody>
           <tfoot><tr><td style="text-align:right;font-weight:700">รวม ${name}</td>
-            <td style="text-align:right;font-family:monospace;font-weight:700">${fmt(sumPacks)} ซอง</td>
+            <td style="text-align:right;font-family:monospace;font-weight:700">${totalLabel}</td>
             <td colspan="4"></td></tr></tfoot>
         </table>
       </div>`
