@@ -340,12 +340,13 @@ export default function PageRefillPrep({ machines, machineStock, machineAssignme
         const fullName = (sku?.name || r.sku_id) + (r.isBox ? " Box" : "")
         const unit = r.isBox ? "กล่อง" : "ซอง"
         return `<tr>
+          <td style="font-family:monospace;font-weight:700">${r.sku_id}</td>
           <td>${fullName}</td>
           <td style="text-align:right;font-family:monospace;font-weight:700">${r.qty} ${unit}</td>
           <td style="text-align:right;font-family:monospace">${r.remain}</td>
           <td style="text-align:right;font-family:monospace">${r.capacity}</td>
           <td style="text-align:center;width:60px">☐</td>
-          <td style="width:25%"></td>
+          <td style="width:20%"></td>
         </tr>`
       }).join("")
       return `<div class="machine">
@@ -356,10 +357,10 @@ export default function PageRefillPrep({ machines, machineStock, machineAssignme
         <h3>${name} <span style="font-weight:400;font-size:11px">· ${enriched.length} รายการ · ${fmt(sumPacks)} ซอง</span></h3>
         <table>
           <thead><tr>
-            <th>สินค้า</th><th style="text-align:right">ต้องเติม</th><th style="text-align:right">คงเหลือ</th><th style="text-align:right">ความจุ</th><th style="text-align:center">ตรวจสอบสินค้า</th><th>หมายเหตุ</th>
+            <th>SKU</th><th>สินค้า</th><th style="text-align:right">ต้องเติม</th><th style="text-align:right">คงเหลือ</th><th style="text-align:right">ความจุ</th><th style="text-align:center">ตรวจสอบสินค้า</th><th>หมายเหตุ</th>
           </tr></thead>
           <tbody>${rows}</tbody>
-          <tfoot><tr><td style="text-align:right;font-weight:700">รวม ${name}</td>
+          <tfoot><tr><td colspan="2" style="text-align:right;font-weight:700">รวม ${name}</td>
             <td style="text-align:right;font-family:monospace;font-weight:700">${totalLabel}</td>
             <td colspan="4"></td></tr></tfoot>
         </table>
