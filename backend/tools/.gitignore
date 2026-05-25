@@ -1,0 +1,5 @@
+# ไฟล์ output ของ generator · regenerate เมื่อไหร่ก็ได้
+DivisionX_Daily_Log_*.xlsx
+.env
+__pycache__/
+*.pyc
