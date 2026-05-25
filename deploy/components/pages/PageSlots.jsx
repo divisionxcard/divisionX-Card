@@ -155,8 +155,9 @@ export default function PageSlots({ machines = [], skus = [], allProfiles = [], 
 <meta charset="utf-8">
 <title>รายการเปลี่ยนสินค้าในตู้ · ${rangeStr}</title>
 <style>
-  @page { size: A4 portrait; margin: 10mm; }
-  body { font-family: Tahoma, "Sarabun", "Noto Sans Thai", "Leelawadee UI", sans-serif; color: #000; margin: 0; padding: 8mm 10mm; }
+  /* margin: 0 บน @page → browser ไม่มีพื้นที่วาง header/footer auto · ใช้ padding ที่ body แทน */
+  @page { size: A4 portrait; margin: 0; }
+  body { font-family: Tahoma, "Sarabun", "Noto Sans Thai", "Leelawadee UI", sans-serif; color: #000; margin: 0; padding: 10mm; }
   .header { text-align: center; margin-bottom: 10px; }
   .header h1 { margin: 0; font-size: 15px; }
   .header .sub { font-size: 11px; margin-top: 3px; }

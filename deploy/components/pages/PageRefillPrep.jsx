@@ -384,8 +384,9 @@ export default function PageRefillPrep({ machines, machineStock, machineAssignme
 <meta charset="utf-8">
 <title>เตรียมของเติมตู้ · ${dateStr}</title>
 <style>
-  @page { size: A4 portrait; margin: 8mm; }
-  body { font-family: Tahoma, "Sarabun", "Noto Sans Thai", "Leelawadee UI", sans-serif; color: #000; margin: 0; padding: 6mm 8mm; }
+  /* margin: 0 บน @page → browser ไม่มีพื้นที่วาง header/footer auto · ใช้ padding ที่ body แทน */
+  @page { size: A4 portrait; margin: 0; }
+  body { font-family: Tahoma, "Sarabun", "Noto Sans Thai", "Leelawadee UI", sans-serif; color: #000; margin: 0; padding: 10mm 10mm; }
   .header { text-align: center; margin-bottom: 12px; font-size: 11px; }
   .header h1 { margin: 0; font-size: 14px; }
   .machine { margin-bottom: 16px; page-break-inside: auto; }
