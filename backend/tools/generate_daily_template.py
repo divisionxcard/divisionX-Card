@@ -1,19 +1,23 @@
 """
 generate_daily_template.py
-สร้างไฟล์ Excel template สำหรับลงข้อมูลรายวัน
-ใช้เป็น backup/manual log ถ้าระบบหลักล่ม · เทียบกลับ DB ภายหลังได้
+สร้างไฟล์ Excel template แอดมินใช้ลงข้อมูลรายวัน · เป็น backup ถ้าระบบหลักล่ม
+
+ออกแบบให้เหมือนไฟล์ที่ admin ใช้อยู่ปัจจุบัน · 5 sheets:
+  1. สต็อกหลัก       · ยอดทั้งหมดบริษัท + คลังกลาง (formula link) + สินค้ารอตรวจสอบ
+  2. เติมตู้          · คลังกลาง + ยอดเติมทุกตู้ + เติมแต่ละตู้ + ยอดคงเหลือ
+  3. ช่องเติมตู้      · slot grid ต่อตู้ (วาดเปล่า · admin เขียนแผนผังเอง)
+  4. ยอดการซื้อบริษัท · purchase log + ราคาขาย (มี formula ยอดตั้งต้น/ราคาทุน-ซอง)
+  5. สต็อกย่อย       · placeholder ว่างเปล่า
 
 Usage:
-    # ตั้ง env vars ก่อน (หรือใส่ใน .env)
-    export SUPABASE_URL=...
-    export SUPABASE_SERVICE_KEY=...
-
     cd backend/tools
-    python generate_daily_template.py
+    py generate_daily_template.py
 
-Output: DivisionX_Daily_Log_YYYY-MM-DD.xlsx (ในโฟลเดอร์เดียวกับ script)
+Env vars (อ่านจาก deploy/.env.local อัตโนมัติ):
+    SUPABASE_URL (หรือ NEXT_PUBLIC_SUPABASE_URL)
+    SUPABASE_SERVICE_KEY (หรือ NEXT_PUBLIC_SUPABASE_ANON_KEY · read-only พอ)
 
-Requirements: openpyxl, supabase, python-dotenv (มีใน deploy/scraper/requirements.txt)
+Output: DivisionX_Daily_Log_YYYY-MM-DD.xlsx
 """
 
 import os
@@ -22,14 +26,13 @@ import io
 from datetime import datetime
 from pathlib import Path
 
-# กัน UnicodeEncodeError บน Windows console (cp1252) เวลา print emoji/ไทย
+# กัน UnicodeEncodeError บน Windows console (cp1252)
 if sys.platform == "win32":
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
     sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8")
 
 try:
     from dotenv import load_dotenv
-    # โหลด .env จาก deploy/scraper/.env ถ้ามี (สำหรับ local dev)
     for env_path in [
         Path(__file__).parent / ".env",
         Path(__file__).parent.parent.parent / "deploy" / "scraper" / ".env",
@@ -39,7 +42,7 @@ try:
             load_dotenv(env_path)
             break
 except ImportError:
-    pass  # dotenv optional
+    pass
 
 from supabase import create_client
 from openpyxl import Workbook
@@ -48,351 +51,634 @@ from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
 
-# ── Config ─────────────────────────────────────────────────────────
-ROWS_PER_SHEET = 200
-REF_SHEET = "Reference"  # ไม่ใส่ emoji เพื่อให้ใช้ใน formula ได้ปลอดภัย
+# ── Family mapping · จัดกลุ่ม SKU ตาม family เหมือนไฟล์ admin ───────
+# ลำดับ family + วิธี match SKU + วิธี sort ภายใน family
+SERIES_PRIORITY = {"OP": 1, "PRB": 2, "EB": 3, "FB": 1}  # ลำดับภายใน family
+
+def _sort_key(s):
+    """sort within family: series priority แล้วถึง sku_id"""
+    series = s.get("series") or ""
+    prio = SERIES_PRIORITY.get(series, 9)
+    return (prio, s["sku_id"])
+
+FAMILIES = [
+    {
+        "name": "One Piece",
+        "match": lambda s: s["series"] in ("OP", "PRB", "EB"),
+        "sort_key": _sort_key,
+    },
+    {
+        "name": "Dragon Ball",
+        "match": lambda s: s["series"] == "FB" or s["sku_id"].strip().upper() == "B29",
+        # FB ก่อน B29
+        "sort_key": lambda s: (0 if s["series"] == "FB" else 1, s["sku_id"]),
+    },
+    {
+        "name": "Naruto",
+        "match": lambda s: s["sku_id"].startswith("NRT"),
+        # Jin ก่อน Series
+        "sort_key": lambda s: (0 if "Jin" in s["sku_id"] else 1, s["sku_id"]),
+    },
+    {
+        "name": "Pokemon",
+        "match": lambda s: s["sku_id"].startswith("PKM"),
+        "sort_key": lambda s: s["sku_id"],
+    },
+    {
+        "name": "Solo Leveling",
+        "match": lambda s: s["sku_id"].startswith("SLL"),
+        "sort_key": lambda s: s["sku_id"],
+    },
+]
+
+
+def short_sku(sku_id: str) -> str:
+    """แปลง 'OP 01' → 'OP01', 'NRT Series - 02' → 'Series02', etc · ให้สั้นเหมือนไฟล์ admin"""
+    s = sku_id.strip()
+    if s.startswith("NRT "):
+        rest = s[4:].replace("- ", "").replace(" ", "")  # 'Series - 01' → 'Series01'
+        return rest
+    if s.startswith("PKM "):
+        rest = s[4:]
+        if "Dream" in rest: return "Mega Dream"
+        return rest  # "Ninja"
+    if s.startswith("SLL "):
+        return "Ua 1"  # ตามที่ admin ใช้
+    # OP / PRB / EB / FB / B29 — เอา space ออก
+    return s.replace(" ", "")
 
 
 # ── Styles ─────────────────────────────────────────────────────────
-HEADER_FONT = Font(name="Tahoma", size=11, bold=True, color="FFFFFF")
-TITLE_FONT = Font(name="Tahoma", size=14, bold=True)
-DEFAULT_FONT = Font(name="Tahoma", size=10)
+TH_FONT = "Tahoma"
+HEADER_FONT = Font(name=TH_FONT, size=11, bold=True, color="FFFFFF")
+TITLE_FONT  = Font(name=TH_FONT, size=14, bold=True)
+SUB_HEADER_FONT = Font(name=TH_FONT, size=11, bold=True)
+DEFAULT_FONT = Font(name=TH_FONT, size=10)
+FAMILY_FONT = Font(name=TH_FONT, size=11, bold=True, color="0F172A")
 
 COLOR = {
-    "sales":     "0EA5E9",  # blue
-    "stock":     "F59E0B",  # orange
-    "refill":    "10B981",  # green
-    "slot":      "8B5CF6",  # purple
-    "claims":    "EF4444",  # red
-    "snapshot":  "06B6D4",  # cyan
-    "reference": "6366F1",  # indigo
-    "cover":     "1E293B",  # slate
+    "main":     "1E40AF",  # navy
+    "refill":   "059669",  # green
+    "slot":     "7C3AED",  # purple
+    "purchase": "DC2626",  # red
+    "sub":      "F1F5F9",  # light gray for sub-section
+    "family":   "FEF3C7",  # cream for family rows
+    "formula":  "F8FAFC",  # very light for auto-calc
 }
 
 THIN_BORDER = Border(
-    left=Side(border_style="thin", color="DDDDDD"),
-    right=Side(border_style="thin", color="DDDDDD"),
-    top=Side(border_style="thin", color="DDDDDD"),
-    bottom=Side(border_style="thin", color="DDDDDD"),
+    left=Side(border_style="thin", color="D1D5DB"),
+    right=Side(border_style="thin", color="D1D5DB"),
+    top=Side(border_style="thin", color="D1D5DB"),
+    bottom=Side(border_style="thin", color="D1D5DB"),
 )
 
 
-def header_fill(hex_color):
+def fill(hex_color):
     return PatternFill(start_color=hex_color, end_color=hex_color, fill_type="solid")
 
 
-def style_header_row(ws, headers, fill_color, row=1):
-    for i, h in enumerate(headers, start=1):
-        cell = ws.cell(row=row, column=i, value=h)
-        cell.font = HEADER_FONT
-        cell.fill = header_fill(fill_color)
-        cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+def style_header_cell(cell, color):
+    cell.font = HEADER_FONT
+    cell.fill = fill(color)
+    cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+    cell.border = THIN_BORDER
+
+
+def style_sub_header_cell(cell, color="sub"):
+    cell.font = SUB_HEADER_FONT
+    cell.fill = fill(COLOR[color] if color in COLOR else color)
+    cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+    cell.border = THIN_BORDER
+
+
+def style_data_cell(cell, formula=False):
+    cell.font = DEFAULT_FONT
+    cell.border = THIN_BORDER
+    if formula:
+        cell.fill = fill(COLOR["formula"])
+
+
+def style_family_row(ws, row, num_cols, family_name):
+    """แถวหัว family · เช่น 'One Piece', 'Dragon Ball'"""
+    for c in range(1, num_cols + 1):
+        cell = ws.cell(row=row, column=c)
+        cell.fill = fill(COLOR["family"])
         cell.border = THIN_BORDER
-    ws.row_dimensions[row].height = 30
-
-
-def set_column_widths(ws, widths):
-    for i, w in enumerate(widths, start=1):
-        ws.column_dimensions[get_column_letter(i)].width = w
-
-
-def add_empty_rows(ws, num_cols, num_rows, start_row=2):
-    for r in range(start_row, start_row + num_rows):
-        for c in range(1, num_cols + 1):
-            cell = ws.cell(row=r, column=c)
-            cell.font = DEFAULT_FONT
-            cell.border = THIN_BORDER
-
-
-def add_dropdown(ws, col_range, source_formula):
-    dv = DataValidation(type="list", formula1=source_formula, allow_blank=True)
-    dv.add(col_range)
-    ws.add_data_validation(dv)
+    cell0 = ws.cell(row=row, column=1, value=family_name)
+    cell0.font = FAMILY_FONT
+    cell0.alignment = Alignment(horizontal="left", vertical="center", indent=1)
 
 
 # ── Fetch reference data ───────────────────────────────────────────
-def fetch_reference_data():
+def fetch_data():
     url = (os.environ.get("SUPABASE_URL")
            or os.environ.get("NEXT_PUBLIC_SUPABASE_URL"))
     key = (os.environ.get("SUPABASE_SERVICE_KEY")
            or os.environ.get("SUPABASE_KEY")
-           or os.environ.get("NEXT_PUBLIC_SUPABASE_ANON_KEY"))  # fallback · อ่าน-only ก็ใช้ได้
+           or os.environ.get("NEXT_PUBLIC_SUPABASE_ANON_KEY"))
     if not url or not key:
         sys.exit(
             "❌ ต้องตั้ง env vars:\n"
             "   • SUPABASE_URL (หรือ NEXT_PUBLIC_SUPABASE_URL)\n"
-            "   • SUPABASE_SERVICE_KEY (หรือ NEXT_PUBLIC_SUPABASE_ANON_KEY)\n"
-            "ใส่ใน deploy/.env.local หรือ export ใน terminal ก่อนรัน"
+            "   • SUPABASE_SERVICE_KEY (หรือ NEXT_PUBLIC_SUPABASE_ANON_KEY)"
         )
-
     sb = create_client(url, key)
     skus = (sb.table("skus")
-            .select("sku_id, name, sell_price, cost_price, avg_cost, packs_per_box, boxes_per_cotton, series")
+            .select("sku_id, name, series, sell_price, cost_price, avg_cost, packs_per_box, boxes_per_cotton")
             .eq("is_active", True)
             .order("sku_id")
             .execute().data) or []
     machines = (sb.table("machines")
                 .select("machine_id, name, location, brand, status")
+                .eq("status", "active")
                 .order("machine_id")
                 .execute().data) or []
     return skus, machines
 
 
-# ── Sheets ─────────────────────────────────────────────────────────
-def add_cover_sheet(wb):
-    ws = wb.create_sheet("00_คู่มือ", 0)
+def group_skus_by_family(skus):
+    """คืน [(family_name, [sku_dict, ...]), ...] เรียงตาม FAMILIES + ภายในเรียงตาม sku_id"""
+    groups = []
+    used = set()
+    for fam in FAMILIES:
+        members = [s for s in skus if s["sku_id"] not in used and fam["match"](s)]
+        members.sort(key=fam.get("sort_key", lambda s: s["sku_id"]))
+        for s in members:
+            used.add(s["sku_id"])
+        if members:
+            groups.append((fam["name"], members))
+    # SKU ที่ไม่ match → กลุ่ม "อื่นๆ"
+    leftovers = [s for s in skus if s["sku_id"] not in used]
+    if leftovers:
+        groups.append(("อื่นๆ", leftovers))
+    return groups
 
-    ws["A1"] = "DivisionX Card — แบบฟอร์มลงข้อมูลรายวัน"
-    ws["A1"].font = Font(name="Tahoma", size=18, bold=True, color="FFFFFF")
-    ws["A1"].fill = header_fill(COLOR["cover"])
-    ws["A1"].alignment = Alignment(horizontal="center", vertical="center")
-    ws.merge_cells("A1:F1")
-    ws.row_dimensions[1].height = 40
 
-    info = [
-        ("", ""),
-        ("ผู้บันทึก", ""),
-        ("วันที่", datetime.now().strftime("%Y-%m-%d")),
-        ("กะ/ผลัด", ""),
-        ("ตู้ที่รับผิดชอบ", ""),
-        ("", ""),
-        ("📖 วิธีใช้งาน", ""),
-        ("", "1. กรอกข้อมูลในแต่ละ sheet แยกตามประเภทรายการ"),
-        ("", "2. คอลัมน์ที่มี dropdown ให้เลือกค่าจาก list (อ้างอิงจาก sheet Reference)"),
-        ("", "3. รายรับ / Ksher fee / Net / รวม ต้นทุน คำนวณอัตโนมัติเมื่อกรอก จำนวน + ราคา"),
-        ("", "4. Ksher fee · VMS chukes = 1.5% · WW wwv = 0.5% (sheet ยอดขายคำนวณให้)"),
-        ("", "5. ถ้าระบบหลักล่ม → ใช้ไฟล์นี้เป็น primary log จนกู้คืน · ตรงกลับเข้า DB เมื่อระบบกลับมา"),
-        ("", "6. สำเนาไฟล์ + เปลี่ยนชื่อตามวันที่ก่อนเริ่มใช้ (เช่น DivisionX_Daily_Log_2026-05-26.xlsx)"),
-        ("", ""),
-        ("📑 รายการ Sheet", ""),
-        ("", "01_ยอดขาย          · transaction การขายแต่ละครั้ง"),
-        ("", "02_รับสินค้า        · log การรับของเข้าคลัง (stock_in)"),
-        ("", "03_เบิกเติมตู้       · withdrawal จากคลังไปตู้ (stock_out)"),
-        ("", "04_เปลี่ยนSlot      · เมื่อสลับสินค้าในช่อง"),
-        ("", "05_เคลม            · refund / สูญหาย / ชำรุด"),
-        ("", "06_สต็อกหน้าตู้      · snapshot ปัจจุบันของแต่ละช่อง"),
-        ("", "Reference          · SKU + Machine list (read-only · regenerate เมื่อมี SKU/ตู้ใหม่)"),
-        ("", ""),
-        ("⚠️ ข้อควรระวัง", ""),
-        ("", "• อย่าแก้ค่าใน sheet Reference โดยตรง · ถ้าต้องอัพเดท ให้รัน script ใหม่"),
-        ("", "• คอลัมน์สีเทาเป็นค่า auto-calc · อย่ากรอกทับ"),
-        ("", "• ตู้ chukes** = แบรนด์ VMS · ตู้ wwv** = แบรนด์ Worldwide"),
-    ]
-    for idx, (label, val) in enumerate(info, start=2):
-        ws.cell(row=idx, column=1, value=label).font = Font(name="Tahoma", size=11, bold=True)
-        ws.cell(row=idx, column=2, value=val).font = DEFAULT_FONT
-        ws.row_dimensions[idx].height = 18
+# ── Sheet: สต็อกหลัก ──────────────────────────────────────────────
+def build_main_stock_sheet(wb, groups, today):
+    """
+    Layout (cols A-N):
+      A: SKU / family header
+      B-D: ยอดทั้งหมดของบริษัท (COTTON / BOX / Pack) · admin กรอก
+      E-G: คลังกลาง (COTTON / BOX / Pack) · formula =เติมตู้!M/N/O column
+      H-N: สินค้ารอการตรวจสอบ (วันที่/เรื่อง/สถานที่/รหัสสินค้า/HOLD/ชำรุด/สูญหาย)
+    """
+    ws = wb.create_sheet("สต็อกหลัก")
 
-    ws.column_dimensions["A"].width = 22
-    ws.column_dimensions["B"].width = 90
+    # Row 1 · top group headers
+    ws.cell(row=1, column=1, value="วันที่").font = SUB_HEADER_FONT
+    ws.cell(row=1, column=1).border = THIN_BORDER
+    style_header_cell(ws.cell(row=1, column=2, value="ยอดทั้งหมดของบริษัท"), COLOR["main"])
+    ws.merge_cells("B1:D1")
+    style_header_cell(ws.cell(row=1, column=5, value="คลังกลาง"), COLOR["refill"])
+    ws.merge_cells("E1:G1")
+    style_header_cell(ws.cell(row=1, column=8, value="สินค้ารอการตรวจสอบ"), COLOR["purchase"])
+    ws.merge_cells("H1:N1")
+
+    # Row 2 · today date + family label for each section
+    ws.cell(row=2, column=1, value=today).number_format = "yyyy-mm-dd"
+    ws.cell(row=2, column=1).font = DEFAULT_FONT
+    ws.cell(row=2, column=1).border = THIN_BORDER
+    for col in (2, 5):
+        c = ws.cell(row=2, column=col, value="(สินค้าทุกประเภท)")
+        c.font = DEFAULT_FONT
+        c.alignment = Alignment(horizontal="center")
+        c.border = THIN_BORDER
+    # Sub-headers ของช่อง "สินค้ารอตรวจสอบ"
+    for i, h in enumerate(["วันที่", "เรื่อง", "สถานที่", "รหัสสินค้า", "HOLD", "ชำรุด", "สูญหาย"], start=8):
+        style_sub_header_cell(ws.cell(row=2, column=i, value=h))
+
+    # Row 3 · unit headers (COTTON / BOX / Pack)
+    ws.cell(row=3, column=1).border = THIN_BORDER
+    for col, label in [(2, "COTTON"), (3, "BOX"), (4, "Pack"),
+                       (5, "COTTON"), (6, "BOX"), (7, "Pack")]:
+        c = ws.cell(row=3, column=col, value=label)
+        c.font = SUB_HEADER_FONT
+        c.alignment = Alignment(horizontal="center")
+        c.border = THIN_BORDER
+        c.fill = fill(COLOR["sub"])
+
+    # SKU rows · group by family · sub-header row + members
+    r = 4
+    family_starts = {}  # family_name → starting row · เพื่อ formula reference จาก refill sheet
+    refill_row_map = {}  # sku_id → row ใน refill sheet (จะตั้งทีหลัง)
+
+    for family_name, members in groups:
+        family_starts[family_name] = r
+        # Family sub-header row
+        style_family_row(ws, r, 7, family_name)
+        # column B-D ตามไฟล์ admin = family label ซ้ำ
+        ws.cell(row=r, column=2, value=family_name).font = FAMILY_FONT
+        ws.cell(row=r, column=5, value=family_name).font = FAMILY_FONT
+        r += 1
+        for sku in members:
+            ws.cell(row=r, column=1, value=short_sku(sku["sku_id"])).font = DEFAULT_FONT
+            ws.cell(row=r, column=1).border = THIN_BORDER
+            # B-D: admin input
+            for col in range(2, 5):
+                style_data_cell(ws.cell(row=r, column=col))
+            # E-G: formula link from เติมตู้ (จะเซ็ตทีหลังเมื่อรู้ row ใน refill)
+            for col in range(5, 8):
+                style_data_cell(ws.cell(row=r, column=col), formula=True)
+            refill_row_map[sku["sku_id"]] = r  # ใช้ row เดียวกันทั้ง 2 sheet
+            r += 1
+
+    # คอลัมน์ H-N (สินค้ารอตรวจสอบ) — empty rows 30 + row "รวม"
+    for hold_r in range(3, 33):
+        for col in range(8, 15):
+            style_data_cell(ws.cell(row=hold_r, column=col))
+    # Summary row
+    sum_row = 33
+    ws.cell(row=sum_row, column=10, value="รวม").font = SUB_HEADER_FONT
+    ws.cell(row=sum_row, column=11, value=f"=SUM(L3:L{sum_row - 1})")
+    ws.cell(row=sum_row, column=12, value=f"=SUM(M3:M{sum_row - 1})")
+    ws.cell(row=sum_row, column=13, value=f"=SUM(N3:N{sum_row - 1})")
+    for col in range(10, 14):
+        ws.cell(row=sum_row, column=col).fill = fill(COLOR["formula"])
+        ws.cell(row=sum_row, column=col).border = THIN_BORDER
+
+    # Column widths
+    widths = [14, 10, 10, 10, 10, 10, 10, 14, 14, 14, 14, 8, 8, 8]
+    for i, w in enumerate(widths, start=1):
+        ws.column_dimensions[get_column_letter(i)].width = w
+
+    ws.freeze_panes = "B4"
+    return refill_row_map  # ส่งกลับเพื่อ refill_sheet ใช้ alignment
+
+
+# ── Sheet: เติมตู้ ────────────────────────────────────────────────
+def build_refill_sheet(wb, groups, machines, today, refill_row_map):
+    """
+    Layout columns:
+      A: วันที่ / SKU
+      B-D: คลังกลาง (COTTON / BOX / Pack) · admin กรอก
+      E-F: ยอดเติมทุกตู้ (BOX / Pack) · formula sum
+      G-* : เติมแต่ละตู้ (BOX / Pack) คู่ละ machine
+      next 3: ยอดคงเหลือคลังกลาง (COTTON / BOX / Pack) · formula
+    """
+    ws = wb.create_sheet("เติมตู้")
+    n_machines = len(machines)
+
+    # Column layout
+    col_warehouse = 2          # B-D: COTTON BOX Pack
+    col_total = 5              # E-F: ยอดเติมทุกตู้ BOX/Pack
+    col_machines_start = 7     # G onwards: per machine BOX/Pack
+    col_remain = col_machines_start + n_machines * 2  # COTTON BOX Pack
+
+    # Row 1 · top group headers
+    ws.cell(row=1, column=1, value="วันที่").font = SUB_HEADER_FONT
+    ws.cell(row=1, column=1).border = THIN_BORDER
+    style_header_cell(ws.cell(row=1, column=col_warehouse, value="คลังกลาง"), COLOR["refill"])
+    ws.merge_cells(start_row=1, start_column=col_warehouse, end_row=1, end_column=col_warehouse + 2)
+    style_header_cell(ws.cell(row=1, column=col_total, value="ยอดเติมทุกตู้"), COLOR["main"])
+    ws.merge_cells(start_row=1, start_column=col_total, end_row=1, end_column=col_total + 1)
+
+    for i, m in enumerate(machines):
+        start = col_machines_start + i * 2
+        title = f"เติม {m.get('name') or m['machine_id']}"
+        style_header_cell(ws.cell(row=1, column=start, value=title), COLOR["slot"])
+        ws.merge_cells(start_row=1, start_column=start, end_row=1, end_column=start + 1)
+
+    style_header_cell(ws.cell(row=1, column=col_remain, value="ยอดคงเหลือคลังกลาง"), COLOR["refill"])
+    ws.merge_cells(start_row=1, start_column=col_remain, end_row=1, end_column=col_remain + 2)
+
+    # Row 2 · date row + family labels
+    ws.cell(row=2, column=1, value=today).number_format = "yyyy-mm-dd"
+    ws.cell(row=2, column=1).border = THIN_BORDER
+
+    # Row 3 · unit headers
+    units_warehouse = ["COTTON", "BOX", "Pack"]
+    for i, u in enumerate(units_warehouse):
+        c = ws.cell(row=3, column=col_warehouse + i, value=u)
+        style_sub_header_cell(c)
+    for i, u in enumerate(["BOX", "Pack"]):
+        c = ws.cell(row=3, column=col_total + i, value=u)
+        style_sub_header_cell(c)
+    for i in range(n_machines):
+        start = col_machines_start + i * 2
+        style_sub_header_cell(ws.cell(row=3, column=start, value="BOX"))
+        style_sub_header_cell(ws.cell(row=3, column=start + 1, value="Pack"))
+    for i, u in enumerate(units_warehouse):
+        c = ws.cell(row=3, column=col_remain + i, value=u)
+        style_sub_header_cell(c)
+
+    total_cols = col_remain + 2
+
+    # SKU rows · same row numbers as สต็อกหลัก (formula link by row)
+    r = 4
+    for family_name, members in groups:
+        style_family_row(ws, r, total_cols, family_name)
+        ws.cell(row=r, column=col_warehouse, value=family_name).font = FAMILY_FONT
+        ws.cell(row=r, column=col_total, value=family_name).font = FAMILY_FONT
+        for i, m in enumerate(machines):
+            ws.cell(row=r, column=col_machines_start + i * 2, value=family_name).font = FAMILY_FONT
+        ws.cell(row=r, column=col_remain, value=family_name).font = FAMILY_FONT
+        r += 1
+        for sku in members:
+            ws.cell(row=r, column=1, value=short_sku(sku["sku_id"])).font = DEFAULT_FONT
+            ws.cell(row=r, column=1).border = THIN_BORDER
+
+            # B-D: admin input คลังกลาง
+            for col in range(col_warehouse, col_warehouse + 3):
+                style_data_cell(ws.cell(row=r, column=col))
+
+            # E-F: ยอดเติมทุกตู้ = sum BOX / Pack across machines
+            box_refs = []
+            pack_refs = []
+            for i in range(n_machines):
+                bx = get_column_letter(col_machines_start + i * 2)
+                pk = get_column_letter(col_machines_start + i * 2 + 1)
+                box_refs.append(f"{bx}{r}")
+                pack_refs.append(f"{pk}{r}")
+            ws.cell(row=r, column=col_total, value=f"={'+'.join(box_refs)}")
+            ws.cell(row=r, column=col_total + 1, value=f"={'+'.join(pack_refs)}")
+            for col in (col_total, col_total + 1):
+                style_data_cell(ws.cell(row=r, column=col), formula=True)
+
+            # Per-machine BOX/Pack · admin input
+            for i in range(n_machines):
+                for j in range(2):
+                    style_data_cell(ws.cell(row=r, column=col_machines_start + i * 2 + j))
+
+            # Remaining (COTTON/BOX/Pack) = warehouse - withdrawn
+            col_b = get_column_letter(col_warehouse)
+            col_c = get_column_letter(col_warehouse + 1)
+            col_d = get_column_letter(col_warehouse + 2)
+            col_e = get_column_letter(col_total)
+            col_f = get_column_letter(col_total + 1)
+            ws.cell(row=r, column=col_remain, value=f"={col_b}{r}")          # COTTON ยกมา
+            ws.cell(row=r, column=col_remain + 1, value=f"={col_c}{r}-{col_e}{r}")  # BOX - withdrawn
+            ws.cell(row=r, column=col_remain + 2, value=f"={col_d}{r}-{col_f}{r}")  # Pack - withdrawn
+            for col in range(col_remain, col_remain + 3):
+                style_data_cell(ws.cell(row=r, column=col), formula=True)
+
+            # NOTE: row r ใน sheet นี้ตรงกับ row ใน สต็อกหลัก ที่เก็บไว้ใน refill_row_map (เพราะใช้ลำดับเดียวกัน)
+            r += 1
+
+    # อัพเดท formula ใน สต็อกหลัก ให้ point มาที่ row ของ refill (เท่ากัน)
+    main_ws = wb["สต็อกหลัก"]
+    for sku_id, main_row in refill_row_map.items():
+        # E (COTTON) = 'เติมตู้'!M{r}, F (BOX) = N{r}, G (Pack) = O{r}
+        col_m = get_column_letter(col_remain)
+        col_n = get_column_letter(col_remain + 1)
+        col_o = get_column_letter(col_remain + 2)
+        main_ws.cell(row=main_row, column=5, value=f"='เติมตู้'!{col_m}{main_row}")
+        main_ws.cell(row=main_row, column=6, value=f"='เติมตู้'!{col_n}{main_row}")
+        main_ws.cell(row=main_row, column=7, value=f"='เติมตู้'!{col_o}{main_row}")
+
+    # Column widths
+    ws.column_dimensions["A"].width = 14
+    for col in range(2, total_cols + 1):
+        ws.column_dimensions[get_column_letter(col)].width = 10
+
+    ws.freeze_panes = "B4"
     return ws
 
 
-def add_reference_sheet(wb, skus, machines):
-    ws = wb.create_sheet(REF_SHEET)
+# ── Sheet: ช่องเติมตู้ ────────────────────────────────────────────
+def build_slot_grid_sheet(wb, machines, current_slots_by_machine):
+    """
+    Layout · ต่อตู้:
+      Row 1: "ตู้XXX ชื่อสาขา"
+      Row 2-5: slot block 1 (slot#/family/SKU+type/capacity)
+      Row 6-9: slot block 2
+      ...
+    เริ่มจากข้อมูล active_slot_mappings ถ้ามี · ไม่งั้น blank grid 6 row × 10 cols
+    """
+    ws = wb.create_sheet("ช่องเติมตู้")
+    SLOTS_PER_ROW = 10  # ต่อบล็อก
 
-    # ── SKU section (columns A-H) ──────────────────────────────────
-    sku_headers = ["SKU ID", "ชื่อสินค้า", "Series", "ราคาขาย", "ราคาทุน", "Avg Cost", "Packs/Box", "Boxes/Cotton"]
-    style_header_row(ws, sku_headers, COLOR["reference"], row=1)
-    for i, sku in enumerate(skus, start=2):
-        ws.cell(row=i, column=1, value=sku["sku_id"]).font = DEFAULT_FONT
-        ws.cell(row=i, column=2, value=sku.get("name") or "").font = DEFAULT_FONT
-        ws.cell(row=i, column=3, value=sku.get("series") or "").font = DEFAULT_FONT
-        ws.cell(row=i, column=4, value=sku.get("sell_price")).font = DEFAULT_FONT
-        ws.cell(row=i, column=5, value=sku.get("cost_price")).font = DEFAULT_FONT
-        ws.cell(row=i, column=6, value=sku.get("avg_cost")).font = DEFAULT_FONT
-        ws.cell(row=i, column=7, value=sku.get("packs_per_box")).font = DEFAULT_FONT
-        ws.cell(row=i, column=8, value=sku.get("boxes_per_cotton")).font = DEFAULT_FONT
+    ws.cell(row=1, column=1, value="IN box / IN pack — แผนผังช่องของแต่ละตู้").font = TITLE_FONT
+    ws.merge_cells("A1:J1")
 
-    set_column_widths(ws, [14, 32, 8, 12, 12, 12, 12, 14])
+    r = 3
+    for m in machines:
+        # Machine title
+        machine_label = f"ตู้ {m['machine_id']} · {m.get('name') or ''} {m.get('location') or ''}"
+        c = ws.cell(row=r, column=1, value=machine_label)
+        c.font = SUB_HEADER_FONT
+        c.fill = fill(COLOR["sub"])
+        ws.merge_cells(start_row=r, start_column=1, end_row=r, end_column=SLOTS_PER_ROW)
+        r += 1
 
-    # ── Machine section (columns J-N) ──────────────────────────────
-    mach_start = 10
-    machine_headers = ["Machine ID", "ชื่อตู้", "สาขา", "Brand", "Status"]
-    for i, h in enumerate(machine_headers, start=mach_start):
-        cell = ws.cell(row=1, column=i, value=h)
-        cell.font = HEADER_FONT
-        cell.fill = header_fill(COLOR["reference"])
-        cell.alignment = Alignment(horizontal="center", vertical="center")
-        cell.border = THIN_BORDER
+        # ดึง slot ของตู้นี้ (ถ้ามี) · sort by slot_number
+        slots = current_slots_by_machine.get(m["machine_id"], [])
+        slots = sorted(slots, key=lambda s: (s.get("slot_number") or ""))
 
-    for i, m in enumerate(machines, start=2):
-        ws.cell(row=i, column=mach_start, value=m["machine_id"]).font = DEFAULT_FONT
-        ws.cell(row=i, column=mach_start + 1, value=m.get("name") or "").font = DEFAULT_FONT
-        ws.cell(row=i, column=mach_start + 2, value=m.get("location") or "").font = DEFAULT_FONT
-        ws.cell(row=i, column=mach_start + 3, value=m.get("brand") or "").font = DEFAULT_FONT
-        ws.cell(row=i, column=mach_start + 4, value=m.get("status") or "").font = DEFAULT_FONT
+        # ถ้าไม่มีข้อมูล · สร้าง 6 บล็อก × 10 slot = 60 ช่องเปล่า
+        if not slots:
+            slots = [{"slot_number": str(i + 1).zfill(3), "product_name": "", "sku_id": "", "max_capacity": ""} for i in range(60)]
 
-    for col in range(mach_start, mach_start + 5):
-        ws.column_dimensions[get_column_letter(col)].width = 20
+        # แบ่งเป็นบล็อกละ SLOTS_PER_ROW
+        for block_start in range(0, len(slots), SLOTS_PER_ROW):
+            block = slots[block_start:block_start + SLOTS_PER_ROW]
+            # 4 rows per block · slot# / family / SKU+type / capacity
+            for col_i, slot in enumerate(block):
+                col = col_i + 1
+                slot_num = slot.get("slot_number") or ""
+                product_name = slot.get("product_name") or ""
+                sku_id = slot.get("sku_id") or ""
+                cap = slot.get("max_capacity") or ""
+                is_box = "box" in (product_name or "").lower()
+                short = short_sku(sku_id) if sku_id else ""
+                short_with_type = f"{short} {'BOX' if is_box else 'PACK'}" if short else ""
 
-    ws.freeze_panes = "A2"
+                # row r = slot number
+                cell_n = ws.cell(row=r, column=col, value=slot_num)
+                cell_n.font = SUB_HEADER_FONT
+                cell_n.alignment = Alignment(horizontal="center")
+                cell_n.fill = fill(COLOR["sub"])
+                cell_n.border = THIN_BORDER
+
+                # row r+1 = family (auto-derive from sku)
+                family = ""
+                if sku_id:
+                    for fam in FAMILIES:
+                        if fam["match"]({"sku_id": sku_id, "series": ""}):
+                            family = fam["name"]
+                            break
+                cell_f = ws.cell(row=r + 1, column=col, value=family)
+                cell_f.font = DEFAULT_FONT
+                cell_f.alignment = Alignment(horizontal="center")
+                cell_f.border = THIN_BORDER
+
+                # row r+2 = SKU + type
+                cell_s = ws.cell(row=r + 2, column=col, value=short_with_type)
+                cell_s.font = SUB_HEADER_FONT
+                cell_s.alignment = Alignment(horizontal="center")
+                cell_s.border = THIN_BORDER
+
+                # row r+3 = capacity
+                cell_c = ws.cell(row=r + 3, column=col, value=cap)
+                cell_c.font = DEFAULT_FONT
+                cell_c.alignment = Alignment(horizontal="center")
+                cell_c.border = THIN_BORDER
+
+            r += 4
+        r += 1  # blank row between machines
+
+    # Column widths
+    for col in range(1, SLOTS_PER_ROW + 1):
+        ws.column_dimensions[get_column_letter(col)].width = 13
+
     return ws
 
 
-# Helper · สร้าง formula range สำหรับ dropdown
-def sku_range(n_skus):
-    return f"={REF_SHEET}!$A$2:$A${n_skus + 1}"
+# ── Sheet: ยอดการซื้อบริษัท ───────────────────────────────────────
+def build_purchase_sheet(wb, skus):
+    """
+    Left section (A-J): ยอดเบิกบริษัท
+      A: วันที่ · B: ลำดับ · C: เรื่อง (family) · D: รหัสสินค้า
+      E: Cotton · F: BOX · G: PACK
+      H: ยอดตั้งต้นบริษัท (formula: E*ppc OR F*ppb+G)
+      I: ราคาทุน/ซอง (formula: J/H)
+      J: ยอดลงทุน (admin input)
+    Right section (N-V): ยอดราคาขาย
+      N: ลำดับ · O: เรื่อง · P: รหัสสินค้า
+      Q: Pack (= ppc) · R: ราคา (admin) · S: ราคาเฉลี่ย (R/Q)
+      T: ราคาขาย +30% (S*1.3) · U: Pack price · V: Box price (=U*ppb)
+    """
+    ws = wb.create_sheet("ยอดการซื้อบริษัท")
 
-def machine_range(n_machines):
-    return f"={REF_SHEET}!$J$2:$J${n_machines + 1}"
+    # Headers row 1
+    style_header_cell(ws.cell(row=1, column=1, value="ยอดเบิกบริษัท"), COLOR["main"])
+    ws.merge_cells("A1:J1")
+    ws.cell(row=1, column=11, value="หมายเหตุ").font = SUB_HEADER_FONT
+    ws.cell(row=1, column=14, value="วันที่").font = SUB_HEADER_FONT
+    style_header_cell(ws.cell(row=1, column=14, value="ยอดราคาขาย (markup 30%)"), COLOR["purchase"])
+    ws.merge_cells("N1:V1")
 
+    # Sub-headers row 2
+    left_headers = ["วันที่", "ลำดับ", "เรื่อง", "รหัสสินค้า", "Cotton", "BOX", "PACK",
+                    "ยอดตั้งต้นบริษัท", "ราคาทุน/ซอง", "ยอดลงทุน"]
+    for i, h in enumerate(left_headers, start=1):
+        style_sub_header_cell(ws.cell(row=2, column=i, value=h))
+    right_headers = ["ลำดับ", "เรื่อง", "รหัสสินค้า", "Pack", "ราคา",
+                     "ราคาเฉลี่ย", "ยอดคงเหลือ +30%", "Pack", "Box"]
+    for i, h in enumerate(right_headers, start=14):
+        style_sub_header_cell(ws.cell(row=2, column=i, value=h))
 
-# ── 01_ยอดขาย ─────────────────────────────────────────────────────
-def add_sales_sheet(wb, n_skus, n_machines):
-    ws = wb.create_sheet("01_ยอดขาย")
-    headers = ["วันที่/เวลา", "ตู้", "ช่อง", "SKU", "ชื่อสินค้า",
-               "จำนวน", "หน่วย", "ราคา/หน่วย", "รายรับ (gross)",
-               "Ksher fee", "Net", "Transaction ID", "หมายเหตุ"]
-    style_header_row(ws, headers, COLOR["sales"])
-    set_column_widths(ws, [18, 14, 8, 14, 30, 10, 10, 12, 14, 12, 14, 22, 25])
-    add_empty_rows(ws, len(headers), ROWS_PER_SHEET)
+    # Build SKU lookup for family + ppc
+    def packs_per_cotton(s):
+        return (s.get("packs_per_box") or 1) * (s.get("boxes_per_cotton") or 1)
+    def family_of(s):
+        for fam in FAMILIES:
+            if fam["match"](s): return fam["name"]
+        return "อื่นๆ"
 
-    # Formula: รายรับ = F * H ; Ksher fee % ตาม brand ; Net = gross − fee
-    for r in range(2, ROWS_PER_SHEET + 2):
-        ws.cell(row=r, column=9).value = f'=IF(AND(F{r}<>"",H{r}<>""),F{r}*H{r},"")'
-        ws.cell(row=r, column=10).value = (
-            f'=IF(I{r}<>"",I{r}*IF(LEFT(B{r},6)="chukes",0.015,'
-            f'IF(LEFT(B{r},3)="wwv",0.005,0.015)),"")'
-        )
-        ws.cell(row=r, column=11).value = f'=IF(I{r}<>"",I{r}-J{r},"")'
-        # สีเทาบนคอลัมน์ auto-calc
-        for c in (9, 10, 11):
-            ws.cell(row=r, column=c).fill = PatternFill(start_color="F8FAFC", end_color="F8FAFC", fill_type="solid")
+    # SKU rows · order ตาม family แล้ว sku_id
+    sorted_skus = []
+    for fam_def in FAMILIES:
+        members = [s for s in skus if fam_def["match"](s)]
+        members.sort(key=fam_def.get("sort_key", lambda s: s["sku_id"]))
+        sorted_skus.extend(members)
+    leftover = [s for s in skus if s not in sorted_skus]
+    sorted_skus.extend(leftover)
 
-    add_dropdown(ws, f"B2:B{ROWS_PER_SHEET + 1}", machine_range(n_machines))
-    add_dropdown(ws, f"D2:D{ROWS_PER_SHEET + 1}", sku_range(n_skus))
-    add_dropdown(ws, f"G2:G{ROWS_PER_SHEET + 1}", '"ซอง,กล่อง"')
+    r = 3
+    for idx, s in enumerate(sorted_skus, start=1):
+        ppc = packs_per_cotton(s)
+        ppb = s.get("packs_per_box") or 1
+        fam = family_of(s)
+        short = short_sku(s["sku_id"])
 
-    ws.freeze_panes = "A2"
-    ws.auto_filter.ref = f"A1:{get_column_letter(len(headers))}{ROWS_PER_SHEET + 1}"
+        # Left section
+        if idx == 1:
+            ws.cell(row=r, column=1, value=datetime.now().date()).number_format = "yyyy-mm-dd"
+        ws.cell(row=r, column=2, value=idx)
+        ws.cell(row=r, column=3, value=fam)
+        ws.cell(row=r, column=4, value=short)
+        # E/F/G admin input (Cotton/Box/Pack)
+        for col in range(5, 8):
+            style_data_cell(ws.cell(row=r, column=col))
+        # H: formula ยอดตั้งต้น = E*ppc + F*ppb + G
+        ws.cell(row=r, column=8, value=f"=E{r}*{ppc}+F{r}*{ppb}+G{r}")
+        style_data_cell(ws.cell(row=r, column=8), formula=True)
+        # I: formula ราคาทุน/ซอง = J/H
+        ws.cell(row=r, column=9, value=f'=IF(H{r}>0,J{r}/H{r},"")')
+        style_data_cell(ws.cell(row=r, column=9), formula=True)
+        # J: admin input ยอดลงทุน
+        style_data_cell(ws.cell(row=r, column=10))
+
+        # Right section · ราคาขาย
+        ws.cell(row=r, column=14, value=idx)
+        ws.cell(row=r, column=15, value=fam)
+        ws.cell(row=r, column=16, value=short)
+        ws.cell(row=r, column=17, value=ppc)  # Q: Pack (= ppc)
+        style_data_cell(ws.cell(row=r, column=18))  # R: ราคา (admin)
+        # S = R/Q
+        ws.cell(row=r, column=19, value=f'=IF(AND(Q{r}>0,R{r}<>""),R{r}/Q{r},"")')
+        style_data_cell(ws.cell(row=r, column=19), formula=True)
+        # T = S*1.3
+        ws.cell(row=r, column=20, value=f'=IF(S{r}<>"",S{r}*1.3,"")')
+        style_data_cell(ws.cell(row=r, column=20), formula=True)
+        # U: Pack price admin / V: Box price = U*ppb
+        ws.cell(row=r, column=21, value=s.get("sell_price"))
+        style_data_cell(ws.cell(row=r, column=21))
+        ws.cell(row=r, column=22, value=f'=IF(U{r}<>"",U{r}*{ppb},"")')
+        style_data_cell(ws.cell(row=r, column=22), formula=True)
+
+        r += 1
+
+    # Summary row · sum J (ยอดลงทุน)
+    ws.cell(row=r + 1, column=9, value="รวมยอดลงทุน").font = SUB_HEADER_FONT
+    ws.cell(row=r + 1, column=10, value=f"=SUM(J3:J{r})")
+    ws.cell(row=r + 1, column=10).font = SUB_HEADER_FONT
+    ws.cell(row=r + 1, column=10).fill = fill(COLOR["formula"])
+
+    # Column widths
+    widths = [12, 6, 14, 12, 8, 8, 8, 16, 12, 14, 18, 4, 4, 6, 14, 12, 10, 10, 12, 14, 10, 10]
+    for i, w in enumerate(widths, start=1):
+        ws.column_dimensions[get_column_letter(i)].width = w
+
+    ws.freeze_panes = "A3"
     return ws
 
 
-# ── 02_รับสินค้า ──────────────────────────────────────────────────
-def add_stock_in_sheet(wb, n_skus):
-    ws = wb.create_sheet("02_รับสินค้า")
-    headers = ["วันที่", "Lot Number", "SKU", "ชื่อสินค้า",
-               "จำนวน", "หน่วย", "ราคาทุน/หน่วย", "รวมต้นทุน",
-               "ผู้รับ", "หมายเหตุ"]
-    style_header_row(ws, headers, COLOR["stock"])
-    set_column_widths(ws, [14, 24, 14, 30, 10, 10, 14, 14, 18, 25])
-    add_empty_rows(ws, len(headers), ROWS_PER_SHEET)
-
-    for r in range(2, ROWS_PER_SHEET + 2):
-        ws.cell(row=r, column=8).value = f'=IF(AND(E{r}<>"",G{r}<>""),E{r}*G{r},"")'
-        ws.cell(row=r, column=8).fill = PatternFill(start_color="F8FAFC", end_color="F8FAFC", fill_type="solid")
-
-    add_dropdown(ws, f"C2:C{ROWS_PER_SHEET + 1}", sku_range(n_skus))
-    add_dropdown(ws, f"F2:F{ROWS_PER_SHEET + 1}", '"ซอง,กล่อง,Cotton"')
-
-    ws.freeze_panes = "A2"
-    ws.auto_filter.ref = f"A1:{get_column_letter(len(headers))}{ROWS_PER_SHEET + 1}"
-    return ws
-
-
-# ── 03_เบิกเติมตู้ ────────────────────────────────────────────────
-def add_stock_out_sheet(wb, n_skus, n_machines):
-    ws = wb.create_sheet("03_เบิกเติมตู้")
-    headers = ["วันที่/เวลา", "From Lot", "ตู้", "ช่อง", "SKU",
-               "ชื่อสินค้า", "จำนวน", "หน่วย", "ผู้เบิก", "หมายเหตุ"]
-    style_header_row(ws, headers, COLOR["refill"])
-    set_column_widths(ws, [18, 24, 14, 8, 14, 30, 10, 10, 18, 25])
-    add_empty_rows(ws, len(headers), ROWS_PER_SHEET)
-
-    add_dropdown(ws, f"C2:C{ROWS_PER_SHEET + 1}", machine_range(n_machines))
-    add_dropdown(ws, f"E2:E{ROWS_PER_SHEET + 1}", sku_range(n_skus))
-    add_dropdown(ws, f"H2:H{ROWS_PER_SHEET + 1}", '"ซอง,กล่อง"')
-
-    ws.freeze_panes = "A2"
-    ws.auto_filter.ref = f"A1:{get_column_letter(len(headers))}{ROWS_PER_SHEET + 1}"
-    return ws
-
-
-# ── 04_เปลี่ยนSlot ────────────────────────────────────────────────
-def add_slot_change_sheet(wb, n_skus, n_machines):
-    ws = wb.create_sheet("04_เปลี่ยนSlot")
-    headers = ["วันที่/เวลา", "ตู้", "ช่อง", "SKU เดิม", "ชื่อสินค้าเดิม",
-               "จำนวนก่อน", "SKU ใหม่", "ชื่อสินค้าใหม่",
-               "จำนวนหลัง", "ความจุ", "ผู้เปลี่ยน", "หมายเหตุ"]
-    style_header_row(ws, headers, COLOR["slot"])
-    set_column_widths(ws, [18, 14, 8, 14, 26, 12, 14, 26, 12, 10, 18, 25])
-    add_empty_rows(ws, len(headers), ROWS_PER_SHEET)
-
-    add_dropdown(ws, f"B2:B{ROWS_PER_SHEET + 1}", machine_range(n_machines))
-    add_dropdown(ws, f"D2:D{ROWS_PER_SHEET + 1}", sku_range(n_skus))
-    add_dropdown(ws, f"G2:G{ROWS_PER_SHEET + 1}", sku_range(n_skus))
-
-    ws.freeze_panes = "A2"
-    ws.auto_filter.ref = f"A1:{get_column_letter(len(headers))}{ROWS_PER_SHEET + 1}"
-    return ws
-
-
-# ── 05_เคลม ───────────────────────────────────────────────────────
-def add_claims_sheet(wb, n_skus, n_machines):
-    ws = wb.create_sheet("05_เคลม")
-    headers = ["วันที่", "ตู้", "SKU", "ชื่อสินค้า", "จำนวน",
-               "หน่วย", "ยอดคืน (บาท)", "สาเหตุ", "สถานะสินค้า",
-               "ผู้บันทึก", "หมายเหตุ"]
-    style_header_row(ws, headers, COLOR["claims"])
-    set_column_widths(ws, [14, 14, 14, 30, 10, 10, 14, 24, 16, 18, 25])
-    add_empty_rows(ws, len(headers), ROWS_PER_SHEET)
-
-    add_dropdown(ws, f"B2:B{ROWS_PER_SHEET + 1}", machine_range(n_machines))
-    add_dropdown(ws, f"C2:C{ROWS_PER_SHEET + 1}", sku_range(n_skus))
-    add_dropdown(ws, f"F2:F{ROWS_PER_SHEET + 1}", '"ซอง,กล่อง"')
-    add_dropdown(ws, f"I2:I{ROWS_PER_SHEET + 1}", '"คืนสต็อก,ชำรุด,สูญหาย"')
-
-    ws.freeze_panes = "A2"
-    ws.auto_filter.ref = f"A1:{get_column_letter(len(headers))}{ROWS_PER_SHEET + 1}"
-    return ws
-
-
-# ── 06_สต็อกหน้าตู้ ──────────────────────────────────────────────
-def add_machine_stock_sheet(wb, n_skus, n_machines):
-    ws = wb.create_sheet("06_สต็อกหน้าตู้")
-    headers = ["ตู้", "ช่อง", "SKU", "ชื่อสินค้า", "ประเภท",
-               "คงเหลือ", "ความจุ", "% เต็ม", "อัพเดทล่าสุด", "หมายเหตุ"]
-    style_header_row(ws, headers, COLOR["snapshot"])
-    set_column_widths(ws, [14, 8, 14, 30, 12, 10, 10, 10, 18, 25])
-    add_empty_rows(ws, len(headers), ROWS_PER_SHEET)
-
-    for r in range(2, ROWS_PER_SHEET + 2):
-        ws.cell(row=r, column=8).value = f'=IF(AND(F{r}<>"",G{r}<>"",G{r}>0),F{r}/G{r},"")'
-        ws.cell(row=r, column=8).number_format = "0%"
-        ws.cell(row=r, column=8).fill = PatternFill(start_color="F8FAFC", end_color="F8FAFC", fill_type="solid")
-
-    add_dropdown(ws, f"A2:A{ROWS_PER_SHEET + 1}", machine_range(n_machines))
-    add_dropdown(ws, f"C2:C{ROWS_PER_SHEET + 1}", sku_range(n_skus))
-    add_dropdown(ws, f"E2:E{ROWS_PER_SHEET + 1}", '"pack,box"')
-
-    ws.freeze_panes = "A2"
-    ws.auto_filter.ref = f"A1:{get_column_letter(len(headers))}{ROWS_PER_SHEET + 1}"
+# ── Sheet: สต็อกย่อย (placeholder) ────────────────────────────────
+def build_substock_sheet(wb):
+    ws = wb.create_sheet("สต็อกย่อย")
+    ws.cell(row=1, column=1, value="(พื้นที่ว่างสำหรับ admin บันทึก stock ย่อย)").font = DEFAULT_FONT
+    ws.column_dimensions["A"].width = 60
     return ws
 
 
 # ── Main ───────────────────────────────────────────────────────────
 def main():
-    print("📥 Fetching SKUs and Machines from Supabase...")
-    skus, machines = fetch_reference_data()
-    n_skus, n_machines = len(skus), len(machines)
-    print(f"   • {n_skus} SKUs · {n_machines} machines")
+    print("📥 Fetching SKUs + Machines from Supabase...")
+    skus, machines = fetch_data()
+    print(f"   • {len(skus)} SKUs · {len(machines)} machines")
+
+    # Optional · ดึง current slot mappings สำหรับ pre-fill ช่องเติมตู้
+    print("📥 Fetching current slot mappings...")
+    url = os.environ.get("SUPABASE_URL") or os.environ.get("NEXT_PUBLIC_SUPABASE_URL")
+    key = (os.environ.get("SUPABASE_SERVICE_KEY") or os.environ.get("SUPABASE_KEY")
+           or os.environ.get("NEXT_PUBLIC_SUPABASE_ANON_KEY"))
+    sb = create_client(url, key)
+    try:
+        ms = sb.table("machine_stock").select("machine_id, slot_number, product_name, sku_id, max_capacity").execute().data
+        current_slots_by_machine = {}
+        for row in ms:
+            current_slots_by_machine.setdefault(row["machine_id"], []).append(row)
+    except Exception as e:
+        print(f"   ⚠ machine_stock fetch failed: {e} · ใช้ grid เปล่าแทน")
+        current_slots_by_machine = {}
 
     print("📝 Building workbook...")
     wb = Workbook()
-    wb.remove(wb.active)  # ลบ default sheet
+    wb.remove(wb.active)
 
-    # Cover → entry sheets → Reference (ลำดับใน tab)
-    add_cover_sheet(wb)
-    add_sales_sheet(wb, n_skus, n_machines)
-    add_stock_in_sheet(wb, n_skus)
-    add_stock_out_sheet(wb, n_skus, n_machines)
-    add_slot_change_sheet(wb, n_skus, n_machines)
-    add_claims_sheet(wb, n_skus, n_machines)
-    add_machine_stock_sheet(wb, n_skus, n_machines)
-    add_reference_sheet(wb, skus, machines)
+    groups = group_skus_by_family(skus)
+    today = datetime.now().date()
 
-    date_str = datetime.now().strftime("%Y-%m-%d")
+    refill_row_map = build_main_stock_sheet(wb, groups, today)
+    build_refill_sheet(wb, groups, machines, today, refill_row_map)
+    build_slot_grid_sheet(wb, machines, current_slots_by_machine)
+    build_purchase_sheet(wb, skus)
+    build_substock_sheet(wb)
+
+    date_str = today.strftime("%Y-%m-%d")
     out_path = Path(__file__).parent / f"DivisionX_Daily_Log_{date_str}.xlsx"
     wb.save(out_path)
     print(f"✅ Saved: {out_path}")
