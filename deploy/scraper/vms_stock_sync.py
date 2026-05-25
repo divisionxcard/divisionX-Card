@@ -245,13 +245,15 @@ def detect_slot_changes(supabase, current_records: list[dict], synced_at: str):
         if existing is None:
             # New slot · INSERT (ไม่ alert · เป็น initial seed)
             to_insert.append({
-                "machine_id":     rec["machine_id"],
-                "slot_number":    rec["slot_number"],
-                "product_id":     pid_new,
-                "product_name":   rec.get("product_name"),
-                "sku_id":         rec.get("sku_id"),
-                "effective_from": synced_at,
-                "detected_by":    "vms_stock_sync",
+                "machine_id":       rec["machine_id"],
+                "slot_number":      rec["slot_number"],
+                "product_id":       pid_new,
+                "product_name":     rec.get("product_name"),
+                "sku_id":           rec.get("sku_id"),
+                "effective_from":   synced_at,
+                "detected_by":      "vms_stock_sync",
+                "initial_qty":      rec.get("remain"),
+                "initial_capacity": rec.get("max_capacity"),
             })
             changes += 1
         elif existing["product_id"] != pid_new:
@@ -259,13 +261,15 @@ def detect_slot_changes(supabase, current_records: list[dict], synced_at: str):
             # pending_qty = machine_stock.remain ก่อน save = จำนวน "สินค้าเก่า" ที่เหลืออยู่
             to_close.append({"id": existing["id"], "pending_qty": remain_map.get(key)})
             to_insert.append({
-                "machine_id":     rec["machine_id"],
-                "slot_number":    rec["slot_number"],
-                "product_id":     pid_new,
-                "product_name":   rec.get("product_name"),
-                "sku_id":         rec.get("sku_id"),
-                "effective_from": synced_at,
-                "detected_by":    "vms_stock_sync",
+                "machine_id":       rec["machine_id"],
+                "slot_number":      rec["slot_number"],
+                "product_id":       pid_new,
+                "product_name":     rec.get("product_name"),
+                "sku_id":           rec.get("sku_id"),
+                "effective_from":   synced_at,
+                "detected_by":      "vms_stock_sync",
+                "initial_qty":      rec.get("remain"),
+                "initial_capacity": rec.get("max_capacity"),
             })
             change_events.append((existing, rec))
             changes += 1

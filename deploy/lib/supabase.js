@@ -623,6 +623,8 @@ export async function getRecentSlotChanges(days = 7, { includeReviewed = false }
           new_product_name:  newer.product_name,
           new_sku_id:        newer.sku_id,
           new_product_id:    newer.product_id,
+          new_initial_qty:      newer.initial_qty,
+          new_initial_capacity: newer.initial_capacity,
           review_status:     older.review_status || "pending",
           review_note:       older.review_note,
           reviewed_at:       older.reviewed_at,
@@ -683,8 +685,11 @@ export async function getSlotHistory(machineId, slotNumber) {
 export async function recordSlotChangeManual({
   machine_id, slot_number,
   new_product_id, new_product_name, new_sku_id, note,
+  initial_qty = null, initial_capacity = null,
 }) {
   const now = new Date().toISOString()
+  // ดึง active row + machine_stock.remain ก่อนปิด · ถ้า admin ไม่ระบุ qty ก่อน
+  // ให้ snapshot จาก machine_stock เป็น pending_qty
   const { data: active } = await supabase
     .from("slot_products_history")
     .select("id")
@@ -693,6 +698,13 @@ export async function recordSlotChangeManual({
     .is("effective_to", null)
     .maybeSingle()
   if (active) {
+    // snapshot machine_stock.remain เป็น pending_qty ของ period เก่า
+    const { data: ms } = await supabase
+      .from("machine_stock")
+      .select("remain")
+      .eq("machine_id", machine_id)
+      .eq("slot_number", slot_number)
+      .maybeSingle()
     const { error: upErr } = await supabase
       .from("slot_products_history")
       .update({
@@ -700,6 +712,7 @@ export async function recordSlotChangeManual({
         review_status: "confirmed",
         review_note:   note || "Manual change by admin",
         reviewed_at:   now,
+        ...(ms?.remain != null ? { pending_qty: ms.remain } : {}),
       })
       .eq("id", active.id)
     if (upErr) throw upErr
@@ -716,6 +729,8 @@ export async function recordSlotChangeManual({
       review_status: "confirmed",
       review_note:   note || "Manual change by admin",
       reviewed_at:   now,
+      initial_qty,
+      initial_capacity,
     })
     .select()
     .single()

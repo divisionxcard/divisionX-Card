@@ -128,11 +128,18 @@ export default function PageSlots({ machines = [], skus = [], allProfiles = [], 
       const oldQty = c.pending_qty != null ? `${c.pending_qty}` : "—"
       const newSku = c.new_sku_id || "—"
       const newName = c.new_product_name || "—"
-      // จำนวนหลังเปลี่ยน · lookup จาก machine_stock ปัจจุบัน · ตรงกับ new_sku_id เท่านั้นจึงเชื่อได้
-      const cur = stockBySlot[`${c.machine_id}::${c.slot_number}`]
-      const newQty = (cur && (cur.sku_id === c.new_sku_id || cur.product_name === c.new_product_name))
-        ? `${cur.remain ?? "—"} / ${cur.max_capacity ?? "—"}`
-        : "—"
+      // จำนวนหลังเปลี่ยน:
+      // 1) preferred · initial_qty/capacity ที่ snapshot ตอน effective_from (แม่นยำ)
+      // 2) fallback · machine_stock ปัจจุบัน ถ้า slot ยังเป็น sku เดิม (สำหรับ record เก่าก่อน migration 041)
+      let newQty = "—"
+      if (c.new_initial_qty != null || c.new_initial_capacity != null) {
+        newQty = `${c.new_initial_qty ?? "—"} / ${c.new_initial_capacity ?? "—"}`
+      } else {
+        const cur = stockBySlot[`${c.machine_id}::${c.slot_number}`]
+        if (cur && (cur.sku_id === c.new_sku_id || cur.product_name === c.new_product_name)) {
+          newQty = `${cur.remain ?? "—"} / ${cur.max_capacity ?? "—"} *`
+        }
+      }
       return `<tr>
         <td>${tStr}</td>
         <td>${machineName}<div style="font-size:9px;color:#666">ช่อง ${c.slot_number}</div></td>
@@ -185,7 +192,7 @@ export default function PageSlots({ machines = [], skus = [], allProfiles = [], 
 </table>
 <div class="footer">
   <span>รวมรายการเปลี่ยน: ${filteredChanges.length} รายการ</span>
-  <span style="color:#666">หมายเหตุ: "จำนวนหลัง" ดึงจากสต็อกหน้าตู้ปัจจุบัน · ถ้าตู้ถูกเปลี่ยนซ้ำหลังจากนั้นค่าจะเป็น —</span>
+  <span style="color:#666">หมายเหตุ: "จำนวนหลัง" = ตอนเริ่ม period (snapshot ตอนเปลี่ยน) · ค่าที่มี * คือสต็อกปัจจุบัน (fallback record เก่าก่อน migration 041)</span>
 </div>
 <div class="signatures">
   <div class="sig-block">
@@ -530,6 +537,8 @@ function HistoryModal({ machine_id, slot_number, machineName, onClose }) {
 function ManualChangeModal({ machine_id, slot_number, current, machineName, skus, onClose, onSaved }) {
   const [skuId, setSkuId] = useState("")
   const [productName, setProductName] = useState("")
+  const [initialQty, setInitialQty] = useState("")
+  const [initialCapacity, setInitialCapacity] = useState("")
   const [note, setNote] = useState("")
   const [saving, setSaving] = useState(false)
   const [err, setErr] = useState(null)
@@ -550,6 +559,8 @@ function ManualChangeModal({ machine_id, slot_number, current, machineName, skus
         new_sku_id:      skuId || null,
         new_product_id:  null,                // ไม่ทราบจาก UI (จะ sync จาก scraper รอบถัดไป)
         new_product_name: productName || canonicalName || skuId,
+        initial_qty:      initialQty === "" ? null : Number(initialQty),
+        initial_capacity: initialCapacity === "" ? null : Number(initialCapacity),
         note: note || null,
       })
       onSaved?.()
@@ -593,6 +604,28 @@ function ManualChangeModal({ machine_id, slot_number, current, machineName, skus
           : selectedSku && productName !== canonicalName
             ? "⚠ ค่าไม่ตรงกับ canonical · admin VMS ต้องตั้งชื่อบนตู้ให้เหมือนช่องนี้"
             : "ระบบจะเติมจาก SKU ที่เลือก · อิง Naming Contract"}
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }}>
+        <div>
+          <label style={{ display: "block", fontSize: 11, color: "var(--dx-text-muted)", marginBottom: 4 }}>
+            จำนวนเริ่ม (ซอง/กล่อง) <span style={{ color: "var(--dx-text-muted)", fontWeight: 400 }}>· optional</span>
+          </label>
+          <input type="number" min="0" value={initialQty} onChange={e => setInitialQty(e.target.value)}
+            className="dx-input" placeholder="เช่น 12"
+            style={{ width: "100%" }}/>
+        </div>
+        <div>
+          <label style={{ display: "block", fontSize: 11, color: "var(--dx-text-muted)", marginBottom: 4 }}>
+            ความจุของช่อง <span style={{ color: "var(--dx-text-muted)", fontWeight: 400 }}>· optional</span>
+          </label>
+          <input type="number" min="0" value={initialCapacity} onChange={e => setInitialCapacity(e.target.value)}
+            className="dx-input" placeholder="เช่น 12"
+            style={{ width: "100%" }}/>
+        </div>
+      </div>
+      <div style={{ fontSize: 10, color: "var(--dx-text-muted)", marginBottom: 14 }}>
+        ใช้ในรายงาน Export PDF "จำนวนหลัง" · ถ้าไม่ระบุ ระบบจะรอ VMS sync อัพเดทให้
       </div>
 
       <label style={{ display: "block", fontSize: 11, color: "var(--dx-text-muted)", marginBottom: 4 }}>หมายเหตุ (optional)</label>
