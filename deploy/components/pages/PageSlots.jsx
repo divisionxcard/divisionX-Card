@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react"
 import {
   Monitor, RefreshCw, History, Edit3, CheckCircle, Flag, X,
   AlertTriangle, Loader2, ArrowRight, Save, Repeat, Printer,
+  ChevronDown, ChevronUp,
 } from "lucide-react"
 import { SectionTitle } from "../shared/dx-components"
 import {
@@ -35,6 +36,7 @@ export default function PageSlots({ machines = [], skus = [], allProfiles = [], 
   const [manualModal, setManualModal] = useState(null)     // { machine_id, slot_number, current }
   const [reconcileModal, setReconcileModal] = useState(null) // change event object
   const [swapModal, setSwapModal] = useState(false)
+  const [expandedMachines, setExpandedMachines] = useState(() => new Set())  // default collapse · กด header เพื่อ expand
   // From-to date filter สำหรับ Review + Export PDF · default = 30 วันที่แล้ว → วันนี้
   const todayISO = () => new Date().toISOString().slice(0, 10)
   const daysAgoISO = (n) => new Date(Date.now() - n * 86400000).toISOString().slice(0, 10)
@@ -290,9 +292,23 @@ export default function PageSlots({ machines = [], skus = [], allProfiles = [], 
         <div className="dx-card" style={{ padding: 30, textAlign: "center", color: "var(--dx-text-muted)", fontSize: 12 }}>
           ยังไม่มีข้อมูล mapping ช่อง · รอ scraper รันรอบถัดไป
         </div>
-      ) : machineIds.map(mid => (
+      ) : machineIds.map(mid => {
+        const isExpanded = expandedMachines.has(mid)
+        const toggle = () => {
+          setExpandedMachines(prev => {
+            const next = new Set(prev)
+            if (next.has(mid)) next.delete(mid); else next.add(mid)
+            return next
+          })
+        }
+        return (
         <div key={mid} className="dx-card" style={{ marginBottom: 16, padding: 16 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+          <button onClick={toggle} type="button"
+            style={{
+              all: "unset", cursor: "pointer", width: "100%",
+              display: "flex", alignItems: "center", gap: 8,
+              marginBottom: isExpanded ? 12 : 0,
+            }}>
             <Monitor size={14} style={{ color: "var(--dx-cyan-soft)" }}/>
             <h3 style={{ margin: 0, fontSize: 13, fontWeight: 700, color: "var(--dx-text)" }}>
               {machineNames[mid] || mid}
@@ -301,7 +317,11 @@ export default function PageSlots({ machines = [], skus = [], allProfiles = [], 
             <span style={{ marginLeft: "auto", fontSize: 11, color: "var(--dx-text-muted)" }}>
               {(slotsByMachine[mid] || []).length} slots
             </span>
-          </div>
+            {isExpanded
+              ? <ChevronUp size={14} style={{ color: "var(--dx-text-muted)" }}/>
+              : <ChevronDown size={14} style={{ color: "var(--dx-text-muted)" }}/>}
+          </button>
+          {isExpanded && (
           <div style={{ overflowX: "auto" }}>
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
               <thead>
@@ -337,8 +357,10 @@ export default function PageSlots({ machines = [], skus = [], allProfiles = [], 
               </tbody>
             </table>
           </div>
+          )}
         </div>
-      ))}
+        )
+      })}
 
       {/* Recent changes review */}
       <div className="dx-card" style={{ marginTop: 24, padding: 16 }}>
