@@ -549,7 +549,11 @@ ${machineBlocks}
                     const enough = myBal >= refillPacksTotal
                     const unit = g.isBox ? "กล่อง" : "ซอง"
                     const qty = getGroupQty(g)
-                    const disabled = !canRefill || myBal <= 0
+                    // disabled = ลด/แก้ qty ไม่ได้เลย (ต้อง canRefill)
+                    const disabled = !canRefill
+                    // ปุ่ม + เพิ่มได้ก็ต่อเมื่อ มีสต็อกในคลังพอ · ปุ่ม − ลดได้เสมอ ตราบที่ qty > 0
+                    const cannotIncrement = disabled || qty >= g.totalRefill || myBal <= 0
+                    const cannotDecrement = disabled || qty <= 0
                     const changed = qty !== g.totalRefill
                     return (
                       <tr key={g.key} style={{ borderBottom: "1px solid var(--dx-border)" }}>
@@ -572,7 +576,7 @@ ${machineBlocks}
                         <td style={{ padding: "11px 10px" }}>
                           {canRefill ? (
                             <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 4 }}>
-                              <QtyBtn onClick={() => setGroupQty(g, qty - 1)} disabled={disabled || qty <= 0} variant="minus"/>
+                              <QtyBtn onClick={() => setGroupQty(g, qty - 1)} disabled={cannotDecrement} variant="minus"/>
                               <input type="number" min={0} max={g.totalRefill} value={qty}
                                 onChange={e => setGroupQty(g, parseInt(e.target.value) || 0)}
                                 disabled={disabled}
@@ -587,7 +591,7 @@ ${machineBlocks}
                                     : "var(--dx-danger)",
                                   outline: "none",
                                 }}/>
-                              <QtyBtn onClick={() => setGroupQty(g, qty + 1)} disabled={disabled || qty >= g.totalRefill} variant="plus"/>
+                              <QtyBtn onClick={() => setGroupQty(g, qty + 1)} disabled={cannotIncrement} variant="plus"/>
                               <span style={{ fontSize: 10, color: "var(--dx-text-muted)", marginLeft: 2 }}>{unit}</span>
                               {changed && !disabled && (
                                 <button type="button" onClick={() => setGroupQty(g, g.totalRefill)}
