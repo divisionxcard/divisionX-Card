@@ -439,89 +439,215 @@ def build_refill_sheet(wb, groups, machines, today, refill_row_map):
 # ── Sheet: ช่องเติมตู้ ────────────────────────────────────────────
 def build_slot_grid_sheet(wb, machines, current_slots_by_machine):
     """
-    Layout · ต่อตู้:
-      Row 1: "ตู้XXX ชื่อสาขา"
-      Row 2-5: slot block 1 (slot#/family/SKU+type/capacity)
-      Row 6-9: slot block 2
-      ...
-    เริ่มจากข้อมูล active_slot_mappings ถ้ามี · ไม่งั้น blank grid 6 row × 10 cols
+    Layout (สวยงาม + แยก brand):
+
+      Row 1-2: Title + legend
+      [brand banner VMS]
+        [machine card 1] · slots organized as BOX section + PACK section
+        [machine card 2]
+        ...
+      [brand banner WW]
+        [machine card 5]
+        ...
+
+    Col A = row labels (ช่อง / สินค้า / SKU / ความจุ) · ทำให้อ่านง่าย
+    Col B onwards = slot grid
     """
     ws = wb.create_sheet("ช่องเติมตู้")
     SLOTS_PER_ROW = 10  # ต่อบล็อก
+    TOTAL_COLS = SLOTS_PER_ROW + 1  # +1 สำหรับ row label
 
-    ws.cell(row=1, column=1, value="IN box / IN pack — แผนผังช่องของแต่ละตู้").font = TITLE_FONT
-    ws.merge_cells("A1:J1")
+    # Brand colors
+    BRAND_COLOR = {
+        "vms":       "1E40AF",  # navy blue
+        "worldwide": "EA580C",  # orange
+    }
+    BRAND_NAME = {
+        "vms":       "VMS · Inboxcorp",
+        "worldwide": "Worldwide (WW)",
+    }
+    BOX_BG = "DBEAFE"   # light blue
+    PACK_BG = "FEF3C7"  # light cream
 
-    r = 3
+    # ── Title + legend ─────────────────────────────────────────────
+    title_cell = ws.cell(row=1, column=1, value="แผนผังช่องเติมตู้ — ของแต่ละตู้")
+    title_cell.font = TITLE_FONT
+    ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=TOTAL_COLS)
+    ws.row_dimensions[1].height = 26
+
+    # Legend
+    legend = ws.cell(row=2, column=1,
+        value="🔵 BOX (กล่อง · cap=4) · 🟡 PACK (ซอง · cap=12) · row 1=ช่อง · row 2=สินค้า · row 3=SKU+ประเภท · row 4=ความจุ")
+    legend.font = Font(name=TH_FONT, size=9, italic=True, color="64748B")
+    ws.merge_cells(start_row=2, start_column=1, end_row=2, end_column=TOTAL_COLS)
+
+    # ── Group machines by brand ────────────────────────────────────
+    by_brand = {"vms": [], "worldwide": []}
     for m in machines:
-        # Machine title
-        machine_label = f"ตู้ {m['machine_id']} · {m.get('name') or ''} {m.get('location') or ''}"
-        c = ws.cell(row=r, column=1, value=machine_label)
-        c.font = SUB_HEADER_FONT
-        c.fill = fill(COLOR["sub"])
-        ws.merge_cells(start_row=r, start_column=1, end_row=r, end_column=SLOTS_PER_ROW)
-        r += 1
+        b = (m.get("brand") or "vms").lower()
+        if b not in by_brand: by_brand[b] = []
+        by_brand[b].append(m)
 
-        # ดึง slot ของตู้นี้ (ถ้ามี) · sort by slot_number
+    r = 4  # start row
+
+    def write_brand_banner(row, brand):
+        color = BRAND_COLOR.get(brand, "475569")
+        name = BRAND_NAME.get(brand, brand.upper())
+        count = len(by_brand.get(brand, []))
+        cell = ws.cell(row=row, column=1, value=f"  ▌ {name}  ·  {count} ตู้")
+        cell.font = Font(name=TH_FONT, size=13, bold=True, color="FFFFFF")
+        cell.fill = fill(color)
+        cell.alignment = Alignment(horizontal="left", vertical="center")
+        ws.merge_cells(start_row=row, start_column=1, end_row=row, end_column=TOTAL_COLS)
+        ws.row_dimensions[row].height = 28
+
+    def write_machine_card(row, m):
+        """เขียน 1 ตู้ · คืน row ถัดไปที่ใช้ได้"""
+        nonlocal_brand = (m.get("brand") or "vms").lower()
+        accent = BRAND_COLOR.get(nonlocal_brand, "475569")
+
+        # Machine title bar
+        title = f"📍 {m.get('name') or m['machine_id']}  ·  {m.get('location') or ''}"
+        sub = f"({m['machine_id']})"
+        tc = ws.cell(row=row, column=1, value=title)
+        tc.font = Font(name=TH_FONT, size=12, bold=True, color="FFFFFF")
+        tc.fill = fill(accent)
+        tc.alignment = Alignment(horizontal="left", vertical="center", indent=1)
+        ws.merge_cells(start_row=row, start_column=1, end_row=row, end_column=TOTAL_COLS - 2)
+        sc = ws.cell(row=row, column=TOTAL_COLS - 1, value=sub)
+        sc.font = Font(name=TH_FONT, size=10, color="FFFFFF", italic=True)
+        sc.fill = fill(accent)
+        sc.alignment = Alignment(horizontal="right", vertical="center")
+        ws.merge_cells(start_row=row, start_column=TOTAL_COLS - 1, end_row=row, end_column=TOTAL_COLS)
+        ws.row_dimensions[row].height = 22
+        row += 1
+
+        # ดึง slot ของตู้นี้ · sort by slot_number
         slots = current_slots_by_machine.get(m["machine_id"], [])
         slots = sorted(slots, key=lambda s: (s.get("slot_number") or ""))
 
-        # ถ้าไม่มีข้อมูล · สร้าง 6 บล็อก × 10 slot = 60 ช่องเปล่า
+        # ถ้าไม่มี · สร้าง 60 ช่องเปล่า
         if not slots:
             slots = [{"slot_number": str(i + 1).zfill(3), "product_name": "", "sku_id": "", "max_capacity": ""} for i in range(60)]
 
-        # แบ่งเป็นบล็อกละ SLOTS_PER_ROW
-        for block_start in range(0, len(slots), SLOTS_PER_ROW):
-            block = slots[block_start:block_start + SLOTS_PER_ROW]
-            # 4 rows per block · slot# / family / SKU+type / capacity
-            for col_i, slot in enumerate(block):
-                col = col_i + 1
-                slot_num = slot.get("slot_number") or ""
-                product_name = slot.get("product_name") or ""
-                sku_id = slot.get("sku_id") or ""
-                cap = slot.get("max_capacity") or ""
-                is_box = "box" in (product_name or "").lower()
-                short = short_sku(sku_id) if sku_id else ""
-                short_with_type = f"{short} {'BOX' if is_box else 'PACK'}" if short else ""
+        # แบ่ง BOX vs PACK (จากชื่อสินค้า · ถ้าว่างให้ลง PACK)
+        box_slots = [s for s in slots if "box" in (s.get("product_name") or "").lower()]
+        pack_slots = [s for s in slots if "box" not in (s.get("product_name") or "").lower()]
 
-                # row r = slot number
-                cell_n = ws.cell(row=r, column=col, value=slot_num)
-                cell_n.font = SUB_HEADER_FONT
-                cell_n.alignment = Alignment(horizontal="center")
-                cell_n.fill = fill(COLOR["sub"])
-                cell_n.border = THIN_BORDER
+        # Helper · render slot blocks · 4-row blocks
+        def render_section(section_name, section_slots, bg_color, start_row):
+            if not section_slots:
+                return start_row
+            # Section sub-header
+            label = ws.cell(row=start_row, column=1, value=f"  {section_name}")
+            label.font = Font(name=TH_FONT, size=10, bold=True, color="1E293B")
+            label.fill = fill(bg_color)
+            label.alignment = Alignment(horizontal="left", vertical="center", indent=1)
+            ws.merge_cells(start_row=start_row, start_column=1, end_row=start_row, end_column=TOTAL_COLS)
+            ws.row_dimensions[start_row].height = 18
+            start_row += 1
 
-                # row r+1 = family (auto-derive from sku)
-                family = ""
-                if sku_id:
-                    for fam in FAMILIES:
-                        if fam["match"]({"sku_id": sku_id, "series": ""}):
-                            family = fam["name"]
-                            break
-                cell_f = ws.cell(row=r + 1, column=col, value=family)
-                cell_f.font = DEFAULT_FONT
-                cell_f.alignment = Alignment(horizontal="center")
-                cell_f.border = THIN_BORDER
+            for block_start in range(0, len(section_slots), SLOTS_PER_ROW):
+                block = section_slots[block_start:block_start + SLOTS_PER_ROW]
 
-                # row r+2 = SKU + type
-                cell_s = ws.cell(row=r + 2, column=col, value=short_with_type)
-                cell_s.font = SUB_HEADER_FONT
-                cell_s.alignment = Alignment(horizontal="center")
-                cell_s.border = THIN_BORDER
+                # row labels in col A
+                labels = ["ช่อง", "สินค้า", "SKU", "ความจุ"]
+                for i, lbl in enumerate(labels):
+                    lc = ws.cell(row=start_row + i, column=1, value=lbl)
+                    lc.font = Font(name=TH_FONT, size=9, bold=True, color="475569")
+                    lc.alignment = Alignment(horizontal="right", vertical="center")
+                    lc.fill = fill("F1F5F9")
+                    lc.border = THIN_BORDER
 
-                # row r+3 = capacity
-                cell_c = ws.cell(row=r + 3, column=col, value=cap)
-                cell_c.font = DEFAULT_FONT
-                cell_c.alignment = Alignment(horizontal="center")
-                cell_c.border = THIN_BORDER
+                for col_i, slot in enumerate(block):
+                    col = col_i + 2  # +2 because col 1 is label
+                    slot_num = slot.get("slot_number") or ""
+                    product_name = slot.get("product_name") or ""
+                    sku_id = slot.get("sku_id") or ""
+                    cap = slot.get("max_capacity") or ""
+                    is_box = "box" in (product_name or "").lower()
+                    short = short_sku(sku_id) if sku_id else ""
+                    short_with_type = f"{short} {'BOX' if is_box else 'PACK'}" if short else ""
 
-            r += 4
-        r += 1  # blank row between machines
+                    # row 0: slot#
+                    cn = ws.cell(row=start_row, column=col, value=slot_num)
+                    cn.font = Font(name=TH_FONT, size=11, bold=True, color="0F172A")
+                    cn.alignment = Alignment(horizontal="center", vertical="center")
+                    cn.fill = fill("E2E8F0")
+                    cn.border = THIN_BORDER
 
-    # Column widths
-    for col in range(1, SLOTS_PER_ROW + 1):
+                    # row 1: family · derive series from sku_id prefix
+                    family = ""
+                    if sku_id:
+                        sid = sku_id.strip()
+                        derived_series = ""
+                        for prefix in ("OP", "PRB", "EB", "FB"):
+                            if sid.startswith(prefix + " ") or sid.startswith(prefix):
+                                derived_series = prefix
+                                break
+                        for fam in FAMILIES:
+                            if fam["match"]({"sku_id": sid, "series": derived_series}):
+                                family = fam["name"]
+                                break
+                    cf = ws.cell(row=start_row + 1, column=col, value=family)
+                    cf.font = Font(name=TH_FONT, size=9, color="64748B")
+                    cf.alignment = Alignment(horizontal="center", vertical="center")
+                    cf.fill = fill(bg_color)
+                    cf.border = THIN_BORDER
+
+                    # row 2: SKU + type
+                    cs = ws.cell(row=start_row + 2, column=col, value=short_with_type)
+                    cs.font = Font(name=TH_FONT, size=10, bold=True, color="0F172A")
+                    cs.alignment = Alignment(horizontal="center", vertical="center")
+                    cs.fill = fill(bg_color)
+                    cs.border = THIN_BORDER
+
+                    # row 3: capacity
+                    cc = ws.cell(row=start_row + 3, column=col, value=cap)
+                    cc.font = Font(name=TH_FONT, size=10, bold=True, color="DC2626")
+                    cc.alignment = Alignment(horizontal="center", vertical="center")
+                    cc.fill = fill("FFFFFF")
+                    cc.border = THIN_BORDER
+
+                # Fill empty cols ถ้า block สั้นกว่า SLOTS_PER_ROW
+                for col_i in range(len(block), SLOTS_PER_ROW):
+                    col = col_i + 2
+                    for off in range(4):
+                        ws.cell(row=start_row + off, column=col).border = THIN_BORDER
+
+                ws.row_dimensions[start_row].height = 20
+                ws.row_dimensions[start_row + 1].height = 14
+                ws.row_dimensions[start_row + 2].height = 18
+                ws.row_dimensions[start_row + 3].height = 16
+                start_row += 4
+
+            return start_row
+
+        row = render_section("🔵 BOX section", box_slots, BOX_BG, row)
+        row = render_section("🟡 PACK section", pack_slots, PACK_BG, row)
+        return row + 1  # spacer
+
+    # ── Render VMS section ─────────────────────────────────────────
+    if by_brand.get("vms"):
+        write_brand_banner(r, "vms")
+        r += 1
+        for m in by_brand["vms"]:
+            r = write_machine_card(r, m)
+
+    # ── Render WW section ──────────────────────────────────────────
+    if by_brand.get("worldwide"):
+        r += 1  # extra spacer
+        write_brand_banner(r, "worldwide")
+        r += 1
+        for m in by_brand["worldwide"]:
+            r = write_machine_card(r, m)
+
+    # ── Column widths ──────────────────────────────────────────────
+    ws.column_dimensions["A"].width = 11  # row label col
+    for col in range(2, TOTAL_COLS + 1):
         ws.column_dimensions[get_column_letter(col)].width = 13
 
+    ws.freeze_panes = "B4"
     return ws
 
 
