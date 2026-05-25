@@ -33,14 +33,14 @@ if sys.platform == "win32":
 
 try:
     from dotenv import load_dotenv
+    # โหลดจากหลายที่ · ลำดับ priority สูง → ต่ำ (file แรกชนะถ้า key ซ้ำ)
     for env_path in [
-        Path(__file__).parent / ".env",
+        Path(__file__).parent / ".env",                                # tools-specific
         Path(__file__).parent.parent.parent / "deploy" / "scraper" / ".env",
-        Path(__file__).parent.parent.parent / "deploy" / ".env.local",
+        Path(__file__).parent.parent.parent / "deploy" / ".env.local",  # Supabase keys
     ]:
         if env_path.exists():
-            load_dotenv(env_path)
-            break
+            load_dotenv(env_path, override=False)  # ไม่ทับของเดิม
 except ImportError:
     pass
 
@@ -51,7 +51,10 @@ from openpyxl import Workbook
 try:
     from googleapiclient.discovery import build as _gbuild
     from googleapiclient.http import MediaFileUpload
-    from google.oauth2.service_account import Credentials
+    from google.oauth2.service_account import Credentials as ServiceCredentials
+    from google.oauth2.credentials import Credentials as UserCredentials
+    from google_auth_oauthlib.flow import InstalledAppFlow
+    from google.auth.transport.requests import Request as GoogleAuthRequest
     _GDRIVE_AVAILABLE = True
 except ImportError:
     _GDRIVE_AVAILABLE = False
@@ -780,41 +783,87 @@ def build_substock_sheet(wb):
 
 
 # ── Google Drive upload ────────────────────────────────────────────
+GDRIVE_SCOPES = ["https://www.googleapis.com/auth/drive.file"]
+TOKEN_FILE = Path(__file__).parent / ".gdrive_token.json"
+
+
+def _get_drive_creds():
+    """
+    ลำดับการเลือก auth:
+    1. OAuth (แนะนำสำหรับ personal Google) — ใช้ GOOGLE_OAUTH_CLIENT_SECRET
+       login ครั้งแรกผ่าน browser · cache token ใน .gdrive_token.json
+    2. Service account (สำหรับ Workspace) — ใช้ GOOGLE_SERVICE_ACCOUNT_JSON
+       (เตือน: SA ไม่มี quota บน personal account · จะ fail "storage quota exceeded")
+    """
+    # OAuth path
+    client_secret = os.environ.get("GOOGLE_OAUTH_CLIENT_SECRET")
+    if client_secret:
+        client_secret = Path(client_secret).expanduser()
+        if not client_secret.exists():
+            print(f"   ⚠ ไม่พบไฟล์ OAuth client secret: {client_secret}")
+            return None
+        creds = None
+        if TOKEN_FILE.exists():
+            try:
+                creds = UserCredentials.from_authorized_user_file(str(TOKEN_FILE), GDRIVE_SCOPES)
+            except Exception:
+                creds = None
+        if not creds or not creds.valid:
+            if creds and creds.expired and creds.refresh_token:
+                print("   🔄 Refreshing OAuth token...")
+                creds.refresh(GoogleAuthRequest())
+            else:
+                print("   🔐 First-time login · จะเปิด browser ให้ authorize...")
+                flow = InstalledAppFlow.from_client_secrets_file(str(client_secret), GDRIVE_SCOPES)
+                creds = flow.run_local_server(port=0)
+            TOKEN_FILE.write_text(creds.to_json(), encoding="utf-8")
+            print(f"   ✓ Token saved: {TOKEN_FILE}")
+        return creds
+
+    # Service account path
+    sa_path = os.environ.get("GOOGLE_SERVICE_ACCOUNT_JSON")
+    if sa_path:
+        sa_path = Path(sa_path).expanduser()
+        if not sa_path.exists():
+            print(f"   ⚠ ไม่พบไฟล์ service account: {sa_path}")
+            return None
+        return ServiceCredentials.from_service_account_file(str(sa_path), scopes=GDRIVE_SCOPES)
+
+    return None
+
+
 def upload_to_gdrive(xlsx_path: Path, convert_to_sheets=True):
     """
     Upload xlsx ไป Google Drive + convert เป็น Google Sheets
 
-    Env vars ที่ต้องตั้ง:
-        GOOGLE_SERVICE_ACCOUNT_JSON · path ไป service account .json file
-        GOOGLE_DRIVE_FOLDER_ID · ID ของ folder ปลายทาง (จาก URL)
+    Env vars:
+        GOOGLE_OAUTH_CLIENT_SECRET (แนะนำ) · path ไป OAuth client secret JSON
+        OR GOOGLE_SERVICE_ACCOUNT_JSON · path ไป service account JSON (Workspace เท่านั้น)
+        GOOGLE_DRIVE_FOLDER_ID · ID ของ folder ปลายทาง
 
-    Returns: dict {file_id, web_view_link} หรือ None ถ้า skip
+    Returns: dict {id, webViewLink, name} หรือ None ถ้า skip/error
     """
     if not _GDRIVE_AVAILABLE:
         print("   ⚠ google-api-python-client ยังไม่ install · skip upload")
-        print("     ติดตั้ง: pip install google-api-python-client google-auth-httplib2")
         return None
 
-    creds_path = os.environ.get("GOOGLE_SERVICE_ACCOUNT_JSON")
     folder_id = os.environ.get("GOOGLE_DRIVE_FOLDER_ID")
-    if not creds_path or not folder_id:
-        print("   ℹ ตั้ง GOOGLE_SERVICE_ACCOUNT_JSON + GOOGLE_DRIVE_FOLDER_ID เพื่อ auto-upload (skip)")
+    if not folder_id:
+        print("   ℹ ตั้ง GOOGLE_DRIVE_FOLDER_ID + GOOGLE_OAUTH_CLIENT_SECRET เพื่อ auto-upload (skip)")
         return None
 
-    creds_path = Path(creds_path).expanduser()
-    if not creds_path.exists():
-        print(f"   ⚠ ไม่พบไฟล์ credentials: {creds_path}")
+    creds = _get_drive_creds()
+    if creds is None:
+        print("   ℹ ตั้ง GOOGLE_OAUTH_CLIENT_SECRET เพื่อ auto-upload (skip)")
         return None
 
     print("📤 Uploading to Google Drive...")
-    scopes = ["https://www.googleapis.com/auth/drive.file"]
-    creds = Credentials.from_service_account_file(str(creds_path), scopes=scopes)
     service = _gbuild("drive", "v3", credentials=creds)
 
     mime_type = "application/vnd.google-apps.spreadsheet" if convert_to_sheets \
                 else "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     metadata = {
-        "name":     xlsx_path.stem,  # ไม่ใส่ .xlsx ถ้า convert เป็น Sheets
+        "name":     xlsx_path.stem,
         "parents":  [folder_id],
         "mimeType": mime_type,
     }
@@ -823,11 +872,19 @@ def upload_to_gdrive(xlsx_path: Path, convert_to_sheets=True):
         mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         resumable=False,
     )
-    result = service.files().create(
-        body=metadata, media_body=media,
-        fields="id, webViewLink, name", supportsAllDrives=True,
-    ).execute()
-    return result
+    try:
+        result = service.files().create(
+            body=metadata, media_body=media,
+            fields="id, webViewLink, name", supportsAllDrives=True,
+        ).execute()
+        return result
+    except Exception as e:
+        msg = str(e)
+        if "storageQuotaExceeded" in msg:
+            print("   ❌ Service account ไม่มี storage quota · ต้องใช้ OAuth (ดู README)")
+        else:
+            print(f"   ❌ Upload failed: {e}")
+        return None
 
 
 # ── Main ───────────────────────────────────────────────────────────

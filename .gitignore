@@ -10,6 +10,12 @@
 .env.staging
 *.env
 
+# ─── Google Cloud service account keys (ห้าม commit เด็ดขาด!) ─
+Stock-Management-/
+*-iam.gserviceaccount.com*.json
+**/service-account*.json
+**/nice-limiter-*.json
+
 # ─── Dependencies ────────────────────────────────────────────
 node_modules/
 __pycache__/

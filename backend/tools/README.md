@@ -72,56 +72,71 @@ SKU จัดกลุ่มตาม family (เหมือนไฟล์ adm
 
 ### Auto-upload ไป Google Drive (ถ้าเครื่องไม่มี Excel)
 
-ถ้าตั้ง 2 env vars นี้ script จะ **upload ไฟล์ขึ้น GDrive + convert เป็น Google Sheets + เปิด browser ให้อัตโนมัติ** ไม่ต้องดาวน์โหลด
+Script จะ **upload ไฟล์ขึ้น GDrive + convert เป็น Google Sheets + เปิด browser อัตโนมัติ**
+ไม่ต้องดาวน์โหลดเองอีก
+
+**สำคัญ:** ต้องใช้ **OAuth** (ไม่ใช่ service account) สำหรับ personal Google account
+เพราะ service account ไม่มี storage quota สำหรับ personal Drive
 
 ```bash
-GOOGLE_SERVICE_ACCOUNT_JSON=/path/to/service-account-key.json
-GOOGLE_DRIVE_FOLDER_ID=1aBcDeFgHiJkLmNoPqRsTuVwXyZ  # ID ของ folder ปลายทาง
+GOOGLE_OAUTH_CLIENT_SECRET=/path/to/client_secret.json
+GOOGLE_DRIVE_FOLDER_ID=1aBcDeFgHiJkLmNoPqRsTuVwXyZ
 ```
 
 **Setup ครั้งแรก (~10 นาที):**
 
-1. **สร้าง Google Cloud Project**
-   - ไปที่ https://console.cloud.google.com → "New Project"
-   - ตั้งชื่อโปรเจค เช่น `divisionx-tools`
+1. **Google Cloud Project**
+   - https://console.cloud.google.com → New Project (หรือใช้ที่มี)
 
-2. **เปิด APIs**
-   - APIs & Services → Library
-   - ค้น "Google Drive API" → Enable
+2. **Enable APIs**
+   - APIs & Services → Library → ค้น "Google Drive API" → Enable
    - ค้น "Google Sheets API" → Enable
 
-3. **สร้าง Service Account**
-   - APIs & Services → Credentials → Create Credentials → Service Account
-   - ตั้งชื่อ เช่น `divisionx-exporter`
-   - Done (ไม่ต้อง grant role · จะแชร์ทาง folder แทน)
-   - เปิด service account นั้น → Keys → Add Key → Create new key → JSON
-   - ดาวน์โหลดไฟล์ .json เก็บไว้ในเครื่อง (ห้าม commit เข้า git!)
+3. **OAuth Consent Screen (Google Auth Platform)**
+   - APIs & Services → OAuth consent screen → Get started
+   - App name: `DivisionX Tools` · User support email · Audience: **External**
+   - Test users → Add: email ของคุณ
+   - Save / Create
 
-4. **สร้าง folder บน Google Drive + Share**
-   - เปิด GDrive → New → Folder → ตั้งชื่อ เช่น "DivisionX Daily Logs"
-   - กดเข้าไป copy `folder ID` จาก URL: `https://drive.google.com/drive/folders/THIS_PART`
-   - Right-click folder → Share → ใส่ email ของ service account (อยู่ใน JSON key: `client_email`)
-   - Permission: **Editor** → Send
+4. **OAuth Client ID**
+   - APIs & Services → Credentials → Clients (หรือ Create Credentials)
+   - Application type: **Desktop app**
+   - ดาวน์โหลด JSON → เปลี่ยนชื่อเป็น `client_secret.json` เก็บไว้ในเครื่อง
 
-5. **ตั้ง env vars** (เพิ่มใน `.env` หรือ `deploy/.env.local`)
+5. **สร้าง folder บน Google Drive**
+   - GDrive → New → Folder → ตั้งชื่อ "DivisionX Daily Logs"
+   - เปิด folder · copy folder ID จาก URL `https://drive.google.com/drive/folders/THIS_PART`
+   - (ไม่ต้อง share ที่ใดเป็นพิเศษ · OAuth ใช้สิทธิ์ของ admin โดยตรง)
+
+6. **ตั้ง env vars** ใน `backend/tools/.env`
    ```bash
-   GOOGLE_SERVICE_ACCOUNT_JSON=/Users/you/Downloads/divisionx-tools-xxxx.json
-   GOOGLE_DRIVE_FOLDER_ID=1aBcDeFgHi...  # folder ID จากขั้น 4
+   GOOGLE_OAUTH_CLIENT_SECRET=C:/path/to/client_secret.json
+   GOOGLE_DRIVE_FOLDER_ID=1aBcDeFgHi...
+   AUTO_OPEN_GDRIVE=1
    ```
 
-6. **รัน script**
+7. **รัน script ครั้งแรก**
    ```bash
    py generate_daily_template.py
    ```
-   จะเห็น:
+   - Browser เปิดให้ login Google → กด **Allow**
+   - Token จะถูก save ที่ `backend/tools/.gdrive_token.json`
+   - ครั้งหน้ารันไม่ต้อง login ซ้ำ
+
+8. **ผลลัพธ์**
    ```
    ✅ Saved local: DivisionX_Daily_Log_2026-05-25.xlsx
-   ☁️  Uploaded to Google Drive · เปิดได้ทันที:
+   📤 Uploading to Google Drive...
+   ☁️  Uploaded · เปิดได้ทันที:
       https://docs.google.com/spreadsheets/d/abc.../edit
-   (เปิด browser ให้แล้ว)
    ```
 
-ตั้ง `AUTO_OPEN_GDRIVE=0` ถ้าไม่อยากให้ browser เปิดอัตโนมัติ
+### หมายเหตุเรื่อง Service Account (Workspace เท่านั้น)
+
+ถ้ามี Google Workspace · ใช้ service account ได้แทน OAuth · ตั้ง
+`GOOGLE_SERVICE_ACCOUNT_JSON` แทน · กับ shared drive หรือ folder ที่ share
+permission Editor กับ email ของ service account · แต่ personal account
+จะ fail "storage quota exceeded" — service account ไม่มี quota
 
 ### Workflow แนะนำเมื่อระบบล่ม
 

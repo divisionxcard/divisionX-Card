@@ -1,5 +1,8 @@
 # ไฟล์ output ของ generator · regenerate เมื่อไหร่ก็ได้
 DivisionX_Daily_Log_*.xlsx
 .env
+.gdrive_token.json
+client_secret*.json
+*.json
 __pycache__/
 *.pyc
