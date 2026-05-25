@@ -79,9 +79,13 @@ export default function PageSlots({ machines = [], skus = [], allProfiles = [], 
   useEffect(() => { load() }, [reviewDays])
 
   const machineIds = useMemo(() => {
-    const ids = [...new Set(active.map(r => r.machine_id))].sort()
+    // รวมตู้จากทั้ง machines prop (รวม ตู้ที่ยังไม่เคยมี slot history เช่น wwv01/wwv02)
+    // + machine_id ที่มีใน active records (เผื่อมีตู้เก่าที่ถูกลบจาก machines แต่ยังมี history)
+    const fromTable = machines.map(m => m.machine_id)
+    const fromActive = active.map(r => r.machine_id)
+    const ids = [...new Set([...fromTable, ...fromActive])].sort()
     return selectedMachine === "all" ? ids : [selectedMachine].filter(id => ids.includes(id))
-  }, [active, selectedMachine])
+  }, [machines, active, selectedMachine])
 
   const slotsByMachine = useMemo(() => {
     const m = {}
@@ -334,6 +338,11 @@ export default function PageSlots({ machines = [], skus = [], allProfiles = [], 
                 </tr>
               </thead>
               <tbody>
+                {(slotsByMachine[mid] || []).length === 0 && (
+                  <tr><td colSpan={5} style={{ padding: 24, textAlign: "center", color: "var(--dx-text-muted)", fontSize: 11 }}>
+                    ยังไม่มีข้อมูล slot · รอ scraper รัน หรือกดเปลี่ยน slot ในตู้นี้เพื่อเริ่ม track
+                  </td></tr>
+                )}
                 {(slotsByMachine[mid] || []).map(s => (
                   <tr key={s.id} style={{ borderTop: "1px solid var(--dx-border)" }}>
                     <td style={{ padding: "8px 10px", textAlign: "center", fontFamily: "var(--dx-mono)", color: "var(--dx-cyan-soft)" }}>{s.slot_number}</td>
