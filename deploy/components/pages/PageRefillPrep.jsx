@@ -390,7 +390,9 @@ export default function PageRefillPrep({ machines, machineStock, machineAssignme
   .header { text-align: center; margin-bottom: 12px; font-size: 11px; }
   .header h1 { margin: 0; font-size: 14px; }
   .machine { margin-bottom: 16px; page-break-inside: auto; }
-  .machine:not(:first-of-type) { page-break-before: always; }
+  /* ตู้ที่ 2 ขึ้นไปขึ้นหน้าใหม่ · ต้องมี padding-top เท่าหน้า 1 เพราะ @page margin:0
+     ทำให้ทุกหน้าใหม่เริ่มที่ขอบบนสุด ไม่มี body padding มาช่วย */
+  .machine:not(:first-of-type) { page-break-before: always; padding-top: 10mm; }
   h3 { margin: 0 0 6px; font-size: 13px; border-bottom: 2px solid #333; padding-bottom: 3px; }
   table { width: 100%; border-collapse: collapse; font-size: 11px; }
   th, td { padding: 4px 6px; border: 1px solid #999; }
