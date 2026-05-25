@@ -11,9 +11,11 @@ Internal CLI tools สำหรับ admin · ไม่ใช่ส่วนข
 ### ติดตั้ง
 
 ```bash
+# Required
 pip install openpyxl supabase python-dotenv
-# หรือใช้ requirements ของ scraper
-pip install -r ../../deploy/scraper/requirements.txt
+
+# Optional · สำหรับ auto-upload ไป Google Drive
+pip install google-api-python-client google-auth-httplib2
 ```
 
 ### ตั้ง env vars
@@ -67,6 +69,59 @@ SKU จัดกลุ่มตาม family (เหมือนไฟล์ adm
 | ยอดการซื้อ | H (ยอดตั้งต้น) | `=E*ppc+F*ppb+G` | Cotton×ppc + Box×ppb + Pack |
 | ยอดการซื้อ | I (ราคาทุน/ซอง) | `=J/H` | ยอดลงทุน ÷ ยอดตั้งต้น |
 | ยอดการซื้อ | T (ราคาขาย) | `=S*1.3` | markup 30% |
+
+### Auto-upload ไป Google Drive (ถ้าเครื่องไม่มี Excel)
+
+ถ้าตั้ง 2 env vars นี้ script จะ **upload ไฟล์ขึ้น GDrive + convert เป็น Google Sheets + เปิด browser ให้อัตโนมัติ** ไม่ต้องดาวน์โหลด
+
+```bash
+GOOGLE_SERVICE_ACCOUNT_JSON=/path/to/service-account-key.json
+GOOGLE_DRIVE_FOLDER_ID=1aBcDeFgHiJkLmNoPqRsTuVwXyZ  # ID ของ folder ปลายทาง
+```
+
+**Setup ครั้งแรก (~10 นาที):**
+
+1. **สร้าง Google Cloud Project**
+   - ไปที่ https://console.cloud.google.com → "New Project"
+   - ตั้งชื่อโปรเจค เช่น `divisionx-tools`
+
+2. **เปิด APIs**
+   - APIs & Services → Library
+   - ค้น "Google Drive API" → Enable
+   - ค้น "Google Sheets API" → Enable
+
+3. **สร้าง Service Account**
+   - APIs & Services → Credentials → Create Credentials → Service Account
+   - ตั้งชื่อ เช่น `divisionx-exporter`
+   - Done (ไม่ต้อง grant role · จะแชร์ทาง folder แทน)
+   - เปิด service account นั้น → Keys → Add Key → Create new key → JSON
+   - ดาวน์โหลดไฟล์ .json เก็บไว้ในเครื่อง (ห้าม commit เข้า git!)
+
+4. **สร้าง folder บน Google Drive + Share**
+   - เปิด GDrive → New → Folder → ตั้งชื่อ เช่น "DivisionX Daily Logs"
+   - กดเข้าไป copy `folder ID` จาก URL: `https://drive.google.com/drive/folders/THIS_PART`
+   - Right-click folder → Share → ใส่ email ของ service account (อยู่ใน JSON key: `client_email`)
+   - Permission: **Editor** → Send
+
+5. **ตั้ง env vars** (เพิ่มใน `.env` หรือ `deploy/.env.local`)
+   ```bash
+   GOOGLE_SERVICE_ACCOUNT_JSON=/Users/you/Downloads/divisionx-tools-xxxx.json
+   GOOGLE_DRIVE_FOLDER_ID=1aBcDeFgHi...  # folder ID จากขั้น 4
+   ```
+
+6. **รัน script**
+   ```bash
+   py generate_daily_template.py
+   ```
+   จะเห็น:
+   ```
+   ✅ Saved local: DivisionX_Daily_Log_2026-05-25.xlsx
+   ☁️  Uploaded to Google Drive · เปิดได้ทันที:
+      https://docs.google.com/spreadsheets/d/abc.../edit
+   (เปิด browser ให้แล้ว)
+   ```
+
+ตั้ง `AUTO_OPEN_GDRIVE=0` ถ้าไม่อยากให้ browser เปิดอัตโนมัติ
 
 ### Workflow แนะนำเมื่อระบบล่ม
 

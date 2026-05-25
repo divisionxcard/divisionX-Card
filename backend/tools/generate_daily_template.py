@@ -46,6 +46,15 @@ except ImportError:
 
 from supabase import create_client
 from openpyxl import Workbook
+
+# Google Drive upload · optional · ถ้ายังไม่ได้ install จะ skip upload
+try:
+    from googleapiclient.discovery import build as _gbuild
+    from googleapiclient.http import MediaFileUpload
+    from google.oauth2.service_account import Credentials
+    _GDRIVE_AVAILABLE = True
+except ImportError:
+    _GDRIVE_AVAILABLE = False
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
@@ -770,6 +779,57 @@ def build_substock_sheet(wb):
     return ws
 
 
+# ── Google Drive upload ────────────────────────────────────────────
+def upload_to_gdrive(xlsx_path: Path, convert_to_sheets=True):
+    """
+    Upload xlsx ไป Google Drive + convert เป็น Google Sheets
+
+    Env vars ที่ต้องตั้ง:
+        GOOGLE_SERVICE_ACCOUNT_JSON · path ไป service account .json file
+        GOOGLE_DRIVE_FOLDER_ID · ID ของ folder ปลายทาง (จาก URL)
+
+    Returns: dict {file_id, web_view_link} หรือ None ถ้า skip
+    """
+    if not _GDRIVE_AVAILABLE:
+        print("   ⚠ google-api-python-client ยังไม่ install · skip upload")
+        print("     ติดตั้ง: pip install google-api-python-client google-auth-httplib2")
+        return None
+
+    creds_path = os.environ.get("GOOGLE_SERVICE_ACCOUNT_JSON")
+    folder_id = os.environ.get("GOOGLE_DRIVE_FOLDER_ID")
+    if not creds_path or not folder_id:
+        print("   ℹ ตั้ง GOOGLE_SERVICE_ACCOUNT_JSON + GOOGLE_DRIVE_FOLDER_ID เพื่อ auto-upload (skip)")
+        return None
+
+    creds_path = Path(creds_path).expanduser()
+    if not creds_path.exists():
+        print(f"   ⚠ ไม่พบไฟล์ credentials: {creds_path}")
+        return None
+
+    print("📤 Uploading to Google Drive...")
+    scopes = ["https://www.googleapis.com/auth/drive.file"]
+    creds = Credentials.from_service_account_file(str(creds_path), scopes=scopes)
+    service = _gbuild("drive", "v3", credentials=creds)
+
+    mime_type = "application/vnd.google-apps.spreadsheet" if convert_to_sheets \
+                else "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    metadata = {
+        "name":     xlsx_path.stem,  # ไม่ใส่ .xlsx ถ้า convert เป็น Sheets
+        "parents":  [folder_id],
+        "mimeType": mime_type,
+    }
+    media = MediaFileUpload(
+        str(xlsx_path),
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        resumable=False,
+    )
+    result = service.files().create(
+        body=metadata, media_body=media,
+        fields="id, webViewLink, name", supportsAllDrives=True,
+    ).execute()
+    return result
+
+
 # ── Main ───────────────────────────────────────────────────────────
 def main():
     print("📥 Fetching SKUs + Machines from Supabase...")
@@ -807,8 +867,22 @@ def main():
     date_str = today.strftime("%Y-%m-%d")
     out_path = Path(__file__).parent / f"DivisionX_Daily_Log_{date_str}.xlsx"
     wb.save(out_path)
-    print(f"✅ Saved: {out_path}")
+    print(f"✅ Saved local: {out_path}")
     print(f"   ขนาด: {out_path.stat().st_size:,} bytes")
+
+    # Try auto-upload ไป Google Drive
+    result = upload_to_gdrive(out_path, convert_to_sheets=True)
+    if result:
+        print(f"☁️  Uploaded to Google Drive · เปิดได้ทันที:")
+        print(f"   {result.get('webViewLink')}")
+        # auto-open browser ถ้า env ANNAUNT_OPEN=1 (optional)
+        if os.environ.get("AUTO_OPEN_GDRIVE", "1") == "1":
+            try:
+                import webbrowser
+                webbrowser.open(result.get("webViewLink"))
+                print("   (เปิด browser ให้แล้ว · ตั้ง AUTO_OPEN_GDRIVE=0 เพื่อปิดฟีเจอร์นี้)")
+            except Exception:
+                pass
 
 
 if __name__ == "__main__":
