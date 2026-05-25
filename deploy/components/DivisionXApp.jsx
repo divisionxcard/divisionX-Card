@@ -838,7 +838,7 @@ export default function DivisionXApp() {
           {page === "claims"     && <PageClaims    machines={machines} skus={skus} claims={claims} onAddClaim={addClaim} onConfirmClaim={confirmClaim} onDeleteClaim={deleteClaim} machineAssignments={machineAssignments} session={session} profile={profile}/>}
           {page === "analytics"  && <PageAnalytics sales={sales} skus={skus} machines={machines}/>}
           {page === "users"      && <PageUsers     currentProfile={profile} machines={machines} machineAssignments={machineAssignments} allProfiles={allProfiles} onAddAssignment={addAssignment} onRemoveAssignment={removeAssignment}/>}
-          {page === "slots"      && <PageSlots     machines={machines} skus={skus} allProfiles={allProfiles}/>}
+          {page === "slots"      && <PageSlots     machines={machines} skus={skus} allProfiles={allProfiles} machineStock={machineStock}/>}
           {page.startsWith("machine_") && (() => {
             const m = machines.find(mc => `machine_${mc.machine_id}` === page)
             return m ? <PageMachineHistory machine={m} stockOut={stockOut} skus={skus} machines={machines} session={session} profile={profile} onUpdateStockOut={updateStockOut} onDeleteStockOut={deleteStockOut}/> : null

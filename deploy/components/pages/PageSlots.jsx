@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react"
 import {
   Monitor, RefreshCw, History, Edit3, CheckCircle, Flag, X,
-  AlertTriangle, Loader2, ArrowRight, Save, Repeat,
+  AlertTriangle, Loader2, ArrowRight, Save, Repeat, Printer,
 } from "lucide-react"
 import { SectionTitle } from "../shared/dx-components"
 import {
@@ -26,7 +26,7 @@ const DISPOSITION_LABELS = {
   unknown:              { label: "ไม่ทราบ",    color: "var(--dx-text-muted)", icon: "?" },
 }
 
-export default function PageSlots({ machines = [], skus = [], allProfiles = [] }) {
+export default function PageSlots({ machines = [], skus = [], allProfiles = [], machineStock = [] }) {
   const [active, setActive] = useState([])
   const [changes, setChanges] = useState([])
   const [loading, setLoading] = useState(true)
@@ -35,7 +35,25 @@ export default function PageSlots({ machines = [], skus = [], allProfiles = [] }
   const [manualModal, setManualModal] = useState(null)     // { machine_id, slot_number, current }
   const [reconcileModal, setReconcileModal] = useState(null) // change event object
   const [swapModal, setSwapModal] = useState(false)
-  const [reviewDays, setReviewDays] = useState(30)
+  // From-to date filter สำหรับ Review + Export PDF · default = 30 วันที่แล้ว → วันนี้
+  const todayISO = () => new Date().toISOString().slice(0, 10)
+  const daysAgoISO = (n) => new Date(Date.now() - n * 86400000).toISOString().slice(0, 10)
+  const [fromDate, setFromDate] = useState(daysAgoISO(30))
+  const [toDate,   setToDate]   = useState(todayISO())
+  // คำนวณ days ที่ต้องดึงจาก DB ตาม fromDate
+  const reviewDays = useMemo(() => {
+    const diff = Math.ceil((Date.now() - new Date(fromDate + "T00:00:00").getTime()) / 86400000)
+    return Math.max(1, diff + 1)  // +1 กัน timezone offset
+  }, [fromDate])
+
+  // map: "machine_id::slot_number" → { remain, max_capacity, sku_id } จาก machineStock
+  const stockBySlot = useMemo(() => {
+    const m = {}
+    for (const s of machineStock || []) {
+      m[`${s.machine_id}::${s.slot_number}`] = s
+    }
+    return m
+  }, [machineStock])
 
   const machineNames = useMemo(() => {
     const m = {}
@@ -74,6 +92,129 @@ export default function PageSlots({ machines = [], skus = [], allProfiles = [] }
   }, [active])
 
   const pendingCount = changes.filter(c => c.review_status === "pending").length
+
+  // filter changes โดย from-to date · ใช้ทั้งใน table และ Export PDF
+  const filteredChanges = useMemo(() => {
+    const fromMs = new Date(fromDate + "T00:00:00").getTime()
+    const toMs   = new Date(toDate + "T23:59:59").getTime()
+    return changes.filter(c => {
+      const t = new Date(c.changed_at).getTime()
+      return t >= fromMs && t <= toMs && (selectedMachine === "all" || c.machine_id === selectedMachine)
+    })
+  }, [changes, fromDate, toDate, selectedMachine])
+
+  // Export PDF · รายการเปลี่ยนสินค้าในตู้ · ช่วงวันที่เลือกได้ · มีลายเซ็น
+  const handlePrintSlotChanges = () => {
+    if (filteredChanges.length === 0) return
+    try { _doPrintSlotChanges() }
+    catch (err) {
+      console.error("Export PDF failed:", err)
+      alert(`Export PDF ล้มเหลว: ${err.message}`)
+    }
+  }
+
+  const _doPrintSlotChanges = () => {
+    const today = new Date()
+    const genDateStr = today.toLocaleDateString("th-TH", { year: "numeric", month: "long", day: "numeric" })
+    const genTimeStr = today.toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" })
+    const fmtDate = (iso) => new Date(iso).toLocaleDateString("th-TH", { year: "numeric", month: "long", day: "numeric" })
+    const rangeStr = fromDate === toDate ? fmtDate(fromDate + "T00:00:00") : `${fmtDate(fromDate + "T00:00:00")} — ${fmtDate(toDate + "T00:00:00")}`
+
+    const rows = filteredChanges.map(c => {
+      const tStr = new Date(c.changed_at).toLocaleString("th-TH", { dateStyle: "short", timeStyle: "short" })
+      const machineName = machineNames[c.machine_id] || c.machine_id
+      const oldSku = c.old_sku_id || "—"
+      const oldName = c.old_product_name || "—"
+      const oldQty = c.pending_qty != null ? `${c.pending_qty}` : "—"
+      const newSku = c.new_sku_id || "—"
+      const newName = c.new_product_name || "—"
+      // จำนวนหลังเปลี่ยน · lookup จาก machine_stock ปัจจุบัน · ตรงกับ new_sku_id เท่านั้นจึงเชื่อได้
+      const cur = stockBySlot[`${c.machine_id}::${c.slot_number}`]
+      const newQty = (cur && (cur.sku_id === c.new_sku_id || cur.product_name === c.new_product_name))
+        ? `${cur.remain ?? "—"} / ${cur.max_capacity ?? "—"}`
+        : "—"
+      return `<tr>
+        <td>${tStr}</td>
+        <td>${machineName}<div style="font-size:9px;color:#666">ช่อง ${c.slot_number}</div></td>
+        <td><b style="font-family:monospace">${oldSku}</b><div style="font-size:9px">${oldName}</div></td>
+        <td style="text-align:right;font-family:monospace">${oldQty}</td>
+        <td><b style="font-family:monospace">${newSku}</b><div style="font-size:9px">${newName}</div></td>
+        <td style="text-align:right;font-family:monospace">${newQty}</td>
+      </tr>`
+    }).join("")
+
+    const html = `<!DOCTYPE html>
+<html><head>
+<meta charset="utf-8">
+<title>รายการเปลี่ยนสินค้าในตู้ · ${rangeStr}</title>
+<style>
+  @page { size: A4 portrait; margin: 10mm; }
+  body { font-family: Tahoma, "Sarabun", "Noto Sans Thai", "Leelawadee UI", sans-serif; color: #000; margin: 0; padding: 8mm 10mm; }
+  .header { text-align: center; margin-bottom: 10px; }
+  .header h1 { margin: 0; font-size: 15px; }
+  .header .sub { font-size: 11px; margin-top: 3px; }
+  table { width: 100%; border-collapse: collapse; font-size: 11px; }
+  th, td { padding: 5px 6px; border: 1px solid #999; vertical-align: top; }
+  thead tr { background: #f0f0f0; }
+  thead th { font-weight: 700; text-align: left; }
+  .footer { display: flex; justify-content: space-between; font-size: 11px; margin-top: 10px; padding-top: 6px; border-top: 1px solid #999; }
+  .signatures { margin-top: 30px; display: flex; justify-content: space-between; gap: 60px; page-break-inside: avoid; }
+  .sig-block { flex: 1; text-align: center; }
+  .sig-line { padding: 22px 12px 4px; border-bottom: 1px solid #000; font-weight: 700; font-size: 12px; min-height: 22px; }
+  .sig-label { margin-top: 4px; font-size: 11px; font-weight: 700; }
+  .sig-date { margin-top: 4px; font-size: 10px; color: #444; }
+  .print-btn { position: fixed; top: 10px; right: 10px; padding: 10px 20px; background: #00d4ff; color: #000; border: none; border-radius: 6px; font-size: 14px; font-weight: 700; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
+  @media print { .print-btn { display: none; } }
+</style>
+</head><body>
+<button class="print-btn" onclick="window.print()">🖨️ Print / Save PDF</button>
+<div class="header">
+  <h1>รายการเปลี่ยนสินค้าในตู้ — DivisionX Card</h1>
+  <div class="sub">ช่วงวันที่: ${rangeStr} · จัดทำเอกสาร: ${genDateStr} เวลา ${genTimeStr} น.</div>
+</div>
+<table>
+  <thead><tr>
+    <th>วันที่/เวลา</th>
+    <th>ตู้ / ช่อง</th>
+    <th>สินค้าเดิม</th>
+    <th style="text-align:right">จำนวนก่อน</th>
+    <th>สินค้าใหม่</th>
+    <th style="text-align:right">จำนวนหลัง<div style="font-weight:400;font-size:9px">(คงเหลือ/ความจุ)</div></th>
+  </tr></thead>
+  <tbody>${rows}</tbody>
+</table>
+<div class="footer">
+  <span>รวมรายการเปลี่ยน: ${filteredChanges.length} รายการ</span>
+  <span style="color:#666">หมายเหตุ: "จำนวนหลัง" ดึงจากสต็อกหน้าตู้ปัจจุบัน · ถ้าตู้ถูกเปลี่ยนซ้ำหลังจากนั้นค่าจะเป็น —</span>
+</div>
+<div class="signatures">
+  <div class="sig-block">
+    <div class="sig-line">&nbsp;</div>
+    <div class="sig-label">ผู้เปลี่ยนสินค้า / ลงชื่อ</div>
+    <div class="sig-date">วันที่ ........../........../..........</div>
+  </div>
+  <div class="sig-block">
+    <div class="sig-line">&nbsp;</div>
+    <div class="sig-label">ผู้ตรวจสอบ / ลงชื่อ</div>
+    <div class="sig-date">วันที่ ........../........../..........</div>
+  </div>
+</div>
+<script>window.addEventListener("load", () => setTimeout(() => window.print(), 400));</script>
+</body></html>`
+
+    const blob = new Blob([html], { type: "text/html;charset=utf-8" })
+    const url = URL.createObjectURL(blob)
+    const printWin = window.open(url, "_blank")
+    if (!printWin) {
+      const a = document.createElement("a")
+      a.href = url
+      a.download = `slot-changes-${fromDate}_${toDate}.html`
+      a.click()
+      alert("Popup ถูก block · ดาวน์โหลด HTML ให้แทน")
+      return
+    }
+    setTimeout(() => URL.revokeObjectURL(url), 60000)
+  }
 
   const onReview = async (historyId, status) => {
     let note = null
@@ -193,17 +334,29 @@ export default function PageSlots({ machines = [], skus = [], allProfiles = [] }
 
       {/* Recent changes review */}
       <div className="dx-card" style={{ marginTop: 24, padding: 16 }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12, flexWrap: "wrap", gap: 10 }}>
           <h3 style={{ margin: 0, fontSize: 13, fontWeight: 700, color: "var(--dx-text)" }}>
             การเปลี่ยนแปลงล่าสุด (Review)
           </h3>
-          <select value={reviewDays} onChange={e => setReviewDays(Number(e.target.value))} className="dx-input" style={{ fontSize: 11 }}>
-            <option value={7}>7 วันล่าสุด</option>
-            <option value={30}>30 วันล่าสุด</option>
-            <option value={90}>90 วันล่าสุด</option>
-          </select>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+            <span style={{ fontSize: 11, color: "var(--dx-text-muted)" }}>ช่วงวันที่:</span>
+            <input type="date" value={fromDate} max={toDate} onChange={e => setFromDate(e.target.value)}
+              className="dx-input" style={{ fontSize: 11, padding: "5px 8px", width: "auto" }}/>
+            <span style={{ fontSize: 11, color: "var(--dx-text-muted)" }}>→</span>
+            <input type="date" value={toDate} min={fromDate} max={todayISO()} onChange={e => setToDate(e.target.value)}
+              className="dx-input" style={{ fontSize: 11, padding: "5px 8px", width: "auto" }}/>
+            <button
+              type="button"
+              onClick={handlePrintSlotChanges}
+              disabled={filteredChanges.length === 0}
+              className="dx-btn dx-btn-ghost"
+              style={{ fontSize: 11, opacity: filteredChanges.length === 0 ? 0.5 : 1 }}
+              title="พิมพ์ / บันทึก PDF">
+              <Printer size={12}/> Export PDF
+            </button>
+          </div>
         </div>
-        {changes.length === 0 ? (
+        {filteredChanges.length === 0 ? (
           <div style={{ textAlign: "center", padding: 24, color: "var(--dx-text-muted)", fontSize: 12 }}>
             ไม่มีการเปลี่ยนแปลงในช่วงนี้
           </div>
@@ -221,7 +374,7 @@ export default function PageSlots({ machines = [], skus = [], allProfiles = [] }
                 </tr>
               </thead>
               <tbody>
-                {changes.map((c, idx) => {
+                {filteredChanges.map((c, idx) => {
                   const badge = STATUS_BADGE[c.review_status] || STATUS_BADGE.pending
                   return (
                     <tr key={`${c.history_id}-${idx}`} style={{ borderTop: "1px solid var(--dx-border)" }}>
