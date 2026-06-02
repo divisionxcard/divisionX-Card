@@ -44,9 +44,16 @@ export default function PageMachineStockView({ machines, machineStock, skus, onR
     grouped[s.machine_id].push(s)
   })
 
+  // รายชื่อตู้ที่แสดง = ตู้ active จากตาราง machines ∪ ตู้ที่มีข้อมูล sync แล้ว
+  // → ตู้ใหม่ที่เพิ่งเพิ่ม (ยังไม่ sync) ก็โชว์ทันทีแบบ "รอข้อมูล" · ตู้ inactive (เช่น chukes03) ไม่โชว์
+  const allMachineIds = [...new Set([
+    ...machines.filter(m => m.status === "active").map(m => m.machine_id),
+    ...Object.keys(grouped),
+  ])].sort()
+
   const machineIds = selectedMachine === "all"
-    ? Object.keys(grouped).sort()
-    : [selectedMachine].filter(id => grouped[id])
+    ? allMachineIds
+    : [selectedMachine].filter(id => allMachineIds.includes(id))
 
   const summarizeBySku = (slots) => {
     const map = {}
@@ -130,7 +137,7 @@ export default function PageMachineStockView({ machines, machineStock, skus, onR
             <select value={selectedMachine} onChange={e => setSelectedMachine(e.target.value)}
               className="dx-input" style={{ width: "auto", padding: "9px 12px", fontSize: 12 }}>
               <option value="all">ทุกตู้</option>
-              {Object.keys(grouped).sort().map(id => (
+              {allMachineIds.map(id => (
                 <option key={id} value={id}>{machineNames[id]?.name || id}</option>
               ))}
             </select>
@@ -557,6 +564,11 @@ export default function PageMachineStockView({ machines, machineStock, skus, onR
                   </div>
                 ) : (
                   <div style={{ padding: 20 }}>
+                    {slots.length === 0 ? (
+                      <div style={{ padding: 24, textAlign: "center", color: "var(--dx-text-muted)", fontSize: 11 }}>
+                        ยังไม่มีข้อมูลสต็อก · รอ scraper ดึงข้อมูลรอบถัดไป (ตู้ใหม่ที่เพิ่งติดตั้ง)
+                      </div>
+                    ) : (
                     <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))", gap: 10 }}>
                       {slots.map(s => {
                         const isEmpty = !s.product_name
@@ -660,6 +672,7 @@ export default function PageMachineStockView({ machines, machineStock, skus, onR
                         )
                       })}
                     </div>
+                    )}
                   </div>
                 )}
               </div>
