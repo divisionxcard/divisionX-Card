@@ -174,12 +174,20 @@ def main():
     synced_at = datetime.utcnow().isoformat()
     all_records = []
     machines_with_data = 0
+    failed_machines = []
 
     for m in machines:
         machine_id = m["machine_id"]
         vendor_id  = m["vendor_id"]
         print(f"\n📦 ดึงข้อมูล {machine_id} (vendor={vendor_id})...")
-        slots = fetch_inventory(s, vendor_id)
+        # ดึงทีละตู้แบบแยกกัน — ตู้เดียวพัง (เช่น ตู้ใหม่ที่ยังติดตั้งไม่เสร็จ)
+        # ต้องไม่ทำให้ตู้อื่นที่ทำงานปกติ sync ไม่ได้ไปด้วย
+        try:
+            slots = fetch_inventory(s, vendor_id)
+        except Exception as e:
+            print(f"  ⚠️ ดึง {machine_id} ไม่ได้ (ข้ามตู้นี้): {e}")
+            failed_machines.append(machine_id)
+            continue
         print(f"  ✅ พบ {len(slots)} slots")
         if slots:
             machines_with_data += 1
@@ -200,7 +208,10 @@ def main():
                 "synced_at":       synced_at,
             })
 
-    print(f"\n📊 รวม {len(all_records)} slots จาก {len(machines)} ตู้")
+    ok_count = len(machines) - len(failed_machines)
+    print(f"\n📊 รวม {len(all_records)} slots จาก {ok_count}/{len(machines)} ตู้")
+    if failed_machines:
+        print(f"⚠️ ตู้ที่ดึงไม่ได้: {', '.join(failed_machines)}")
 
     # Fail loud ถ้าทุกตู้ดึงไม่ได้
     if machines_with_data == 0:
