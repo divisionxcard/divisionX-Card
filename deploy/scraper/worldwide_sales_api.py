@@ -252,6 +252,36 @@ def detail_to_records(detail: dict, machine_lookup: dict) -> tuple[list[dict], l
     return sales_records, ship_fail_records
 
 
+def filter_unknown_skus(supabase, sales: list[dict], ship_fails: list[dict]) -> list[dict]:
+    """กัน FK violation จากสินค้าใหม่ที่ยังไม่มีใน skus (เช่น 'OP 16')
+       - sales.sku_id = NOT NULL FK → drop record ที่ sku ไม่อยู่ใน skus
+       - ship_fails.sku_id = nullable → set None
+    sku เดียวที่ไม่รู้จักต้องไม่ทำให้ save ล้มทั้งชุด"""
+    res = supabase.table("skus").select("sku_id").execute()
+    valid = {r["sku_id"] for r in (res.data or [])}
+    dropped = {}
+    kept = []
+    for r in sales:
+        sid = r.get("sku_id")
+        if sid in valid:
+            kept.append(r)
+        else:
+            dropped[sid] = dropped.get(sid, 0) + 1
+    nulled = {}
+    for r in ship_fails:
+        sid = r.get("sku_id")
+        if sid and sid not in valid:
+            nulled[sid] = nulled.get(sid, 0) + 1
+            r["sku_id"] = None
+    if dropped:
+        print("⚠️ sales sku ไม่รู้จัก → ข้าม (เพิ่มใน skus แล้ว backfill ถึงจะเก็บยอดได้): "
+              + ", ".join(f"{k}×{v}" for k, v in sorted(dropped.items())))
+    if nulled:
+        print("⚠️ ship_fails sku ไม่รู้จัก → set NULL: "
+              + ", ".join(f"{k}×{v}" for k, v in sorted(nulled.items())))
+    return kept
+
+
 def save_to_supabase(supabase, records: list[dict]):
     if not records:
         print("⚠️ ไม่มีข้อมูลที่จะบันทึก")
@@ -435,6 +465,7 @@ def main():
         for sf in ship_fails[:3]:
             print(f"  SHIP FAIL: {sf}")
     else:
+        records = filter_unknown_skus(supabase, records, ship_fails)
         save_to_supabase(supabase, records)
         save_ship_fails(supabase, ship_fails)
 

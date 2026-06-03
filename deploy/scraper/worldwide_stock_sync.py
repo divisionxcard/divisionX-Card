@@ -131,6 +131,23 @@ def fetch_inventory(s, vendor_id: str) -> list[dict]:
     return slots
 
 
+def null_unknown_skus(supabase, records: list[dict]):
+    """set sku_id = None สำหรับ sku ที่ไม่มีในตาราง skus (กัน FK violation)
+    ตู้ WW อาจมีสินค้าใหม่ที่ยังไม่มีใน skus (เช่น 'OP 16') — เก็บ product_name ไว้
+    แต่ไม่ผูก sku · sku เดียวที่ไม่รู้จักต้องไม่ทำให้ save ล้มทั้งชุด"""
+    res = supabase.table("skus").select("sku_id").execute()
+    valid = {r["sku_id"] for r in (res.data or [])}
+    unknown = {}
+    for rec in records:
+        sid = rec.get("sku_id")
+        if sid and sid not in valid:
+            unknown[sid] = unknown.get(sid, 0) + 1
+            rec["sku_id"] = None
+    if unknown:
+        print("⚠️ sku ไม่รู้จัก (set NULL · เก็บ product_name ไว้): "
+              + ", ".join(f"{k}×{v}" for k, v in sorted(unknown.items())))
+
+
 def save_to_supabase(supabase, records: list[dict]):
     if not records:
         print("⚠️ ไม่มีข้อมูลที่จะบันทึก")
@@ -227,6 +244,7 @@ def main():
                   f"remain={r['remain']}/{r['max_capacity']} status={r['status']}")
         print(f"  ... (total {len(all_records)} slots)")
     else:
+        null_unknown_skus(supabase, all_records)
         save_to_supabase(supabase, all_records)
 
 
