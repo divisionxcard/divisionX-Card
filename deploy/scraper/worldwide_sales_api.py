@@ -42,6 +42,9 @@ PACKS_PER_BOX = {
     "NRT Series - 01": 30, "NRT Series - 02": 30, "NRT Jin - 1": 10,
     "PKM Dream EX": 10, "PKM Ninja": 30,
     "SLL UA 51": 16,
+    # WW ตู้ wwv03/04/05 (2026-06-03)
+    "OP 16": 24, "PKM Ghost": 30,
+    "YGH The Heroes": 15, "YGH The Revals": 15, "YGH Chaos Origins": 15,
 }
 
 UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
@@ -84,6 +87,12 @@ def map_goods_to_sku(goods_name: str) -> str | None:
         ("naruto jin1",     "NRT Jin - 1"),
         ("pokemon maga ex", "PKM Dream EX"),
         ("solo leveling",   "SLL UA 51"),
+        # WW ตู้ wwv03/04/05 (2026-06-03) — ชื่อ portal ≠ ชื่อ DvX
+        ("pokemon ghost",   "PKM Ghost"),
+        ("chaos origins",   "YGH Chaos Origins"),
+        ("limited over",    "YGH The Revals"),   # portal เรียก "Yuki oh Limited Over Collection"
+        ("the revals",      "YGH The Revals"),   # เผื่อ portal เปลี่ยนเป็นชื่อจริงทีหลัง
+        ("the heroes",      "YGH The Heroes"),   # ⚠ raw name ยังไม่ verify (ยังไม่มาถึงตู้)
     ):
         if sub in lower:
             return sku

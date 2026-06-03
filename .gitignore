@@ -62,3 +62,9 @@ scripts/vms-scraper/*.har
 *.dump
 
 .vercel
+
+# ─── Local dashboard launcher (machine-specific paths) ───────
+dashboard.bat
+
+# ─── Secrets dropped in repo root (service keys / passwords) ──
+Supabase Data.txt
