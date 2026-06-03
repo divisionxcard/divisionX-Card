@@ -2,7 +2,7 @@
 type: machine
 machine_id: wwv03
 brand: worldwide
-machine_id_vendor: VCM350CKC25070006
+machine_id_vendor: VCM350CKC20070006
 status: active
 location: เซ็นทรัล ศาลายา
 route: สามพราน
@@ -20,7 +20,7 @@ last_updated: 2026-06-03
 |-------|-------|
 | Machine ID | wwv03 |
 | Brand | worldwide |
-| Vendor ID | VCM350CKC25070006 |
+| Vendor ID | VCM350CKC20070006 |
 | Route | สามพราน |
 | ที่ตั้ง | เซ็นทรัล ศาลายา |
 | Version | SXA1B31F.THA230915.013 |

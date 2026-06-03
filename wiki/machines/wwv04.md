@@ -2,7 +2,7 @@
 type: machine
 machine_id: wwv04
 brand: worldwide
-machine_id_vendor: VCM350CKC25120001
+machine_id_vendor: VCM350CKC20120001
 status: active
 location: เซ็นทรัล เวสต์เกต
 route: บางใหญ่
@@ -20,7 +20,7 @@ last_updated: 2026-06-03
 |-------|-------|
 | Machine ID | wwv04 |
 | Brand | worldwide |
-| Vendor ID | VCM350CKC25120001 |
+| Vendor ID | VCM350CKC20120001 |
 | Route | บางใหญ่ |
 | ที่ตั้ง | เซ็นทรัล เวสต์เกต |
 | Version | SXA1B31R.THA230915.013 |

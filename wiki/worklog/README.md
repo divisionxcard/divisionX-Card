@@ -18,3 +18,4 @@ type: worklog-index
 ## รายการ
 
 - [[2026-06-03-add-ww-machines]] — เพิ่มตู้ WorldWide wwv03/wwv04 · แก้ vendor_id wwv02 · harden scraper
+- [[2026-06-03-fix-ww-vendor-and-fk]] — แก้บั๊ก vendor_id อ่านผิด (042) + FK crash จาก sku 'OP 16' + เพิ่ม wwv05

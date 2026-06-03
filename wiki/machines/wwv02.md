@@ -2,7 +2,7 @@
 type: machine
 machine_id: wwv02
 brand: worldwide
-machine_id_vendor: VCM350CKC25050001
+machine_id_vendor: VCM350CKC20050001
 status: active
 location: เดอะมอลไลฟ์สโตร์ บางกะปิ
 route: เขตบางกะปิ
@@ -20,7 +20,7 @@ last_updated: 2026-06-03
 |-------|-------|
 | Machine ID | wwv02 |
 | Brand | worldwide |
-| Vendor ID | VCM350CKC25050001 |
+| Vendor ID | VCM350CKC20050001 |
 | Route | เขตบางกะปิ |
 | ที่ตั้ง | เดอะมอลไลฟ์สโตร์ บางกะปิ |
 | Version | SXA1B31R.THA251001.014 |
@@ -32,7 +32,8 @@ _scraper จะ sync จาก machine_stock (00:15 น. เวลาไทย)_
 
 ## ⚠️ ประวัติแก้ไข (audit)
 
-- **2026-06-03** — แก้ vendor_id จาก `VCM350CKC20050001` (พิมพ์ผิดตำแหน่งที่ 11) → `VCM350CKC25050001` ให้ตรง portal · ก่อนแก้ scraper ดึงข้อมูลตู้นี้ไม่ได้ · ดู [[2026-06-03-add-ww-machines]]
+- **vendor_id ที่ถูกต้องคือ `VCM350CKC20050001`** (ขึ้นต้น 20) — sync ได้ 55 slots
+- **2026-06-03** — migration 042 เผลอเปลี่ยนเป็น `VCM350CKC25050001` (อ่านเลขจากรูป portal ผิด 0→5) → wwv02 ดึงข้อมูลไม่ได้ (0 slots) · migration 043 revert กลับ · ดู [[2026-06-03-fix-ww-vendor-and-fk]]
 
 ## 📝 หมายเหตุ
 
