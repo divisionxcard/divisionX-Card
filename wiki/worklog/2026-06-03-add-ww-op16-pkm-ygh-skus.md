@@ -2,7 +2,7 @@
 type: worklog
 date: 2026-06-03
 tags: [skus, worldwide, scraper, migration]
-commits: []
+commits: [56243b4]
 ---
 
 # เพิ่มสินค้าใหม่ตู้ WW: OP 16 + Pokemon Ghost + Yu-Gi-Oh (3 sets)
