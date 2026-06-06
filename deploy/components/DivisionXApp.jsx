@@ -299,14 +299,16 @@ function ResetPasswordPage({ onDone }) {
 
 // NAV
 // ─────────────────────────────────────────────
+// hidden:true = ฟีเจอร์ระบบสต็อกในเว็บที่ยังไม่ได้ใช้ (แอดมินบันทึกใน Excel แทน)
+// ซ่อนจากเมนูเป็นค่าเริ่มต้น · กดปุ่ม "แสดงหน้าที่ซ่อน" ท้าย sidebar เพื่อเปิดกลับ
 const NAV_BASE = [
   { id:"dashboard",  label:"ภาพรวม",         icon:Home          },
-  { id:"stock",      label:"จัดการสต็อก",    icon:Package       },
-  { id:"withdrawal", label:"เบิกเติมตู้",     icon:ArrowUpCircle },
-  { id:"transfer",   label:"แจกจ่ายสินค้า",  icon:Send,  adminOnly:true },
-  { id:"mystock",    label:"สต็อกของฉัน",    icon:Boxes         },
+  { id:"stock",      label:"จัดการสต็อก",    icon:Package,       hidden:true },
+  { id:"withdrawal", label:"เบิกเติมตู้",     icon:ArrowUpCircle, hidden:true },
+  { id:"transfer",   label:"แจกจ่ายสินค้า",  icon:Send,  adminOnly:true, hidden:true },
+  { id:"mystock",    label:"สต็อกของฉัน",    icon:Boxes,         hidden:true },
   { id:"refillprep", label:"เตรียมของเติมตู้", icon:ClipboardList },
-  { id:"claims",     label:"เคลม/คืนเงิน",  icon:AlertTriangle },
+  { id:"claims",     label:"เคลม/คืนเงิน",  icon:AlertTriangle, hidden:true },
   { id:"machstock",  label:"สต็อกหน้าตู้",   icon:Monitor       },
   { id:"sales",      label:"ยอดขาย",         icon:ShoppingCart  },
   { id:"analytics",  label:"วิเคราะห์ SKU",  icon:BarChart2     },
@@ -333,6 +335,12 @@ function initialPageFromURL() {
 export default function DivisionXApp() {
   const [page, setPage]         = useState(initialPageFromURL)
   const [sideOpen, setSideOpen] = useState(false)
+  // toggle แสดง/ซ่อนหน้าที่ยังไม่ได้ใช้ (ระบบสต็อกในเว็บ) · จำค่าไว้ใน localStorage
+  const [showHidden, setShowHidden] = useState(() =>
+    typeof window !== "undefined" && localStorage.getItem("dvx_showHidden") === "1")
+  useEffect(() => {
+    if (typeof window !== "undefined") localStorage.setItem("dvx_showHidden", showHidden ? "1" : "0")
+  }, [showHidden])
   const [withdrawalExpanded, setWithdrawalExpanded] = useState(false)
   const [stockInitialTab, setStockInitialTab] = useState(null)
 
@@ -376,6 +384,7 @@ export default function DivisionXApp() {
 
   const isAdmin = profile?.role === "admin"
   const NAV = isAdmin ? [...NAV_BASE, ...NAV_ADMIN_ITEMS] : NAV_BASE.filter(n => !n.adminOnly)
+  const hiddenCount = NAV.filter(n => n.hidden).length
 
   // ── Data State ──
   const [machines,            setMachines]            = useState([])
@@ -716,7 +725,7 @@ export default function DivisionXApp() {
         </div>
 
         <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
-          {NAV.map(n => {
+          {NAV.filter(n => showHidden || !n.hidden || n.id === page).map(n => {
             const Icon   = n.icon
             const active = page === n.id
             const isWithdrawal = n.id === "withdrawal"
@@ -737,9 +746,11 @@ export default function DivisionXApp() {
                   }
                 }}
                   className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all
+                    ${n.hidden && !active ? "opacity-50" : ""}
                     ${withdrawalActive ? "bg-blue-600 text-white shadow-sm" : active ? "bg-blue-600 text-white shadow-sm" : "text-gray-600 hover:bg-gray-100"}`}>
                   <Icon size={18}/>
                   <span>{n.label}</span>
+                  {n.hidden && <EyeOff size={12} className={active ? "text-white/70" : "text-gray-300"}/>}
                   {n.id === "stock" && lowCount > 0 && (
                     <span className={`ml-auto text-xs px-1.5 py-0.5 rounded-full font-bold ${active?"bg-white/20 text-white":"bg-amber-100 text-amber-600"}`}>
                       {lowCount}
@@ -774,6 +785,18 @@ export default function DivisionXApp() {
             )
           })}
         </nav>
+
+        {/* Toggle แสดง/ซ่อนหน้าที่ยังไม่ได้ใช้ (ระบบสต็อกในเว็บ) · กันลืมว่าซ่อนอะไรไป */}
+        {hiddenCount > 0 && (
+          <div className="px-3 pb-1">
+            <button onClick={() => setShowHidden(v => !v)}
+              title={showHidden ? "ซ่อนหน้าที่ยังไม่ได้ใช้กลับ" : "แสดงหน้าที่ซ่อนไว้ทั้งหมด"}
+              className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-all">
+              {showHidden ? <EyeOff size={14}/> : <Eye size={14}/>}
+              <span>{showHidden ? "ซ่อนหน้าที่ไม่ใช้" : `แสดงหน้าที่ซ่อน (${hiddenCount})`}</span>
+            </button>
+          </div>
+        )}
 
         <div className="p-4 border-t border-gray-100 space-y-3">
           {/* User info */}
