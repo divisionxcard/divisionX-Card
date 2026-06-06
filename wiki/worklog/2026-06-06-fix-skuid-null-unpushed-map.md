@@ -38,9 +38,13 @@ YGH The Revals export ออกมาไม่มีชื่อ (admin แจ�
    - `%Chaos Origins%` → YGH Chaos Origins (7) · `%The Revals%` → YGH The Revals (7)
 4. verify: NULL sku_id ที่ is_occupied=true เหลือ **0 แถว**
 
+## backfill ยอดขาย WW (เสร็จ ✓)
+- admin กด Run workflow `worldwide-sync.yml` (from=2026-06-03 to=2026-06-06) — ผมไม่มี GH_PAT/WW creds ในเครื่อง
+- verify ใน DB: **276 sales rows** กลับมาครบ (wwv01-05 × 4 วัน) · สินค้าใหม่ที่เคยถูก drop (FK)
+  เข้าครบ 44 rows: OP 16 (30 ซอง/6,380฿) · PKM Ghost (9/1,440฿) · YGH Chaos Origins (3/200฿) ·
+  YGH The Revals (2/400฿) · The Heroes = 0 (ยังไม่เข้าตู้ ถูกต้อง)
+
 ## งานค้างต่อ
-- **backfill ยอดขาย WW 2026-06-03 → 06-06** — ส่งมอบให้ admin กดเอง (ผมไม่มี GH_PAT/WW creds ในเครื่อง)
-  · workflow `worldwide-sync.yml` → from_date/to_date · upsert idempotent · ปลอดภัยกดซ้ำ
 - เดิมจาก [[2026-06-03-add-ww-op16-pkm-ygh-skus]]: verify ชื่อ raw "The Heroes" ตอนเข้าตู้ ·
   sell_price/cost_price 5 sku = 0 (admin กรอก UI)
 - (cleanup) migration 045 + sku_aliases external_name ของ YGH ใส่ raw name ผิด
