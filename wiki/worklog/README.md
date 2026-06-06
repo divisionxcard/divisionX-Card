@@ -20,3 +20,4 @@ type: worklog-index
 - [[2026-06-03-add-ww-machines]] — เพิ่มตู้ WorldWide wwv03/wwv04 · แก้ vendor_id wwv02 · harden scraper
 - [[2026-06-03-fix-ww-vendor-and-fk]] — แก้บั๊ก vendor_id อ่านผิด (042) + FK crash จาก sku 'OP 16' + เพิ่ม wwv05
 - [[2026-06-03-add-ww-op16-pkm-ygh-skus]] — เพิ่ม 5 sku (OP 16 + PKM Ghost + YGH×3) + แก้ map · "Limited Over Collection" = The Revals
+- [[2026-06-06-fix-skuid-null-unpushed-map]] — export "สินค้าไม่มีชื่อ" · ต้นเหตุ map commit ไม่ถูก push → nightly sync null sku_id · VMS ก็โดน (Pokemon Ghost) · patch DB + push
