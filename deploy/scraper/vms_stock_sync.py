@@ -135,6 +135,13 @@ def map_product_to_sku(product_name: str) -> str | None:
         ("naruto jin1",     "NRT Jin - 1"),
         ("pokemon maga ex", "PKM Dream EX"),
         ("solo leveling",   "SLL UA 51"),
+        # สินค้าใหม่ 2026-06 (ขายทั้งตู้ VMS + WW) — mirror worldwide_stock_sync.py
+        # ตู้ VMS ส่ง 'Pokemon Ghost ' (มีช่องว่างท้าย) · strip() ด้านบนจัดการแล้ว
+        ("pokemon ghost",   "PKM Ghost"),
+        ("chaos origins",   "YGH Chaos Origins"),
+        ("limited over",    "YGH The Revals"),
+        ("the revals",      "YGH The Revals"),
+        ("the heroes",      "YGH The Heroes"),
     ):
         if key in name:
             return sku
