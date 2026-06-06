@@ -47,8 +47,9 @@ YGH The Revals export ออกมาไม่มีชื่อ (admin แจ�
 ## งานค้างต่อ
 - เดิมจาก [[2026-06-03-add-ww-op16-pkm-ygh-skus]]: verify ชื่อ raw "The Heroes" ตอนเข้าตู้ ·
   sell_price/cost_price 5 sku = 0 (admin กรอก UI)
-- (cleanup) migration 045 + sku_aliases external_name ของ YGH ใส่ raw name ผิด
-  (`Yuki Oh ...` แทน `YU-GI-OH! ...`) — ไม่กระทบ function เพราะ scraper ใช้ substring map · แก้ทีหลังได้
+- ~~(cleanup) sku_aliases ของ YGH~~ **เสร็จ (mig 046)** — พบว่าชื่อเก่าไม่ผิด แต่ **portal rename
+  กลางเดือน** (`Yuki Oh ...` → `YU-GI-OH! ...`) · เติมชื่อใหม่ + alias source=vms ของ Pokemon Ghost
+  · sku_aliases เป็น source-of-truth เท่านั้น (ไม่ถูก query ตอน sync)
 
 ## บทเรียน (why)
 - **commit แล้วไม่ push = โค้ด deploy ไม่เปลี่ยน** แต่ DB ในเครื่อง dev ดู "ถูก" เพราะ migration apply ตรง
