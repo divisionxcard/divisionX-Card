@@ -11,4 +11,5 @@ type: project-index
 ### King Power / AOT (ลงตู้สนามบิน) — `status: planning`
 - [[kingpower-aot-plan]] — **แผนผังงาน** 5 เฟส (Mermaid) · critical path · Gantt · จุดตัดสินใจ build vs จ้าง · checklist
 - [[kingpower-aot-reference]] — **Knowledge base** สเปคเต็ม: Text File V9 (5 datasets/52 ฟิลด์), RCAgent/RCMonitor, ขั้นตอนภาษี, อนุมัติราคา, ผู้ติดต่อ
+- [[kingpower-aot-vendor-questions]] — **ชุดคำถามส่ง WorldWide/VMS** ว่าตู้รองรับ AOT ได้ไหม · ใช้ตัดสิน build vs จ้าง
 - ต้นทาง: `คู่มือ - พัฒนาโปรแกรม POS สำหรับตู้ Vending/` (ไม่ commit เข้า git)
