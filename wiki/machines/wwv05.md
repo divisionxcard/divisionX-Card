@@ -4,17 +4,18 @@ machine_id: wwv05
 brand: worldwide
 machine_id_vendor: VCM350CKC23050301
 status: active
-location: ยานนาวา
-route: ยานนาวา
+location: ซีคอน บางแค
+route: ภาษีเจริญ
 version: SXA1B31R.THA230915.013
-last_updated: 2026-06-03
+last_updated: 2026-06-11
 ---
 
-# ตู้ที่ 9 (wwv05) · ยานนาวา
+# ตู้ที่ 9 (wwv05) · ซีคอน บางแค
 
-ตู้ WorldWide Vending — เตรียมไว้กำลังจะติดตั้ง (เพิ่มเข้าระบบ 2026-06-03 ผ่าน migration 044)
+ตู้ WorldWide Vending — ติดตั้งใช้งานจริงแล้วที่ ซีคอน บางแค (route ภาษีเจริญ)
+เพิ่มเข้าระบบ 2026-06-03 ผ่าน migration 044 · เปลี่ยนชื่อจริง 2026-06-11 ผ่าน migration 047
 
-> 📌 ชื่อ site ใน portal ยังเป็น default "WorldWide Vending" · หลังติดตั้งเสร็จจะเปลี่ยนเป็นชื่อจริง → อัปเดต name/location ตู้นี้ตามด้วย
+> ✅ ติดตั้งเสร็จแล้ว — เดิม site portal เป็น default "WorldWide Vending" (placeholder ยานนาวา) · ตอนนี้ portal แสดง site "ซีคอน บางแค" / route "ภาษีเจริญ" · inventory ~95% · sync ปกติ
 
 ## ข้อมูลพื้นฐาน
 
@@ -23,10 +24,10 @@ last_updated: 2026-06-03
 | Machine ID | wwv05 |
 | Brand | worldwide |
 | Vendor ID | VCM350CKC23050301 |
-| Route | ยานนาวา |
-| ที่ตั้ง | ยานนาวา (รอชื่อจริง) |
+| Route | ภาษีเจริญ |
+| ที่ตั้ง | ซีคอน บางแค |
 | Version | SXA1B31R.THA230915.013 |
-| สถานะ | ใช้งาน (active · เตรียมติดตั้ง) |
+| สถานะ | ใช้งาน (active · ติดตั้งแล้ว) |
 
 ## 📦 สินค้าในตู้ (Current Slots)
 
