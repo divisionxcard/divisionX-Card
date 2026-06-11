@@ -2,7 +2,7 @@
 type: worklog
 date: 2026-06-11
 tags: [kingpower, aot, planning, knowledge-base, docs]
-commits: []
+commits: [4ad098b]
 ---
 
 # วางแผนงาน + KB โปรเจค King Power / AOT (ลงตู้สนามบิน)
