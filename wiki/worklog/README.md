@@ -22,3 +22,4 @@ type: worklog-index
 - [[2026-06-03-add-ww-op16-pkm-ygh-skus]] — เพิ่ม 5 sku (OP 16 + PKM Ghost + YGH×3) + แก้ map · "Limited Over Collection" = The Revals
 - [[2026-06-06-fix-skuid-null-unpushed-map]] — export "สินค้าไม่มีชื่อ" · ต้นเหตุ map commit ไม่ถูก push → nightly sync null sku_id · VMS ก็โดน (Pokemon Ghost) · patch DB + push
 - [[2026-06-11-rename-wwv05-seacon-bangkae]] — wwv05 placeholder "ยานนาวา" → ชื่อจริง "ซีคอน บางแค" หลังติดตั้ง · DB+migration 047+wiki
+- [[2026-06-11-add-favicon]] — เพิ่ม favicon โลโก้ DC บนแท็บ · app/icon.jpg ตาม Next.js convention · เดิมเป็นลูกโลก default
