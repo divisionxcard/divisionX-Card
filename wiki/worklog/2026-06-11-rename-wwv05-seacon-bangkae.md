@@ -2,7 +2,7 @@
 type: worklog
 date: 2026-06-11
 tags: [machine, worldwide, rename, db, migration]
-commits: []
+commits: [d0e8251]
 ---
 
 # เปลี่ยนชื่อจริง wwv05 · ยานนาวา (placeholder) → ซีคอน บางแค
