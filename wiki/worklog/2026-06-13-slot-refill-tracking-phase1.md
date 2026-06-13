@@ -41,7 +41,12 @@ commits: [3d7ae85]
 ## ข้อจำกัด / จุดเฝ้าระวัง
 - WW sold ลง pack ทั้งหมด → ถ้า WW มีขายจากช่อง box จริง qty_added ฝั่ง pack จะคลาดเล็กน้อย (ยอมรับได้)
 - VMS sales เก่าบางส่วน `slot_number=NULL` (4631 มี / 10886 NULL) → sold_between เฉพาะ sales ที่มี slot (ล่าสุดมีครบ)
-- ยังไม่รันจริง end-to-end — รอบ sync แรกจะเป็น **คืนนี้ 00:05** (VMS) · ควรเช็ค workflow log + ตาราง
+
+## ✅ ทดสอบจริง end-to-end (manual sync 2026-06-13 ~09:53 ไทย)
+dispatch workflow จริงทั้ง 2 ตัว (vms-stock-sync + worldwide-stock-sync) → completed/success ทั้งคู่
+- **VMS**: `slot_tracking (vms): บันทึก 18 events (refill=18, swap=0)` — chukes01 ถูกเติมเต็มเป็น 12 ทุกช่อง · qty_added ถูกต้อง (เช่น PKM Ninja 6→12 = เติม 6)
+- **WW**: `slot_tracking (worldwide): ไม่มีการเติม/สลับ` — รันจบไม่ error · 0 event เพราะไม่มีการเติม WW ในช่วง window (ถูกต้อง)
+- window รอบนี้แคบ (~3 ชม.) เพราะ machine_stock เพิ่ง sync เมื่อคืน → sold_between=0 สมเหตุผล
 
 ## งานค้างต่อ (เฟส 2-3)
 - **เฟส 2**: `slot_restock_sessions` (bracket รอบจัดของ) + supabase.js queries + ปุ่ม "เริ่มจัดของ/ซิงค์หลังเสร็จ" + ตารางสรุป + แก้ตัวเลขเอง
