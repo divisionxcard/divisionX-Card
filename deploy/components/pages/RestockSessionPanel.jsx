@@ -62,18 +62,43 @@ export default function RestockSessionPanel({ machines = [], skus = [], profile 
   const togglePick = (id) =>
     setPicked((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]))
 
-  // ── เริ่มรอบ ──
+  // ── สั่ง sync ตู้ตาม platform + รอจน machine_stock มีข้อมูลใหม่ (async ~1-2 นาที) ──
+  // return true ถ้าข้อมูลใหม่มาถึง · throw ถ้า dispatch ไม่สำเร็จ
+  const syncAndWait = async (machineIds, label) => {
+    const before = await getLatestStockSyncedAt(machineIds)
+    const brands = new Set(machineIds.map(brandOf))
+    const triggers = []
+    if (brands.has("vms")) triggers.push(fetch("/api/stock-sync", { method: "POST" }))
+    if (brands.has("worldwide")) triggers.push(fetch("/api/worldwide-stock-sync", { method: "POST" }))
+    const results = await Promise.all(triggers.map((p) => p.then((r) => r.json()).catch((e) => ({ error: e.message }))))
+    const failed = results.find((r) => !r.success)
+    if (failed) throw new Error(failed.error || "สั่งซิงค์ไม่สำเร็จ")
+    for (let i = 0; i < 12; i++) {
+      await sleep(12000)
+      const latest = await getLatestStockSyncedAt(machineIds)
+      if (latest && latest !== before) return true
+      setMsg({ type: "info", msg: `${label}... (${(i + 1) * 12}s)` })
+    }
+    return false
+  }
+
+  // ── เริ่มรอบ: ดึงสต็อกสดเป็น baseline ก่อน แล้วค่อยสร้าง session ──
   const handleStart = async () => {
     if (!picked.length) { setMsg({ type: "error", msg: "เลือกตู้อย่างน้อย 1 ตู้" }); return }
     try {
-      setBusy("start"); setMsg(null)
+      setBusy("start"); setMsg({ type: "info", msg: "กำลังดึงสต็อกตั้งต้น (baseline)..." })
+      const landed = await syncAndWait(picked, "กำลังดึง baseline & รอข้อมูลใหม่")
+      if (!landed) {
+        setMsg({ type: "error", msg: "ดึง baseline ไม่ทัน (sync ช้า) — ลองกด \"เริ่มรอบจัดของ\" อีกครั้ง" })
+        return
+      }
       await startRestockSession({
         machine_ids: picked,
         started_by: profile?.id || null,
         started_by_name: profile?.display_name || profile?.username || null,
       })
       await reloadOpen()
-      setMsg({ type: "success", msg: "เริ่มรอบจัดของแล้ว — จัดของหน้าตู้ให้เสร็จ แล้วกด \"จัดเสร็จ\"" })
+      setMsg({ type: "success", msg: "ตั้ง baseline + เริ่มรอบแล้ว — จัดของหน้าตู้ได้เลย เสร็จแล้วกด \"จัดเสร็จ\"" })
     } catch (e) { setMsg({ type: "error", msg: e.message }) }
     finally { setBusy(null) }
   }
@@ -83,23 +108,7 @@ export default function RestockSessionPanel({ machines = [], skus = [], profile 
     if (!session) return
     try {
       setBusy("closing"); setMsg({ type: "info", msg: "กำลังสั่งซิงค์ตู้..." })
-      const before = await getLatestStockSyncedAt(session.machine_ids)
-      const brands = new Set(session.machine_ids.map(brandOf))
-      const triggers = []
-      if (brands.has("vms")) triggers.push(fetch("/api/stock-sync", { method: "POST" }))
-      if (brands.has("worldwide")) triggers.push(fetch("/api/worldwide-stock-sync", { method: "POST" }))
-      const results = await Promise.all(triggers.map((p) => p.then((r) => r.json()).catch((e) => ({ error: e.message }))))
-      const failed = results.find((r) => !r.success)
-      if (failed) throw new Error(failed.error || "สั่งซิงค์ไม่สำเร็จ")
-
-      // poll จน machine_stock มีข้อมูลใหม่ (sync เป็น async ~1-2 นาที)
-      let landed = false
-      for (let i = 0; i < 12; i++) {
-        await sleep(12000)
-        const latest = await getLatestStockSyncedAt(session.machine_ids)
-        if (latest && latest !== before) { landed = true; break }
-        setMsg({ type: "info", msg: `กำลังซิงค์ & รอข้อมูลใหม่... (${(i + 1) * 12}s)` })
-      }
+      const landed = await syncAndWait(session.machine_ids, "กำลังซิงค์ & รอข้อมูลใหม่")
       if (!landed) {
         setMsg({ type: "error", msg: "ยังไม่ได้ข้อมูล sync ใหม่ (sync อาจช้า) — รอสักครู่แล้วกด \"จัดเสร็จ\" อีกครั้ง · รอบยังเปิดอยู่" })
         return
@@ -196,12 +205,14 @@ export default function RestockSessionPanel({ machines = [], skus = [], profile 
               </div>
               <div style={{ display: "flex", gap: 8 }}>
                 <button onClick={handleStart} disabled={busy === "start"} className="dx-btn dx-btn-primary"
-                  style={{ opacity: busy === "start" ? 0.5 : 1 }}>
-                  <Play size={13} /> {busy === "start" ? "กำลังเริ่ม..." : "เริ่มรอบจัดของ"}
+                  style={{ opacity: busy === "start" ? 0.6 : 1 }}>
+                  {busy === "start" ? <RefreshCw size={13} className="animate-spin" /> : <Play size={13} />}
+                  {busy === "start" ? "กำลังดึง baseline..." : "เริ่มรอบจัดของ"}
                 </button>
               </div>
               <p style={{ margin: 0, fontSize: 11, color: "var(--dx-text-muted)" }}>
-                ℹ️ ระบบใช้สต็อกล่าสุดเป็น "ก่อน" (ยอดขายระหว่างนั้นถูกหักคืนให้อัตโนมัติ) — เริ่มได้เลยไม่ต้องรอ
+                ℹ️ กด "เริ่มรอบจัดของ" ระบบจะดึงสต็อกสดเป็นจุดตั้งต้น (baseline) ก่อน ~1-2 นาที → แล้วค่อยจัดของหน้าตู้
+                · จัดของช่วงห้างปิด (ไม่มีขาย) จะได้ตัวเลขแม่นสุด
               </p>
             </div>
           ) : (
