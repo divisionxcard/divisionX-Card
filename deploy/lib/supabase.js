@@ -1016,3 +1016,105 @@ export async function swapSlots(machineId, slotA, slotB) {
 
   return { closed: [rowA.id, rowB.id], opened: (newRows || []).map(r => r.id) }
 }
+
+// ── Slot Refill Tracking — รอบจัดของ (เฟส 2) ─────────────────────
+// slot_refill_events (mig 048) จดการเติมทุก sync · slot_restock_sessions (mig 049) = bracket รอบจัดของ
+
+// session ที่ยังเปิดอยู่ (กำลังจัดของ) · null ถ้าไม่มี
+export async function getOpenRestockSession() {
+  const { data, error } = await supabase
+    .from("slot_restock_sessions")
+    .select("*")
+    .eq("status", "open")
+    .order("started_at", { ascending: false })
+    .limit(1)
+    .maybeSingle()
+  if (error) throw error
+  return data || null
+}
+
+// เริ่มรอบจัดของ · baseline = sync ล่าสุด (sold_between แก้ยอดขายให้เอง ไม่ต้อง sync ก่อน)
+export async function startRestockSession({ machine_ids, started_by, started_by_name, note }) {
+  const { data, error } = await supabase
+    .from("slot_restock_sessions")
+    .insert({ machine_ids, started_by, started_by_name, note, status: "open" })
+    .select()
+    .single()
+  if (error) throw error
+  return data
+}
+
+// ปิดรอบ + stamp session_id ลง refill events ที่อยู่ในกรอบ (ตู้ + ตั้งแต่ started_at ถึง closed_at)
+export async function closeRestockSession(sessionId) {
+  const closedAt = new Date().toISOString()
+  const { data: sess, error } = await supabase
+    .from("slot_restock_sessions")
+    .update({ status: "closed", closed_at: closedAt })
+    .eq("id", sessionId)
+    .select()
+    .single()
+  if (error) throw error
+  // stamp events ในกรอบเวลา+ตู้ ที่ยังไม่ถูกผูก session
+  const { error: eStamp } = await supabase
+    .from("slot_refill_events")
+    .update({ session_id: sessionId })
+    .is("session_id", null)
+    .in("machine_id", sess.machine_ids)
+    .gte("synced_at", sess.started_at)
+    .lte("synced_at", closedAt)
+  if (eStamp) throw eStamp
+  return sess
+}
+
+// ยกเลิกรอบ (ลบ session ที่ยังเปิด · ไม่กระทบ refill events)
+export async function cancelRestockSession(sessionId) {
+  const { error } = await supabase.from("slot_restock_sessions").delete().eq("id", sessionId)
+  if (error) throw error
+}
+
+// รายการรอบจัดของล่าสุด
+export async function getRestockSessions(limit = 20) {
+  const { data, error } = await supabase
+    .from("slot_restock_sessions")
+    .select("*")
+    .order("started_at", { ascending: false })
+    .limit(limit)
+  if (error) throw error
+  return data || []
+}
+
+// refill events ของ session — closed: ตาม session_id · open: preview ตามกรอบเวลา+ตู้ (ยังไม่ stamp)
+export async function getRefillEventsForSession(session) {
+  let q = supabase.from("slot_refill_events").select("*")
+  if (session.status === "closed") {
+    q = q.eq("session_id", session.id)
+  } else {
+    q = q.in("machine_id", session.machine_ids).gte("synced_at", session.started_at)
+  }
+  const { data, error } = await q
+    .order("machine_id", { ascending: true })
+    .order("sku_id", { ascending: true })
+  if (error) throw error
+  return data || []
+}
+
+// แก้จำนวนเติมเอง (manual override) · set manual_adjusted = true
+export async function updateRefillEventQty(id, qtyAdded) {
+  const { data, error } = await supabase
+    .from("slot_refill_events")
+    .update({ qty_added: qtyAdded, manual_adjusted: true })
+    .eq("id", id)
+    .select()
+    .single()
+  if (error) throw error
+  return data
+}
+
+// max(synced_at) ของ machine_stock สำหรับตู้ที่เลือก (ใช้ poll ว่า sync รอบใหม่มาถึงยัง)
+export async function getLatestStockSyncedAt(machineIds) {
+  let q = supabase.from("machine_stock").select("synced_at").order("synced_at", { ascending: false }).limit(1)
+  if (machineIds?.length) q = q.in("machine_id", machineIds)
+  const { data, error } = await q.maybeSingle()
+  if (error) throw error
+  return data?.synced_at || null
+}

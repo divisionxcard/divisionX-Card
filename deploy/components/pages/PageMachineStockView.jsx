@@ -7,8 +7,9 @@ import {
 import { CHART_COLORS } from "../shared/constants"
 import { fmt, sortSkus } from "../shared/helpers"
 import { SectionTitle } from "../shared/dx-components"
+import RestockSessionPanel from "./RestockSessionPanel"
 
-export default function PageMachineStockView({ machines, machineStock, skus, onRefresh }) {
+export default function PageMachineStockView({ machines, machineStock, skus, onRefresh, profile }) {
   const [selectedMachine, setSelectedMachine] = useState("all")
   const [sortBy, setSortBy] = useState("slot")
   const [syncingVms, setSyncingVms] = useState(false)
@@ -187,6 +188,9 @@ export default function PageMachineStockView({ machines, machineStock, skus, onR
           )}
         </div>
       )}
+
+      {/* รอบจัดของ — ติดตามการเติมจริง (Slot Refill Tracking เฟส 2) */}
+      <RestockSessionPanel machines={machines} skus={skus} profile={profile} />
 
       {/* Refill Report (inline, print = light theme) */}
       {showRefill && machineStock.length > 0 && (
