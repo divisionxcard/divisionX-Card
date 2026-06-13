@@ -251,6 +251,12 @@ def main():
         print(f"  ... (total {len(all_records)} slots)")
     else:
         null_unknown_skus(supabase, all_records)
+        # Track refill events (slot_refill_events) — ก่อน save (เทียบกับ machine_stock เดิม)
+        try:
+            from slot_tracking import track_refill_events
+            track_refill_events(supabase, "worldwide", all_records, synced_at, "worldwide_stock_sync")
+        except Exception as e:
+            print(f"⚠️  slot_refill_events tracking failed: {e}")
         save_to_supabase(supabase, all_records)
 
 

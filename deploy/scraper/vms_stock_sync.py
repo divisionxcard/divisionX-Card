@@ -397,6 +397,13 @@ def main():
         # ไม่ fail workflow ถ้า history tracking error · core sync ยัง work
         print(f"⚠️  slot_products_history update failed: {e}")
 
+    # Layer 4: Track refill events (slot_refill_events) — ก่อน save เช่นกัน (เทียบกับ machine_stock เดิม)
+    try:
+        from slot_tracking import track_refill_events
+        track_refill_events(supabase, "vms", all_records, synced_at, "vms_stock_sync")
+    except Exception as e:
+        print(f"⚠️  slot_refill_events tracking failed: {e}")
+
     save_to_supabase(all_records)
 
 if __name__ == "__main__":
