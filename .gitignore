@@ -68,3 +68,7 @@ dashboard.bat
 
 # ─── Secrets dropped in repo root (service keys / passwords) ──
 Supabase Data.txt
+
+# ─── Analysis scripts ที่ฝัง service key (อย่า commit) ────────
+scripts/gap_analysis.mjs
+scripts/sellthrough_chukes01.mjs
