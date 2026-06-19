@@ -2,7 +2,7 @@
 type: worklog
 date: 2026-06-19
 tags: [machines, worldwide, migration, rama2]
-commits: [050]
+commits: [050, 051]
 ---
 
 # เพิ่มตู้ WorldWide wwv06 · เซ็นทรัล พระราม 2 (ติดตั้งคืน 2026-06-19)
@@ -22,8 +22,12 @@ commits: [050]
 ## ทำไม INSERT อย่างเดียว (ไม่แก้ scraper)
 ตู้ WorldWide เป็น **data-driven** — scraper อ่านจากตาราง machines (brand='worldwide', config.machine_id_vendor) ตรง ไม่ต้องแก้โค้ด (ต่างจาก VMS/chukes ที่ต้องแก้ KIOSKS dict) · ดู memory `project_add_worldwide_machine`
 
-## ข้อสังเกต
-- ที่ เซ็นทรัล พระราม 2 มีตู้ VMS [[chukes02]] อยู่แล้ว → wwv06 เป็นคนละ vendor อยู่ร่วมกันได้ (ระวังตอนวิเคราะห์ "ยอดต่อสาขา" จะมี 2 ตู้)
+## แยกยอด 2 ตู้ที่พระราม 2 (migration 051)
+ที่ เซ็นทรัล พระราม 2 มีตู้ VMS [[chukes02]] อยู่แล้ว → wwv06 เป็นคนละ vendor อยู่ร่วมกัน · แอดมินเน้นย้ำว่า **ห้ามรวมยอด 2 ตู้นี้**
+
+ตรวจโค้ดแล้ว: ระบบ **group ด้วย `machine_id` ทุกจุด** (PageDashboard/MachineStockView/RefillPrep/Analytics) — `location` ใช้แค่ป้ายแสดงผล ไม่เคยเป็น key รวมยอด → **ไม่ต้องแก้ logic** · ค่าธรรมเนียม Ksher ก็แยกถูกตาม brand เอง (chukes02 vms 1.5% · wwv06 ww 0.5% · ดู [[project_payment_gateway]])
+
+เพื่อกันสับสน "สายตาคน" ในลิสต์/รายงาน → **migration 051** เติมแท็ก brand ท้ายชื่อ: chukes02 → `(VMS)` · wwv06 → `(WW)` (apply prod แล้ว · name เป็นแค่ป้ายไม่กระทบ logic)
 - ⚠️ **ตรวจหลัง sync แรก (พรุ่งนี้เช้า)**: ถ้ามี SKU ที่ยังไม่อยู่ใน WW scraper map → sku_id null ("สินค้าไม่มีชื่อ") ต้องเพิ่ม map (ดู [[2026-06-06-fix-skuid-null-unpushed-map]])
 
 ## 🔗 เกี่ยวข้อง
