@@ -32,9 +32,11 @@ last_updated: 2026-06-19
 
 ## 📦 สินค้าในตู้ (Current Slots)
 
-_scraper จะ sync จาก machine_stock (00:15 น. เวลาไทย)_
+_scraper sync จาก machine_stock (00:15 + 09:10 น. เวลาไทย หรือ trigger เอง)_
+
+✅ **sync แรกผ่านสะอาด 2026-06-20**: 55 ช่อง · 54 ช่องมีของ · **SKU แมพติดครบ 0 null** · ช่องของหลากหลาย (OP/EB/PRB · Naruto · Solo Leveling · Dragonball FB · YGH The Revals/Chaos Origins · Pokemon Ghost/Dream EX/Ninja) — ไม่ต้องแก้ scraper map
+- ช่องว่างเหลือ 1: slot 013 OP 16 (Box, cap 4)
 
 ## 📝 หมายเหตุ
 
 - vendor_id copy จาก portal machine list โดยตรง (ตามภาพ portal) · ตู้พี่น้อง: [[wwv01]] · [[wwv02]] · [[wwv03]] · [[wwv04]] · [[wwv05]]
-- ⚠️ **ตรวจหลัง sync แรก**: ถ้าตู้มี SKU ที่ยังไม่อยู่ใน WW scraper map → sku_id จะ null ("สินค้าไม่มีชื่อ") ต้องเพิ่ม map (ดู worklog 2026-06-06-fix-skuid-null-unpushed-map)
