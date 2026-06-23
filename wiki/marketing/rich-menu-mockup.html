@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DivisionX Card · Rich Menu Mockup (2500×1686)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Prompt:wght@400;500;600;700;800&family=Noto+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{ --black:#0a0a0a; --panel:#141414; --panel2:#1c1c1c; --ink:#ffffff; --muted:#9a9a9a;
+         --gold:#f6b73c; --gold2:#ffd479; --mint:#46e0b0; --line:#2e2e2e; }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:#000;color:var(--ink);font-family:'Noto Sans Thai',sans-serif;padding:28px;display:flex;flex-direction:column;align-items:center;gap:22px;}
+  h1{font-family:'Prompt';font-weight:700;font-size:22px;}
+  .meta{color:var(--muted);font-size:13px;text-align:center;line-height:1.5;font-family:'Prompt';}
+  .gold{color:var(--gold2);}
+
+  /* ===== RICH MENU · true ratio 2500:1686 ===== */
+  .menu{
+    width:min(1000px,96vw); aspect-ratio:2500/1686;
+    background:
+      radial-gradient(120% 80% at 50% -10%, #1a1a1a 0%, rgba(26,26,26,0) 55%),
+      var(--black);
+    border:1px solid var(--line); border-radius:18px; overflow:hidden;
+    display:grid; grid-template-columns:1fr 1fr 1fr; grid-template-rows:1fr 1fr;
+    position:relative;
+  }
+  /* faint DC watermark */
+  .menu::after{content:"DC";position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+    font-family:'Prompt';font-weight:800;font-size:30vw;color:#ffffff;opacity:.02;pointer-events:none;letter-spacing:-.05em;}
+  @media(min-width:1040px){ .menu::after{font-size:300px;} }
+
+  .cell{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;
+    border-right:1px solid var(--line);border-bottom:1px solid var(--line);padding:4%;text-align:center;}
+  .cell:nth-child(3n){border-right:none;}
+  .cell:nth-child(n+4){border-bottom:none;}
+  .ic{font-size:clamp(28px,6.2vw,64px);line-height:1;filter:drop-shadow(0 2px 8px rgba(0,0,0,.6));}
+  .lb{font-family:'Prompt';font-weight:600;font-size:clamp(13px,2.5vw,26px);color:var(--ink);}
+  .sub{font-size:clamp(9px,1.4vw,14px);color:var(--muted);font-weight:400;}
+  .badge{position:absolute;top:12%;right:14%;background:var(--mint);color:#06281e;
+    font-family:'Prompt';font-weight:700;font-size:clamp(8px,1.3vw,13px);padding:2px 10px;border-radius:999px;letter-spacing:.05em;}
+  .cell .accent{color:var(--gold2);}
+  /* top-left brand cell tint */
+  .cell.brand{background:linear-gradient(160deg,rgba(246,183,60,.06),transparent);}
+
+  /* spec table */
+  .spec{width:min(1000px,96vw);background:#0f0f0f;border:1px solid var(--line);border-radius:14px;padding:20px 24px;}
+  .spec h2{font-family:'Prompt';font-size:16px;color:var(--gold2);margin-bottom:12px;}
+  table{width:100%;border-collapse:collapse;font-size:13px;}
+  th,td{padding:8px 12px;border-top:1px solid var(--line);text-align:left;}
+  th{color:var(--gold2);font-family:'Prompt';font-weight:600;border-top:none;}
+  td.n{font-variant-numeric:tabular-nums;font-family:'Prompt';color:var(--muted);}
+  .legend{display:flex;gap:18px;flex-wrap:wrap;font-size:12px;color:var(--muted);font-family:'Prompt';}
+  .sw{display:inline-block;width:14px;height:14px;border-radius:3px;vertical-align:-2px;margin-right:6px;}
+</style>
+</head>
+<body>
+
+  <h1>DivisionX Card — Rich Menu <span class="gold">(แบบใหญ่ 6 ช่อง)</span></h1>
+  <p class="meta">ขนาดจริงสำหรับอัปโหลด LINE OA: <span class="gold">2500 × 1686 px</span> · อัตราส่วน 2500:1686 (เมนูด้านล่างย่อให้พอดีจอ)<br>
+  ธีมตามโลโก้จริง: ดำ + ขาว + ทอง (accent) · ฟอนต์ Prompt + Noto Sans Thai</p>
+
+  <!-- ===== THE RICH MENU ===== -->
+  <div class="menu">
+    <div class="cell brand">
+      <div class="ic">📍</div>
+      <div class="lb">สาขาทั้งหมด</div>
+      <div class="sub">11 ตู้ · แผนที่</div>
+    </div>
+    <div class="cell">
+      <span class="badge">NEW</span>
+      <div class="ic">🔥</div>
+      <div class="lb accent">ของใหม่สัปดาห์นี้</div>
+      <div class="sub">เพิ่งเติม / restock</div>
+    </div>
+    <div class="cell">
+      <div class="ic">🎴</div>
+      <div class="lb">วิธีกดซื้อ</div>
+      <div class="sub">ง่าย ๆ 24 ชม.</div>
+    </div>
+    <div class="cell">
+      <div class="ic">🎁</div>
+      <div class="lb">โปรสมาชิก</div>
+      <div class="sub">สิทธิ์เฉพาะคุณ</div>
+    </div>
+    <div class="cell">
+      <span class="badge">SOON</span>
+      <div class="ic">📅</div>
+      <div class="lb accent">เซ็ตใหม่เร็ว ๆ นี้</div>
+      <div class="sub">ปฏิทินปล่อย OP</div>
+    </div>
+    <div class="cell">
+      <div class="ic">💬</div>
+      <div class="lb">แชทสอบถาม</div>
+      <div class="sub">ทักได้เลย</div>
+    </div>
+  </div>
+
+  <!-- ===== TAP AREA COORDINATES ===== -->
+  <div class="spec">
+    <h2>พิกัด Tap Area (สำหรับตั้งค่าใน LINE OA · อิงภาพ 2500×1686)</h2>
+    <table>
+      <tr><th>ช่อง</th><th>ปุ่ม</th><th>X</th><th>Y</th><th>กว้าง</th><th>สูง</th><th>Action</th></tr>
+      <tr><td>1</td><td>📍 สาขาทั้งหมด</td><td class="n">0</td><td class="n">0</td><td class="n">833</td><td class="n">843</td><td>รูป/ลิงก์แผนที่ 11 ตู้</td></tr>
+      <tr><td>2</td><td>🔥 ของใหม่สัปดาห์นี้</td><td class="n">833</td><td class="n">0</td><td class="n">834</td><td class="n">843</td><td>ข้อความ+รูปของเพิ่งเติม</td></tr>
+      <tr><td>3</td><td>🎴 วิธีกดซื้อ</td><td class="n">1667</td><td class="n">0</td><td class="n">833</td><td class="n">843</td><td>คลิป/รูปสอนกดตู้</td></tr>
+      <tr><td>4</td><td>🎁 โปรสมาชิก</td><td class="n">0</td><td class="n">843</td><td class="n">833</td><td class="n">843</td><td>คูปอง/สิทธิพิเศษ</td></tr>
+      <tr><td>5</td><td>📅 เซ็ตใหม่เร็วๆนี้</td><td class="n">833</td><td class="n">843</td><td class="n">834</td><td class="n">843</td><td>ปฏิทินปล่อยเซ็ต OP</td></tr>
+      <tr><td>6</td><td>💬 แชทสอบถาม</td><td class="n">1667</td><td class="n">843</td><td class="n">833</td><td class="n">843</td><td>เปิดแชท</td></tr>
+    </table>
+  </div>
+
+  <!-- ===== DESIGN NOTES ===== -->
+  <div class="spec">
+    <h2>โน้ตสำหรับดีไซเนอร์ / ทำต่อใน Canva</h2>
+    <p class="legend" style="margin-bottom:12px;">
+      <span><span class="sw" style="background:#0a0a0a;border:1px solid #2e2e2e"></span>ดำ #0a0a0a (พื้น)</span>
+      <span><span class="sw" style="background:#ffffff"></span>ขาว #ffffff (ตัวอักษร)</span>
+      <span><span class="sw" style="background:#f6b73c"></span>ทอง #f6b73c (accent/หัวข้อเด่น)</span>
+      <span><span class="sw" style="background:#46e0b0"></span>มิ้นต์ #46e0b0 (ป้าย NEW)</span>
+    </p>
+    <table>
+      <tr><th>หัวข้อ</th><th>แนวทาง</th></tr>
+      <tr><td>ไอคอน</td><td>mockup ใช้ emoji ชั่วคราว → โปรดักชันแนะนำ <b>line-icon ขาวเส้นบาง</b> ให้พรีเมียมตรงโลโก้</td></tr>
+      <tr><td>เส้นแบ่ง</td><td>hairline เทาเข้ม #2e2e2e (หรือทองจางๆ) · อย่าหนา</td></tr>
+      <tr><td>ป้าย NEW/SOON</td><td>มิ้นต์ #46e0b0 ตัวอักษรเข้ม · ใช้เฉพาะช่องของใหม่/เซ็ตใหม่</td></tr>
+      <tr><td>โลโก้ DC</td><td>วางจางเป็น watermark กลาง (opacity ~2%) อย่าเด่นจนแย่งปุ่ม</td></tr>
+      <tr><td>ตัวอักษร</td><td>Prompt 600 · ขนาดใหญ่พอกดบนมือถือ · 1 บรรทัดหลัก + sub 1 บรรทัด</td></tr>
+      <tr><td>Contrast</td><td>ขาวบนดำชัดอยู่แล้ว · ของเด่น (ของใหม่/เซ็ตใหม่) ใช้ทองดึงตา</td></tr>
+    </table>
+    <p class="meta" style="text-align:left;margin-top:14px;">
+    <b class="gold">วิธีได้ไฟล์ PNG 2500×1686:</b> เปิดไฟล์นี้ในเบราว์เซอร์เป็นแบบอ้างอิง → ทำจริงใน Canva/Figma ที่ขนาด 2500×1686 (LINE ต้องการพิกัด tap area เป๊ะตามตารางบน) · หรือใช้ทีมดีไซน์ทำตามสเปคนี้<br>
+    <b class="gold">เริ่มเล็กได้:</b> ถ้ายังไม่พร้อม 6 ช่อง → ตัดเหลือ 3 ช่อง (สาขา · ของใหม่ · โปรสมาชิก) ขนาด 2500×843
+    </p>
+  </div>
+
+</body>
+</html>
