@@ -5,6 +5,8 @@ export const metadata = {
   description: "วิธีกดตู้ DivisionX Card ง่ายๆ 4 ขั้นตอน · ตู้กดการ์ดเกมอัตโนมัติ เปิด 24 ชม.",
 }
 
+const VIDEO_URL = "https://xethnqqmpvlpmafvphky.supabase.co/storage/v1/object/public/marketing/how-to-buy.mp4"
+
 const STEPS = [
   { ic: "🃏", title: "เลือกการ์ด", desc: "แตะหน้าจอ เลื่อนเลือกชุด/การ์ดที่ต้องการ — ดูรูปและราคาได้ที่หน้าจอ" },
   { ic: "🛒", title: "ยืนยันรายการ", desc: "เลือกจำนวนซอง/กล่อง ตรวจสอบรายการให้ครบก่อนชำระเงิน" },
@@ -32,6 +34,10 @@ export default function HowToPage() {
         .ht-title{font-size:clamp(24px,5vw,34px);font-weight:800;letter-spacing:-.5px;margin:0;}
         .ht-title b{color:var(--dx-cyan);}
         .ht-sub{color:var(--dx-cyan-soft);font-size:14px;margin-top:8px;font-weight:600;}
+        .ht-video{max-width:300px;margin:0 auto 28px;border-radius:20px;overflow:hidden;
+          border:1px solid var(--dx-border-glow);box-shadow:0 0 28px var(--dx-glow-soft);background:#000;}
+        .ht-video video{width:100%;display:block;aspect-ratio:9/16;background:#000;object-fit:cover;}
+        .ht-vcap{text-align:center;color:var(--dx-text-muted);font-size:12.5px;margin:-16px 0 22px;}
         .ht-steps{display:flex;flex-direction:column;gap:14px;}
         .ht-step{position:relative;display:flex;gap:16px;align-items:flex-start;
           background:var(--dx-bg-card);border:1px solid var(--dx-border);border-radius:16px;padding:18px 18px 18px 16px;}
@@ -66,6 +72,11 @@ export default function HowToPage() {
           <h1 className="ht-title">วิธีการ<b>ซื้อ</b></h1>
           <div className="ht-sub">กดตู้ง่ายๆ แค่ 4 ขั้นตอน · ไม่ต้องต่อคิว</div>
         </header>
+
+        <div className="ht-video">
+          <video src={VIDEO_URL} autoPlay muted loop playsInline controls preload="metadata" />
+        </div>
+        <div className="ht-vcap">▶ ดูคลิปวิธีกดตู้ (15 วิ) · แตะเพื่อเปิดเสียง</div>
 
         <div className="ht-steps">
           {STEPS.map((s, i) => (

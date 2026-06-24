@@ -72,3 +72,6 @@ Supabase Data.txt
 # ─── Analysis scripts ที่ฝัง service key (อย่า commit) ────────
 scripts/gap_analysis.mjs
 scripts/sellthrough_chukes01.mjs
+
+# ─── Video source (โฮสต์บน Supabase Storage แล้ว · ไฟล์ใหญ่) ──
+Video/
