@@ -1,0 +1,104 @@
+import "../globals.css"
+
+export const metadata = {
+  title: "วิธีการซื้อ — DivisionX Card",
+  description: "วิธีกดตู้ DivisionX Card ง่ายๆ 4 ขั้นตอน · ตู้กดการ์ดเกมอัตโนมัติ เปิด 24 ชม.",
+}
+
+const STEPS = [
+  { ic: "🃏", title: "เลือกการ์ด", desc: "แตะหน้าจอ เลื่อนเลือกชุด/การ์ดที่ต้องการ — ดูรูปและราคาได้ที่หน้าจอ" },
+  { ic: "🛒", title: "ยืนยันรายการ", desc: "เลือกจำนวนซอง/กล่อง ตรวจสอบรายการให้ครบก่อนชำระเงิน" },
+  { ic: "📱", title: "ชำระเงิน", desc: "สแกน QR พร้อมเพย์ หรือชำระตามวิธีที่หน้าจอแสดง รอระบบยืนยันการจ่าย" },
+  { ic: "📦", title: "รับสินค้า", desc: "รอสินค้าหล่นที่ช่องรับด้านล่าง หยิบได้เลย — เปิดลุ้นการ์ดกันได้เลย!" },
+]
+
+const TIPS = [
+  { ic: "⏰", t: "เปิด 24 ชม.", d: "กดได้ทุกเวลา ไม่ต้องต่อคิว ทั้ง 11 สาขา" },
+  { ic: "✨", t: "ลุ้นการ์ดหายาก", d: "มีการ์ดระดับแรร์ซ่อนอยู่เพียบ ลุ้นได้ทุกซอง" },
+  { ic: "💬", t: "มีปัญหา?", d: "ของไม่ออก/จ่ายเงินแล้วติดขัด ทักไลน์ @Divisionxcard ได้เลย" },
+]
+
+export default function HowToPage() {
+  return (
+    <main style={{ minHeight: "100vh", background: "var(--dx-bg-page)", color: "var(--dx-text)", fontFamily: "var(--dx-font)" }}>
+      <style dangerouslySetInnerHTML={{ __html: `
+        .ht-wrap{max-width:760px;margin:0 auto;padding:28px 18px 60px;}
+        .ht-hero{position:relative;text-align:center;padding:30px 16px 26px;border-radius:20px;overflow:hidden;
+          background:radial-gradient(120% 130% at 50% -20%, rgba(0,212,255,.18), rgba(0,212,255,0) 60%), var(--dx-bg-surface);
+          border:1px solid var(--dx-border-strong);margin-bottom:26px;}
+        .ht-hero::after{content:"";position:absolute;left:0;right:0;bottom:0;height:2px;
+          background:linear-gradient(90deg,transparent,var(--dx-cyan),transparent);opacity:.7;}
+        .ht-logo{height:52px;width:auto;margin-bottom:12px;filter:drop-shadow(0 0 14px var(--dx-glow));}
+        .ht-title{font-size:clamp(24px,5vw,34px);font-weight:800;letter-spacing:-.5px;margin:0;}
+        .ht-title b{color:var(--dx-cyan);}
+        .ht-sub{color:var(--dx-cyan-soft);font-size:14px;margin-top:8px;font-weight:600;}
+        .ht-steps{display:flex;flex-direction:column;gap:14px;}
+        .ht-step{position:relative;display:flex;gap:16px;align-items:flex-start;
+          background:var(--dx-bg-card);border:1px solid var(--dx-border);border-radius:16px;padding:18px 18px 18px 16px;}
+        .ht-step::before{content:"";position:absolute;left:0;top:14px;bottom:14px;width:4px;border-radius:4px;
+          background:linear-gradient(180deg,var(--dx-cyan),var(--dx-cyan-dim));box-shadow:0 0 12px var(--dx-glow);}
+        .ht-num{flex:none;width:46px;height:46px;border-radius:13px;display:flex;align-items:center;justify-content:center;
+          font-size:20px;font-weight:800;color:#02263a;background:var(--dx-cyan);box-shadow:0 0 16px var(--dx-glow);}
+        .ht-body{flex:1;}
+        .ht-h{font-size:17px;font-weight:700;display:flex;align-items:center;gap:8px;}
+        .ht-d{color:var(--dx-text-muted);font-size:13.5px;margin-top:6px;line-height:1.5;}
+        .ht-sec{margin-top:30px;font-size:13px;color:var(--dx-cyan-soft);font-weight:700;letter-spacing:.05em;text-transform:uppercase;margin-bottom:12px;}
+        .ht-tips{display:grid;grid-template-columns:1fr;gap:12px;}
+        @media(min-width:620px){.ht-tips{grid-template-columns:1fr 1fr 1fr;}}
+        .ht-tip{background:var(--dx-bg-surface);border:1px solid var(--dx-border);border-radius:14px;padding:16px;}
+        .ht-tip .i{font-size:24px;}
+        .ht-tip .tt{font-weight:700;font-size:14.5px;margin-top:8px;}
+        .ht-tip .td{color:var(--dx-text-muted);font-size:12.5px;margin-top:5px;line-height:1.45;}
+        .ht-cta{margin-top:30px;text-align:center;}
+        .ht-btn{display:inline-flex;align-items:center;gap:8px;background:var(--dx-cyan);color:#02263a;font-weight:700;
+          font-size:15px;text-decoration:none;padding:12px 22px;border-radius:12px;transition:background .15s, box-shadow .15s;}
+        .ht-btn:hover{background:var(--dx-cyan-bright);box-shadow:0 0 18px var(--dx-glow);}
+        .ht-foot{text-align:center;margin-top:34px;padding-top:22px;border-top:1px solid var(--dx-border);}
+        .ht-chip{display:inline-flex;align-items:center;gap:7px;background:var(--dx-bg-surface);
+          border:1px solid var(--dx-border-strong);border-radius:999px;padding:7px 14px;font-size:14px;font-weight:600;margin:0 5px;}
+        .ht-chip a{color:var(--dx-cyan-soft);text-decoration:none;}
+        .ht-line{background:#06C755;color:#fff;border-radius:6px;font-size:11px;font-weight:800;padding:2px 7px;}
+      `}} />
+
+      <div className="ht-wrap">
+        <header className="ht-hero">
+          <img className="ht-logo" src="/logo.png" alt="DivisionX Card" />
+          <h1 className="ht-title">วิธีการ<b>ซื้อ</b></h1>
+          <div className="ht-sub">กดตู้ง่ายๆ แค่ 4 ขั้นตอน · ไม่ต้องต่อคิว</div>
+        </header>
+
+        <div className="ht-steps">
+          {STEPS.map((s, i) => (
+            <div className="ht-step" key={i}>
+              <div className="ht-num">{i + 1}</div>
+              <div className="ht-body">
+                <div className="ht-h"><span>{s.ic}</span>{s.title}</div>
+                <div className="ht-d">{s.desc}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="ht-sec">เกร็ดน่ารู้</div>
+        <div className="ht-tips">
+          {TIPS.map((t, i) => (
+            <div className="ht-tip" key={i}>
+              <div className="i">{t.ic}</div>
+              <div className="tt">{t.t}</div>
+              <div className="td">{t.d}</div>
+            </div>
+          ))}
+        </div>
+
+        <div className="ht-cta">
+          <a className="ht-btn" href="/branches">📍 ดูสาขาใกล้คุณ</a>
+        </div>
+
+        <footer className="ht-foot">
+          <span className="ht-chip"><span className="ht-line">LINE</span> @Divisionxcard</span>
+          <span className="ht-chip">📞 <a href="tel:0863863219">086-386-3219</a></span>
+        </footer>
+      </div>
+    </main>
+  )
+}
