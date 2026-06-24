@@ -34,11 +34,13 @@ export default function HowToPage() {
         .ht-title{font-size:clamp(24px,5vw,34px);font-weight:800;letter-spacing:-.5px;margin:0;}
         .ht-title b{color:var(--dx-cyan);}
         .ht-sub{color:var(--dx-cyan-soft);font-size:14px;margin-top:8px;font-weight:600;}
-        .ht-video{max-width:300px;margin:0 auto 28px;border-radius:20px;overflow:hidden;
+        .ht-steps{display:flex;flex-direction:column;gap:14px;}
+        .ht-bottom{display:flex;gap:16px;align-items:flex-start;margin-top:26px;}
+        .ht-video{flex:0 0 44%;max-width:300px;border-radius:18px;overflow:hidden;
           border:1px solid var(--dx-border-glow);box-shadow:0 0 28px var(--dx-glow-soft);background:#000;}
         .ht-video video{width:100%;display:block;aspect-ratio:9/16;background:#000;object-fit:cover;}
-        .ht-vcap{text-align:center;color:var(--dx-text-muted);font-size:12.5px;margin:-16px 0 22px;}
-        .ht-steps{display:flex;flex-direction:column;gap:14px;}
+        .ht-vcap{text-align:center;color:var(--dx-text-muted);font-size:11.5px;padding:8px 6px;background:var(--dx-bg-surface);}
+        .ht-tipswrap{flex:1;display:flex;flex-direction:column;}
         .ht-step{position:relative;display:flex;gap:16px;align-items:flex-start;
           background:var(--dx-bg-card);border:1px solid var(--dx-border);border-radius:16px;padding:18px 18px 18px 16px;}
         .ht-step::before{content:"";position:absolute;left:0;top:14px;bottom:14px;width:4px;border-radius:4px;
@@ -48,9 +50,8 @@ export default function HowToPage() {
         .ht-body{flex:1;}
         .ht-h{font-size:17px;font-weight:700;display:flex;align-items:center;gap:8px;}
         .ht-d{color:var(--dx-text-muted);font-size:13.5px;margin-top:6px;line-height:1.5;}
-        .ht-sec{margin-top:30px;font-size:13px;color:var(--dx-cyan-soft);font-weight:700;letter-spacing:.05em;text-transform:uppercase;margin-bottom:12px;}
-        .ht-tips{display:grid;grid-template-columns:1fr;gap:12px;}
-        @media(min-width:620px){.ht-tips{grid-template-columns:1fr 1fr 1fr;}}
+        .ht-sec{font-size:13px;color:var(--dx-cyan-soft);font-weight:700;letter-spacing:.05em;text-transform:uppercase;margin-bottom:12px;}
+        .ht-tips{display:flex;flex-direction:column;gap:12px;flex:1;}
         .ht-tip{background:var(--dx-bg-surface);border:1px solid var(--dx-border);border-radius:14px;padding:16px;}
         .ht-tip .i{font-size:24px;}
         .ht-tip .tt{font-weight:700;font-size:14.5px;margin-top:8px;}
@@ -73,11 +74,6 @@ export default function HowToPage() {
           <div className="ht-sub">กดตู้ง่ายๆ แค่ 4 ขั้นตอน · ไม่ต้องต่อคิว</div>
         </header>
 
-        <div className="ht-video">
-          <video src={VIDEO_URL} autoPlay muted loop playsInline controls preload="metadata" />
-        </div>
-        <div className="ht-vcap">▶ ดูคลิปวิธีกดตู้ (15 วิ) · แตะเพื่อเปิดเสียง</div>
-
         <div className="ht-steps">
           {STEPS.map((s, i) => (
             <div className="ht-step" key={i}>
@@ -90,15 +86,23 @@ export default function HowToPage() {
           ))}
         </div>
 
-        <div className="ht-sec">เกร็ดน่ารู้</div>
-        <div className="ht-tips">
-          {TIPS.map((t, i) => (
-            <div className="ht-tip" key={i}>
-              <div className="i">{t.ic}</div>
-              <div className="tt">{t.t}</div>
-              <div className="td">{t.d}</div>
+        <div className="ht-bottom">
+          <div className="ht-video">
+            <video src={VIDEO_URL} autoPlay muted loop playsInline controls preload="metadata" />
+            <div className="ht-vcap">▶ คลิปวิธีกดตู้ · 15 วิ</div>
+          </div>
+          <div className="ht-tipswrap">
+            <div className="ht-sec">เกร็ดน่ารู้</div>
+            <div className="ht-tips">
+              {TIPS.map((t, i) => (
+                <div className="ht-tip" key={i}>
+                  <div className="i">{t.ic}</div>
+                  <div className="tt">{t.t}</div>
+                  <div className="td">{t.d}</div>
+                </div>
+              ))}
             </div>
-          ))}
+          </div>
         </div>
 
         <div className="ht-cta">
