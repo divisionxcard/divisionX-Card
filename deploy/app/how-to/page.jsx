@@ -35,12 +35,17 @@ export default function HowToPage() {
         .ht-title b{color:var(--dx-cyan);}
         .ht-sub{color:var(--dx-cyan-soft);font-size:14px;margin-top:8px;font-weight:600;}
         .ht-steps{display:flex;flex-direction:column;gap:14px;}
-        .ht-bottom{display:flex;gap:16px;align-items:flex-start;margin-top:26px;}
-        .ht-video{flex:0 0 44%;max-width:300px;border-radius:18px;overflow:hidden;
+        .ht-bottom{display:flex;flex-direction:column;align-items:center;gap:18px;margin-top:26px;}
+        .ht-video{width:230px;max-width:78%;border-radius:18px;overflow:hidden;
           border:1px solid var(--dx-border-glow);box-shadow:0 0 28px var(--dx-glow-soft);background:#000;}
         .ht-video video{width:100%;display:block;aspect-ratio:9/16;background:#000;object-fit:cover;}
         .ht-vcap{text-align:center;color:var(--dx-text-muted);font-size:11.5px;padding:8px 6px;background:var(--dx-bg-surface);}
-        .ht-tipswrap{flex:1;display:flex;flex-direction:column;}
+        .ht-tipswrap{width:100%;display:flex;flex-direction:column;}
+        @media(min-width:600px){
+          .ht-bottom{flex-direction:row;align-items:flex-start;}
+          .ht-video{flex:0 0 42%;width:auto;max-width:300px;}
+          .ht-tipswrap{flex:1;width:auto;}
+        }
         .ht-step{position:relative;display:flex;gap:16px;align-items:flex-start;
           background:var(--dx-bg-card);border:1px solid var(--dx-border);border-radius:16px;padding:18px 18px 18px 16px;}
         .ht-step::before{content:"";position:absolute;left:0;top:14px;bottom:14px;width:4px;border-radius:4px;
