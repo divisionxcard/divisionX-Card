@@ -70,6 +70,8 @@ export default function HowToPage() {
           border:1px solid var(--dx-border-strong);border-radius:999px;padding:7px 14px;font-size:14px;font-weight:600;margin:0 5px;}
         .ht-chip a{color:var(--dx-cyan-soft);text-decoration:none;}
         .ht-line{background:#06C755;color:#fff;border-radius:6px;font-size:11px;font-weight:800;padding:2px 7px;}
+        a.ht-chip{text-decoration:none;color:var(--dx-text);transition:border-color .15s, box-shadow .15s;cursor:pointer;}
+        a.ht-chip:hover{border-color:var(--dx-border-glow);box-shadow:0 0 14px var(--dx-glow-soft);}
       `}} />
 
       <div className="ht-wrap">
@@ -115,7 +117,7 @@ export default function HowToPage() {
         </div>
 
         <footer className="ht-foot">
-          <span className="ht-chip"><span className="ht-line">LINE</span> @Divisionxcard</span>
+          <a className="ht-chip" href="https://lin.ee/9cMKVRm" target="_blank" rel="noopener noreferrer"><span className="ht-line">LINE</span> @Divisionxcard</a>
           <span className="ht-chip">📞 <a href="tel:0863863219">086-386-3219</a></span>
         </footer>
       </div>

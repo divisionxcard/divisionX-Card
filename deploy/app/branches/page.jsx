@@ -62,6 +62,8 @@ export default function BranchesPage() {
         .bx-chip{display:inline-flex;align-items:center;gap:7px;background:var(--dx-bg-surface);
           border:1px solid var(--dx-border-strong);border-radius:999px;padding:7px 14px;}
         .bx-line{background:#06C755;color:#fff;border-radius:6px;font-size:11px;font-weight:800;padding:2px 7px;}
+        a.bx-chip{text-decoration:none;color:var(--dx-text);transition:border-color .15s, box-shadow .15s;cursor:pointer;}
+        a.bx-chip:hover{border-color:var(--dx-border-glow);box-shadow:0 0 14px var(--dx-glow-soft);}
         .bx-count{color:var(--dx-text-muted);font-size:12px;margin-top:14px;}
       `}} />
 
@@ -93,7 +95,7 @@ export default function BranchesPage() {
         {/* Footer / contact */}
         <footer className="bx-foot">
           <div className="bx-contact">
-            <span className="bx-chip"><span className="bx-line">LINE</span> @Divisionxcard</span>
+            <a className="bx-chip" href="https://lin.ee/9cMKVRm" target="_blank" rel="noopener noreferrer"><span className="bx-line">LINE</span> @Divisionxcard</a>
             <span className="bx-chip">📞 <a href="tel:0863863219">086-386-3219</a></span>
           </div>
           <div className="bx-count">DivisionX Card · ตู้กดการ์ดเกมอัตโนมัติ</div>
