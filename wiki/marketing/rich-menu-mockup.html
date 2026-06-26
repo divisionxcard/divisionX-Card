@@ -8,131 +8,122 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@400;500;600;700;800&family=Noto+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-  :root{ --black:#0a0a0a; --panel:#141414; --panel2:#1c1c1c; --ink:#ffffff; --muted:#9a9a9a;
-         --gold:#f6b73c; --gold2:#ffd479; --mint:#46e0b0; --line:#2e2e2e; }
+  :root{ --black:#070707; --ink:#ffffff; --muted:#a7a7a7; --gold:#f6b73c; --gold2:#ffd479; --mint:#46e0b0; --line:#333; }
   *{box-sizing:border-box;margin:0;padding:0;}
   body{background:#000;color:var(--ink);font-family:'Noto Sans Thai',sans-serif;padding:28px;display:flex;flex-direction:column;align-items:center;gap:22px;}
   h1{font-family:'Prompt';font-weight:700;font-size:22px;}
-  .meta{color:var(--muted);font-size:13px;text-align:center;line-height:1.5;font-family:'Prompt';}
+  .meta{color:var(--muted);font-size:13px;text-align:center;line-height:1.6;font-family:'Prompt';}
   .gold{color:var(--gold2);}
 
   /* ===== RICH MENU · true ratio 2500:1686 ===== */
   .menu{
-    width:min(1000px,96vw); aspect-ratio:2500/1686;
-    background:
-      radial-gradient(120% 80% at 50% -10%, #1a1a1a 0%, rgba(26,26,26,0) 55%),
-      var(--black);
-    border:1px solid var(--line); border-radius:18px; overflow:hidden;
+    width:min(1040px,96vw); aspect-ratio:2500/1686; position:relative;
+    background:radial-gradient(130% 90% at 50% -10%, #161616 0%, #070707 60%);
+    border:1px solid #2a2a2a; border-radius:20px; overflow:hidden;
     display:grid; grid-template-columns:1fr 1fr 1fr; grid-template-rows:1fr 1fr;
-    position:relative;
+    box-shadow:0 30px 80px rgba(0,0,0,.6);
   }
-  /* faint DC watermark */
+  /* global holographic shimmer over whole menu */
+  .menu::before{content:"";position:absolute;inset:0;pointer-events:none;mix-blend-mode:screen;opacity:.10;
+    background:conic-gradient(from 200deg at 30% 20%, #ff5d8f,#ffd479,#46e0b0,#5db4ff,#b388ff,#ff5d8f);}
   .menu::after{content:"DC";position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
-    font-family:'Prompt';font-weight:800;font-size:30vw;color:#ffffff;opacity:.02;pointer-events:none;letter-spacing:-.05em;}
-  @media(min-width:1040px){ .menu::after{font-size:300px;} }
+    font-family:'Prompt';font-weight:800;color:#fff;opacity:.025;pointer-events:none;letter-spacing:-.05em;font-size:clamp(120px,30vw,320px);}
 
-  .cell{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;
-    border-right:1px solid var(--line);border-bottom:1px solid var(--line);padding:4%;text-align:center;}
-  .cell:nth-child(3n){border-right:none;}
-  .cell:nth-child(n+4){border-bottom:none;}
-  .ic{font-size:clamp(28px,6.2vw,64px);line-height:1;filter:drop-shadow(0 2px 8px rgba(0,0,0,.6));}
-  .lb{font-family:'Prompt';font-weight:600;font-size:clamp(13px,2.5vw,26px);color:var(--ink);}
-  .sub{font-size:clamp(9px,1.4vw,14px);color:var(--muted);font-weight:400;}
-  .badge{position:absolute;top:12%;right:14%;background:var(--mint);color:#06281e;
-    font-family:'Prompt';font-weight:700;font-size:clamp(8px,1.3vw,13px);padding:2px 10px;border-radius:999px;letter-spacing:.05em;}
-  .cell .accent{color:var(--gold2);}
-  /* top-left brand cell tint */
-  .cell.brand{background:linear-gradient(160deg,rgba(246,183,60,.06),transparent);}
+  .cell{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;
+    padding:5%;text-align:center;overflow:hidden;isolation:isolate;}
+  .cell::before{content:"";position:absolute;inset:0;z-index:-2;} /* themed bg layer */
+  .cell::after{content:"";position:absolute;inset:0;z-index:-1; /* readability veil */
+    background:linear-gradient(180deg, rgba(7,7,7,.15) 0%, rgba(7,7,7,.55) 70%, rgba(7,7,7,.78) 100%);}
+  /* thin separators */
+  .cell{border-right:1px solid rgba(255,255,255,.06);border-bottom:1px solid rgba(255,255,255,.06);}
+  .cell:nth-child(3n){border-right:none;} .cell:nth-child(n+4){border-bottom:none;}
 
-  /* spec table */
-  .spec{width:min(1000px,96vw);background:#0f0f0f;border:1px solid var(--line);border-radius:14px;padding:20px 24px;}
-  .spec h2{font-family:'Prompt';font-size:16px;color:var(--gold2);margin-bottom:12px;}
-  table{width:100%;border-collapse:collapse;font-size:13px;}
-  th,td{padding:8px 12px;border-top:1px solid var(--line);text-align:left;}
-  th{color:var(--gold2);font-family:'Prompt';font-weight:600;border-top:none;}
-  td.n{font-variant-numeric:tabular-nums;font-family:'Prompt';color:var(--muted);}
-  .legend{display:flex;gap:18px;flex-wrap:wrap;font-size:12px;color:var(--muted);font-family:'Prompt';}
-  .sw{display:inline-block;width:14px;height:14px;border-radius:3px;vertical-align:-2px;margin-right:6px;}
+  /* trading-card corner frame accents */
+  .corner{position:absolute;width:26px;height:26px;border:2px solid rgba(246,183,60,.55);z-index:1;}
+  .corner.tl{top:14px;left:14px;border-right:none;border-bottom:none;}
+  .corner.br{bottom:14px;right:14px;border-left:none;border-top:none;}
+
+  .ic{font-size:clamp(30px,6.4vw,66px);line-height:1;filter:drop-shadow(0 3px 10px rgba(0,0,0,.8));}
+  .lb{font-family:'Prompt';font-weight:700;font-size:clamp(14px,2.6vw,27px);color:var(--ink);text-shadow:0 2px 10px rgba(0,0,0,.7);}
+  .sub{font-size:clamp(9px,1.45vw,14px);color:#d6d6d6;font-weight:400;text-shadow:0 1px 6px rgba(0,0,0,.8);}
+  .accent{color:var(--gold2);}
+  .badge{position:absolute;top:11%;right:13%;z-index:2;font-family:'Prompt';font-weight:700;
+    font-size:clamp(8px,1.3vw,13px);padding:3px 12px;border-radius:999px;letter-spacing:.08em;box-shadow:0 4px 14px rgba(0,0,0,.5);}
+  .badge.new{background:var(--mint);color:#06281e;}
+  .badge.soon{background:linear-gradient(90deg,#ffd479,#f6b73c);color:#3a2700;}
+
+  /* ===== per-cell themed backgrounds (pure CSS, no external art) ===== */
+  /* 1 location: gold glow + dot grid map */
+  .c1::before{background:
+     radial-gradient(120% 90% at 50% 0%, rgba(246,183,60,.30), rgba(246,183,60,0) 60%),
+     radial-gradient(rgba(255,255,255,.10) 1.4px, transparent 1.4px) 0 0/26px 26px, #0b0b0b;}
+  /* 2 NEW: full holographic foil */
+  .c2::before{background:
+     conic-gradient(from 160deg at 40% 30%, #ff5d8f, #ffd479, #46e0b0, #5db4ff, #b388ff, #ff5d8f);
+     opacity:.9;}
+  .c2::after{background:linear-gradient(180deg, rgba(7,7,7,.30) 0%, rgba(7,7,7,.55) 60%, rgba(7,7,7,.80) 100%);}
+  /* 3 howto: diagonal gold pinstripes + glow */
+  .c3::before{background:
+     radial-gradient(90% 70% at 50% 40%, rgba(246,183,60,.16), transparent 70%),
+     repeating-linear-gradient(45deg, rgba(255,255,255,.045) 0 2px, transparent 2px 16px), #0a0a0a;}
+  /* 4 promo: gold member-card gradient */
+  .c4::before{background:
+     linear-gradient(135deg, #6b4e16 0%, #caa14a 28%, #f6d98a 46%, #9c7a2e 64%, #5e4413 100%);}
+  .c4::after{background:linear-gradient(180deg, rgba(20,12,0,.10) 0%, rgba(20,12,0,.45) 70%, rgba(20,12,0,.70) 100%);}
+  /* 5 soon: holographic teal/violet sweep */
+  .c5::before{background:
+     conic-gradient(from 220deg at 60% 40%, #5db4ff, #b388ff, #46e0b0, #5db4ff);
+     opacity:.55;}
+  .c5::after{background:linear-gradient(180deg, rgba(7,7,7,.35) 0%, rgba(7,7,7,.6) 60%, rgba(7,7,7,.82) 100%);}
+  /* 6 chat: mint glow bottom */
+  .c6::before{background:
+     radial-gradient(100% 80% at 50% 110%, rgba(70,224,176,.30), transparent 60%), #0a0a0a;}
 </style>
 </head>
 <body>
 
-  <h1>DivisionX Card — Rich Menu <span class="gold">(แบบใหญ่ 6 ช่อง)</span></h1>
-  <p class="meta">ขนาดจริงสำหรับอัปโหลด LINE OA: <span class="gold">2500 × 1686 px</span> · อัตราส่วน 2500:1686 (เมนูด้านล่างย่อให้พอดีจอ)<br>
-  ธีมตามโลโก้จริง: ดำ + ขาว + ทอง (accent) · ฟอนต์ Prompt + Noto Sans Thai</p>
+  <h1>DivisionX Card — Rich Menu <span class="gold">v2 · ธีมฟอยล์การ์ดพรีเมียม</span></h1>
+  <p class="meta">ขนาดจริงอัปโหลด LINE OA: <span class="gold">2500 × 1686 px</span> · พื้นหลังออกแบบเอง (เอฟเฟกต์โฮโลแกรม/ฟอยล์ + กรอบการ์ด)<br>
+  ไม่ใช้อาร์ตลิขสิทธิ์ · ธีมดำ + ทอง + โฮโลแกรม ตามโลโก้ DC</p>
 
   <!-- ===== THE RICH MENU ===== -->
   <div class="menu">
-    <div class="cell brand">
-      <div class="ic">📍</div>
-      <div class="lb">สาขาทั้งหมด</div>
-      <div class="sub">11 ตู้ · แผนที่</div>
-    </div>
-    <div class="cell">
-      <span class="badge">NEW</span>
-      <div class="ic">🔥</div>
-      <div class="lb accent">ของใหม่สัปดาห์นี้</div>
-      <div class="sub">เพิ่งเติม / restock</div>
-    </div>
-    <div class="cell">
-      <div class="ic">🎴</div>
-      <div class="lb">วิธีกดซื้อ</div>
-      <div class="sub">ง่าย ๆ 24 ชม.</div>
-    </div>
-    <div class="cell">
-      <div class="ic">🎁</div>
-      <div class="lb">โปรสมาชิก</div>
-      <div class="sub">สิทธิ์เฉพาะคุณ</div>
-    </div>
-    <div class="cell">
-      <span class="badge">SOON</span>
-      <div class="ic">📅</div>
-      <div class="lb accent">เซ็ตใหม่เร็ว ๆ นี้</div>
-      <div class="sub">ปฏิทินปล่อย OP</div>
-    </div>
-    <div class="cell">
-      <div class="ic">💬</div>
-      <div class="lb">แชทสอบถาม</div>
-      <div class="sub">ทักได้เลย</div>
-    </div>
+    <div class="cell c1"><span class="corner tl"></span><span class="corner br"></span>
+      <div class="ic">📍</div><div class="lb">สาขาทั้งหมด</div><div class="sub">11 ตู้ · แผนที่</div></div>
+
+    <div class="cell c2"><span class="corner tl"></span><span class="corner br"></span><span class="badge new">NEW</span>
+      <div class="ic">🔥</div><div class="lb accent">ของใหม่สัปดาห์นี้</div><div class="sub">เพิ่งเติม / restock</div></div>
+
+    <div class="cell c3"><span class="corner tl"></span><span class="corner br"></span>
+      <div class="ic">🎴</div><div class="lb">วิธีกดซื้อ</div><div class="sub">ง่าย ๆ ไม่ต้องรอ</div></div>
+
+    <div class="cell c4"><span class="corner tl"></span><span class="corner br"></span>
+      <div class="ic">🎁</div><div class="lb" style="color:#2a1c00;text-shadow:0 1px 6px rgba(255,255,255,.25)">โปรสมาชิก</div>
+      <div class="sub" style="color:#3a2a05;text-shadow:none">สิทธิ์เฉพาะคุณ</div></div>
+
+    <div class="cell c5"><span class="corner tl"></span><span class="corner br"></span><span class="badge soon">SOON</span>
+      <div class="ic">📅</div><div class="lb accent">เซ็ตใหม่เร็ว ๆ นี้</div><div class="sub">ปฏิทินปล่อย OP</div></div>
+
+    <div class="cell c6"><span class="corner tl"></span><span class="corner br"></span>
+      <div class="ic">💬</div><div class="lb">แชทสอบถาม</div><div class="sub">ทักได้เลย</div></div>
   </div>
 
   <!-- ===== TAP AREA COORDINATES ===== -->
-  <div class="spec">
-    <h2>พิกัด Tap Area (สำหรับตั้งค่าใน LINE OA · อิงภาพ 2500×1686)</h2>
-    <table>
-      <tr><th>ช่อง</th><th>ปุ่ม</th><th>X</th><th>Y</th><th>กว้าง</th><th>สูง</th><th>Action</th></tr>
-      <tr><td>1</td><td>📍 สาขาทั้งหมด</td><td class="n">0</td><td class="n">0</td><td class="n">833</td><td class="n">843</td><td>รูป/ลิงก์แผนที่ 11 ตู้</td></tr>
-      <tr><td>2</td><td>🔥 ของใหม่สัปดาห์นี้</td><td class="n">833</td><td class="n">0</td><td class="n">834</td><td class="n">843</td><td>ข้อความ+รูปของเพิ่งเติม</td></tr>
-      <tr><td>3</td><td>🎴 วิธีกดซื้อ</td><td class="n">1667</td><td class="n">0</td><td class="n">833</td><td class="n">843</td><td>คลิป/รูปสอนกดตู้</td></tr>
-      <tr><td>4</td><td>🎁 โปรสมาชิก</td><td class="n">0</td><td class="n">843</td><td class="n">833</td><td class="n">843</td><td>คูปอง/สิทธิพิเศษ</td></tr>
-      <tr><td>5</td><td>📅 เซ็ตใหม่เร็วๆนี้</td><td class="n">833</td><td class="n">843</td><td class="n">834</td><td class="n">843</td><td>ปฏิทินปล่อยเซ็ต OP</td></tr>
-      <tr><td>6</td><td>💬 แชทสอบถาม</td><td class="n">1667</td><td class="n">843</td><td class="n">833</td><td class="n">843</td><td>เปิดแชท</td></tr>
-    </table>
-  </div>
-
-  <!-- ===== DESIGN NOTES ===== -->
-  <div class="spec">
-    <h2>โน้ตสำหรับดีไซเนอร์ / ทำต่อใน Canva</h2>
-    <p class="legend" style="margin-bottom:12px;">
-      <span><span class="sw" style="background:#0a0a0a;border:1px solid #2e2e2e"></span>ดำ #0a0a0a (พื้น)</span>
-      <span><span class="sw" style="background:#ffffff"></span>ขาว #ffffff (ตัวอักษร)</span>
-      <span><span class="sw" style="background:#f6b73c"></span>ทอง #f6b73c (accent/หัวข้อเด่น)</span>
-      <span><span class="sw" style="background:#46e0b0"></span>มิ้นต์ #46e0b0 (ป้าย NEW)</span>
-    </p>
-    <table>
-      <tr><th>หัวข้อ</th><th>แนวทาง</th></tr>
-      <tr><td>ไอคอน</td><td>mockup ใช้ emoji ชั่วคราว → โปรดักชันแนะนำ <b>line-icon ขาวเส้นบาง</b> ให้พรีเมียมตรงโลโก้</td></tr>
-      <tr><td>เส้นแบ่ง</td><td>hairline เทาเข้ม #2e2e2e (หรือทองจางๆ) · อย่าหนา</td></tr>
-      <tr><td>ป้าย NEW/SOON</td><td>มิ้นต์ #46e0b0 ตัวอักษรเข้ม · ใช้เฉพาะช่องของใหม่/เซ็ตใหม่</td></tr>
-      <tr><td>โลโก้ DC</td><td>วางจางเป็น watermark กลาง (opacity ~2%) อย่าเด่นจนแย่งปุ่ม</td></tr>
-      <tr><td>ตัวอักษร</td><td>Prompt 600 · ขนาดใหญ่พอกดบนมือถือ · 1 บรรทัดหลัก + sub 1 บรรทัด</td></tr>
-      <tr><td>Contrast</td><td>ขาวบนดำชัดอยู่แล้ว · ของเด่น (ของใหม่/เซ็ตใหม่) ใช้ทองดึงตา</td></tr>
+  <div style="width:min(1040px,96vw);background:#0f0f0f;border:1px solid var(--line);border-radius:14px;padding:20px 24px;">
+    <h2 style="font-family:'Prompt';font-size:16px;color:var(--gold2);margin-bottom:12px;">พิกัด Tap Area (ตั้งใน LINE OA · อิงภาพ 2500×1686)</h2>
+    <table style="width:100%;border-collapse:collapse;font-size:13px;">
+      <tr style="color:var(--gold2);font-family:Prompt;text-align:left;"><th style="padding:8px 12px;">ช่อง</th><th>ปุ่ม</th><th>X</th><th>Y</th><th>กว้าง</th><th>สูง</th></tr>
+      <tr><td style="padding:7px 12px;border-top:1px solid #333;">1</td><td style="border-top:1px solid #333;">📍 สาขาทั้งหมด</td><td style="border-top:1px solid #333;">0</td><td style="border-top:1px solid #333;">0</td><td style="border-top:1px solid #333;">833</td><td style="border-top:1px solid #333;">843</td></tr>
+      <tr><td style="padding:7px 12px;border-top:1px solid #333;">2</td><td style="border-top:1px solid #333;">🔥 ของใหม่</td><td style="border-top:1px solid #333;">833</td><td style="border-top:1px solid #333;">0</td><td style="border-top:1px solid #333;">834</td><td style="border-top:1px solid #333;">843</td></tr>
+      <tr><td style="padding:7px 12px;border-top:1px solid #333;">3</td><td style="border-top:1px solid #333;">🎴 วิธีกดซื้อ</td><td style="border-top:1px solid #333;">1667</td><td style="border-top:1px solid #333;">0</td><td style="border-top:1px solid #333;">833</td><td style="border-top:1px solid #333;">843</td></tr>
+      <tr><td style="padding:7px 12px;border-top:1px solid #333;">4</td><td style="border-top:1px solid #333;">🎁 โปรสมาชิก</td><td style="border-top:1px solid #333;">0</td><td style="border-top:1px solid #333;">843</td><td style="border-top:1px solid #333;">833</td><td style="border-top:1px solid #333;">843</td></tr>
+      <tr><td style="padding:7px 12px;border-top:1px solid #333;">5</td><td style="border-top:1px solid #333;">📅 เซ็ตใหม่</td><td style="border-top:1px solid #333;">833</td><td style="border-top:1px solid #333;">843</td><td style="border-top:1px solid #333;">834</td><td style="border-top:1px solid #333;">843</td></tr>
+      <tr><td style="padding:7px 12px;border-top:1px solid #333;">6</td><td style="border-top:1px solid #333;">💬 แชท</td><td style="border-top:1px solid #333;">1667</td><td style="border-top:1px solid #333;">843</td><td style="border-top:1px solid #333;">833</td><td style="border-top:1px solid #333;">843</td></tr>
     </table>
     <p class="meta" style="text-align:left;margin-top:14px;">
-    <b class="gold">วิธีได้ไฟล์ PNG 2500×1686:</b> เปิดไฟล์นี้ในเบราว์เซอร์เป็นแบบอ้างอิง → ทำจริงใน Canva/Figma ที่ขนาด 2500×1686 (LINE ต้องการพิกัด tap area เป๊ะตามตารางบน) · หรือใช้ทีมดีไซน์ทำตามสเปคนี้<br>
-    <b class="gold">เริ่มเล็กได้:</b> ถ้ายังไม่พร้อม 6 ช่อง → ตัดเหลือ 3 ช่อง (สาขา · ของใหม่ · โปรสมาชิก) ขนาด 2500×843
-    </p>
+    <b class="gold">พื้นหลังแต่ละช่อง:</b> ออกแบบด้วยกราฟฟิก (โฮโลแกรม/ฟอยล์ทอง/กรอบการ์ด) ไม่ใช้อาร์ตลิขสิทธิ์<br>
+    <b class="gold">อยากได้รูปสินค้าจริง?</b> ใช้ภาพทางการจาก distributor (Bandai/ซัพพลายเออร์) หรือรูปถ่ายสินค้าของเราเอง → วางทับเลเยอร์พื้นหลังช่องได้ (มี veil เข้มรองรับให้ตัวอักษรอ่านออกอยู่แล้ว)<br>
+    <b class="gold">ทำไฟล์จริง:</b> recreate ใน Canva/Figma ขนาด 2500×1686 ตามนี้ · ไอคอน emoji = แทนที่ด้วย line-icon ขาวได้</p>
   </div>
 
 </body>
