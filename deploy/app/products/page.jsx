@@ -92,7 +92,7 @@ export default async function ProductsPage() {
         <header className="pr-hero">
           <img className="pr-logo" src="/logo.png" alt="DivisionX Card" />
           <h1 className="pr-title">สินค้า<b>ทั้งหมด</b></h1>
-          <div className="pr-sub">การ์ดเกมในตู้ · {skus.length} รายการ · เปิด 24 ชม.</div>
+          <div className="pr-sub">การ์ดเกมในตู้ · {skus.length} รายการ · เปิดตามเวลาห้าง</div>
         </header>
 
         {groups.length === 0 && (

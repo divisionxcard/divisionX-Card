@@ -2,7 +2,7 @@ import "../globals.css"
 
 export const metadata = {
   title: "วิธีการซื้อ — DivisionX Card",
-  description: "วิธีกดตู้ DivisionX Card ง่ายๆ 4 ขั้นตอน · ตู้กดการ์ดเกมอัตโนมัติ เปิด 24 ชม.",
+  description: "วิธีกดตู้ DivisionX Card ง่ายๆ 4 ขั้นตอน · ตู้กดการ์ดเกมอัตโนมัติในห้าง",
 }
 
 const VIDEO_URL = "https://xethnqqmpvlpmafvphky.supabase.co/storage/v1/object/public/marketing/how-to-buy.mp4"
@@ -15,7 +15,7 @@ const STEPS = [
 ]
 
 const TIPS = [
-  { ic: "⏰", t: "เปิด 24 ชม.", d: "กดได้ทุกเวลา ไม่ต้องต่อคิว ทั้ง 11 สาขา" },
+  { ic: "⏰", t: "เปิดตามเวลาห้าง", d: "กดเองได้ ไม่ต้องต่อคิว ทั้ง 11 สาขา" },
   { ic: "✨", t: "ลุ้นการ์ดหายาก", d: "มีการ์ดระดับแรร์ซ่อนอยู่เพียบ ลุ้นได้ทุกซอง" },
   { ic: "💬", t: "มีปัญหา?", d: "ของไม่ออก/จ่ายเงินแล้วติดขัด ทักไลน์ @Divisionxcard ได้เลย" },
 ]

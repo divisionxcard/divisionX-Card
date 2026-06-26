@@ -2,7 +2,7 @@ import "../globals.css"
 
 export const metadata = {
   title: "สาขาที่พร้อมให้บริการ — DivisionX Card",
-  description: "ตู้กดการ์ดเกมอัตโนมัติ DivisionX Card · 11 สาขาในห้างชั้นนำ · เปิด 24 ชม.",
+  description: "ตู้กดการ์ดเกมอัตโนมัติ DivisionX Card · 11 สาขาในห้างชั้นนำ · เปิดตามเวลาห้าง",
 }
 
 // 11 สาขา (เรียงตามที่แอดมินกำหนด) · maps = คำค้น Google Maps
@@ -72,7 +72,7 @@ export default function BranchesPage() {
         <header className="bx-hero">
           <img className="bx-logo" src="/logo.png" alt="DivisionX Card" />
           <h1 className="bx-title">สาขาที่<b>พร้อมให้บริการ</b></h1>
-          <div className="bx-sub">ตู้กดการ์ดเกมอัตโนมัติ · เปิด 24 ชม.</div>
+          <div className="bx-sub">ตู้กดการ์ดเกมอัตโนมัติ · เปิดตามเวลาห้าง</div>
           <div className="bx-tag">รวดเร็ว · ปลอดภัย · ทันสมัย · {BRANCHES.length} สาขาในห้างชั้นนำ</div>
         </header>
 
