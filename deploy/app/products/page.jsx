@@ -5,8 +5,8 @@ export const metadata = {
   description: "การ์ดเกมทั้งหมดในตู้ DivisionX Card · One Piece, Pokémon, Yu-Gi-Oh, Dragon Ball และอีกมากมาย",
 }
 
-// refetch ทุก 1 ชม. (ISR) — ราคา/สินค้าใหม่อัปเดตเองไม่ต้อง build
-export const revalidate = 3600
+// refetch ทุก 60 วินาที (ISR) — อัปรูป/สินค้าใหม่ใน "จัดการ SKU" แล้วเห็นภายใน ~1 นาที
+export const revalidate = 60
 
 // ลำดับ + ชื่อแสดงผลของแต่ละแฟรนไชส์
 const FR = [
@@ -24,7 +24,7 @@ async function getSkus() {
   try {
     const res = await fetch(
       `${url}/rest/v1/skus?is_active=eq.true&select=sku_id,name,series,franchise,sell_price,image_url,image_url_box&order=series,sku_id`,
-      { headers: { apikey: key, Authorization: `Bearer ${key}` }, next: { revalidate: 3600 } }
+      { headers: { apikey: key, Authorization: `Bearer ${key}` }, next: { revalidate: 60 } }
     )
     if (!res.ok) return []
     return await res.json()
