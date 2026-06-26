@@ -71,8 +71,9 @@ export default async function ProductsPage() {
         .pc{background:var(--dx-bg-card);border:1px solid var(--dx-border);border-radius:14px;overflow:hidden;
           transition:border-color .15s, transform .15s;}
         .pc:hover{border-color:var(--dx-border-glow);transform:translateY(-2px);}
-        .pc-img{aspect-ratio:1/1;background-color:#0c1d3a;background-position:center;background-size:cover;
-          background-repeat:no-repeat;display:flex;align-items:center;justify-content:center;}
+        .pc-img{aspect-ratio:1/1;background-color:#0c1d3a;background-position:center;background-size:contain;
+          background-repeat:no-repeat;background-origin:content-box;padding:12px;
+          display:flex;align-items:center;justify-content:center;}
         .pc-ph{font-size:34px;opacity:.5;}
         .pc-meta{padding:10px 12px 13px;}
         .pc-name{font-size:12.5px;font-weight:600;line-height:1.35;min-height:34px;}
