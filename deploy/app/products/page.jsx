@@ -33,8 +33,6 @@ async function getSkus() {
   }
 }
 
-const price = (p) => (Number(p) > 0 ? `฿${Math.round(Number(p)).toLocaleString()}` : null)
-
 export default async function ProductsPage() {
   const skus = await getSkus()
 
@@ -119,9 +117,6 @@ export default async function ProductsPage() {
                   </div>
                   <div className="pc-meta">
                     <div className="pc-name">{s.name}</div>
-                    {price(s.sell_price)
-                      ? <div className="pc-price">{price(s.sell_price)}</div>
-                      : <div className="pc-ask">สอบถามหน้าตู้</div>}
                   </div>
                 </div>
               ))}
@@ -129,7 +124,7 @@ export default async function ProductsPage() {
           </section>
         ))}
 
-        <p className="pr-note">ราคาอาจเปลี่ยนแปลง · สินค้าบางรายการมีเฉพาะบางสาขา</p>
+        <p className="pr-note">สินค้าบางรายการมีเฉพาะบางสาขา · แอดไลน์เช็คของก่อนได้</p>
 
         <footer className="pr-foot">
           <a className="pr-chip" href="https://lin.ee/9cMKVRm" target="_blank" rel="noopener noreferrer">
