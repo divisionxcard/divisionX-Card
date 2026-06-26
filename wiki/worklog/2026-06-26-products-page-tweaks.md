@@ -2,7 +2,7 @@
 type: worklog
 date: 2026-06-26
 tags: [web, frontend, marketing, products, content-fix, isr]
-commits: [446c724, 0657cf4, 78f4fc7, 3b988b0]
+commits: [446c724, 0657cf4, 78f4fc7, 3b988b0, 7f21cfd]
 ---
 
 # /products ปรับแก้ + แก้ข้อมูลผิด "24 ชม." ทั้งระบบ
@@ -29,8 +29,11 @@ commits: [446c724, 0657cf4, 78f4fc7, 3b988b0]
 **why:** รูปแต่ละช่องบนมือถือขนาดไม่เท่ากัน — ไฟล์รูปต้นฉบับเฟรมต่างกัน (บางไฟล์มีขอบดำ → `object-fit:contain` โชว์เล็ก) · FB-07 รูปเสีย → ขึ้นไอคอนแตก
 - เปลี่ยน `.pc-img` จาก `<img object-fit:contain>` → `<div background-size:cover>` (inline backgroundImage) → ทุกรูปฟิลเต็มสี่เหลี่ยมเท่ากันแบบ FB-05
 - ผลพลอยได้: รูปหาย/เสียโชว์พื้น `#0c1d3a` สะอาด (ไม่มีไอคอน broken image)
-- trade-off: cover ครอปขอบบน-ล่างซองทรงสูงเล็กน้อย (ถ้าตัดส่วนสำคัญ → เปลี่ยน box เป็น 3:4)
 - ⚠️ FB-07 และตัวที่ image_url เสีย/ว่าง ต้องอัปรูปใหม่เองที่ "จัดการ SKU"
+
+### 4b. กลับเป็น contain (7f21cfd) — แอดมินเปลี่ยนใจ
+cover ครอปขอบซองทรงสูง → แอดมินขอให้โชว์เต็มใบไม่ครอป (แบบ FB-06) · เปลี่ยน `background-size` cover→**contain** + `background-origin:content-box` + padding 12px (เว้นขอบ) · ยังกันไอคอนรูปแตกเหมือนเดิม
+- **หมายเหตุ:** ขนาดซองที่เห็นยังไม่เท่ากันเป๊ะ 100% เพราะ**เฟรมไฟล์รูปต้นฉบับต่างกัน** (FB-06 มีขอบดำในไฟล์ → ซองเล็ก · FB-05 ซองเต็มไฟล์ → ใหญ่กว่า) · จะเท่ากันเป๊ะต้อง re-crop/re-upload รูปให้ซองกินสัดส่วนเท่ากันทุกไฟล์
 
 ## รูปสินค้าอัปเองได้ที่ไหน (ตอบ recurring question)
 เว็บแอป → **จัดการสต็อก → แท็บ "จัดการ SKU" (admin)** → ปุ่มรูป "ซอง" (=image_url ที่ /products ใช้) / "กล่อง" (image_url_box) · component `SkuImageManager.jsx` บีบอัด+resize อัตโนมัติ
