@@ -21,6 +21,7 @@ BOT_TOKEN = os.environ.get("TELEGRAM_MKT_BOT_TOKEN")
 CHAT_ID = os.environ.get("TELEGRAM_MKT_CHAT_ID")
 
 CONFIG = os.path.join(os.path.dirname(__file__), "..", "tasks", "marketing_reminders.json")
+QUEUE = os.path.join(os.path.dirname(__file__), "..", "tasks", "content_queue.json")
 
 WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 DAY_TH = {"Mon": "จันทร์", "Tue": "อังคาร", "Wed": "พุธ", "Thu": "พฤหัสบดี",
@@ -63,6 +64,22 @@ def send(text):
         return False
 
 
+def load_captions(slot, wd):
+    """ดึงแคปชั่นจาก content_queue ที่ตรง slot + วัน (ถ้ามีไฟล์)"""
+    if not os.path.exists(QUEUE):
+        return []
+    try:
+        with open(QUEUE, encoding="utf-8") as f:
+            q = json.load(f)
+    except Exception:
+        return []
+    return [
+        p for p in q.get("posts", [])
+        if p.get("slot") == slot
+        and (p.get("days") == "daily" or wd in (p.get("days") or []))
+    ]
+
+
 def main():
     now = thai_now()
     wd = WEEKDAYS[now.weekday()]
@@ -94,8 +111,22 @@ def main():
         f"━━━━━━━━━━━━━\n"
         f"{lines}\n"
         f"━━━━━━━━━━━━━\n"
-        f"<i>ทำเสร็จติ๊กในใจได้เลย 🎴 · ปฏิทินเต็ม: wiki/marketing/facebook-content-plan</i>"
+        f"<i>ทำเสร็จติ๊กในใจได้เลย 🎴</i>"
     )
+
+    # แนบแคปชั่นพร้อมโพสต์จาก content queue (ระดับ 2)
+    caps = load_captions(slot, wd)
+    for c in caps:
+        cap = (c.get("caption") or "").strip()
+        if not cap:
+            continue
+        text += (
+            f"\n\n📝 <b>แคปชั่น · {html.escape(c.get('platform', 'FB'))}</b> (ก๊อปไปโพสต์ได้เลย)\n"
+            f"<code>{html.escape(cap)}</code>"
+        )
+        if c.get("link"):
+            text += f"\n🔗 {html.escape(c['link'])} <i>(ใส่ในคอมเมนต์ ไม่ใส่ในโพสต์)</i>"
+
     send(text)
 
 

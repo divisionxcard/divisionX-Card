@@ -1,0 +1,45 @@
+{
+  "_comment": "คิวแคปชั่นโพสต์ (ระดับ 2) · Telegram reminder จะดึงแคปชั่นของวัน/slot มาให้ก๊อปไปโพสต์ · แก้ได้เลย · slot: morning|evening · days: 'daily' หรือ list ['Mon'...] · {…} = เติมก่อนโพสต์",
+  "posts": [
+    {
+      "days": ["Mon"], "slot": "morning", "platform": "FB เพจ",
+      "caption": "🔥 เติมของใหม่แล้ว! One Piece OP-13 / OP-15 / OP-16 เข้าตู้ครบทุกสาขา\nนักสะสมสาย One Piece ห้ามพลาด — ของหมดไวมาก รีบมากดกันได้เลย 🎴\n#OnePieceTCG #ตู้กดการ์ด #DivisionXCard",
+      "link": "division-x-card.vercel.app/products"
+    },
+    {
+      "days": ["Tue", "Sat"], "slot": "morning", "platform": "FB Reels",
+      "caption": "เปิดซอง เปิดดวง! 🎴✨ ลูกค้ากด {ชื่อการ์ด} ได้จากตู้ DivisionX {สาขา}\nของจริง ลุ้นจริง ทุกซองมีโอกาสได้การ์ดแรร์ 🔥 ใครจะเป็นคนต่อไป?\n#เปิดซองวันพีช #OnePieceTCG #DivisionXCard",
+      "link": "division-x-card.vercel.app/branches"
+    },
+    {
+      "days": ["Wed"], "slot": "morning", "platform": "FB เพจ",
+      "caption": "📚 รีวิวเซ็ต {ชื่อเซ็ต}! การ์ดเด่นในเซ็ตนี้มีอะไรบ้าง ตัวไหนน่าตามล่า?\n{สรุปสั้น 2-3 บรรทัด}\nอยากลองเปิดเอง? มีในตู้ DivisionX แล้ว 🎴\n#OnePieceTCG #รีวิวการ์ด #DivisionXCard",
+      "link": "division-x-card.vercel.app/products"
+    },
+    {
+      "days": ["Thu"], "slot": "morning", "platform": "FB เพจ",
+      "caption": "📍 ตู้กดการ์ด DivisionX มี 11 สาขาแล้ว! ใกล้บ้านใครบ้าง มาเช็กกัน\nกดเองง่าย ๆ ไม่ต้องต่อคิว · ดูวิธีกด + นำทางสาขาได้เลย 🎴\n#ตู้กดการ์ด #DivisionXCard",
+      "link": "division-x-card.vercel.app/branches"
+    },
+    {
+      "days": ["Fri"], "slot": "morning", "platform": "FB เพจ",
+      "caption": "🎴 เสาร์-อาทิตย์นี้ มาเปิดซองที่ตู้การ์ด DivisionX!\nOP13/15/16 ครบ · เติมสดทุกวัน · ชวนเพื่อนมาเปิดด้วยกัน สนุกกว่าเยอะ 😎\n#OnePieceTCG #DivisionXCard",
+      "link": "division-x-card.vercel.app/branches"
+    },
+    {
+      "days": ["Sat"], "slot": "morning", "platform": "FB เพจ (กิจกรรม)",
+      "caption": "🎁 แจกการ์ดฟรี! กติกาง่าย ๆ:\n1) กดติดตามเพจ + ไลก์โพสต์นี้\n2) แชร์โพสต์ (ตั้งสาธารณะ)\n3) แท็กเพื่อน 2 คน + คอมเมนต์เซ็ตที่อยากได้\nสุ่มแจก {รางวัล} · ประกาศผล {วัน} 🎴 แอดไลน์รับสิทธิ์ลุ้นเพิ่ม!",
+      "link": "lin.ee/9cMKVRm"
+    },
+    {
+      "days": ["Sun"], "slot": "morning", "platform": "FB เพจ",
+      "caption": "สายไหนกันบ้าง? 🎴 คอมเมนต์บอกหน่อย!\n🏴‍☠️ One Piece · ⚡ Pokémon · 🃏 Yu-Gi-Oh · 🐉 Dragon Ball\nมาดูว่าชาวเพจสายไหนเยอะสุด!",
+      "link": ""
+    },
+    {
+      "days": ["Mon", "Wed", "Fri"], "slot": "evening", "platform": "กลุ่ม FB",
+      "caption": "(โพสต์ในกลุ่ม TCG · value-first ไม่ขายตรง · เขียนใหม่ทุกกลุ่ม)\nเปิดซอง {เซ็ต} จากตู้กดมา ได้ {ชื่อการ์ด} 🎴🔥 ดวงโอเคไหมครับ?\nใครเปิดเซ็ตนี้ได้อะไรเด็ดบ้าง มาอวดกัน! (ถ้ามีคนถามซื้อที่ไหน → ตอบในคอมเมนต์)",
+      "link": ""
+    }
+  ]
+}
