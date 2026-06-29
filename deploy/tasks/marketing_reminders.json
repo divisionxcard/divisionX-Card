@@ -1,0 +1,20 @@
+{
+  "_comment": "งานการตลาดที่จะแจ้งเตือนเข้า Telegram (แยก bot/chat จาก scraper) · แก้รายการได้เลย · slot: morning|evening · days: 'daily' หรือ list ['Mon','Tue','Wed','Thu','Fri','Sat','Sun']",
+  "tasks": [
+    { "title": "เช็ก/ตอบคอมเมนต์ + แชทค้างจากเมื่อวานให้หมด", "slot": "morning", "days": "daily" },
+    { "title": "LINE broadcast เช้า 09:30 (เติมของเช้า)", "slot": "morning", "days": "daily" },
+
+    { "title": "โพสต์ FB: ของใหม่/เติมของต้นสัปดาห์ 🔥", "slot": "morning", "days": ["Mon"] },
+    { "title": "ถ่าย + ลง Reels เปิดซองสด 🎴", "slot": "morning", "days": ["Tue", "Sat"] },
+    { "title": "โพสต์ความรู้/รีวิวเซ็ต 📚", "slot": "morning", "days": ["Wed"] },
+    { "title": "โพสต์สาขา/วิธีกด 📍", "slot": "morning", "days": ["Thu"] },
+    { "title": "โพสต์ชวนมาสุดสัปดาห์ 🎁", "slot": "morning", "days": ["Fri"] },
+    { "title": "โพล/คำถามดึง engagement 😎", "slot": "morning", "days": ["Sun"] },
+    { "title": "ลงกิจกรรมแจกการ์ดรายสัปดาห์ 🎁 (follow+share+tag)", "slot": "morning", "days": ["Sat"] },
+
+    { "title": "LINE broadcast เย็น 17:30 (รีมายด์พีคเย็น)", "slot": "evening", "days": "daily" },
+    { "title": "ตอบคอมเมนต์/แชทของโพสต์วันนี้ให้หมด", "slot": "evening", "days": "daily" },
+    { "title": "ลงโพสต์ในกลุ่ม FB 1-2 กลุ่ม (value-first ไม่สแปม)", "slot": "evening", "days": ["Mon", "Wed", "Fri"] },
+    { "title": "สรุปยอดผู้ติดตาม/reach รายสัปดาห์ + ดูคลิปไหนปัง", "slot": "evening", "days": ["Sun"] }
+  ]
+}

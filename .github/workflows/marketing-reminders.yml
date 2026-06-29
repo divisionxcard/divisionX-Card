@@ -1,0 +1,35 @@
+name: Marketing Task Reminders
+
+on:
+  schedule:
+    # 08:00 น. ไทย (01:00 UTC) — สรุปงานเช้า
+    - cron: "0 1 * * *"
+    # 17:00 น. ไทย (10:00 UTC) — เตือนงานก่อนจบวัน
+    - cron: "0 10 * * *"
+  workflow_dispatch:
+    inputs:
+      slot:
+        description: "บังคับ slot (เว้นว่าง = เดาจากเวลา)"
+        required: false
+        type: choice
+        options: ["", "morning", "evening"]
+        default: ""
+
+jobs:
+  remind:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Send marketing reminder
+        env:
+          TELEGRAM_MKT_BOT_TOKEN: ${{ secrets.TELEGRAM_MKT_BOT_TOKEN }}
+          TELEGRAM_MKT_CHAT_ID:   ${{ secrets.TELEGRAM_MKT_CHAT_ID }}
+        run: python deploy/scraper/marketing_reminder.py ${{ github.event.inputs.slot }}
