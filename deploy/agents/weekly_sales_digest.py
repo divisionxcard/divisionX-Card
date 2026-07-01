@@ -126,7 +126,8 @@ def main():
         return
 
     now = datetime.utcnow()
-    d14 = (now - timedelta(days=14)).strftime("%Y-%m-%dT%H:%M:%S+00:00")
+    # วันที่ล้วน (ไม่มี timezone) — เลี่ยง '+' ใน query string ที่ทำให้ PostgREST 400
+    d14 = (now - timedelta(days=14)).strftime("%Y-%m-%d")
     cut = now - timedelta(days=7)
 
     sales = sb_get(f"sales?select=machine_id,sku_id,quantity_sold,grand_total,sold_at&sold_at=gte.{d14}")
@@ -139,7 +140,7 @@ def main():
     rev_this = rev_last = 0.0
     for s in sales:
         rev = float(s.get("grand_total") or 0)
-        dt = datetime.fromisoformat(s["sold_at"].replace("+00:00", "")) if "+00:00" in s["sold_at"] else datetime.fromisoformat(s["sold_at"][:19])
+        dt = datetime.fromisoformat(s["sold_at"][:19])  # naive UTC (drop tz) — เทียบกับ utcnow() ได้ตรง
         this_week = dt >= cut
         mid = s["machine_id"]
         if this_week:
