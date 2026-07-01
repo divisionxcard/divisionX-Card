@@ -1,0 +1,32 @@
+name: Weekly Sales Digest
+
+on:
+  schedule:
+    # จันทร์ 09:00 น. ไทย (02:00 UTC) — สรุปยอดขายสัปดาห์ที่ผ่านมา
+    - cron: "0 2 * * 1"
+  workflow_dispatch:
+
+jobs:
+  digest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install deps (anthropic เฉพาะชั้น AI · optional)
+        run: pip install anthropic
+
+      - name: Send weekly sales digest
+        env:
+          SUPABASE_URL:           ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY:   ${{ secrets.SUPABASE_SERVICE_KEY }}
+          TELEGRAM_MKT_BOT_TOKEN: ${{ secrets.TELEGRAM_MKT_BOT_TOKEN }}
+          TELEGRAM_MKT_CHAT_ID:   ${{ secrets.TELEGRAM_MKT_CHAT_ID }}
+          ANTHROPIC_API_KEY:      ${{ secrets.ANTHROPIC_API_KEY }}
+        run: python deploy/agents/weekly_sales_digest.py
