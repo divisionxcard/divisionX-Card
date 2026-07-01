@@ -2,7 +2,7 @@
 type: worklog
 date: 2026-07-01
 tags: [agents, ai, telegram, sales, automation, digest]
-commits: [a13eff1]
+commits: [a13eff1, 1614cde]
 ---
 
 # AI สรุปยอดขายรายสัปดาห์ → Telegram
