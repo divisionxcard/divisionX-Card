@@ -165,6 +165,7 @@ export async function getSalesByMachine(daysOrDate = 30) {
       .from("sales")
       .select("machine_id, sku_id, transaction_id, product_name_raw, grand_total, quantity_sold, sold_at")
       .gte("sold_at", from.toISOString())
+      .order("id", { ascending: true })  // ต้อง order คงที่ ไม่งั้น pagination ข้าม/ซ้ำแถว (แถวใหม่สุดหลุด)
       .range(offset, offset + pageSize - 1)
     if (error) throw error
     all.push(...data)
@@ -178,12 +179,23 @@ export async function getSalesByMachine(daysOrDate = 30) {
 export async function getTopSkus(days = 30) {
   const from = new Date()
   from.setDate(from.getDate() - days)
-  const { data, error } = await supabase
-    .from("sales")
-    .select("sku_id, quantity_sold, grand_total, sold_at")
-    .gte("sold_at", from.toISOString())
-  if (error) throw error
-  return data
+  // paginate — ไม่งั้นโดน cap 1000 แถว (30 วันมี 7,000+ แถว → Top SKU เพี้ยน)
+  const all = []
+  let offset = 0
+  const pageSize = 1000
+  while (true) {
+    const { data, error } = await supabase
+      .from("sales")
+      .select("sku_id, quantity_sold, grand_total, sold_at")
+      .gte("sold_at", from.toISOString())
+      .order("id", { ascending: true })
+      .range(offset, offset + pageSize - 1)
+    if (error) throw error
+    all.push(...data)
+    if (data.length < pageSize) break
+    offset += pageSize
+  }
+  return all
 }
 
 // ── แก้ไข Stock In ───────────────────────────────────────────
