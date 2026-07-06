@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DivisionX Card · ป้าย LED หลังตู้ (89×21 ซม.) — ภาพนิ่งพร้อมพิมพ์</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Prompt:wght@400;500;600;700;800;900&family=Noto+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{ --navy:#03102A; --navy2:#061B3A; --blue:#1B8DFF; --blue2:#59D2FF; --chrome:#cfe0f5; --line:#06C755; }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:#0a0a0a;color:#fff;font-family:'Noto Sans Thai',sans-serif;padding:26px 14px 50px;
+    display:flex;flex-direction:column;align-items:center;gap:18px;}
+  h1{font-family:'Prompt';font-weight:700;font-size:19px;text-align:center;}
+  .note{max-width:1250px;color:#9fb0c9;font-size:12.5px;font-family:'Prompt';line-height:1.6;text-align:center;}
+  .note b{color:var(--blue2);}
+  .spec{max-width:1250px;width:min(1250px,96vw);background:#0f0f0f;border:1px solid #2a2a2a;border-radius:12px;padding:16px 20px;font-family:'Prompt';font-size:12.5px;color:#c9d6ea;line-height:1.7;}
+  .spec b{color:var(--blue2);}
+
+  /* ===== SIGN · 891:210 · ภาพนิ่งทั้งหมด (ไม่มี animation) ===== */
+  .sign{position:relative;width:min(1250px,97vw);aspect-ratio:891/210;overflow:hidden;border-radius:12px;
+    background:
+      radial-gradient(58% 150% at 60% 44%, rgba(89,210,255,.40), rgba(27,141,255,.18) 34%, rgba(27,141,255,0) 62%),
+      linear-gradient(100deg, #0a2e58 0%, #04122b 46%, #01060f 100%);
+    background-color:#04122b;
+    border:2px solid rgba(89,210,255,.6);
+    box-shadow:0 0 0 1px rgba(27,141,255,.5), 0 0 70px rgba(27,141,255,.4);}
+
+  /* energy rays (นิ่ง) */
+  .rays{position:absolute;left:60%;top:44%;width:120%;height:280%;transform:translate(-50%,-50%);pointer-events:none;z-index:1;opacity:.42;
+    background:conic-gradient(from 0deg at 50% 50%,
+      transparent 0deg, rgba(89,210,255,.6) 3deg, transparent 7deg,
+      transparent 26deg, rgba(27,141,255,.42) 29deg, transparent 33deg,
+      transparent 54deg, rgba(89,210,255,.55) 57deg, transparent 61deg,
+      transparent 84deg, rgba(27,141,255,.42) 87deg, transparent 91deg,
+      transparent 114deg, rgba(89,210,255,.55) 117deg, transparent 121deg,
+      transparent 146deg, rgba(27,141,255,.42) 149deg, transparent 153deg,
+      transparent 184deg, rgba(89,210,255,.55) 187deg, transparent 191deg,
+      transparent 224deg, rgba(27,141,255,.42) 227deg, transparent 231deg,
+      transparent 264deg, rgba(89,210,255,.55) 267deg, transparent 271deg,
+      transparent 304deg, rgba(27,141,255,.42) 307deg, transparent 311deg,
+      transparent 338deg, rgba(89,210,255,.5) 341deg, transparent 345deg, transparent 360deg);}
+
+  /* sparkles (นิ่ง) */
+  .spark{position:absolute;inset:0;pointer-events:none;z-index:2;opacity:.9;
+    background-image:
+      radial-gradient(2.5px 2.5px at 20% 28%, #fff, transparent),
+      radial-gradient(2px 2px at 74% 62%, var(--blue2), transparent),
+      radial-gradient(1.6px 1.6px at 45% 82%, #fff, transparent),
+      radial-gradient(2.4px 2.4px at 88% 20%, var(--blue2), transparent),
+      radial-gradient(1.6px 1.6px at 33% 18%, #fff, transparent),
+      radial-gradient(2px 2px at 63% 36%, #fff, transparent),
+      radial-gradient(1.6px 1.6px at 54% 12%, var(--blue2), transparent),
+      radial-gradient(2px 2px at 14% 68%, var(--blue2), transparent),
+      radial-gradient(1.5px 1.5px at 92% 74%, #fff, transparent),
+      radial-gradient(2px 2px at 40% 55%, var(--blue2), transparent);}
+
+  /* lightning (นิ่ง เรืองแสง) */
+  .bolt{position:absolute;z-index:3;pointer-events:none;filter:drop-shadow(0 0 6px var(--blue2)) drop-shadow(0 0 16px var(--blue));opacity:.9;}
+  .bolt.b1{top:1%;left:52%;height:62%;} .bolt.b2{top:18%;left:84%;height:72%;} .bolt.b3{top:6%;left:33%;height:54%;}
+
+  .vig{position:absolute;inset:0;pointer-events:none;z-index:4;box-shadow:inset 0 0 90px rgba(2,10,26,.72);}
+
+  /* seam guides (เฉพาะพรีวิว — ลบตอน export) */
+  .seam{position:absolute;top:0;bottom:0;width:0;border-left:2px dashed rgba(255,255,255,.14);z-index:20;}
+  .seam.a{left:33.333%;} .seam.b{left:66.666%;}
+  .seamlbl{position:absolute;top:4px;font-family:'Prompt';font-size:9px;color:rgba(255,255,255,.3);z-index:20;transform:translateX(6px);}
+
+  /* LEFT brand */
+  .left{position:absolute;left:2.5%;top:50%;transform:translateY(-50%);width:20%;text-align:center;z-index:15;}
+  .logo{height:44px;width:auto;margin-bottom:8px;mix-blend-mode:screen;filter:drop-shadow(0 0 16px rgba(89,210,255,.9));}
+  .word{font-family:'Prompt';font-weight:900;line-height:.95;font-size:27px;letter-spacing:.5px;
+    background:linear-gradient(180deg,#fff 0%,var(--blue2) 58%,var(--blue) 100%);
+    -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+    filter:drop-shadow(0 2px 16px rgba(27,141,255,.8));}
+  .tag{font-family:'Prompt';font-weight:800;color:#02121f;font-size:10.5px;letter-spacing:.04em;margin-top:9px;display:inline-block;
+    background:linear-gradient(90deg,var(--blue2),var(--blue));border-radius:999px;padding:4px 12px;box-shadow:0 3px 16px rgba(27,141,255,.7);}
+  .slogan{margin-top:9px;font-family:'Prompt';font-weight:800;font-size:13px;color:#fff;
+    text-shadow:0 0 10px var(--blue),0 0 20px var(--blue);}
+  @media(max-width:820px){.word{font-size:3.6vw;}.logo{height:5.5vw;}.tag{font-size:1.3vw;}.slogan{font-size:1.7vw;}}
+
+  /* CARDS grid + holo sheen (นิ่ง) */
+  .cards{position:absolute;left:23%;right:1.8%;top:9%;bottom:7%;z-index:8;
+    display:grid;grid-template-columns:repeat(10,1fr);grid-template-rows:repeat(2,1fr);gap:6px;}
+  .slot{position:relative;background:#000;border:1.5px solid rgba(89,210,255,.7);border-radius:6px;overflow:hidden;
+    box-shadow:0 0 16px rgba(27,141,255,.55), inset 0 0 12px rgba(0,0,0,.6);}
+  .slot img{width:100%;height:100%;object-fit:contain;display:block;}
+  /* แสงโฮโลแกรมค้างนิ่ง — แถบเฉียงพาดทุกใบ */
+  .slot::after{content:"";position:absolute;top:-30%;left:-20%;width:55%;height:170%;transform:rotate(20deg);pointer-events:none;
+    background:linear-gradient(90deg, transparent, rgba(255,255,255,.18), rgba(89,210,255,.42), rgba(179,136,255,.24), transparent);
+    mix-blend-mode:screen;}
+
+  .contact{position:absolute;top:6%;right:2.5%;font-family:'Prompt';font-weight:700;font-size:12px;color:var(--blue2);z-index:16;}
+  .contact .lb{background:var(--line);color:#fff;border-radius:4px;font-size:.75em;padding:1px 5px;margin-right:4px;}
+
+  /* badge แท้ 100% (นิ่ง) */
+  .badge{position:absolute;left:22.3%;top:6.5%;z-index:17;transform:rotate(-8deg);
+    width:64px;height:64px;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    background:radial-gradient(circle at 40% 35%, #fff, var(--blue2) 45%, var(--blue) 100%);
+    color:#02121f;font-family:'Prompt';font-weight:900;line-height:1;text-align:center;
+    box-shadow:0 0 20px rgba(89,210,255,.9), 0 4px 10px rgba(0,0,0,.4);}
+  .badge b{font-size:19px;} .badge span{font-size:8px;font-weight:700;}
+  @media(max-width:820px){.badge{width:5.2vw;height:5.2vw;}.badge b{font-size:1.5vw;}.badge span{font-size:.7vw;}.contact{font-size:1.4vw;}}
+
+  /* ปุ่มซ่อนเส้นแบ่ง เผื่อจับภาพ */
+  .toolbar{display:flex;gap:10px;}
+  .btn{font-family:'Prompt';font-weight:600;font-size:12px;color:#cfe0f5;background:#122;border:1px solid #2a3a4a;border-radius:8px;padding:7px 14px;cursor:pointer;}
+  .hideguides .seam,.hideguides .seamlbl{display:none;}
+</style>
+</head>
+<body>
+
+  <h1>ป้าย LED หลังตู้ · <span style="color:var(--blue2)">89 × 21 ซม.</span> — ภาพนิ่งพร้อมพิมพ์ ⚡</h1>
+  <p class="note">เอฟเฟกต์ทั้งหมด<b>เป็นภาพนิ่ง</b> (glow/สายฟ้า/ประกาย/โฮโลแกรมค้างอยู่กับที่) · พิมพ์ลงกระดาษ/backlit film ได้เลย · เส้นประ = รอยต่อ 3 แผ่น A4</p>
+
+  <div class="toolbar">
+    <button class="btn" onclick="document.getElementById('sign').classList.toggle('hideguides')">ซ่อน/แสดง เส้นแบ่งแผ่น</button>
+  </div>
+
+  <!-- ===== SIGN ===== -->
+  <div class="sign" id="sign">
+    <div class="rays"></div>
+    <div class="spark"></div>
+    <svg class="bolt b1" viewBox="0 0 40 120"><polyline points="24,0 10,52 22,52 6,120" fill="none" stroke="#d6f0ff" stroke-width="4"/></svg>
+    <svg class="bolt b2" viewBox="0 0 40 120"><polyline points="18,0 30,48 18,48 32,120" fill="none" stroke="#d6f0ff" stroke-width="4"/></svg>
+    <svg class="bolt b3" viewBox="0 0 40 120"><polyline points="22,0 12,50 24,50 10,120" fill="none" stroke="#d6f0ff" stroke-width="3.5"/></svg>
+    <div class="vig"></div>
+
+    <span class="seam a"></span><span class="seamlbl" style="left:33.333%">แผ่น 2</span>
+    <span class="seam b"></span><span class="seamlbl" style="left:66.666%">แผ่น 3</span>
+    <span class="seamlbl" style="left:0.5%">แผ่น 1</span>
+
+    <div class="contact"><span class="lb">LINE</span>@Divisionxcard</div>
+    <div class="badge"><b>แท้</b><span>100%</span></div>
+
+    <div class="cards" id="cards"></div>
+
+    <div class="left">
+      <img class="logo" src="assets/logo.jpg" alt="DC">
+      <div class="word">DIVISION X CARD</div>
+      <div class="tag">ตู้การ์ดเกม TCG</div>
+      <div class="slogan">⚡ เปิดซอง เปิดดวง</div>
+    </div>
+  </div>
+
+  <!-- ===== SPEC ===== -->
+  <div class="spec">
+    <b>📐 ไฟล์พิมพ์</b> — 891 × 210 มม. · 300 DPI = <b>~10,524 × 2,480 px</b> · หรือ 3 ไฟล์ = <b>3,508 × 2,480 px/แผ่น</b> · <b>✅ โชว์สินค้าจริงที่ขาย = ถูกลิขสิทธิ์</b><br>
+    <b>🖨️ ทำจริง:</b> ทุกเอฟเฟกต์เป็นภาพนิ่งแล้ว → กด "ซ่อนเส้นแบ่ง" แล้วแคปหน้าจอ/ให้ผม export PNG ความละเอียดพิมพ์ ตัด 3 แผ่น A4 ส่งร้าน backlit film ได้เลย
+  </div>
+
+<script>
+  const N = 20, wrap = document.getElementById('cards');
+  for (let i = 0; i < N; i++) {
+    const slot = document.createElement('div');
+    slot.className = 'slot';
+    const img = document.createElement('img');
+    img.src = `assets/p${String(i+1).padStart(2,'0')}.png`;
+    img.onerror = () => slot.remove();
+    slot.appendChild(img);
+    wrap.appendChild(slot);
+  }
+</script>
+</body>
+</html>

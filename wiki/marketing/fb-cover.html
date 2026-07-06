@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DivisionX Card · Facebook Cover (1640×624)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Prompt:wght@400;500;600;700;800;900&family=Noto+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{ --navy:#03102A; --navy2:#061B3A; --blue:#1B8DFF; --blue2:#59D2FF; --chrome:#cfe0f5; --line:#06C755; }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:#0a0a0a;display:flex;flex-direction:column;align-items:center;gap:18px;padding:26px 14px 50px;
+    font-family:'Noto Sans Thai',sans-serif;color:#fff;}
+  .note{max-width:900px;text-align:center;color:#9fb0c9;font-size:12.5px;font-family:'Prompt';line-height:1.6;}
+  .note b{color:var(--blue2);}
+
+  /* ===== FB COVER · 1640:624 (อัปโหลด 1640×624) ===== */
+  .cover{position:relative;width:min(900px,96vw);aspect-ratio:1640/624;overflow:hidden;border-radius:14px;
+    background:
+      radial-gradient(70% 120% at 18% 30%, rgba(27,141,255,.45), rgba(27,141,255,0) 55%),
+      radial-gradient(60% 120% at 88% 80%, rgba(89,210,255,.30), rgba(89,210,255,0) 55%),
+      linear-gradient(120deg, #061B3A 0%, #03102A 55%, #020a18 100%);
+    border:1px solid rgba(89,210,255,.3);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:3% 6%;}
+  /* lightning */
+  .cover::before{content:"";position:absolute;inset:0;pointer-events:none;opacity:.45;
+    background:
+      linear-gradient(108deg, transparent 26%, rgba(89,210,255,.55) 27%, transparent 28%),
+      linear-gradient(116deg, transparent 70%, rgba(27,141,255,.5) 71%, transparent 72%);}
+  .cover::after{content:"";position:absolute;inset:0;pointer-events:none;box-shadow:inset 0 0 80px rgba(27,141,255,.22);}
+  .cover > *{position:relative;z-index:1;}
+  /* mobile safe-zone guide (เส้นกึ่งกลางที่มือถือเห็นชัวร์) */
+  .safe{position:absolute;top:0;bottom:0;left:50%;transform:translateX(-50%);width:50%;
+    border-left:1px dashed rgba(255,255,255,.12);border-right:1px dashed rgba(255,255,255,.12);z-index:0;}
+
+  .logo{height:16%;width:auto;margin-bottom:1.5%;mix-blend-mode:screen;filter:drop-shadow(0 0 12px rgba(89,210,255,.55));}
+  .word{font-family:'Prompt';font-weight:900;letter-spacing:.5px;line-height:.95;
+    font-size:6.2vw;
+    background:linear-gradient(180deg,#fff 0%, var(--blue2) 58%, var(--blue) 100%);
+    -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+    filter:drop-shadow(0 2px 12px rgba(27,141,255,.5));}
+  @media(min-width:560px){.word{font-size:42px;}}
+  .tag{font-family:'Prompt';font-weight:600;color:#eaf3ff;font-size:2.7vw;margin-top:1.5%;letter-spacing:.02em;}
+  @media(min-width:560px){.tag{font-size:17px;}}
+  .slogan{display:inline-block;margin-top:2.4%;font-family:'Prompt';font-weight:700;font-size:2.6vw;
+    color:#02263a;background:linear-gradient(90deg,var(--blue2),var(--blue));border-radius:999px;padding:1.2% 3.2%;
+    box-shadow:0 4px 16px rgba(27,141,255,.45);}
+  @media(min-width:560px){.slogan{font-size:16px;padding:7px 20px;}}
+  .meta{margin-top:2.4%;font-family:'Prompt';font-weight:600;color:var(--chrome);font-size:2.1vw;letter-spacing:.03em;}
+  @media(min-width:560px){.meta{font-size:13px;}}
+  .meta .b{color:var(--blue2);}
+</style>
+</head>
+<body>
+
+  <p class="note">รูปปก Facebook · อัปโหลดขนาด <b>1640 × 624 px</b> · เนื้อหาสำคัญอยู่กลาง (โซนเส้นประ = ที่มือถือเห็นชัวร์ ไม่โดนครอป)</p>
+
+  <div class="cover">
+    <span class="safe"></span>
+    <img class="logo" src="../../image/Logo/Logo.jpg" alt="DC" />
+    <div class="word">DIVISION X CARD</div>
+    <div class="tag">ตู้กดการ์ดเกมอัตโนมัติ · One Piece · Pokémon · Yu-Gi-Oh และอีกเพียบ</div>
+    <div class="slogan">⚡ เปิดซอง เปิดดวง · กดได้ทั้ง 11 สาขา</div>
+    <div class="meta">📍 11 สาขาในห้างชั้นนำ <span class="b">·</span> 💬 LINE @Divisionxcard <span class="b">·</span> division-x-card.vercel.app</div>
+  </div>
+
+</body>
+</html>
