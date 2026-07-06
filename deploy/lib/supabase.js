@@ -414,9 +414,14 @@ export async function getMachineAssignments() {
 }
 
 export async function addMachineAssignment(record) {
+  // upsert บน (machine_id, user_id) — ถ้าคู่เดิมมีอยู่แล้ว (รวมถึงแถวที่ is_active=false ค้างไว้)
+  // จะปลุกกลับมา active แทนการ insert ใหม่ → กันชน unique constraint
   const { data, error } = await supabase
     .from("machine_assignments")
-    .insert([record])
+    .upsert(
+      { ...record, is_active: true, assigned_at: new Date().toISOString() },
+      { onConflict: "machine_id,user_id" }
+    )
     .select()
     .single()
   if (error) throw error
@@ -1122,11 +1127,4 @@ export async function updateRefillEventQty(id, qtyAdded) {
   return data
 }
 
-// max(synced_at) ของ machine_stock สำหรับตู้ที่เลือก (ใช้ poll ว่า sync รอบใหม่มาถึงยัง)
-export async function getLatestStockSyncedAt(machineIds) {
-  let q = supabase.from("machine_stock").select("synced_at").order("synced_at", { ascending: false }).limit(1)
-  if (machineIds?.length) q = q.in("machine_id", machineIds)
-  const { data, error } = await q.maybeSingle()
-  if (error) throw error
-  return data?.synced_at || null
-}
+// max(synced_at) ของ machine_stock สำหรับตู้ที่เลื�

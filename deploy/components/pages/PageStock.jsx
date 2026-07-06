@@ -29,6 +29,7 @@ export default function PageStock({ stockIn, stockBalance, onAddStockIn, onUpdat
   const [lotYear, setLotYear] = useState(nowDate().slice(0, 4))
   const [historySkuIn, setHistorySkuIn] = useState("")
   const [lotSkuFilter, setLotSkuFilter] = useState("")
+  const [historyLimit, setHistoryLimit] = useState(50)  // แสดงทีละ 50 แถว กันหน้าอืดตอนข้อมูลเยอะ
 
   const [form, setForm] = useState({
     lot_number: genLotNumber(),
@@ -525,7 +526,7 @@ export default function PageStock({ stockIn, stockBalance, onAddStockIn, onUpdat
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredHistory.map((r, i) => {
+                    {filteredHistory.slice(0, historyLimit).map((r, i) => {
                       const cpp = r.quantity_packs > 0 ? r.total_cost / r.quantity_packs : 0
                       return (
                         <tr key={i} style={{ borderBottom: "1px solid var(--dx-border)" }}>
@@ -546,6 +547,17 @@ export default function PageStock({ stockIn, stockBalance, onAddStockIn, onUpdat
                     })}
                   </tbody>
                 </table>
+                {filteredHistory.length > historyLimit && (
+                  <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 10, padding: "14px 0 2px" }}>
+                    <span style={{ fontSize: 11, color: "var(--dx-text-muted)" }}>
+                      แสดง {historyLimit} จาก {filteredHistory.length} รายการ
+                    </span>
+                    <button onClick={() => setHistoryLimit(n => n + 50)} className="dx-btn dx-btn-ghost"
+                      style={{ padding: "5px 14px", fontSize: 11 }}>
+                      แสดงเพิ่ม 50 รายการ
+                    </button>
+                  </div>
+                )}
               </div>
             )
           })()}
@@ -938,31 +950,4 @@ function MiniStat({ label, value, color }) {
   return (
     <div>
       <p style={{ margin: 0, fontSize: 9, color: "var(--dx-text-muted)" }}>{label}</p>
-      <p className="dx-mono" style={{ margin: "2px 0 0", fontSize: 11, fontWeight: 700, color: color || "var(--dx-cyan-soft)" }}>
-        {value}
-      </p>
-    </div>
-  )
-}
-
-function Toast({ toast }) {
-  const isError = toast.type === "error"
-  return (
-    <div style={{
-      position: "fixed", top: 16, left: 16, right: 16, zIndex: 50,
-      padding: "12px 16px", borderRadius: 12,
-      display: "flex", alignItems: "center", gap: 10,
-      background: "var(--dx-bg-card)",
-      border: `1px solid ${isError ? "rgba(255,68,102,0.35)" : "rgba(0,255,136,0.35)"}`,
-      color: isError ? "var(--dx-danger)" : "var(--dx-success)",
-      boxShadow: "0 20px 40px -10px rgba(0,0,0,0.5)",
-      fontSize: 13,
-      ...(typeof window !== "undefined" && window.innerWidth >= 640
-        ? { left: "auto", right: 16, maxWidth: 360 }
-        : {}),
-    }}>
-      {isError ? <X size={16}/> : <CheckCircle size={16}/>}
-      <span>{toast.msg}</span>
-    </div>
-  )
-}
+      <p className="dx-mono" style={{ margin: "2px 0 0", f

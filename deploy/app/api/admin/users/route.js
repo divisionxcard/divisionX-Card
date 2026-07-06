@@ -1,5 +1,6 @@
 import { createClient } from "@supabase/supabase-js"
 import { NextResponse } from "next/server"
+import { requireAdmin } from "../../../../lib/apiAuth"
 
 // ใช้ Service Role Key เฉพาะ server-side เท่านั้น (ไม่เปิดเผยใน browser)
 const adminClient = createClient(
@@ -12,7 +13,9 @@ const USERNAME_RE = /^[a-z0-9_]{3,20}$/
 const validateUsername = (u) => typeof u === "string" && USERNAME_RE.test(u)
 
 // GET /api/admin/users — ดึงรายชื่อผู้ใช้ทั้งหมด
-export async function GET() {
+export async function GET(req) {
+  const gate = await requireAdmin(req)
+  if (gate.error) return gate.error
   try {
     const { data: { users }, error } = await adminClient.auth.admin.listUsers()
     if (error) throw error
@@ -39,6 +42,8 @@ export async function GET() {
 
 // POST /api/admin/users — เพิ่มผู้ใช้ใหม่
 export async function POST(req) {
+  const gate = await requireAdmin(req)
+  if (gate.error) return gate.error
   try {
     const { email, password, username, display_name, role } = await req.json()
 
@@ -85,6 +90,8 @@ export async function POST(req) {
 
 // PATCH /api/admin/users — แก้ไขสิทธิ์/ชื่อผู้ใช้/username
 export async function PATCH(req) {
+  const gate = await requireAdmin(req)
+  if (gate.error) return gate.error
   try {
     const { userId, role, display_name, username } = await req.json()
     if (!userId) {
@@ -125,12 +132,4 @@ export async function PATCH(req) {
 
 // DELETE /api/admin/users — ลบผู้ใช้
 export async function DELETE(req) {
-  try {
-    const { userId } = await req.json()
-    const { error } = await adminClient.auth.admin.deleteUser(userId)
-    if (error) throw error
-    return NextResponse.json({ success: true })
-  } catch (err) {
-    return NextResponse.json({ error: err.message }, { status: 400 })
-  }
-}
+  co

@@ -5,6 +5,7 @@ import {
   Pencil, Trash2, Eye, EyeOff,
 } from "lucide-react"
 import { StatusDot, SectionTitle } from "../shared/dx-components"
+import { authFetch } from "../../lib/authFetch"
 
 export default function PageUsers({ currentProfile, machines, machineAssignments, allProfiles, onAddAssignment, onRemoveAssignment }) {
   const [users, setUsers] = useState([])
@@ -24,7 +25,7 @@ export default function PageUsers({ currentProfile, machines, machineAssignments
   const loadUsers = async () => {
     setLoading(true)
     try {
-      const res = await fetch("/api/admin/users")
+      const res = await authFetch("/api/admin/users")
       const data = await res.json()
       if (data.error) throw new Error(data.error)
       setUsers(data)
@@ -39,7 +40,7 @@ export default function PageUsers({ currentProfile, machines, machineAssignments
     setSaving(true)
     try {
       const payload = { ...form, username: form.username.trim().toLowerCase() }
-      const res = await fetch("/api/admin/users", {
+      const res = await authFetch("/api/admin/users", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -62,7 +63,7 @@ export default function PageUsers({ currentProfile, machines, machineAssignments
     }
     setSavingEdit(true)
     try {
-      const res = await fetch("/api/admin/users", {
+      const res = await authFetch("/api/admin/users", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -84,7 +85,7 @@ export default function PageUsers({ currentProfile, machines, machineAssignments
   const handleDelete = async (userId, email) => {
     setDeleting(true)
     try {
-      const res = await fetch("/api/admin/users", {
+      const res = await authFetch("/api/admin/users", {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ userId }),
@@ -480,10 +481,4 @@ export default function PageUsers({ currentProfile, machines, machineAssignments
                   )}
                 </div>
               )
-            })}
-          </div>
-        </div>
-      )}
-    </div>
-  )
-}
+          

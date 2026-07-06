@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server"
+import { requireUser } from "../../../lib/apiAuth"
 
-export async function POST() {
+export async function POST(req) {
+  const gate = await requireUser(req)
+  if (gate.error) return gate.error
   const token = process.env.GH_PAT
   if (!token) {
     return NextResponse.json({ error: "GH_PAT not configured" }, { status: 500 })
@@ -42,8 +45,4 @@ export async function POST() {
     }
 
     const data = await res.text()
-    return NextResponse.json({ error: `GitHub API error: ${res.status}`, detail: data }, { status: res.status })
-  } catch (err) {
-    return NextResponse.json({ error: err.message }, { status: 500 })
-  }
-}
+    return NextResponse.json({ error: `GitHub API error: ${res.status}`, detail

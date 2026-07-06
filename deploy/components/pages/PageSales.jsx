@@ -10,6 +10,7 @@ import {
 import { CHART_COLORS } from "../shared/constants"
 import { fmt, fmtB, getLastNDays, fmtDayLabel, today, buildBrandMap, ksherFeePct } from "../shared/helpers"
 import { Badge, KpiCard, SectionTitle } from "../shared/dx-components"
+import { authFetch } from "../../lib/authFetch"
 
 // ─────────────────────────────────────────────
 // SALES: SKU × Machine breakdown
@@ -277,7 +278,7 @@ export default function PageSales({ machines, sales, skus, claims, onRefresh }) 
   const triggerSync = async (endpoint, label, setBusy) => {
     setBusy(true); setSyncMsg(null)
     try {
-      const res = await fetch(endpoint, { method: "POST" })
+      const res = await authFetch(endpoint, { method: "POST" })
       const data = await res.json()
       if (data.success) {
         setSyncMsg({ type: "success", text: `สั่งดึง ${label} ย้อนหลัง 3 วันสำเร็จ — รอประมาณ 2-3 นาที แล้วกด refresh` })
@@ -497,9 +498,4 @@ function Th({ children, align = "left", style, className }) {
       letterSpacing: 0.5, textTransform: "uppercase",
       color: "var(--dx-text-muted)",
       borderBottom: "1px solid var(--dx-border-strong)",
-      ...style,
-    }}>
-      {children}
-    </th>
-  )
-}
+      ...s

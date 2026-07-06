@@ -10,6 +10,7 @@ import {
   getOpenRestockSession, startRestockSession, closeRestockSession, cancelRestockSession,
   getRestockSessions, getRefillEventsForSession, updateRefillEventQty, getLatestStockSyncedAt,
 } from "../../lib/supabase"
+import { authFetch } from "../../lib/authFetch"
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 const bkkTime = (iso) => (iso ? new Date(iso).toLocaleString("th-TH", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }) : "")
@@ -68,8 +69,8 @@ export default function RestockSessionPanel({ machines = [], skus = [], profile 
     const before = await getLatestStockSyncedAt(machineIds)
     const brands = new Set(machineIds.map(brandOf))
     const triggers = []
-    if (brands.has("vms")) triggers.push(fetch("/api/stock-sync", { method: "POST" }))
-    if (brands.has("worldwide")) triggers.push(fetch("/api/worldwide-stock-sync", { method: "POST" }))
+    if (brands.has("vms")) triggers.push(authFetch("/api/stock-sync", { method: "POST" }))
+    if (brands.has("worldwide")) triggers.push(authFetch("/api/worldwide-stock-sync", { method: "POST" }))
     const results = await Promise.all(triggers.map((p) => p.then((r) => r.json()).catch((e) => ({ error: e.message }))))
     const failed = results.find((r) => !r.success)
     if (failed) throw new Error(failed.error || "สั่งซิงค์ไม่สำเร็จ")
@@ -357,8 +358,4 @@ function RefillTable({ events, nameOf, eventPacks, editId, editVal, setEditVal, 
       })}
       <div style={{ display: "flex", justifyContent: "flex-end", gap: 6, paddingTop: 4, borderTop: "1px solid var(--dx-border)" }}>
         <span style={{ fontSize: 12, fontWeight: 700, color: "var(--dx-text)" }}>รวมเติมทั้งหมด</span>
-        <span className="dx-mono" style={{ fontSize: 13, fontWeight: 700, color: "var(--dx-success)" }}>{fmt(grandPacks)} ซอง</span>
-      </div>
-    </div>
-  )
-}
+        <span className="dx-mono" style={{ fontSize: 13, fontWeight: 700, color: "var(--dx-success)" }}>{fmt(gran

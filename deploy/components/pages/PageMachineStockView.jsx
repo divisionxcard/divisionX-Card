@@ -8,6 +8,7 @@ import { CHART_COLORS } from "../shared/constants"
 import { fmt, sortSkus } from "../shared/helpers"
 import { SectionTitle } from "../shared/dx-components"
 import RestockSessionPanel from "./RestockSessionPanel"
+import { authFetch } from "../../lib/authFetch"
 
 export default function PageMachineStockView({ machines, machineStock, skus, onRefresh, profile }) {
   const [selectedMachine, setSelectedMachine] = useState("all")
@@ -21,7 +22,7 @@ export default function PageMachineStockView({ machines, machineStock, skus, onR
   const triggerStockSync = async (endpoint, label, setBusy) => {
     try {
       setBusy(true); setSyncMsg(null)
-      const res = await fetch(endpoint, { method: "POST" })
+      const res = await authFetch(endpoint, { method: "POST" })
       const data = await res.json()
       if (data.success) {
         setSyncMsg({ type: "success", msg: `กำลังดึงข้อมูลสต็อก ${label}... รอสักครู่แล้วกด Refresh` })
@@ -694,9 +695,4 @@ function Th({ children, align = "left", style }) {
       padding: "8px 8px", textAlign: align,
       fontSize: 10, fontWeight: 500, letterSpacing: 0.5, textTransform: "uppercase",
       color: "var(--dx-text-muted)",
-      ...style,
-    }}>
-      {children}
-    </th>
-  )
-}
+      ...s
