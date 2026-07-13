@@ -72,7 +72,7 @@ MACHINES / ตู้-สาขา
 | `deploy/app/api/vendos-stock-sync/route.js` | ปุ่ม "ดึงข้อมูล Vendos" บนเว็บ |
 
 ## Secrets ที่ต้องเพิ่ม
-- GitHub Secrets: `VENDOS_USERNAME`, `VENDOS_PASSWORD`
+- ✅ **GitHub Secrets: `VENDOS_USERNAME`, `VENDOS_PASSWORD` — เพิ่มแล้ว (2026-07-13)**
 - Vercel env (สำหรับปุ่ม manual): เหมือน WW (ใช้ GH_PAT ที่มีอยู่ trigger workflow)
 
 ## machines.config schema (ร่าง สำหรับ Vendos)
