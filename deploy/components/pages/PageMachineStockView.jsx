@@ -15,6 +15,7 @@ export default function PageMachineStockView({ machines, machineStock, skus, onR
   const [sortBy, setSortBy] = useState("slot")
   const [syncingVms, setSyncingVms] = useState(false)
   const [syncingWw,  setSyncingWw]  = useState(false)
+  const [syncingPayif, setSyncingPayif] = useState(false)
   const [syncMsg, setSyncMsg] = useState(null)
   const [showSkuDetail, setShowSkuDetail] = useState(false)
   const [showRefill, setShowRefill] = useState(false)
@@ -128,6 +129,11 @@ export default function PageMachineStockView({ machines, machineStock, skus, onR
               style={{ opacity: syncingWw ? 0.5 : 1, cursor: syncingWw ? "not-allowed" : "pointer" }}>
               <RefreshCw size={13} className={syncingWw ? "animate-spin" : ""}/>
               {syncingWw ? "กำลังดึง..." : "ดึงข้อมูล WW"}
+            </button>
+            <button onClick={() => triggerStockSync("/api/payif-stock-sync", "Payif", setSyncingPayif)} disabled={syncingPayif} className="dx-btn dx-btn-primary"
+              style={{ opacity: syncingPayif ? 0.5 : 1, cursor: syncingPayif ? "not-allowed" : "pointer" }}>
+              <RefreshCw size={13} className={syncingPayif ? "animate-spin" : ""}/>
+              {syncingPayif ? "กำลังดึง..." : "ดึงข้อมูล Payif"}
             </button>
             {machineStock.length > 0 && (
               <button onClick={() => setShowRefill(v => !v)}
@@ -695,4 +701,9 @@ function Th({ children, align = "left", style }) {
       padding: "8px 8px", textAlign: align,
       fontSize: 10, fontWeight: 500, letterSpacing: 0.5, textTransform: "uppercase",
       color: "var(--dx-text-muted)",
-      ...s
+      ...style,
+    }}>
+      {children}
+    </th>
+  )
+}
