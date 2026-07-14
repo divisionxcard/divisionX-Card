@@ -73,7 +73,9 @@ def login() -> requests.Session:
                json={"username": VENDOS_USER, "password": VENDOS_PASS}, timeout=30)
     if r.status_code != 200:
         raise SystemExit(f"❌ Login failed: HTTP {r.status_code} · {r.text[:200]}")
-    tok = (r.json() or {}).get("access_token")
+    j = r.json() or {}
+    # envelope ห่อ token ใน data: {"code":1000,"data":{"access_token":...}}
+    tok = (j.get("data") or {}).get("access_token") or j.get("access_token")
     if not tok:
         raise SystemExit(f"❌ Login OK แต่ไม่พบ access_token: {r.text[:200]}")
     s.headers.update({"Authorization": f"Bearer {tok}"})
