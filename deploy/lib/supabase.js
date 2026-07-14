@@ -1127,4 +1127,11 @@ export async function updateRefillEventQty(id, qtyAdded) {
   return data
 }
 
-// max(synced_at) ของ machine_stock สำหรับตู้ที่เลื�
+// max(synced_at) ของ machine_stock สำหรับตู้ที่เลือก (ใช้ poll ว่า sync รอบใหม่มาถึงยัง)
+export async function getLatestStockSyncedAt(machineIds) {
+  let q = supabase.from("machine_stock").select("synced_at").order("synced_at", { ascending: false }).limit(1)
+  if (machineIds?.length) q = q.in("machine_id", machineIds)
+  const { data, error } = await q.maybeSingle()
+  if (error) throw error
+  return data?.synced_at || null
+}
