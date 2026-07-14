@@ -1,10 +1,10 @@
 """
-DivisionX Card — Vendos Machine Stock Sync
-ดึงสต็อกหน้าตู้จาก Vendos control center API (JSON REST + Bearer token)
+DivisionX Card — Payif Machine Stock Sync
+ยี่ห้อตู้ = Payif · จัดการผ่าน Vendos control center API (JSON REST + Bearer token)
 
 Flow:
   1. POST /auth/user/token {username,password} → access_token
-  2. For each vendos machine ใน DB (brand='vendos', config.machine_id_vendor = shop_id):
+  2. For each payif machine ใน DB (brand='payif', config.machine_id_vendor = shop_id):
        GET /cc_api/shop/stock/{shop_id}  → list[{slot, product_id, sell_price, qty, capacity, warn_threshold}]
        GET /cc_api/shop/sales/{shop_id}  → dict{slot: {product_name, ...}}   (stock endpoint ไม่มีชื่อสินค้า)
        join ด้วย slot → ได้ชื่อสินค้า + คงเหลือ + ความจุ
@@ -93,9 +93,9 @@ def api_get(s: requests.Session, path: str):
     return j.get("data")
 
 
-def fetch_vendos_machines(supabase) -> list[dict]:
-    """[{machine_id, shop_id}] จาก machines brand='vendos'"""
-    res = supabase.table("machines").select("machine_id, config").eq("brand", "vendos").execute()
+def fetch_payif_machines(supabase) -> list[dict]:
+    """[{machine_id, shop_id}] จาก machines brand='payif'"""
+    res = supabase.table("machines").select("machine_id, config").eq("brand", "payif").execute()
     out = []
     for row in (res.data or []):
         cfg = row.get("config") or {}
@@ -169,16 +169,16 @@ def main():
     args = ap.parse_args()
 
     now_bkk = datetime.utcnow() + timedelta(hours=7)
-    print(f"\n{'=' * 50}\nDivisionX Card — Vendos Stock Sync\nเวลาไทย: {now_bkk:%Y-%m-%d %H:%M}\n{'=' * 50}\n")
+    print(f"\n{'=' * 50}\nDivisionX Card — Payif Stock Sync\nเวลาไทย: {now_bkk:%Y-%m-%d %H:%M}\n{'=' * 50}\n")
 
     if args.dry_run and args.shop_id:
         supabase = None
         machines = [{"machine_id": "TEST", "shop_id": args.shop_id}]
     else:
         supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
-        machines = fetch_vendos_machines(supabase)
+        machines = fetch_payif_machines(supabase)
         if not machines:
-            raise SystemExit("❌ ไม่พบ machine brand=vendos ใน DB — INSERT machines ก่อน sync")
+            raise SystemExit("❌ ไม่พบ machine brand=payif ใน DB — INSERT machines ก่อน sync")
     print(f"ตู้ทั้งหมด: {len(machines)} ตู้")
 
     s = login()

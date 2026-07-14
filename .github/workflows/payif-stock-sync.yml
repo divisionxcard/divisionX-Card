@@ -1,0 +1,48 @@
+name: Payif Stock Sync
+
+# ยี่ห้อตู้ Payif (ผ่าน Vendos portal API) — ดึงสต็อกหน้าตู้เข้า machine_stock
+# อ่านตู้จาก machines (brand='payif') · sync ทุกตู้อัตโนมัติเมื่อเพิ่มตู้ใหม่
+on:
+  schedule:
+    # ดึก 00:20 น. ไทย (17:20 UTC วันก่อน)
+    - cron: "20 17 * * *"
+    # เช้า 09:20 น. ไทย (02:20 UTC) — จับการเติมข้ามคืน ก่อนห้างเปิด
+    - cron: "20 2 * * *"
+  workflow_dispatch:
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install requests supabase
+
+      - name: Payif Stock Sync
+        env:
+          VENDOS_USERNAME:      ${{ secrets.VENDOS_USERNAME }}
+          VENDOS_PASSWORD:      ${{ secrets.VENDOS_PASSWORD }}
+          SUPABASE_URL:         ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: python deploy/scraper/payif_stock_sync.py
+
+      - name: Telegram alert on failure
+        if: failure()
+        env:
+          TELEGRAM_BOT_TOKEN:     ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_OWNER_CHAT_ID: ${{ secrets.TELEGRAM_OWNER_CHAT_ID }}
+        run: |
+          if [ -n "$TELEGRAM_BOT_TOKEN" ] && [ -n "$TELEGRAM_OWNER_CHAT_ID" ]; then
+            RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+              -H "Content-Type: application/json" \
+              -d "{\"chat_id\":\"$TELEGRAM_OWNER_CHAT_ID\",\"parse_mode\":\"HTML\",\"text\":\"🚨 <b>Cron Scraper FAIL</b>\\n\\nJob: <code>Payif Stock Sync</code>\\n<a href=\\\"$RUN_URL\\\">ดู log บน GitHub</a>\"}"
+          fi
