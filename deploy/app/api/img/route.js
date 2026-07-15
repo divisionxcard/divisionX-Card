@@ -22,4 +22,28 @@ export async function GET(request) {
     return new NextResponse("Invalid url", { status: 400 })
   }
   if (target.protocol !== "https:" || !ALLOWED_HOSTS.has(target.hostname)) {
-    return new Ne
+    return new NextResponse("Forbidden host", { status: 403 })
+  }
+
+  try {
+    const res = await fetch(target.toString(), {
+      headers: { "Referer": "https://vms.inboxcorp.co.th/" },
+    })
+
+    if (!res.ok) {
+      return new NextResponse("Image not found", { status: 404 })
+    }
+
+    const contentType = res.headers.get("content-type") || "image/png"
+    const buffer = await res.arrayBuffer()
+
+    return new NextResponse(buffer, {
+      headers: {
+        "Content-Type": contentType,
+        "Cache-Control": "public, max-age=86400, s-maxage=604800",
+      },
+    })
+  } catch {
+    return new NextResponse("Failed to fetch image", { status: 500 })
+  }
+}

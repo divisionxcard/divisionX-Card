@@ -498,4 +498,9 @@ function Th({ children, align = "left", style, className }) {
       letterSpacing: 0.5, textTransform: "uppercase",
       color: "var(--dx-text-muted)",
       borderBottom: "1px solid var(--dx-border-strong)",
-      ...s
+      ...style,
+    }}>
+      {children}
+    </th>
+  )
+}

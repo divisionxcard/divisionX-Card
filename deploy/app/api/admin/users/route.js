@@ -132,4 +132,18 @@ export async function PATCH(req) {
 
 // DELETE /api/admin/users — ลบผู้ใช้
 export async function DELETE(req) {
-  co
+  const gate = await requireAdmin(req)
+  if (gate.error) return gate.error
+  try {
+    const { userId } = await req.json()
+    // กัน admin ลบตัวเอง (lockout)
+    if (userId === gate.user.id) {
+      return NextResponse.json({ error: "ไม่สามารถลบบัญชีตัวเองได้" }, { status: 400 })
+    }
+    const { error } = await adminClient.auth.admin.deleteUser(userId)
+    if (error) throw error
+    return NextResponse.json({ success: true })
+  } catch (err) {
+    return NextResponse.json({ error: err.message }, { status: 400 })
+  }
+}

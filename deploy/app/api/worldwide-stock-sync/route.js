@@ -27,4 +27,8 @@ export async function POST(req) {
     }
 
     const data = await res.text()
-    return NextResponse.json({ error: `GitHub API error: ${res.status}`, detail: 
+    return NextResponse.json({ error: `GitHub API error: ${res.status}`, detail: data }, { status: res.status })
+  } catch (err) {
+    return NextResponse.json({ error: err.message }, { status: 500 })
+  }
+}

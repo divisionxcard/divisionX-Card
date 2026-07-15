@@ -358,4 +358,8 @@ function RefillTable({ events, nameOf, eventPacks, editId, editVal, setEditVal, 
       })}
       <div style={{ display: "flex", justifyContent: "flex-end", gap: 6, paddingTop: 4, borderTop: "1px solid var(--dx-border)" }}>
         <span style={{ fontSize: 12, fontWeight: 700, color: "var(--dx-text)" }}>รวมเติมทั้งหมด</span>
-        <span className="dx-mono" style={{ fontSize: 13, fontWeight: 700, color: "var(--dx-success)" }}>{fmt(gran
+        <span className="dx-mono" style={{ fontSize: 13, fontWeight: 700, color: "var(--dx-success)" }}>{fmt(grandPacks)} ซอง</span>
+      </div>
+    </div>
+  )
+}

@@ -481,4 +481,10 @@ export default function PageUsers({ currentProfile, machines, machineAssignments
                   )}
                 </div>
               )
-          
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
