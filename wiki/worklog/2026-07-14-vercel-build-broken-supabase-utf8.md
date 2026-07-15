@@ -2,7 +2,7 @@
 type: worklog
 date: 2026-07-14
 tags: [bugfix, vercel, build, deploy, supabase, utf8, incident]
-commits: [ebdec13]
+commits: [ebdec13, 1f08581]
 severity: high — production ค้างมา 8 วัน
 ---
 
@@ -33,9 +33,22 @@ commit **cfd3a67** ("security: add auth...") ทำให้ **ท้ายไ�
 - คอมเมนต์/ข้อความไทยในโค้ด เสี่ยงถ้าไฟล์ถูกตัด/save ผิด encoding → ควรเช็ก `git diff` ตอน commit ว่ามี `\ No newline` + byte เพี้ยนไหม
 - deploy Error สะสมเงียบ ๆ ได้นาน (prod ค้าง 8 วันไม่มีใครรู้ จนบังเอิญเจอตอนปุ่มไม่ขึ้น) → ควรมี alert เมื่อ Vercel deploy fail
 
-## ค้าง/ติดตาม
-- ยังมีไฟล์ security อื่น ๆ ค้างเป็น `M` ใน working tree (deploy/app/api/*, components/*) — ยังไม่ committed · เป็นงานคนละส่วน ไม่แตะ
-- verify deploy ebdec13 build ผ่าน → payif route + งานค้างทั้งหมดขึ้น prod
+## เจอเพิ่ม: ไม่ใช่แค่ supabase.js — cfd3a67 ตัดหลายไฟล์
+หลังแก้ supabase.js แล้ว stash working tree → build HEAD → เจอ **ไฟล์ที่ 2**:
+`app/api/admin/users/route.js` ตัดที่บรรทัด 135 (`co` ค้าง) = Syntax Error
+→ commit `cfd3a67` **ตัดหลายไฟล์กลางคัน** · working tree มีตัวเต็มค้างเป็น `M` (build ผ่าน) แต่ไม่เคย commit
+
+**กู้ตัวเต็ม (1f08581):** commit ไฟล์ M ทั้งหมดที่ cfd3a67 ตัด —
+api/{admin/users,img,stock-sync,vms-sync,worldwide-stock-sync,worldwide-sync} +
+components/{PageSales,PageStock,PageUsers,RestockSessionPanel} (admin/users 134→149 บรรทัด)
+→ build HEAD ผ่าน (stash-free) · push
+
+**วิธีจับให้ครบ:** `git stash` ไฟล์ M ออก แล้ว `npm run build` = เทสต์ตรงกับที่ Vercel build (HEAD)
+อย่าเชื่อ build ที่มี working-tree M ปน — มันปิดบั๊กที่ committed truncation
+
+## บทเรียนเพิ่ม
+- working tree M ที่ค้างนาน = อันตราย: build ในเครื่องผ่านเพราะใช้ working tree · แต่ HEAD (Vercel) พัง
+- commit ที่ "ตัดไฟล์" (มี `\ No newline` + บรรทัดขาดครึ่ง) = สัญญาณ tool/save เพี้ยน — ควร review diff ก่อน push เสมอ
 
 ## 🔗 เกี่ยวข้อง
 [[2026-07-14-payif-machine-live]] · commit cfd3a67 (security) ต้นเหตุ
