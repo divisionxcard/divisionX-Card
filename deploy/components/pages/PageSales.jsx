@@ -121,8 +121,8 @@ function SalesSkuByMachine({ sales, machines, skus }) {
                 <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                   <div style={{
                     width: 10, height: 10, borderRadius: 999,
-                    background: CHART_COLORS[mi],
-                    boxShadow: `0 0 8px ${CHART_COLORS[mi]}`,
+                    background: CHART_COLORS[mi % CHART_COLORS.length],
+                    boxShadow: `0 0 8px ${CHART_COLORS[mi % CHART_COLORS.length]}`,
                   }}/>
                   <div style={{ textAlign: "left" }}>
                     <p style={{ margin: 0, fontSize: 12, fontWeight: 600, color: "var(--dx-text)" }}>{m.name}</p>
@@ -454,7 +454,7 @@ export default function PageSales({ machines, sales, skus, claims, onRefresh }) 
                     cursor={{ fill: "transparent" }}/>
                   <Legend wrapperStyle={{ fontSize: 11, color: "var(--dx-text-secondary)" }}/>
                   {machines.map((m, i) => (
-                    <Bar key={m.machine_id} dataKey={m.name} fill={CHART_COLORS[i]}
+                    <Bar key={m.machine_id} dataKey={m.name} fill={CHART_COLORS[i % CHART_COLORS.length]}
                       radius={viewMode === "stacked" ? [0, 0, 0, 0] : [4, 4, 0, 0]}
                       stackId={viewMode === "stacked" ? "a" : undefined}/>
                   ))}

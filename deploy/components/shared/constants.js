@@ -26,7 +26,11 @@ export const SKUS = [
 ]
 
 export const SERIES_COLOR = { OP: "#3b82f6", PRB: "#8b5cf6", EB: "#10b981" }
-export const CHART_COLORS = ["#3b82f6","#8b5cf6","#10b981","#f59e0b","#ef4444","#06b6d4"]
+export const CHART_COLORS = [
+  "#3b82f6","#8b5cf6","#10b981","#f59e0b","#ef4444","#06b6d4",
+  "#ec4899","#84cc16","#f97316","#14b8a6","#a855f7","#eab308",
+  "#22d3ee","#f43f5e",
+]
 
 export const THAI_MONTHS = ["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."]
 

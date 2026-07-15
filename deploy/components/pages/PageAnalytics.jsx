@@ -205,9 +205,9 @@ export default function PageAnalytics({ sales, skus, machines = [] }) {
                 />
                 <Legend wrapperStyle={{ fontSize: 11, color: "var(--dx-text-secondary)" }}/>
                 {top5.map((skuId, i) => (
-                  <Line key={skuId} type="monotone" dataKey={skuId} stroke={CHART_COLORS[i]} strokeWidth={2}
-                    dot={{ r: 3, fill: CHART_COLORS[i] }}
-                    style={{ filter: `drop-shadow(0 0 3px ${CHART_COLORS[i]})` }}/>
+                  <Line key={skuId} type="monotone" dataKey={skuId} stroke={CHART_COLORS[i % CHART_COLORS.length]} strokeWidth={2}
+                    dot={{ r: 3, fill: CHART_COLORS[i % CHART_COLORS.length] }}
+                    style={{ filter: `drop-shadow(0 0 3px ${CHART_COLORS[i % CHART_COLORS.length]})` }}/>
                 ))}
               </LineChart>
             </ResponsiveContainer>
