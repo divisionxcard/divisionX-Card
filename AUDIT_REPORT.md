@@ -89,4 +89,20 @@
 - เพิ่มไฟล์ `deploy/lib/apiAuth.js` (`requireUser` / `requireAdmin`) และ `deploy/lib/authFetch.js`
 - `/api/admin/users` — ทุก method ต้องเป็น admin + กัน admin ลบตัวเอง · `PageUsers.jsx` ส่ง token แล้ว
 - `/api/img` — จำกัด https + allowlist `vms.inboxcorp.co.th`, `api.inboxcorp.co.th` (ปิด SSRF)
-- `/api/vms-sync`, `/api/stock-sync`, `/api/
+- `/api/vms-sync`, `/api/stock-sync`, `/api/worldwide-sync`, `/api/worldwide-stock-sync` — ต้อง login · ปรับ client 3 ไฟล์ให้ส่ง token
+- เพิ่ม migration `053_rls_transactional_tables.sql` — **รอรันบน Supabase + ทดสอบ staging**
+- 🔧 ต้องทำเอง: rotate Google service account key (`nice-limiter-*.json`)
+
+## ข้อ 2 — ลบไฟล์ซ้ำ
+- ลบ `divisionX-Card/`, `frontend/`, `.EXE` 443MB, `deploy/backups/`, `deploy/.claude-design-output/`, `.understand-anything/`, `__pycache__/` → คืนพื้นที่ ~1.75GB
+- เพิ่ม `backend/database/migrations/README.md` บันทึกเลข migration ที่ชน + กติกาเริ่ม 054
+
+## ข้อ 3 — Performance
+- ตรวจแล้ว: DB มี index ครบเกือบหมด · ช่องว่างจริงคือ `stock_in` เรียงตาม `created_at` แต่ไม่มี index
+- เพิ่ม migration `054_perf_stock_in_created_at_index.sql` (zero-risk) — **รอรันบน Supabase**
+- หมายเหตุ: จำกัดจำนวนแถว stock_in/stock_out ฝั่ง client ไม่ได้ เพราะหน้าเบิกใช้คำนวณยอด Lot คงเหลือจากประวัติทั้งหมด (แนะนำ lazy-load หน้ายอดขายเป็น follow-up ที่ต้องทดสอบ)
+
+## ข้อ 4 — UX
+- หน้า "ประวัติการรับ" (`PageStock.jsx`) แสดงทีละ 50 แถว + ปุ่ม "แสดงเพิ่ม" (กันหน้าอืดเมื่อข้อมูลเยอะ)
+
+**ต้องทำเองก่อน production:** รัน migration 053 + 054 บน Supabase (ทดสอบ staging ก่อน), rotate service key, แล้ว push ขึ้น `main` เพื่อให้ Vercel deploy
