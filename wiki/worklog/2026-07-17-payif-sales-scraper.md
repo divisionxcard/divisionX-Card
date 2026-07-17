@@ -2,8 +2,8 @@
 type: worklog
 date: 2026-07-17
 tags: [payif, vendos, sales, scraper, api, live, iconsiam]
-commits: [bb2e63b, 96a835b, 1bcb5c3]
-status: ✅ live — sales scraper เสร็จ · backfill 30 orders · cron เปิดแล้ว
+commits: [bb2e63b, 96a835b, 1bcb5c3, 6b45ba4, 485ac55, 03cd7d3]
+status: ✅ live — sales scraper เสร็จ · backfill 30 orders · cron เปิดแล้ว · ปุ่มเว็บเสร็จ
 ---
 
 # Payif sales scraper — ตู้ pf01 (ไอคอนสยาม) ยอดขายเข้าระบบ
@@ -49,10 +49,16 @@ REPORT GET /cc_api/reports/order-detail-report?ft_from_dt=… → xlsx (สำ�
   ช่วง **14 ก.ค. 18:00 → 17 ก.ค. 21:54** (ไทย) · 17 SKU (OP/FB/PRB/NRT/PKM) — ตรง dry-run เป๊ะ
 - หน้ายอดขายบนเว็บแสดง pf01 อัตโนมัติ (frontend รวมข้ามแบรนด์ผ่าน machine_id)
 
+## ปุ่ม manual sync ยอดขายบนเว็บ (03cd7d3)
+- `deploy/app/api/payif-sync/route.js` — dispatch `payif-sync.yml` (ย้อน 3 วัน `from_date/to_date` · `requireUser`) ลอก worldwide-sync
+- ปุ่ม **"Sync Payif"** ใน `PageSales.jsx` ถัดจาก Sync VMS/WW (state `syncingPayif` · reuse `triggerSync`)
+- `npm run build` ผ่าน · `/api/payif-sync` compiled — เดิมมีแค่ปุ่ม stock (ฝั่งสต็อกหน้าตู้)
+
 ## หมายเหตุ / ต่อยอด
 - ตู้เริ่มขาย **14 ก.ค.** (order แรก) ไม่ใช่ 1 ก.ค. — backfill เผื่อช่วงกว้างไม่มีผล (order มีเท่าที่มี)
 - cron active แล้วตั้งแต่ push · 00:15 คืนนี้จะดึง `--days 1` (เมื่อวาน+วันนี้) อัตโนมัติ · dup กันด้วย sale_key
 - ยังไม่ทำ: ship-fail tracking (Payif refund ในตัว?) — รอเจอเคส order ที่ไม่ success ก่อน
+- ✅ ปุ่ม manual sync ยอดขาย Payif เสร็จแล้ว (ดูด้านบน) — Payif มีปุ่มครบทั้ง stock + sales
 
 ## 🔗 เกี่ยวข้อง
 [[2026-07-14-payif-machine-live]] · [[2026-07-14-vendos-stock-scraper]] · [[project_vendos_integration]] · [[project_sku_mapping_two_scraper_maps]] · [[reference_trigger_github_workflow]]
