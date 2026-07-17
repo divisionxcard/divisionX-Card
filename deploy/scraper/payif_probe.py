@@ -136,23 +136,42 @@ def main():
         raise SystemExit("❌ --orders-only ต้องระบุ --shop-id ด้วย")
 
     # ── ORDER deep probe — หา transaction จริง (timestamp + สินค้า + ยอดเงิน) ──
-    print("── ORDER deep probe (shop", sid, ") ──")
-    order_data = show(s, f"/cc_api/shop/order/{sid}")
-    # ลอง pagination / date filter หลายรูปแบบ (เดาจาก convention ทั่วไป)
-    show(s, f"/cc_api/shop/order/{sid}", params={"page": 1, "limit": 20})
-    show(s, f"/cc_api/shop/order/{sid}", params={"page": 1, "page_size": 20})
-    show(s, f"/cc_api/shop/order/{sid}", params={"start": "2026-07-01", "end": "2026-07-31"})
-    show(s, f"/cc_api/shop/order/{sid}",
-         params={"date_from": "2026-07-01", "date_to": "2026-07-31"})
+    # จาก static /static/js/api.js (ยืนยัน):
+    #   get_order:        GET /cc_api/shop/order          (ไม่มี param — list ทั้งบัญชี)
+    #   get_order_detail: GET /cc_api/shop/order/{order_id}
+    #   sum_sales:        GET /cc_api/summary/sales-summary?<qs>
+    #   order report:     GET /cc_api/reports/order-detail-report?<qs> (download file)
+    print("── ORDER list (bare — จาก api.js get_order) ──")
+    order_data = show(s, "/cc_api/shop/order")
+    # เผื่อ list ยาว — ดู 3 รายการแรกเต็ม ๆ (show ตัดเหลือ item เดียว)
+    lst = order_data if isinstance(order_data, list) else (order_data or {}).get("data")
+    if isinstance(lst, list) and lst:
+        print(f"  (ทั้งหมด {len(lst)} orders · sample 3 รายการแรก)")
+        print(json.dumps(lst[:3], ensure_ascii=False, indent=2)[:4000], "\n")
 
-    # ถ้า list order มี item → เจาะ detail ด้วย order id ตัวแรก
+    # เจาะ detail ด้วย order id ตัวแรก
     oid = first_id(order_data)
     if oid is not None:
         print(f"── ORDER detail (order id={oid}) ──")
-        show(s, f"/cc_api/shop/order/{sid}/{oid}")
-        show(s, f"/cc_api/shop/order/detail/{oid}")
-        show(s, f"/cc_api/order/{oid}")
-        show(s, f"/cc_api/order/detail/{oid}")
+        show(s, f"/cc_api/shop/order/{oid}")
+
+    print("── SUMMARY / REPORT (ลอง qs หลายแบบ) ──")
+    show(s, "/cc_api/summary/sales-summary")
+    show(s, "/cc_api/summary/sales-summary",
+         params={"start": "2026-07-01", "end": "2026-07-17"})
+    show(s, "/cc_api/summary/sales-summary",
+         params={"date_from": "2026-07-01", "date_to": "2026-07-17", "shop_id": sid})
+    # report = download file → ดูแค่ HTTP status + content-type
+    for qs in ({"start": "2026-07-01", "end": "2026-07-17"},
+               {"date_from": "2026-07-01", "date_to": "2026-07-17"},
+               {"start": "2026-07-01", "end": "2026-07-17", "shop_id": sid}):
+        try:
+            r = s.get(f"{BASE}/cc_api/reports/order-detail-report", params=qs, timeout=30)
+            ct = r.headers.get("Content-Type", "")
+            body = r.text[:300] if "json" in ct or "text" in ct else f"({len(r.content)} bytes)"
+            print(f"GET /cc_api/reports/order-detail-report ?{qs} → HTTP {r.status_code} · {ct} · {body}\n")
+        except Exception as e:
+            print(f"GET /cc_api/reports/order-detail-report ?{qs} → ERROR {e}\n")
 
 
 if __name__ == "__main__":
