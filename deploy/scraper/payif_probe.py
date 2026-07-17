@@ -155,39 +155,49 @@ def main():
         print(f"── ORDER detail (order id={oid}) ──")
         show(s, f"/cc_api/shop/order/{oid}")
 
-    # bare order crash "NoneType tzinfo" = endpoint ต้องการ date param → brute-force ชื่อ param
-    print("── ORDER param brute-force (หาว่า date param ชื่ออะไร) ──")
-    D1, D2 = "2026-07-01", "2026-07-17"
-    D1T, D2T = "2026-07-01 00:00:00", "2026-07-17 23:59:59"
+    # date filter param จริง = ft_from_dt / ft_to_dt (จาก api.js get_weekly_val)
+    #   format: ft_from_dt=YYYY-MM-DDT00:00:00.000 · ft_to_dt=YYYY-MM-DDT23:59:59.000
+    print("── ORDER — ft_from_dt/ft_to_dt (param จริงจาก api.js) ──")
+    FT_FROM = "2026-07-01T00:00:00.000"
+    FT_TO   = "2026-07-17T23:59:59.000"
     param_candidates = [
-        {"start": D1, "end": D2},
-        {"begin": D1, "end": D2},
-        {"from": D1, "to": D2},
-        {"date_from": D1, "date_to": D2},
-        {"start_date": D1, "end_date": D2},
-        {"startDate": D1, "endDate": D2},
-        {"start_time": D1T, "end_time": D2T},
-        {"startTime": D1T, "endTime": D2T},
-        {"st": D1, "et": D2},
-        {"start": D1T, "end": D2T},
-        {"start": D1, "end": D2, "shop_id": sid},
-        {"start": D1, "end": D2, "shop": sid},
-        {"start": D1, "end": D2, "page": 1, "page_size": 50},
+        {"ft_from_dt": FT_FROM, "ft_to_dt": FT_TO},
+        {"ft_from_dt": FT_FROM, "ft_to_dt": FT_TO, "start": 0, "length": 50},
+        {"ft_from_dt": FT_FROM, "ft_to_dt": FT_TO, "shop_id": sid},
+        {"ft_to_dt": FT_TO},   # get_daily_val ส่งแค่ ft_to_dt
+        # DataTables server-side style (Aj.get ผูกกับ DataTable)
+        {"ft_from_dt": FT_FROM, "ft_to_dt": FT_TO, "draw": 1, "start": 0, "length": 50},
     ]
+    order_rows = None
     for qs in param_candidates:
         try:
-            r = s.get(f"{BASE}/cc_api/shop/order", params=qs, timeout=30)
+            r = s.get(f"{BASE}/cc_api/shop/order", params=qs, timeout=60)
             j = r.json()
             code = j.get("code")
             data = j.get("data")
-            n = len(data) if isinstance(data, list) else ("null" if data is None else "dict")
+            n = len(data) if isinstance(data, list) else ("null" if data is None else f"dict:{list(data.keys())}")
             tag = "✅ WORKS" if code == 1000 else ""
-            print(f"  ?{qs} → code={code} desc={str(j.get('desc'))[:60]!r} data={n} {tag}")
-            if code == 1000 and isinstance(data, list) and data:
-                print("    sample:", json.dumps(data[0], ensure_ascii=False)[:800])
+            print(f"  ?{qs} → code={code} desc={str(j.get('desc'))[:50]!r} data={n} {tag}")
+            if code == 1000 and data:
+                rows = data if isinstance(data, list) else data.get("data") or data.get("rows") or data.get("list")
+                if isinstance(rows, list) and rows and order_rows is None:
+                    order_rows = rows
+                    print(f"    → {len(rows)} orders · sample 2 รายการ:")
+                    print(json.dumps(rows[:2], ensure_ascii=False, indent=2)[:2500])
         except Exception as e:
             print(f"  ?{qs} → ERROR {e}")
     print()
+
+    # ถ้าได้ order list → เจาะ detail ตัวแรก
+    if order_rows:
+        item = order_rows[0]
+        oid = None
+        for k in ("id", "order_id", "order_no", "orderNum", "order_num", "txn_no", "_id"):
+            if isinstance(item, dict) and item.get(k) is not None:
+                oid = item[k]; print(f"  order id field='{k}'={oid}"); break
+        if oid is not None:
+            print(f"── ORDER DETAIL /cc_api/shop/order/{oid} ──")
+            show(s, f"/cc_api/shop/order/{oid}")
 
     print("── SUMMARY / REPORT (ลอง qs หลายแบบ) ──")
     show(s, "/cc_api/summary/sales-summary")
@@ -195,15 +205,14 @@ def main():
          params={"start": "2026-07-01", "end": "2026-07-17"})
     show(s, "/cc_api/summary/sales-summary",
          params={"date_from": "2026-07-01", "date_to": "2026-07-17", "shop_id": sid})
-    # report = download file → ดูแค่ HTTP status + content-type
-    for qs in ({"start": "2026-07-01", "end": "2026-07-17"},
-               {"date_from": "2026-07-01", "date_to": "2026-07-17"},
-               {"start": "2026-07-01", "end": "2026-07-17", "shop_id": sid}):
+    # report = download file (xlsx) → ดูแค่ HTTP status + content-type (ใช้ ft_from_dt/ft_to_dt)
+    for qs in ({"ft_from_dt": "2026-07-01T00:00:00.000", "ft_to_dt": "2026-07-17T23:59:59.000"},
+               {"ft_from_dt": "2026-07-01T00:00:00.000", "ft_to_dt": "2026-07-17T23:59:59.000", "shop_id": sid}):
         try:
             r = s.get(f"{BASE}/cc_api/reports/order-detail-report", params=qs, timeout=30)
             ct = r.headers.get("Content-Type", "")
-            body = r.text[:300] if "json" in ct or "text" in ct else f"({len(r.content)} bytes)"
-            print(f"GET /cc_api/reports/order-detail-report ?{qs} → HTTP {r.status_code} · {ct} · {body}\n")
+            body = r.text[:300] if "json" in ct or "text" in ct else f"({len(r.content)} bytes · {ct})"
+            print(f"GET /cc_api/reports/order-detail-report ?{qs} → HTTP {r.status_code} · {body}\n")
         except Exception as e:
             print(f"GET /cc_api/reports/order-detail-report ?{qs} → ERROR {e}\n")
 
