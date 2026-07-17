@@ -155,6 +155,40 @@ def main():
         print(f"── ORDER detail (order id={oid}) ──")
         show(s, f"/cc_api/shop/order/{oid}")
 
+    # bare order crash "NoneType tzinfo" = endpoint ต้องการ date param → brute-force ชื่อ param
+    print("── ORDER param brute-force (หาว่า date param ชื่ออะไร) ──")
+    D1, D2 = "2026-07-01", "2026-07-17"
+    D1T, D2T = "2026-07-01 00:00:00", "2026-07-17 23:59:59"
+    param_candidates = [
+        {"start": D1, "end": D2},
+        {"begin": D1, "end": D2},
+        {"from": D1, "to": D2},
+        {"date_from": D1, "date_to": D2},
+        {"start_date": D1, "end_date": D2},
+        {"startDate": D1, "endDate": D2},
+        {"start_time": D1T, "end_time": D2T},
+        {"startTime": D1T, "endTime": D2T},
+        {"st": D1, "et": D2},
+        {"start": D1T, "end": D2T},
+        {"start": D1, "end": D2, "shop_id": sid},
+        {"start": D1, "end": D2, "shop": sid},
+        {"start": D1, "end": D2, "page": 1, "page_size": 50},
+    ]
+    for qs in param_candidates:
+        try:
+            r = s.get(f"{BASE}/cc_api/shop/order", params=qs, timeout=30)
+            j = r.json()
+            code = j.get("code")
+            data = j.get("data")
+            n = len(data) if isinstance(data, list) else ("null" if data is None else "dict")
+            tag = "✅ WORKS" if code == 1000 else ""
+            print(f"  ?{qs} → code={code} desc={str(j.get('desc'))[:60]!r} data={n} {tag}")
+            if code == 1000 and isinstance(data, list) and data:
+                print("    sample:", json.dumps(data[0], ensure_ascii=False)[:800])
+        except Exception as e:
+            print(f"  ?{qs} → ERROR {e}")
+    print()
+
     print("── SUMMARY / REPORT (ลอง qs หลายแบบ) ──")
     show(s, "/cc_api/summary/sales-summary")
     show(s, "/cc_api/summary/sales-summary",
