@@ -1,0 +1,76 @@
+name: Payif Daily Sales Sync
+
+# ยี่ห้อตู้ Payif (ผ่าน Vendos portal API) — ดึงยอดขายเข้า sales table
+# อ่านตู้จาก machines (brand='payif') · sync ทุกตู้อัตโนมัติเมื่อเพิ่มตู้ใหม่
+on:
+  schedule:
+    # ทุกวัน 00:15 น. ไทย (17:15 UTC วันก่อน) — ยอดขายเมื่อวาน (คั่นกลาง stock 00:20)
+    - cron: "15 17 * * *"
+  workflow_dispatch:
+    inputs:
+      days:
+        description: "จำนวนวันย้อนหลัง (default: 1 = เมื่อวาน)"
+        required: false
+        default: "1"
+      from_date:
+        description: "วันเริ่มต้น (YYYY-MM-DD) สำหรับ backfill"
+        required: false
+      to_date:
+        description: "วันสิ้นสุด (YYYY-MM-DD) สำหรับ backfill"
+        required: false
+      dry_run:
+        description: "dry-run (ไม่ save ลง Supabase)"
+        type: boolean
+        default: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install requests supabase
+
+      - name: Payif Sales Sync
+        env:
+          VENDOS_USERNAME:      ${{ secrets.VENDOS_USERNAME }}
+          VENDOS_PASSWORD:      ${{ secrets.VENDOS_PASSWORD }}
+          SUPABASE_URL:         ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          IN_DAYS:      ${{ inputs.days }}
+          IN_FROM_DATE: ${{ inputs.from_date }}
+          IN_TO_DATE:   ${{ inputs.to_date }}
+          IN_DRY_RUN:   ${{ inputs.dry_run }}
+        working-directory: deploy/scraper
+        run: |
+          ARGS=()
+          if [ -n "$IN_FROM_DATE" ] && [ -n "$IN_TO_DATE" ]; then
+            ARGS+=(--from-date "$IN_FROM_DATE" --to-date "$IN_TO_DATE")
+            echo "🗓  Backfill: $IN_FROM_DATE → $IN_TO_DATE"
+          elif [ -n "$IN_DAYS" ]; then
+            ARGS+=(--days "$IN_DAYS")
+            echo "📅 Days back: $IN_DAYS"
+          fi
+          if [ "$IN_DRY_RUN" = "true" ]; then ARGS+=(--dry-run); echo "🧪 DRY-RUN"; fi
+          python payif_sales_sync.py "${ARGS[@]}"
+
+      - name: Telegram alert on failure
+        if: failure()
+        env:
+          TELEGRAM_BOT_TOKEN:     ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_OWNER_CHAT_ID: ${{ secrets.TELEGRAM_OWNER_CHAT_ID }}
+        run: |
+          if [ -n "$TELEGRAM_BOT_TOKEN" ] && [ -n "$TELEGRAM_OWNER_CHAT_ID" ]; then
+            RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+              -H "Content-Type: application/json" \
+              -d "{\"chat_id\":\"$TELEGRAM_OWNER_CHAT_ID\",\"parse_mode\":\"HTML\",\"text\":\"🚨 <b>Cron Scraper FAIL</b>\\n\\nJob: <code>Payif Daily Sales Sync</code>\\n<a href=\\\"$RUN_URL\\\">ดู log บน GitHub</a>\"}"
+          fi
