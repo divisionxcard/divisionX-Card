@@ -24,3 +24,4 @@ type: worklog-index
 - [[2026-06-11-rename-wwv05-seacon-bangkae]] — wwv05 placeholder "ยานนาวา" → ชื่อจริง "ซีคอน บางแค" หลังติดตั้ง · DB+migration 047+wiki
 - [[2026-06-11-add-favicon]] — เพิ่ม favicon โลโก้ DC บนแท็บ · app/icon.jpg ตาม Next.js convention · เดิมเป็นลูกโลก default
 - [[2026-06-11-kingpower-aot-plan-kb]] — วางแผน + KB โปรเจค King Power/AOT ลงตู้สนามบิน · แผนผัง 5 เฟส + สเปค Text File V9
+- [[2026-07-17-payif-sales-scraper]] — sales scraper ตู้ pf01 (ไอคอนสยาม) · `/cc_api/shop/order` param `ft_from_dt/ft_to_dt` · backfill 30 orders ฿6,641 · cron 00:15
