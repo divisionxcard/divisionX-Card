@@ -273,6 +273,7 @@ export default function PageSales({ machines, sales, skus, claims, onRefresh }) 
   const [machineSel, setMachineSel] = useState("all")
   const [syncingVms, setSyncingVms] = useState(false)
   const [syncingWw,  setSyncingWw]  = useState(false)
+  const [syncingPayif, setSyncingPayif] = useState(false)
   const [syncMsg, setSyncMsg] = useState(null)
 
   const triggerSync = async (endpoint, label, setBusy) => {
@@ -390,6 +391,11 @@ export default function PageSales({ machines, sales, skus, claims, onRefresh }) 
               style={{ opacity: syncingWw ? 0.5 : 1, cursor: syncingWw ? "not-allowed" : "pointer" }}>
               {syncingWw ? <Loader2 size={13} className="animate-spin"/> : <RefreshCw size={13}/>}
               {syncingWw ? "กำลังสั่ง..." : "Sync WW"}
+            </button>
+            <button onClick={() => triggerSync("/api/payif-sync", "Payif", setSyncingPayif)} disabled={syncingPayif} className="dx-btn dx-btn-primary"
+              style={{ opacity: syncingPayif ? 0.5 : 1, cursor: syncingPayif ? "not-allowed" : "pointer" }}>
+              {syncingPayif ? <Loader2 size={13} className="animate-spin"/> : <RefreshCw size={13}/>}
+              {syncingPayif ? "กำลังสั่ง..." : "Sync Payif"}
             </button>
             <select value={machineSel} onChange={e => setMachineSel(e.target.value)}
               className="dx-input" style={{ width: "auto", padding: "9px 12px", fontSize: 12 }}>
