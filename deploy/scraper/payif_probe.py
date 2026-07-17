@@ -25,7 +25,9 @@ def login(user: str, pw: str) -> str:
                       json={"username": user, "password": pw}, timeout=30)
     print(f"LOGIN POST /auth/user/token → HTTP {r.status_code}")
     r.raise_for_status()
-    tok = (r.json() or {}).get("access_token")
+    j = r.json() or {}
+    # envelope ห่อ token ใน data: {"code":1000,"data":{"access_token":...}}
+    tok = (j.get("data") or {}).get("access_token") or j.get("access_token")
     if not tok:
         raise SystemExit(f"❌ ไม่พบ access_token ใน response: {r.text[:300]}")
     print("  ✅ ได้ access_token แล้ว\n")
@@ -84,6 +86,8 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--user", default=os.environ.get("VENDOS_USERNAME"))
     ap.add_argument("--pass", dest="pw", default=os.environ.get("VENDOS_PASSWORD"))
+    ap.add_argument("--shop-id", default=None, help="ระบุ shop id ตรง ๆ (ข้าม discovery) เช่น 208")
+    ap.add_argument("--orders-only", action="store_true", help="เจาะเฉพาะ order endpoints")
     a = ap.parse_args()
     if not a.user or not a.pw:
         raise SystemExit("❌ ต้องมี VENDOS_USERNAME/PASSWORD (env) หรือ --user/--pass")
@@ -96,34 +100,59 @@ def main():
     s = requests.Session()
     s.headers.update({"Authorization": f"Bearer {tok}"})
 
-    # ── endpoints ที่ไม่ต้องระบุ id ──
-    print("── รายการตู้/สาขา/สินค้า ──")
-    shops = show(s, "/cc_api/shop")
-    show(s, "/cc_api/vdm")
-    show(s, "/cc_api/vdm/undeployed")
-    show(s, "/cc_api/product")
+    sid = a.shop_id
+    if not a.orders_only:
+        # ── endpoints ที่ไม่ต้องระบุ id ──
+        print("── รายการตู้/สาขา/สินค้า ──")
+        shops = show(s, "/cc_api/shop")
+        show(s, "/cc_api/vdm")
+        show(s, "/cc_api/vdm/undeployed")
+        show(s, "/cc_api/product")
 
-    # ── หา shop id เพื่อลอง stock/sales ──
-    print("── หา shop id ──")
-    sid = first_id(shops)
-    print()
+        # ── หา shop id เพื่อลอง stock/sales ──
+        if sid is None:
+            print("── หา shop id ──")
+            sid = first_id(shops)
+            print()
+
+        if sid is None:
+            print("⚠️ ยังไม่มี shop (ตู้ยังไม่ลงทะเบียน/ยังไม่มีข้อมูล) → ข้าม stock/sales")
+            print("   รันสคริปต์นี้อีกครั้งเมื่อตู้เริ่มมีข้อมูล")
+            return
+
+        # ลองทั้งแบบ path param และ query param (ยังไม่รู้ว่า Aj.get ต่อ id แบบไหน)
+        print("── STOCK (ลองหลายรูปแบบ id) ──")
+        show(s, f"/cc_api/shop/stock/{sid}")
+        show(s, "/cc_api/shop/stock", params={"id": sid})
+        show(s, "/cc_api/shop/stock", params={"shop_id": sid})
+
+        print("── SALES / ORDER ──")
+        show(s, f"/cc_api/shop/sales/{sid}")
+        show(s, "/cc_api/shop/sales", params={"id": sid})
+        show(s, f"/cc_api/shop/order/{sid}")
+        show(s, "/cc_api/shop/supply", params={"id": sid})
 
     if sid is None:
-        print("⚠️ ยังไม่มี shop (ตู้ยังไม่ลงทะเบียน/ยังไม่มีข้อมูล) → ข้าม stock/sales")
-        print("   รันสคริปต์นี้อีกครั้งเมื่อตู้เริ่มมีข้อมูล")
-        return
+        raise SystemExit("❌ --orders-only ต้องระบุ --shop-id ด้วย")
 
-    # ลองทั้งแบบ path param และ query param (ยังไม่รู้ว่า Aj.get ต่อ id แบบไหน)
-    print("── STOCK (ลองหลายรูปแบบ id) ──")
-    show(s, f"/cc_api/shop/stock/{sid}")
-    show(s, "/cc_api/shop/stock", params={"id": sid})
-    show(s, "/cc_api/shop/stock", params={"shop_id": sid})
+    # ── ORDER deep probe — หา transaction จริง (timestamp + สินค้า + ยอดเงิน) ──
+    print("── ORDER deep probe (shop", sid, ") ──")
+    order_data = show(s, f"/cc_api/shop/order/{sid}")
+    # ลอง pagination / date filter หลายรูปแบบ (เดาจาก convention ทั่วไป)
+    show(s, f"/cc_api/shop/order/{sid}", params={"page": 1, "limit": 20})
+    show(s, f"/cc_api/shop/order/{sid}", params={"page": 1, "page_size": 20})
+    show(s, f"/cc_api/shop/order/{sid}", params={"start": "2026-07-01", "end": "2026-07-31"})
+    show(s, f"/cc_api/shop/order/{sid}",
+         params={"date_from": "2026-07-01", "date_to": "2026-07-31"})
 
-    print("── SALES / ORDER ──")
-    show(s, f"/cc_api/shop/sales/{sid}")
-    show(s, "/cc_api/shop/sales", params={"id": sid})
-    show(s, f"/cc_api/shop/order/{sid}")
-    show(s, "/cc_api/shop/supply", params={"id": sid})
+    # ถ้า list order มี item → เจาะ detail ด้วย order id ตัวแรก
+    oid = first_id(order_data)
+    if oid is not None:
+        print(f"── ORDER detail (order id={oid}) ──")
+        show(s, f"/cc_api/shop/order/{sid}/{oid}")
+        show(s, f"/cc_api/shop/order/detail/{oid}")
+        show(s, f"/cc_api/order/{oid}")
+        show(s, f"/cc_api/order/detail/{oid}")
 
 
 if __name__ == "__main__":

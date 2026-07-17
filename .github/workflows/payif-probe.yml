@@ -1,0 +1,40 @@
+name: Payif API Probe
+
+# รันมือเท่านั้น — เจาะดูรูปแบบ JSON จาก Vendos API (โดยเฉพาะ order/transaction)
+# ใช้ตอนพัฒนา scraper · ไม่แตะ Supabase · ผลอยู่ใน log ของ run
+on:
+  workflow_dispatch:
+    inputs:
+      shop_id:
+        description: "Vendos shop id (เช่น 208 = pf01 ไอคอนสยาม)"
+        required: true
+        default: "208"
+      orders_only:
+        description: "เจาะเฉพาะ order endpoints"
+        type: boolean
+        default: true
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install requests
+
+      - name: Run probe
+        env:
+          VENDOS_USERNAME: ${{ secrets.VENDOS_USERNAME }}
+          VENDOS_PASSWORD: ${{ secrets.VENDOS_PASSWORD }}
+        run: |
+          ARGS="--shop-id ${{ inputs.shop_id }}"
+          if [ "${{ inputs.orders_only }}" = "true" ]; then ARGS="$ARGS --orders-only"; fi
+          python deploy/scraper/payif_probe.py $ARGS
