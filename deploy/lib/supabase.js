@@ -253,7 +253,7 @@ export async function getMachines() {
   const { data, error } = await supabase
     .from("machines")
     .select("*")
-    .order("machine_id")
+    .order("id")   // เรียงตามเลขตู้ (id 1..N = "ตู้ที่ N") ไม่ใช่ machine_id ตัวอักษร (ไม่งั้น pf01=ตู้ที่ 12 แทรกกลาง wwv)
   if (error) throw error
   return data
 }
