@@ -1,9 +1,9 @@
 ---
 type: sku
-sku_id: FB 07
-slug: FB07
-series: FB
-pack_size: 24
+sku_id: YGH The Heroes
+slug: YGHTheHeroes
+series: OTHER
+pack_size: 15
 boxes_per_cotton: 12
 sell_price: 0.0
 cost_price: 0.0
@@ -17,15 +17,15 @@ velocity_per_day: 0.00
 trend_pct: 0.0
 current_stock_total: 0
 mode: dry-run
-last_updated: 2026-07-24T20:40:52.228399
+last_updated: 2026-07-24T20:40:00.382767
 ---
 
-# FB07
+# YGHTheHeroes
 
 > 🤖 **Dry-run** — ยังไม่ได้เรียก LLM
 
-**Name:** Dragonball Fusion World FB-07
-**Series:** FB
+**Name:** Yu-Gi-Oh The Heroes
+**Series:** OTHER
 
 ## 📊 Performance (30 วันล่าสุด)
 
