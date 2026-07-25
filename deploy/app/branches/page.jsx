@@ -2,27 +2,36 @@ import "../globals.css"
 
 export const metadata = {
   title: "สาขาที่พร้อมให้บริการ — DivisionX Card",
-  description: "ตู้กดการ์ดเกมอัตโนมัติ DivisionX Card · 11 สาขาในห้างชั้นนำ · เปิดตามเวลาห้าง",
+  description: "ตู้กดการ์ดเกมอัตโนมัติ DivisionX Card · หลายสาขาในห้างชั้นนำ · เปิดตามเวลาห้าง",
 }
 
-// 11 สาขา (เรียงตามที่แอดมินกำหนด) · maps = คำค้น Google Maps
-const BRANCHES = [
-  { name: "เดอะมอลล์บางแค", floor: "ชั้น 3", hint: "ตรงข้าม Harborland", maps: "เดอะมอลล์ บางแค" },
-  { name: "เซ็นทรัลพระราม 2", floor: "ชั้น 4", hint: "หน้าจุดขายป๊อบคอร์น ชั้นโรงหนัง", maps: "เซ็นทรัล พระราม 2" },
-  { name: "เซ็นทรัลชลบุรี", floor: "ชั้น 4", hint: "หน้าลิฟต์ ชั้นโรงหนัง", maps: "เซ็นทรัล ชลบุรี" },
-  { name: "เซ็นทรัลพระราม 9", floor: "ชั้น 7", hint: "ด้านข้างร้าน โอ้กะจู้", maps: "เซ็นทรัล พระราม 9" },
-  { name: "เซ็นทรัลรามอินทรา", floor: "ชั้น 3", hint: "ติดบันไดเลื่อนทางขึ้น บริเวณแถวร้าน AKA", maps: "เซ็นทรัล รามอินทรา" },
-  { name: "เดอะมอลล์บางกะปิ", floor: "ชั้น 3", hint: "ก่อนถึงฟิตเนสเฟิร์ส", maps: "เดอะมอลล์ บางกะปิ" },
-  { name: "เซ็นทรัลศาลายา", floor: "ชั้น 3", hint: "หน้าลิฟต์ หลัง HACHIBAN RAMEN", maps: "เซ็นทรัล ศาลายา" },
-  { name: "เซ็นทรัลเวสต์เกต", floor: "ชั้น 2", hint: "หน้าห้องน้ำ ข้าง Super Sport", maps: "เซ็นทรัล เวสต์เกต" },
-  { name: "ซีคอนบางแค", floor: "ชั้น 4", hint: "ด้านหลัง MK", maps: "ซีคอนสแควร์ บางแค" },
-  { name: "เซ็นทรัลพระราม 2", floor: "ชั้น G", hint: "ติดบันไดเลื่อน หน้า BreadTalk", maps: "เซ็นทรัล พระราม 2" },
-  { name: "เซ็นทรัลเวสต์วิลล์", floor: "ชั้น 1", hint: "ฝั่งลานจอดรถ", maps: "เซ็นทรัล เวสต์วิลล์" },
-]
+// refetch ทุก 60 วินาที (ISR) — เพิ่มตู้ใหม่ (ใส่ config.branch) แล้วสาขาขึ้นเองภายใน ~1 นาที
+export const revalidate = 60
+
+// ดึงสาขาจาก machines table (config.branch) — data-driven ไม่ต้องแก้โค้ดตอนเพิ่มตู้
+async function getBranches() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  try {
+    const res = await fetch(
+      `${url}/rest/v1/machines?status=eq.active&select=machine_id,config`,
+      { headers: { apikey: key, Authorization: `Bearer ${key}` }, next: { revalidate: 60 } }
+    )
+    if (!res.ok) return []
+    const rows = await res.json()
+    return rows
+      .map((m) => m.config?.branch)
+      .filter((b) => b && b.public)
+      .sort((a, b) => (a.order ?? 999) - (b.order ?? 999))
+  } catch {
+    return []
+  }
+}
 
 const mapHref = (q) => `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}`
 
-export default function BranchesPage() {
+export default async function BranchesPage() {
+  const BRANCHES = await getBranches()
   return (
     <main style={{ minHeight: "100vh", background: "var(--dx-bg-page)", color: "var(--dx-text)", fontFamily: "var(--dx-font)" }}>
       <style dangerouslySetInnerHTML={{ __html: `
@@ -81,11 +90,11 @@ export default function BranchesPage() {
           {BRANCHES.map((b, i) => (
             <div className="bx-card" key={i}>
               <div className="bx-row">
-                <div className="bx-name">📍 {b.name}</div>
-                <span className="bx-floor">{b.floor}</span>
+                <div className="bx-name">📍 {b.display_name}</div>
+                {b.floor ? <span className="bx-floor">{b.floor}</span> : null}
               </div>
-              <div className="bx-hint">{b.hint}</div>
-              <a className="bx-btn" href={mapHref(b.maps)} target="_blank" rel="noopener noreferrer">
+              {b.landmark ? <div className="bx-hint">{b.landmark}</div> : <div className="bx-hint" />}
+              <a className="bx-btn" href={mapHref(b.maps || b.display_name)} target="_blank" rel="noopener noreferrer">
                 🧭 นำทาง Google Maps
               </a>
             </div>
