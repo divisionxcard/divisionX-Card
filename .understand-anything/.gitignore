@@ -1,0 +1,5 @@
+# Track the knowledge graph + config; ignore working/intermediate files
+intermediate/
+tmp/
+*.cjs
+*.log

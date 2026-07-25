@@ -1,0 +1,44 @@
+# .understandignore — DivisionX Card (full rebuild)
+# Built-in defaults already exclude: node_modules/, .git/, dist/, build/, .next/, images, lockfiles, *.min.*
+
+# --- Tooling / self ---
+.understand-anything/
+.claude/
+
+# --- Secrets / credentials ---
+Stock-Management-/
+*.env
+deploy/.env.local
+deploy/.env.staging
+Supabase Data.txt
+
+# --- Generated / build ---
+deploy/.claude-design-output/
+**/.next/
+**/__pycache__/
+deploy/dev.log
+
+# --- Binary / media / data dumps ---
+Video/
+image/
+*.xlsx
+*.zip
+*.png
+*.jpg
+*.jpeg
+*.svg
+*.ico
+deploy/docs/DivisionX-for-ClaudeDesign.zip
+
+# --- Obsidian internals (not real docs) ---
+wiki/.obsidian/
+*.base
+*.canvas
+
+# --- Local launchers (machine-specific) ---
+dashboard.bat
+ww-backfill.bat
+
+# --- Binary Office docs (POS manual reference) ---
+*.doc
+*.docx
