@@ -24,6 +24,9 @@ __pycache__/
 .venv/
 venv/
 
+# ─── Generated staging (Loop 2 content suggestions · regenerate ทุกสัปดาห์) ─
+deploy/tasks/content_suggestions.json
+
 # ─── Build Output ────────────────────────────────────────────
 .next/
 dist/

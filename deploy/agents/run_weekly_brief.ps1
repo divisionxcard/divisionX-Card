@@ -1,4 +1,4 @@
-# Loop 1 — รีเฟรช AI Insights แล้วส่งบรีฟการตลาดรายสัปดาห์เข้า Telegram
+# Loop 1+2 — รีเฟรช AI Insights → บรีฟการตลาด + ร่างคอนเทนต์ → Telegram
 # ใช้ Ollama local (ฟรี) → รันในเครื่องที่มี Ollama เท่านั้น
 #
 # ตั้ง Windows Task Scheduler รายสัปดาห์ (จันทร์ 08:30):
@@ -14,7 +14,10 @@ $dir = Split-Path -Parent $MyInvocation.MyCommand.Path
 Write-Host "[1/2] รีเฟรช AI Insights (sku_profile_agent · Ollama)..."
 py "$dir\sku_profile_agent.py"
 
-Write-Host "[2/2] ส่งบรีฟการตลาดเข้า Telegram..."
+Write-Host "[2/3] ส่งบรีฟการตลาดเข้า Telegram..."
 py "$dir\weekly_marketing_brief.py"
 
-Write-Host "เสร็จ — ตรวจ Telegram กลุ่มการตลาด"
+Write-Host "[3/3] ร่างคอนเทนต์จาก SKU มาแรง (รออนุมัติ)..."
+py "$dir\content_suggester.py"
+
+Write-Host "เสร็จ — ตรวจ Telegram กลุ่มการตลาด (บรีฟ + ร่างคอนเทนต์)"

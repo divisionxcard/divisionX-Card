@@ -3,7 +3,7 @@ type: marketing
 scope: automation-architecture
 date: 2026-07-25
 tags: [marketing, automation, ai-insights, restock-guard, telegram, content-queue, ollama]
-status: 🟢 Loop 3 (restock-guard) + Loop 1 (weekly brief) build เสร็จ · Loop 2 ถัดไป
+status: 🟢 ครบ 3 loops build เสร็จ — Loop 3 restock-guard (live) · Loop 1 brief · Loop 2 content suggester
 ---
 
 # ใช้ AI Insights ขับเคลื่อนการตลาดอัตโนมัติ
@@ -51,8 +51,12 @@ sku_profile_agent → wiki/skus/*.md → /api/wiki-insights → [rule engine / a
 - **ต้องทำ:** เพิ่ม `TELEGRAM_MKT_BOT_TOKEN` + `TELEGRAM_MKT_CHAT_ID` ใน `deploy/.env.local` (agent โหลด .env.local อัตโนมัติ) · Ollama รันอยู่ + qwen2.5:7b
 - ⚠️ Ollama รันบน cloud cron ไม่ได้ → รันในเครื่อง local เท่านั้น (นี่คือ trade-off ของทางฟรี · ถ้าอยากอัตโนมัติเต็มบน cloud ต้องสลับไป Claude API)
 
-### 🟡 Loop 2 — Auto Content Queue จาก winners
-winner ประจำสัปดาห์ → Ollama ร่าง caption original (โทน "เปิดซอง เปิดดวง") → เขียนเข้า [content_queue.json](../../deploy/tasks/content_queue.json) → [marketing_reminder.py](../../deploy/scraper/marketing_reminder.py) หยิบไปเตือนโพสต์ · **คนอนุมัติ = human-in-loop**
+### 🟢 Loop 2 — Content Suggester จาก winners (build เสร็จ)
+winner ประจำสัปดาห์ → Ollama ร่าง caption original (โทน "เปิดซอง เปิดดวง") → **staging แยก** รออนุมัติ
+- [content_suggester.py](../../deploy/agents/content_suggester.py): อ่าน winners (trend สูง) → Ollama ร่าง N แคปชั่นต่างแพลตฟอร์ม (FB เพจ/Reels/กลุ่ม) → เขียน `deploy/tasks/content_suggestions.json` (`status: pending_review` · gitignored) + ส่ง Telegram พร้อม `<code>` ก๊อปได้
+- **ไม่แตะ [content_queue.json](../../deploy/tasks/content_queue.json) (curated)** — คนรีวิว/อนุมัติแล้วก๊อป object เข้าเอง = human-in-loop จริง · approved แล้ว [marketing_reminder.py](../../deploy/scraper/marketing_reminder.py) หยิบไปเตือนโพสต์
+- ทดสอบ dry-run: ร่างจาก FB09/OP11/FB06 · JSON parse ผ่าน · โครงสร้างตรง content_queue format · qwen2.5:7b พอใช้ (มีคำเพี้ยน · `--model qwen2.5:14b` ดีขึ้น) — review-gated จึงรับได้
+- รวมใน [run_weekly_brief.ps1](../../deploy/agents/run_weekly_brief.ps1) step 3 (ต่อจาก brief)
 
 ## ข้อจำกัดที่ยึด (จาก [[project_actual_usage_scope]] + [[ai-content-intelligence-plan]])
 - **งบ AI จำกัด** → ใช้ Ollama local ฟรีเป็นหลัก · cloud API เฉพาะงานสร้างสรรค์ยาก/งาน cron
@@ -63,7 +67,7 @@ winner ประจำสัปดาห์ → Ollama ร่าง caption orig
 ## ลำดับทำ
 1. ✅ **Loop 3 restock-guard** — build + workflow + ส่ง Telegram จริงพิสูจน์แล้ว · cron active
 2. ✅ **Loop 1 brief** — build เสร็จ (Ollama local) · รอเพิ่ม TELEGRAM_MKT_* ใน .env.local + ตั้ง Task Scheduler
-3. **Loop 2 content queue** — ถัดไป · ต่อยอด Loop 1 (winner → ร่าง caption → content_queue.json)
+3. ✅ **Loop 2 content suggester** — build เสร็จ (Ollama local · staging + review) · รันร่วม runner step 3
 
 ## 🔗 เกี่ยวข้อง
 [[ai-content-intelligence-plan]] · [[project_marketing_assignment]] · [[auto-posting-plan]] · [[2026-06-29-auto-posting-level1-2]] · [[project_slot_refill_tracking_design]] · [[project_actual_usage_scope]]
