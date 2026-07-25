@@ -3,7 +3,7 @@ type: marketing
 scope: automation-architecture
 date: 2026-07-25
 tags: [marketing, automation, ai-insights, restock-guard, telegram, content-queue, ollama]
-status: 🟢 เริ่มแล้ว — Loop 3 (restock-guard) build เสร็จ · Loop 1/2 วางแผน
+status: 🟢 Loop 3 (restock-guard) + Loop 1 (weekly brief) build เสร็จ · Loop 2 ถัดไป
 ---
 
 # ใช้ AI Insights ขับเคลื่อนการตลาดอัตโนมัติ
@@ -43,10 +43,13 @@ sku_profile_agent → wiki/skus/*.md → /api/wiki-insights → [rule engine / a
 - ทดสอบ dry-run กับข้อมูลจริง: logic ถูก (จับ OP-10 ชลบุรี, แปลงหน่วยถูก) · วันเติมเต็มไม่มี alert = ถูกต้อง
 - **ต้องตั้ง GitHub Secrets** `TELEGRAM_MKT_BOT_TOKEN` + `TELEGRAM_MKT_CHAT_ID` (มีอยู่แล้วจาก weekly digest)
 
-### 🟡 Loop 1 — Weekly Marketing Brief (ถัดไป · คุ้มสุด)
-ต่อยอด [weekly_sales_digest.py](../../deploy/agents/weekly_sales_digest.py) — ดึง insights JSON → **Ollama local ฟรี** สังเคราะห์เป็น "สัปดาห์นี้ดันอะไร / หยุดอะไร / เติมอะไร" → Telegram ทุกจันทร์
-- ปัญหา: Ollama รันบน cloud cron ไม่ได้ → ต้องรันในเครื่อง local + task scheduler **หรือ** ย้าย insights refresh + brief ขึ้น cloud (Claude API เฉพาะงานนี้ ประหยัด)
-- ตอนนี้ weekly_digest มีชั้น AI ผ่าน Claude อยู่แล้ว (ปิดเพราะไม่ใส่ ANTHROPIC_API_KEY) → เปิด key = ได้ทันที
+### 🟢 Loop 1 — Weekly Marketing Brief (build เสร็จ · Ollama local)
+สังเคราะห์ AI Insights → บรีฟการตลาด actionable → Telegram · **ใช้ Ollama local (ฟรี) ตามที่เลือก**
+- [weekly_marketing_brief.py](../../deploy/agents/weekly_marketing_brief.py): อ่าน frontmatter `wiki/skus/*.md` → จัด winners/losers/low-margin (mirror /api/wiki-insights) + ยอดต่อตู้ WoW จาก DB → Ollama เขียนบรีฟ (📣 ดัน / 🔧 แก้ / 💸 งบ / 📦 เติม) → Telegram HTML
+- [run_weekly_brief.ps1](../../deploy/agents/run_weekly_brief.ps1): รีเฟรช insight (sku_profile_agent) → ส่งบรีฟ · ตั้ง **Windows Task Scheduler จันทร์ 08:30** (คำสั่งในไฟล์)
+- ทดสอบ dry-run กับข้อมูลจริง: บรีฟถูกต้อง (winners FB09/OP11 · losers OP10 · เตือนเติม wwv04/wwv08) · แปลง markdown→Telegram HTML แล้ว
+- **ต้องทำ:** เพิ่ม `TELEGRAM_MKT_BOT_TOKEN` + `TELEGRAM_MKT_CHAT_ID` ใน `deploy/.env.local` (agent โหลด .env.local อัตโนมัติ) · Ollama รันอยู่ + qwen2.5:7b
+- ⚠️ Ollama รันบน cloud cron ไม่ได้ → รันในเครื่อง local เท่านั้น (นี่คือ trade-off ของทางฟรี · ถ้าอยากอัตโนมัติเต็มบน cloud ต้องสลับไป Claude API)
 
 ### 🟡 Loop 2 — Auto Content Queue จาก winners
 winner ประจำสัปดาห์ → Ollama ร่าง caption original (โทน "เปิดซอง เปิดดวง") → เขียนเข้า [content_queue.json](../../deploy/tasks/content_queue.json) → [marketing_reminder.py](../../deploy/scraper/marketing_reminder.py) หยิบไปเตือนโพสต์ · **คนอนุมัติ = human-in-loop**
@@ -58,9 +61,9 @@ winner ประจำสัปดาห์ → Ollama ร่าง caption orig
 - Insights ยัง **refresh แบบรันมือ** (Ollama local) → Loop 1/2 อัตโนมัติเต็มตัวต้องแก้ให้ refresh เองก่อน
 
 ## ลำดับทำ
-1. ✅ **Loop 3 restock-guard** — build + workflow เสร็จ · รอตั้ง secrets + เปิด cron
-2. **Loop 1 brief** — ตัดสินใจ Ollama-local vs Claude-cloud ก่อน
-3. **Loop 2 content queue** — หลัง Loop 1 พิสูจน์ว่า Ollama สรุป insight ได้ดี
+1. ✅ **Loop 3 restock-guard** — build + workflow + ส่ง Telegram จริงพิสูจน์แล้ว · cron active
+2. ✅ **Loop 1 brief** — build เสร็จ (Ollama local) · รอเพิ่ม TELEGRAM_MKT_* ใน .env.local + ตั้ง Task Scheduler
+3. **Loop 2 content queue** — ถัดไป · ต่อยอด Loop 1 (winner → ร่าง caption → content_queue.json)
 
 ## 🔗 เกี่ยวข้อง
 [[ai-content-intelligence-plan]] · [[project_marketing_assignment]] · [[auto-posting-plan]] · [[2026-06-29-auto-posting-level1-2]] · [[project_slot_refill_tracking_design]] · [[project_actual_usage_scope]]
