@@ -1,0 +1,49 @@
+name: Restock Guard
+
+on:
+  schedule:
+    # 11:30 น. ไทย (04:30 UTC) — หลังพีคขายเช้า · เตือนก่อนของฮิตหมดกลางวัน
+    - cron: "30 4 * * *"
+    # 14:30 น. ไทย (07:30 UTC) — รอบบ่าย · ดักตัวที่ขายไวช่วงบ่าย
+    - cron: "30 7 * * *"
+  workflow_dispatch:
+    inputs:
+      threshold_days:
+        description: "เตือนถ้าของเหลือ < N วัน (default 1.0)"
+        required: false
+        type: string
+        default: "1.0"
+      min_velocity:
+        description: "ตัดของขายช้า < N ซอง/วัน (default 2.0)"
+        required: false
+        type: string
+        default: "2.0"
+      dry_run:
+        description: "dry-run (print เฉย ไม่ส่ง Telegram)"
+        required: false
+        type: boolean
+        default: false
+
+jobs:
+  guard:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Run restock guard
+        env:
+          SUPABASE_URL:           ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY:   ${{ secrets.SUPABASE_SERVICE_KEY }}
+          TELEGRAM_MKT_BOT_TOKEN: ${{ secrets.TELEGRAM_MKT_BOT_TOKEN }}
+          TELEGRAM_MKT_CHAT_ID:   ${{ secrets.TELEGRAM_MKT_CHAT_ID }}
+        run: |
+          ARGS="--threshold-days ${{ github.event.inputs.threshold_days || '1.0' }} --min-velocity ${{ github.event.inputs.min_velocity || '2.0' }}"
+          if [ "${{ github.event.inputs.dry_run }}" = "true" ]; then ARGS="$ARGS --dry-run"; fi
+          python deploy/agents/restock_guard.py $ARGS
