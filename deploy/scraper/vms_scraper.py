@@ -33,6 +33,8 @@ PACKS_PER_BOX = {
     "NRT Series - 01": 30, "NRT Series - 02": 30, "NRT Jin - 1": 10,
     "PKM Dream EX": 10, "PKM Ninja": 30,
     "SLL UA 51": 16,
+    # YGH ขายที่ตู้ VMS ด้วย — Chaos Origins 30 ซอง/กล่อง (2026-07-29)
+    "YGH The Heroes": 15, "YGH The Revals": 15, "YGH Chaos Origins": 30,
 }
 
 # ── VMS Product Name → SKU ID Mapping ───────────────────────────

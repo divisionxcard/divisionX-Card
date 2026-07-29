@@ -3,7 +3,7 @@ type: sku
 sku_id: YGH Chaos Origins
 slug: YGHChaosOrigins
 series: OTHER
-pack_size: 15
+pack_size: 30
 boxes_per_cotton: 12
 sell_price: 0.0
 cost_price: 0.0

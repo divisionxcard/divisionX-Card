@@ -44,7 +44,7 @@ PACKS_PER_BOX = {
     "SLL UA 51": 16,
     # WW ตู้ wwv03/04/05 (2026-06-03)
     "OP 16": 24, "PKM Ghost": 30,
-    "YGH The Heroes": 15, "YGH The Revals": 15, "YGH Chaos Origins": 15,
+    "YGH The Heroes": 15, "YGH The Revals": 15, "YGH Chaos Origins": 30,
 }
 
 UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "

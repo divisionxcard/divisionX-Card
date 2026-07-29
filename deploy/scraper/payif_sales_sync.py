@@ -56,7 +56,7 @@ PACKS_PER_BOX = {
     "NRT Series - 01": 30, "NRT Series - 02": 30, "NRT Jin - 1": 10,
     "PKM Dream EX": 10, "PKM Ninja": 30, "PKM Ghost": 30,
     "SLL UA 51": 16,
-    "YGH The Heroes": 15, "YGH The Revals": 15, "YGH Chaos Origins": 15,
+    "YGH The Heroes": 15, "YGH The Revals": 15, "YGH Chaos Origins": 30,
 }
 
 # format วันที่ของ Vendos (จาก static config.js)
