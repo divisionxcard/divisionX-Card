@@ -27,8 +27,9 @@ status: ✅ หน้า /branches ดึงสดจาก machines.config · �
 - floor/landmark **optional** — ตู้ใหม่ใส่แค่ display_name+maps ก็ขึ้นได้ เติมรายละเอียดทีหลัง
 
 ## ต่อยอด / ค้าง
-- ⏳ **ไอคอนสยาม floor + landmark** ยังไม่มี (รอแอดมิน) → ตอนนี้โชว์แค่ "ไอคอนสยาม" + ปุ่มแผนที่ ICONSIAM
-  · เติมได้ทันทีผ่าน `config.branch.floor/landmark` (PostgREST) ไม่ต้อง deploy
+- ✅ **ไอคอนสยาม floor + landmark** (29 ก.ค. 2026) — แอดมินแจ้ง **ชั้น 6 · หน้าร้าน Karun Thai Tea**
+  · apply prod ผ่าน PostgREST + **migration 057** · verify หน้า /branches ขึ้นแล้ว (ISR 60s ไม่ต้อง deploy)
+  · ⚠️ PATCH ภาษาไทยต้องส่งผ่านไฟล์ `--data-binary @file.json` — ใส่ JSON ในบรรทัดคำสั่ง bash ตรงๆ ตัวอักษรไทยเพี้ยนเป็น `?`
 - **เพิ่มตู้ครั้งหน้า** ถ้าอยากขึ้น /branches → ใส่ `config.branch` (public=true) ก็พอ ไม่ต้องแก้โค้ด
 
 ## 🔗 เกี่ยวข้อง
