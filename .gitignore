@@ -78,3 +78,18 @@ scripts/sellthrough_chukes01.mjs
 
 # ─── Video source (โฮสต์บน Supabase Storage แล้ว · ไฟล์ใหญ่) ──
 Video/
+
+# ─── รูปต้นฉบับ (774MB · โฮสต์บน Supabase Storage แล้ว) ───────
+image/
+
+# ─── Claude Code local (worktrees + settings เฉพาะเครื่อง) ────
+.claude/settings.local.json
+.claude/worktrees/
+
+# ─── Obsidian scratch (ไฟล์ Untitled ที่เผลอสร้าง) ────────────
+wiki/Untitled*
+
+# ─── เอกสารอ้างอิงจากคู่ค้า / ไฟล์งานแอดมิน (ไบนารีก้อนใหญ่) ──
+คู่มือ - พัฒนาโปรแกรม POS สำหรับตู้ Vending/
+*.xlsx
+deploy/docs/*.zip

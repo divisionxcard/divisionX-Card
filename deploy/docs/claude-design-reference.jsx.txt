@@ -1,0 +1,31 @@
+// ══════════════════════════════════════════════════════════════════
+// Reference ONLY — อย่า import ไฟล์นี้
+// ══════════════════════════════════════════════════════════════════
+//
+// Output จาก Claude Design (pages.jsx) — ใช้เป็น visual reference
+// ว่า dark theme ของแต่ละหน้าควร "หน้าตา" ประมาณไหน
+//
+// เนื้อหาใช้ window.DX_DATA (mock) + window.Icon (custom SVG) + uSt (useState alias)
+// ของ Claude Design preview — ไม่ compatible กับ Next.js project
+//
+// เวลาจะ migrate หน้าจริง: อ่านไฟล์นี้เป็น reference แล้วเขียนใหม่ใน
+// pages/Page<Name>DX.jsx ให้ใช้:
+//   - import { useState } from "react"
+//   - import icons จาก "lucide-react"
+//   - import { KpiCard, Badge, StatusDot, SectionTitle, BoosterPH } from "../shared/dx-components"
+//   - import { fmt, fmtB, getSkuSeries } from "../shared/helpers"
+//   - ใช้ข้อมูลจริงจาก props (เหมือนหน้าเดิมใน pages/)
+//
+// Pages ที่อยู่ในไฟล์นี้:
+//   - StockPage        — PageStock (dark version)
+//   - WithdrawPage     — PageWithdrawal (dark version)
+//   - VMSPage          — PageMachineStockView (dark version)
+//   - SalesPage        — PageSales (dark version) + HUDChart component
+//   - SkuAnalyticsPage — PageAnalytics (dark version) + Sparkline component
+//   - RefillPage       — PageRefillPrep (dark version)
+//
+// ⚠️ NO Dashboard — Claude Design น่าจะใส่ Dashboard ไว้ใน app.jsx หรือ
+//    design-canvas.jsx (ยังไม่ได้ส่งมา)
+// ══════════════════════════════════════════════════════════════════
+
+// [pages.jsx content ตามที่ผู้ใช้ส่ง]

@@ -1,0 +1,38 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(py -m pip install --upgrade 'supabase>=2.9.0' 2>&1)",
+      "PowerShell(py -m pip install --upgrade websockets 2>&1)",
+      "Bash(git -C \"c:/Projects/divisionX Card\" add deploy/agents/ wiki/discrepancies/2026-05-21-*.md)",
+      "Bash(git -C 'c:/Projects/divisionX Card' commit -m ' *)",
+      "PowerShell(try { $r = Invoke-RestMethod -Uri 'http://localhost:11434/api/tags' -TimeoutSec 5; Write-Output 'Ollama API: OK'; Write-Output 'Models installed:'; $r.models | ForEach-Object { Write-Output \\('  - ' + $_.name + ' \\(' + [math]::Round\\($_.size / 1GB, 2\\) + ' GB\\)'\\) } } catch { Write-Output \\('Ollama API not reachable: ' + $_.Exception.Message\\) })",
+      "PowerShell(py \"c:\\\\Projects\\\\divisionX Card\\\\deploy\\\\agents\\\\reconcile_agent.py\" --date 2026-05-21 --machines chukes01)",
+      "Bash(git -C \"c:/Projects/divisionX Card\" add deploy/agents/reconcile_agent.py wiki/discrepancies/2026-05-21-chukes01.md)",
+      "PowerShell(py \"c:\\\\Projects\\\\divisionX Card\\\\deploy\\\\agents\\\\reconcile_agent.py\" --date 2026-05-21)",
+      "Bash(git -C \"c:/Projects/divisionX Card\" add wiki/discrepancies/)",
+      "PowerShell(ollama pull qwen2.5:14b 2>&1)",
+      "PowerShell(Get-ChildItem -Path \"$env:LOCALAPPDATA\\\\Programs\", \"$env:ProgramFiles\", \"$env:USERPROFILE\\\\AppData\\\\Local\" -Filter \"ollama.exe\" -Recurse -ErrorAction SilentlyContinue | Select-Object -First 3 -ExpandProperty FullName)",
+      "PowerShell(& \"$env:LOCALAPPDATA\\\\Programs\\\\Ollama\\\\ollama.exe\" pull qwen2.5:14b 2>&1 | Select-Object -Last 5)",
+      "PowerShell(try { $r = Invoke-RestMethod -Uri 'http://localhost:11434/api/tags' -TimeoutSec 5; $r.models | ForEach-Object { Write-Output \\('  - ' + $_.name + ' \\(' + [math]::Round\\($_.size / 1GB, 2\\) + ' GB\\)'\\) } } catch { Write-Output \\('Error: ' + $_.Exception.Message\\) })",
+      "PowerShell(Get-Process | Where-Object { $_.Name -match 'ollama' } | Select-Object Name, Id, @{N='MemoryMB';E={[math]::Round\\($_.WorkingSet64/1MB, 0\\)}}, StartTime)",
+      "Bash(cat \"/c/Users/choog/AppData/Local/Temp/claude/c--Projects-divisionX-Card/bed5fe6f-6e50-41ba-ad16-89751a73603b/tasks/blkpfpstn.output\" 2>&1 | head -30; echo \"---\"; ls -la \"/c/Users/choog/AppData/Local/Temp/claude/c--Projects-divisionX-Card/bed5fe6f-6e50-41ba-ad16-89751a73603b/tasks/\" 2>&1)",
+      "Read(//c/Users/choog/AppData/Local/Temp/claude/c--Projects-divisionX-Card/bed5fe6f-6e50-41ba-ad16-89751a73603b/tasks/**)",
+      "Read(//c/Users/choog/AppData/Local/Temp/claude/c--Projects-divisionX-Card/bed5fe6f-6e50-41ba-ad16-89751a73603b/tasks//**)",
+      "PowerShell(py \"c:\\\\Projects\\\\divisionX Card\\\\deploy\\\\agents\\\\pull_model.py\" qwen2.5:14b)",
+      "Bash(node -e ' *)",
+      "Bash(node \"C:/Users/choog/.claude/plugins/marketplaces/understand-anything/understand-anything-plugin/skills/understand/compute-batches.mjs\" \"c:/Projects/divisionX Card\" --changed-files=\"c:/Projects/divisionX Card/.understand-anything/tmp-changed.txt\")",
+      "Bash(node C:/Users/choog/.claude/plugins/marketplaces/understand-anything/understand-anything-plugin/skills/understand/extract-structure.mjs 'c:/Projects/divisionX Card/.understand-anything/tmp/ua-file-analyzer-input-102.json' 'c:/Projects/divisionX Card/.understand-anything/tmp/ua-file-extract-results-102.json')",
+      "Bash(node C:/Users/choog/.claude/plugins/marketplaces/understand-anything/understand-anything-plugin/skills/understand/extract-structure.mjs 'c:/Projects/divisionX Card/.understand-anything/tmp/ua-file-analyzer-input-101.json' 'c:/Projects/divisionX Card/.understand-anything/tmp/ua-file-extract-results-101.json')",
+      "Bash(node \"C:/Users/choog/.claude/plugins/marketplaces/understand-anything/understand-anything-plugin/skills/understand/extract-structure.mjs\" \"c:/Projects/divisionX Card/.understand-anything/tmp/ua-file-analyzer-input-103.json\" \"c:/Projects/divisionX Card/.understand-anything/tmp/ua-file-extract-results-103.json\")",
+      "Bash(node .understand-anything/ua-validate.cjs \".understand-anything/intermediate/assembled-graph.json\")",
+      "Bash(cd \"c:/Projects/divisionX Card\")",
+      "Bash(echo \"=== meta \\(อัปเดตล่าสุด\\) ===\")",
+      "Bash(cat .understand-anything/meta.json)",
+      "Bash(echo \"\")",
+      "Bash(echo \"=== HEAD ปัจจุบัน ===\")",
+      "Bash(node -e \"try{const g=require\\('./.understand-anything/knowledge-graph.json'\\);console.log\\('analyzedAt:',g.project.analyzedAt\\);console.log\\('gitCommitHash:',g.project.gitCommitHash\\);console.log\\('nodes:',g.nodes.length,'edges:',g.edges.length\\);}catch\\(e\\){console.log\\('อ่านไม่ได้:',e.message\\);}\")",
+      "Bash(mkdir -p .understand-anything/tmp)",
+      "Bash(node __TRACKED_VAR__/scan-project.mjs 'c:/Projects/divisionX Card' .understand-anything/tmp/ua-scan-files.json)"
+    ]
+  }
+}
