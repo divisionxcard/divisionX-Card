@@ -2,7 +2,7 @@
 type: worklog
 date: 2026-08-04
 tags: [openclaw, agents, skills, telegram, automation, supabase]
-commits: []
+commits: [1c3f280]
 status: ✅ เฟส 1 เสร็จ — 5 skill + 2 สคริปต์ใหม่ ทดสอบผ่านจริงทุกคำสั่ง
 ---
 
