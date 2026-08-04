@@ -3,7 +3,7 @@ type: worklog
 date: 2026-08-04
 tags: [marketing, idea-collector, rss, automation, frontend]
 commits: [b41bef0, b06aefa]
-status: ⏳ โค้ดเสร็จ+build ผ่าน · dry-run ได้ไอเดียจริง 34 ชิ้น — รอ apply migration 060
+status: ✅ apply migration + เก็บไอเดียจริง 40 ชิ้นแล้ว (ข่าว 26 · TikTok 6 · ภายใน 8) · flow pick ทดสอบผ่าน
 ---
 
 # สถานี 1 — ระบบหาไอเดียคอนเทนต์
@@ -81,13 +81,18 @@ status: ⏳ โค้ดเสร็จ+build ผ่าน · dry-run ได้�
 > ทางที่ 2 สำคัญกว่าที่คิด — คลิปไวรัลที่ "เห็นกับตา" มักตรงกลุ่มเป้าหมายกว่าที่ระบบเดาให้
 > และใช้เวลาแค่ copy-paste ไม่ต้องพิมพ์อะไรเลย
 
-## ค้าง
-1. **apply `060_marketing_ideas.sql`** ใน Supabase SQL Editor
-2. `py deploy/agents/idea_collector.py` (รันจริง) แล้วเปิดหน้าดู
-3. ใส่ `channel_id` ของช่อง YouTube ที่อยากตามใน `idea_sources.json` (ตอนนี้ว่าง)
+## ผลรันจริง
+เก็บได้ **40 ไอเดีย** — ข่าว 26 · TikTok 6 · ภายใน 8 · รันซ้ำได้ 0 ใหม่ (idempotent ผ่าน)
 
-ทดสอบแล้ว: `npm run build` ผ่าน · dry-run เก็บได้ news 30 + internal 8 · YAML workflow valid
-**ยังไม่ได้ทดสอบปุ่ม "เริ่มทำคอนเทนต์" กับข้อมูลจริง** (ต้องมีตารางก่อน)
+จำลอง flow `pick` ที่ระดับ DB เพื่อพิสูจน์ schema (แล้วคืนสภาพเดิม):
+`ไอเดีย → สร้าง marketing_content(draft) + โยง idea_id → ไอเดียเป็น picked` ✅
+กล่องอนุมัติ query `status=in.(draft,pending)` เห็นร่างใหม่ทันที ✅
+
+## ค้าง
+- ใส่ `channel_id` ของช่อง YouTube ที่อยากตามใน `idea_sources.json` (ตอนนี้ว่าง → เก็บได้ 0)
+- **ยังไม่ได้กดปุ่มจริงบนหน้าเว็บ** (ไม่มี admin credential) — ทดสอบถึงระดับ DB เท่านั้น
+
+ทดสอบแล้ว: `npm run build` ผ่าน · YAML workflow valid · เก็บจริง 40 ชิ้น · idempotent · flow pick ผ่าน
 
 ## 🔗 เกี่ยวข้อง
 [[2026-08-04-marketing-page-phase1-2]] · [[marketing-os-page]] · [[project_marketing_assignment]]
