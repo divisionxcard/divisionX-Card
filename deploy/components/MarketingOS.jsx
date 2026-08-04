@@ -1,0 +1,460 @@
+"use client"
+// Marketing OS — หน้า /marketing (เฟส 1+2)
+//
+// ธีสิสการออกแบบ: หน้านี้เป็น "กล่องรออนุมัติ" ไม่ใช่ dashboard
+// เปิดมาต้องเห็นทันทีว่าวันนี้มีอะไรรอกด แล้วเคลียร์ให้หมดในไม่กี่นาที
+// ตัวเลขอยู่ล่างสุด อ่านสัปดาห์ละครั้ง
+//
+// เฟส 1 = โซน A (อนุมัติคอนเทนต์) · เฟส 2 = โซน C (สายพาน) + D (ตัวเลข)
+// โซน B (ตอบคอมเมนต์) เป็นเฟส 3 — ยังขึ้นเป็นการ์ดอธิบายว่าติดอะไรอยู่
+import { useState, useEffect, useCallback } from "react"
+import {
+  Megaphone, RefreshCw, Check, X, Pencil, Clock, AlertTriangle,
+  Wallet, Package, Receipt, TrendingUp, Trophy, MessageSquare, Lock, Send,
+} from "lucide-react"
+import {
+  ResponsiveContainer, ComposedChart, Bar, Line, XAxis, YAxis,
+  CartesianGrid, Tooltip, ReferenceDot,
+} from "recharts"
+import { supabase } from "../lib/supabase"
+import KpiCard from "./shared/KpiCard"
+
+const PLATFORM_LABEL = { fb: "FB เพจ", line: "LINE OA", ig: "Instagram", tiktok: "TikTok" }
+const SLOT_LABEL = { morning: "เช้า", evening: "เย็น" }
+const baht = (n) => (n ?? 0).toLocaleString("th-TH")
+
+// ── สถานะสายพาน ────────────────────────────────────────────────────────
+const PIPE_STATE = {
+  success:   { dot: "bg-green-500",  text: "ผ่าน",     cls: "text-green-600" },
+  failure:   { dot: "bg-red-500",    text: "ล้ม",      cls: "text-red-600 font-semibold" },
+  cancelled: { dot: "bg-gray-400",   text: "ยกเลิก",   cls: "text-gray-500" },
+  in_progress:{ dot: "bg-amber-400 animate-pulse", text: "กำลังทำ", cls: "text-amber-600" },
+  queued:    { dot: "bg-amber-300",  text: "รอคิว",    cls: "text-amber-600" },
+  never:     { dot: "bg-gray-300",   text: "ยังไม่เคยรัน", cls: "text-gray-400" },
+  unknown:   { dot: "bg-gray-300",   text: "ไม่ทราบ",  cls: "text-gray-400" },
+}
+
+function thaiAgo(iso) {
+  if (!iso) return "—"
+  const mins = Math.floor((Date.now() - new Date(iso).getTime()) / 60000)
+  if (mins < 1) return "เมื่อกี้"
+  if (mins < 60) return `${mins} นาทีที่แล้ว`
+  const hrs = Math.floor(mins / 60)
+  if (hrs < 24) return `${hrs} ชม.ที่แล้ว`
+  return `${Math.floor(hrs / 24)} วันที่แล้ว`
+}
+
+export default function MarketingOS() {
+  const [token, setToken] = useState(null)
+  const [authState, setAuthState] = useState("checking")   // checking | ok | anon | forbidden
+  const [loading, setLoading] = useState(false)
+  const [err, setErr] = useState("")
+
+  const [content, setContent] = useState({ items: [], counts: {} })
+  const [pipeline, setPipeline] = useState(null)
+  const [metrics, setMetrics] = useState(null)
+  const [days, setDays] = useState(7)
+
+  const [editingId, setEditingId] = useState(null)
+  const [editText, setEditText] = useState("")
+  const [rejectingId, setRejectingId] = useState(null)
+  const [rejectText, setRejectText] = useState("")
+  const [busyId, setBusyId] = useState(null)
+
+  // ── auth ──
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => {
+      const t = data?.session?.access_token
+      if (!t) { setAuthState("anon"); return }
+      setToken(t); setAuthState("ok")
+    })
+  }, [])
+
+  const api = useCallback(async (path, opts = {}) => {
+    const res = await fetch(`/api/marketing/${path}`, {
+      ...opts,
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+        ...(opts.headers || {}),
+      },
+    })
+    if (res.status === 403) { setAuthState("forbidden"); throw new Error("ต้องเป็น admin เท่านั้น") }
+    const json = await res.json().catch(() => ({}))
+    if (!res.ok) throw new Error(json.error || `HTTP ${res.status}`)
+    return json
+  }, [token])
+
+  const loadAll = useCallback(async () => {
+    if (!token) return
+    setLoading(true); setErr("")
+    const [c, p, m] = await Promise.allSettled([
+      api("content?status=pending"),
+      api("pipeline"),
+      api(`metrics?days=${days}`),
+    ])
+    if (c.status === "fulfilled") setContent(c.value)
+    if (p.status === "fulfilled") setPipeline(p.value)
+    if (m.status === "fulfilled") setMetrics(m.value)
+    const failed = [c, p, m].filter(r => r.status === "rejected")
+    if (failed.length) setErr(failed.map(f => f.reason.message).join(" · "))
+    setLoading(false)
+  }, [api, token, days])
+
+  useEffect(() => { if (authState === "ok") loadAll() }, [authState, loadAll])
+
+  // ── การกระทำบนการ์ด ──
+  async function patch(id, body) {
+    setBusyId(id)
+    try {
+      await api("content", { method: "PATCH", body: JSON.stringify({ id, ...body }) })
+      setContent(c => ({
+        ...c,
+        items: c.items.filter(i => i.id !== id),
+        counts: { ...c.counts, pending: Math.max(0, (c.counts.pending || 1) - 1) },
+      }))
+    } catch (e) { setErr(e.message) } finally { setBusyId(null) }
+  }
+
+  const approve = (id) => patch(id, { status: "approved" })
+  const saveEdit = (id) => { patch(id, { status: "approved", caption: editText }); setEditingId(null) }
+  const reject = (id) => {
+    patch(id, { status: "rejected", reject_reason: rejectText.trim() || null })
+    setRejectingId(null); setRejectText("")
+  }
+
+  // ── หน้าจอสถานะ ──
+  if (authState === "checking") return <Shell><p className="text-gray-500">กำลังตรวจสิทธิ์…</p></Shell>
+  if (authState === "anon") return (
+    <Shell>
+      <div className="bg-white rounded-2xl border border-gray-100 p-8 text-center">
+        <Lock className="mx-auto text-gray-400 mb-3" size={32} />
+        <p className="font-semibold text-gray-800 mb-1">ต้องเข้าสู่ระบบก่อน</p>
+        <p className="text-sm text-gray-500 mb-4">หน้านี้แสดงข้อมูลการตลาดภายใน</p>
+        <a href="/" className="inline-block px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium">
+          ไปหน้าเข้าสู่ระบบ
+        </a>
+      </div>
+    </Shell>
+  )
+  if (authState === "forbidden") return (
+    <Shell>
+      <div className="bg-white rounded-2xl border border-gray-100 p-8 text-center">
+        <Lock className="mx-auto text-red-400 mb-3" size={32} />
+        <p className="font-semibold text-gray-800">เฉพาะผู้ดูแลระบบ (admin)</p>
+      </div>
+    </Shell>
+  )
+
+  const pending = content.items || []
+
+  return (
+    <Shell onRefresh={loadAll} loading={loading}>
+      {err && (
+        <div className="mb-4 flex items-start gap-2 bg-red-50 border border-red-200 text-red-700 rounded-xl p-3 text-sm">
+          <AlertTriangle size={16} className="mt-0.5 shrink-0" /><span>{err}</span>
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
+        {/* ── โซน A · กล่องอนุมัติ ── */}
+        <section className="lg:col-span-2">
+          <h2 className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
+            <Megaphone size={16} className="text-blue-600" />
+            รออนุมัติ
+            <span className="px-2 py-0.5 rounded-full bg-blue-600 text-white text-xs">{pending.length}</span>
+          </h2>
+
+          {pending.length === 0 ? (
+            <div className="bg-white rounded-2xl border border-gray-100 p-8 text-center">
+              <Check className="mx-auto text-green-500 mb-2" size={28} />
+              <p className="text-gray-700 font-medium">เคลียร์หมดแล้ว</p>
+              <p className="text-sm text-gray-400 mt-1">
+                ร่างใหม่มาจาก content_suggester ทุกเช้า
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {pending.map(item => (
+                <article key={item.id} className="bg-white rounded-2xl border border-gray-100 p-4">
+                  <div className="flex items-center gap-2 text-xs text-gray-500 mb-2">
+                    <span className="px-2 py-0.5 rounded bg-gray-100 font-medium text-gray-700">
+                      {PLATFORM_LABEL[item.platform] || item.platform}
+                    </span>
+                    {item.slot && <span>· {SLOT_LABEL[item.slot] || item.slot}</span>}
+                    {item.created_by === "ai" && <span>· 🤖 AI ร่าง</span>}
+                  </div>
+
+                  {editingId === item.id ? (
+                    <textarea
+                      value={editText}
+                      onChange={e => setEditText(e.target.value)}
+                      rows={6}
+                      className="w-full text-sm border border-blue-300 rounded-lg p-3 mb-2 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                    />
+                  ) : (
+                    <p className="text-sm text-gray-800 whitespace-pre-wrap mb-2">{item.caption}</p>
+                  )}
+
+                  {/* บรรทัดนี้คือหัวใจ — บอกว่าทำไม AI ถึงเสนอชิ้นนี้ ตัดสินใจได้ใน 2 วินาที */}
+                  {item.source_reason && (
+                    <p className="text-xs text-amber-700 bg-amber-50 rounded-lg px-2.5 py-1.5 mb-3">
+                      💡 จาก: {item.source_reason}
+                    </p>
+                  )}
+
+                  {rejectingId === item.id ? (
+                    <div className="flex gap-2">
+                      <input
+                        value={rejectText}
+                        onChange={e => setRejectText(e.target.value)}
+                        placeholder="ทิ้งเพราะอะไร? (ช่วยให้ AI ไม่เสนอแบบเดิมอีก)"
+                        className="flex-1 text-sm border border-gray-300 rounded-lg px-3 py-1.5"
+                        autoFocus
+                      />
+                      <button onClick={() => reject(item.id)}
+                        className="px-3 py-1.5 rounded-lg bg-red-600 text-white text-sm">ทิ้ง</button>
+                      <button onClick={() => setRejectingId(null)}
+                        className="px-3 py-1.5 rounded-lg bg-gray-100 text-gray-600 text-sm">ยกเลิก</button>
+                    </div>
+                  ) : (
+                    <div className="flex flex-wrap gap-2">
+                      {editingId === item.id ? (
+                        <>
+                          <button disabled={busyId === item.id} onClick={() => saveEdit(item.id)}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-600 text-white text-sm font-medium disabled:opacity-50">
+                            <Check size={14} /> บันทึก + อนุมัติ
+                          </button>
+                          <button onClick={() => setEditingId(null)}
+                            className="px-3 py-1.5 rounded-lg bg-gray-100 text-gray-600 text-sm">ยกเลิก</button>
+                        </>
+                      ) : (
+                        <>
+                          <button disabled={busyId === item.id} onClick={() => approve(item.id)}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-600 text-white text-sm font-medium disabled:opacity-50">
+                            <Check size={14} /> อนุมัติ
+                          </button>
+                          <button onClick={() => { setEditingId(item.id); setEditText(item.caption) }}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-100 text-gray-700 text-sm">
+                            <Pencil size={14} /> แก้
+                          </button>
+                          <button onClick={() => setRejectingId(item.id)}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-100 text-gray-500 text-sm">
+                            <X size={14} /> ทิ้ง
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  )}
+                </article>
+              ))}
+            </div>
+          )}
+        </section>
+
+        <div className="space-y-4">
+          {/* ── โซน B · ยังไม่เปิด (เฟส 3) ── */}
+          <section>
+            <h2 className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
+              <MessageSquare size={16} className="text-gray-400" /> ตอบเอง
+              <span className="px-2 py-0.5 rounded-full bg-gray-200 text-gray-500 text-xs">เฟส 3</span>
+            </h2>
+            <div className="bg-white rounded-2xl border border-dashed border-gray-200 p-5 text-sm text-gray-500">
+              <p className="mb-2">
+                กล่องคอมเมนต์/แชทที่ AI ตอบเองไม่ได้ จะมาโผล่ตรงนี้
+              </p>
+              <p className="text-xs text-gray-400">
+                ยังทำไม่ได้เพราะต้องขอ permission อ่าน/ตอบคอมเมนต์จาก Meta ก่อน
+              </p>
+            </div>
+          </section>
+
+          {/* ── โซน C · สายพาน ── */}
+          <section>
+            <h2 className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
+              <Clock size={16} className="text-blue-600" /> สายพานการผลิต
+              {pipeline?.failing > 0 && (
+                <span className="px-2 py-0.5 rounded-full bg-red-600 text-white text-xs">
+                  {pipeline.failing} ล้ม
+                </span>
+              )}
+            </h2>
+            <div className="bg-white rounded-2xl border border-gray-100 divide-y divide-gray-50">
+              {pipeline?.warning && (
+                <p className="p-3 text-xs text-amber-700 bg-amber-50">{pipeline.warning}</p>
+              )}
+              {(pipeline?.jobs || []).map(j => {
+                const s = PIPE_STATE[j.state] || PIPE_STATE.unknown
+                return (
+                  <div key={j.key} className="flex items-center gap-2.5 px-3 py-2">
+                    <span className={`w-2 h-2 rounded-full shrink-0 ${s.dot}`} />
+                    <span className="flex-1 text-sm text-gray-700 truncate">{j.label}</span>
+                    <span className="text-xs text-gray-400 shrink-0">{thaiAgo(j.started_at)}</span>
+                    {j.state === "failure" && j.url && (
+                      <a href={j.url} target="_blank" rel="noreferrer"
+                        className={`text-xs shrink-0 underline ${s.cls}`}>ดู log</a>
+                    )}
+                  </div>
+                )
+              })}
+              {!pipeline && <p className="p-3 text-sm text-gray-400">กำลังโหลด…</p>}
+            </div>
+          </section>
+        </div>
+      </div>
+
+      {/* ── โซน D · ตัวเลข ── */}
+      <section>
+        <div className="flex items-center justify-between mb-2">
+          <h2 className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+            <TrendingUp size={16} className="text-blue-600" /> ตัวเลข
+          </h2>
+          <div className="flex gap-1">
+            {[7, 14, 30].map(d => (
+              <button key={d} onClick={() => setDays(d)}
+                className={`px-3 py-1 rounded-lg text-xs font-medium ${
+                  days === d ? "bg-blue-600 text-white" : "bg-white text-gray-600 border border-gray-200"}`}>
+                {d} วัน
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {metrics ? (
+          <>
+            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-3 mb-4">
+              <KpiCard icon={Wallet} color="green" label="รายรับ"
+                value={`${baht(metrics.kpi.revenue)} ฿`}
+                sub={metrics.kpi.revenue_delta_pct === null ? `${metrics.range.days} วัน`
+                  : `${metrics.kpi.revenue_delta_pct >= 0 ? "▲" : "▼"} ${Math.abs(metrics.kpi.revenue_delta_pct)}% เทียบช่วงก่อน`} />
+              <KpiCard icon={Package} color="blue" label="ซองที่ขายได้"
+                value={baht(metrics.kpi.packs)} sub={`${metrics.range.days} วัน`} />
+              <KpiCard icon={Receipt} color="purple" label="ธุรกรรม"
+                value={baht(metrics.kpi.transactions)} sub="นับจาก transaction_id" />
+              <KpiCard icon={TrendingUp} color="amber" label="เฉลี่ยต่อวัน"
+                value={`${baht(metrics.kpi.revenue_per_day)} ฿`} sub="ทุกตู้รวมกัน" />
+              <KpiCard icon={Trophy} color="orange" label="ตู้ที่ขายดีสุด"
+                value={metrics.kpi.top_machine ? `${baht(metrics.kpi.top_machine.revenue)} ฿` : "—"}
+                sub={metrics.kpi.top_machine?.name || "ไม่มีข้อมูล"} />
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+              <div className="lg:col-span-2 bg-white rounded-2xl border border-gray-100 p-4">
+                <p className="text-sm font-semibold text-gray-700 mb-1">ยอดขายรายวัน + วันที่โพสต์</p>
+                <p className="text-xs text-gray-400 mb-3">
+                  จุดฟ้าคือวันที่มีโพสต์ออกไป — ดูว่ายอดขยับตามไหม
+                </p>
+                <div style={{ width: "100%", height: 240 }}>
+                  <ResponsiveContainer>
+                    <ComposedChart data={metrics.daily} margin={{ top: 12, right: 8, bottom: 0, left: -12 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                      <XAxis dataKey="label" tick={{ fontSize: 11, fill: "#94a3b8" }} />
+                      <YAxis tick={{ fontSize: 11, fill: "#94a3b8" }}
+                        tickFormatter={v => v >= 1000 ? `${Math.round(v / 1000)}k` : v} />
+                      <Tooltip
+                        formatter={(v, n) => n === "revenue" ? [`${baht(v)} ฿`, "รายรับ"] : [v, n]}
+                        labelFormatter={l => `วันที่ ${l}`} />
+                      <Bar dataKey="revenue" fill="#93c5fd" radius={[4, 4, 0, 0]} />
+                      <Line type="monotone" dataKey="revenue" stroke="#2563eb" strokeWidth={2} dot={false} />
+                      {metrics.daily.filter(d => d.posts > 0).map(d => (
+                        <ReferenceDot key={d.date} x={d.label} y={d.revenue}
+                          r={5} fill="#06b6d4" stroke="#fff" strokeWidth={2} />
+                      ))}
+                    </ComposedChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div className="bg-white rounded-2xl border border-gray-100 p-4">
+                  <p className="text-sm font-semibold text-gray-700 mb-3">โพสต์ช่วยไหม</p>
+                  {metrics.post_lift.days_with_post === 0 ? (
+                    <p className="text-sm text-gray-400">
+                      ยังไม่มีโพสต์ที่บันทึกไว้ในช่วงนี้ — อนุมัติแล้วกดว่าโพสต์แล้วถึงจะเริ่มนับ
+                    </p>
+                  ) : (
+                    <>
+                      <div className="flex items-baseline gap-2 mb-1">
+                        <span className="text-xs text-gray-500 w-24">วันที่มีโพสต์</span>
+                        <span className="text-lg font-bold text-gray-800">
+                          {baht(metrics.post_lift.avg_with_post)} ฿
+                        </span>
+                      </div>
+                      <div className="flex items-baseline gap-2 mb-3">
+                        <span className="text-xs text-gray-500 w-24">วันที่ไม่มี</span>
+                        <span className="text-lg font-bold text-gray-400">
+                          {baht(metrics.post_lift.avg_without_post)} ฿
+                        </span>
+                      </div>
+                      <p className={`text-xs rounded-lg px-2.5 py-1.5 ${
+                        metrics.post_lift.reliable ? "text-gray-500 bg-gray-50"
+                                                   : "text-amber-700 bg-amber-50"}`}>
+                        {metrics.post_lift.reliable
+                          ? metrics.post_lift.caveat
+                          : `ข้อมูลยังน้อยเกินจะสรุป (${metrics.post_lift.days_with_post} วันที่โพสต์) — ${metrics.post_lift.caveat}`}
+                      </p>
+                    </>
+                  )}
+                </div>
+
+                <div className="bg-white rounded-2xl border border-dashed border-gray-200 p-4">
+                  <p className="text-sm font-semibold text-gray-500 mb-1">ROAS · กำไรสุทธิ</p>
+                  <p className="text-xs text-gray-400">{metrics.pending_features.ad_spend}</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-2xl border border-gray-100 p-4 mt-4">
+              <p className="text-sm font-semibold text-gray-700 mb-3">ยอดขายต่อสาขา</p>
+              <div className="space-y-1.5">
+                {metrics.per_machine.slice(0, 8).map(m => {
+                  const max = metrics.per_machine[0]?.revenue || 1
+                  return (
+                    <div key={m.machine_id} className="flex items-center gap-2">
+                      <span className="text-xs text-gray-600 w-48 truncate shrink-0">{m.name}</span>
+                      <div className="flex-1 h-4 bg-gray-100 rounded overflow-hidden">
+                        <div className="h-full bg-blue-400 rounded"
+                          style={{ width: `${(m.revenue / max) * 100}%` }} />
+                      </div>
+                      <span className="text-xs text-gray-700 font-medium w-20 text-right shrink-0">
+                        {baht(m.revenue)} ฿
+                      </span>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          </>
+        ) : (
+          <div className="bg-white rounded-2xl border border-gray-100 p-8 text-center text-gray-400">
+            กำลังโหลดตัวเลข…
+          </div>
+        )}
+      </section>
+    </Shell>
+  )
+}
+
+function Shell({ children, onRefresh, loading }) {
+  return (
+    <main className="min-h-screen bg-gray-50">
+      <header className="bg-white border-b border-gray-100 sticky top-0 z-10">
+        <div className="max-w-6xl mx-auto px-4 py-3 flex items-center gap-3">
+          <Megaphone size={20} className="text-blue-600" />
+          <div className="flex-1">
+            <h1 className="font-bold text-gray-800 leading-tight">Marketing OS</h1>
+            <p className="text-xs text-gray-400">DivisionX Card · การตลาดออนไลน์</p>
+          </div>
+          <a href="/" className="text-xs text-gray-500 hover:text-gray-700">← กลับหน้าหลัก</a>
+          {onRefresh && (
+            <button onClick={onRefresh} disabled={loading}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-100 text-gray-700 text-sm disabled:opacity-50">
+              <RefreshCw size={14} className={loading ? "animate-spin" : ""} /> รีเฟรช
+            </button>
+          )}
+        </div>
+      </header>
+      <div className="max-w-6xl mx-auto px-4 py-5">{children}</div>
+    </main>
+  )
+}
