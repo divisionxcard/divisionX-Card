@@ -11,7 +11,7 @@ import { useState, useEffect, useCallback } from "react"
 import {
   Megaphone, RefreshCw, Check, X, Pencil, Clock, AlertTriangle,
   Wallet, Package, Receipt, TrendingUp, Trophy, MessageSquare, Lock,
-  Lightbulb, Newspaper, Youtube, BarChart3, ExternalLink, Sparkles,
+  Lightbulb, Newspaper, Youtube, BarChart3, ExternalLink, Sparkles, Music2, Plus,
 } from "lucide-react"
 import {
   ResponsiveContainer, ComposedChart, Bar, Line, XAxis, YAxis,
@@ -27,6 +27,7 @@ const baht = (n) => (n ?? 0).toLocaleString("th-TH")
 // แหล่งที่มาของไอเดีย — ไอคอนช่วยให้สแกนเร็วว่าอันไหนข่าวนอก อันไหนข้อมูลเราเอง
 const IDEA_SOURCE = {
   news:     { icon: Newspaper, label: "ข่าว/เทรนด์", cls: "bg-sky-50 text-sky-700" },
+  tiktok:   { icon: Music2,    label: "TikTok",      cls: "bg-pink-50 text-pink-600" },
   youtube:  { icon: Youtube,   label: "YouTube",     cls: "bg-red-50 text-red-600" },
   internal: { icon: BarChart3, label: "ข้อมูลเราเอง", cls: "bg-emerald-50 text-emerald-700" },
   comment:  { icon: MessageSquare, label: "เสียงลูกค้า", cls: "bg-purple-50 text-purple-700" },
@@ -67,6 +68,8 @@ export default function MarketingOS() {
   const [days, setDays] = useState(7)
   const [dismissingId, setDismissingId] = useState(null)
   const [dismissText, setDismissText] = useState("")
+  const [pasteUrl, setPasteUrl] = useState("")
+  const [pasting, setPasting] = useState(false)
 
   const [editingId, setEditingId] = useState(null)
   const [editText, setEditText] = useState("")
@@ -147,6 +150,18 @@ export default function MarketingOS() {
     } catch (e) { setErr(e.message) } finally { setBusyId(null) }
   }
 
+  // วางลิงก์คลิปที่เห็นว่าไวรัล → ระบบดึงชื่อ/ผู้โพสต์ให้ผ่าน oEmbed
+  async function addFromUrl() {
+    const url = pasteUrl.trim()
+    if (!url) return
+    setPasting(true); setErr("")
+    try {
+      const created = await api("ideas", { method: "POST", body: JSON.stringify({ url }) })
+      setIdeas(s => ({ ...s, items: [created, ...(s.items || [])] }))
+      setPasteUrl("")
+    } catch (e) { setErr(e.message) } finally { setPasting(false) }
+  }
+
   const approve = (id) => patch(id, { status: "approved" })
   const saveEdit = (id) => { patch(id, { status: "approved", caption: editText }); setEditingId(null) }
   const reject = (id) => {
@@ -204,6 +219,22 @@ export default function MarketingOS() {
               </span>
             ))}
           </h2>
+
+          {/* วางลิงก์เอง — ทางเดียวที่เก็บ "คลิปไวรัลที่เห็นกับตา" ได้
+              (TikTok ไม่มี RSS · Creative Center API ตอบ no permission) */}
+          <div className="flex gap-2 mb-2">
+            <input
+              value={pasteUrl}
+              onChange={e => setPasteUrl(e.target.value)}
+              onKeyDown={e => { if (e.key === "Enter") addFromUrl() }}
+              placeholder="วางลิงก์ TikTok / YouTube ที่เห็นว่าไวรัล แล้วกด Enter"
+              className="flex-1 text-sm border border-gray-200 rounded-xl px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-amber-200"
+            />
+            <button onClick={addFromUrl} disabled={pasting || !pasteUrl.trim()}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-gray-800 text-white text-sm disabled:opacity-40">
+              <Plus size={14} /> {pasting ? "กำลังดึง…" : "เก็บไว้"}
+            </button>
+          </div>
 
           {ideas.warning ? (
             <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 text-sm text-amber-800">

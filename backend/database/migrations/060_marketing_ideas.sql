@@ -7,6 +7,9 @@
 -- แหล่งข้อมูล (ทดสอบแล้วว่าดึงได้จริงโดยไม่ต้องมี API key):
 --   news     — Google News RSS ภาษาไทย (ข่าว/เทรนด์วงการการ์ด)
 --   youtube  — YouTube channel RSS (คลิปใหม่ของช่องที่เราตาม)
+--   tiktok   — ข่าวเรื่องไวรัล TikTok + ลิงก์คลิปที่คนวางเอง (ดึง title/ผู้โพสต์ผ่าน oEmbed)
+--              ⚠ TikTok ไม่มี RSS สาธารณะ และ Creative Center API ตอบ "no permission"
+--              การค้นหาคลิปไวรัลอัตโนมัติจึงทำไม่ได้ถ้าไม่สมัคร official API
 --   internal — สัญญาณจากข้อมูลขายของเราเอง (SKU มาแรง/ตก · ของใกล้หมด)
 --   comment  — เสียงลูกค้าจาก FB/YT (เฟส 3 · ต้องขอ permission Meta ก่อน)
 
@@ -16,7 +19,7 @@ create table if not exists marketing_ideas (
   status        text not null default 'new'
                 check (status in ('new','picked','dismissed')),
   source        text not null
-                check (source in ('news','youtube','internal','comment','manual')),
+                check (source in ('news','youtube','tiktok','internal','comment','manual')),
   source_label  text,                    -- "Google News" · ชื่อช่อง YouTube · "ยอดขาย 7 วัน"
 
   title         text not null,

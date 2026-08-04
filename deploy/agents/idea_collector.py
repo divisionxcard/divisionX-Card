@@ -1,14 +1,21 @@
 """
 Idea Collector — สถานี 1 ของระบบการตลาด: "ทีมรีเสิร์ช" ที่หาไอเดียมาวางบนโต๊ะทุกเช้า
 
-เก็บไอเดียคอนเทนต์จาก 3 แหล่ง แล้วเขียนลงตาราง marketing_ideas
+เก็บไอเดียคอนเทนต์จาก 4 แหล่ง แล้วเขียนลงตาราง marketing_ideas
 ให้หน้า /marketing โซนไอเดียเอาไปแสดง (คนเป็นคนกดเลือกเอง)
 
   news     Google News RSS ภาษาไทย        — ข่าว/เทรนด์วงการการ์ด
+  tiktok   Google News (คำค้นเน้นไวรัล)   — กระแส TikTok (ทางอ้อม · ดูหมายเหตุล่าง)
   youtube  YouTube channel RSS            — คลิปใหม่ของช่องที่เราตาม
   internal ข้อมูลขายของเราเอง             — SKU มาแรง/ตก · ของใกล้หมด · ตู้ยอดตก
 
-ทั้งสามแหล่ง **ไม่ต้องมี API key** จึงรันบน GitHub Actions ได้
+ทั้งสี่แหล่ง **ไม่ต้องมี API key** จึงรันบน GitHub Actions ได้
+
+⚠ TikTok: ไม่มี RSS สาธารณะ · Creative Center API ตอบ "no permission" (40101)
+  · RSSHub public ตอบ 403 · official API ต้องสมัคร+รออนุมัติ
+  ตัวเก็บจึงดักได้แค่ "ข่าวที่พูดถึงกระแส TikTok" ส่วนคลิปที่เห็นเองให้วางลิงก์
+  บนหน้า /marketing (ระบบดึงชื่อ/ผู้โพสต์ผ่าน oEmbed ซึ่งเป็นช่องทางสาธารณะของแพลตฟอร์ม)
+
 (เสียงลูกค้าจากคอมเมนต์ FB/YT เป็นเฟส 3 — ต้องขอ permission Meta ก่อน)
 
 การให้คะแนน: นับคำที่ตรงกับแฟรนไชส์/ชื่อ SKU ที่เราขายจริง (ดึงจากตาราง skus)
@@ -158,6 +165,38 @@ def collect_news(cfg, keywords):
                 "angle": angle_for(fr, it["title"]),
                 "relevance": f"ตรงคำค้น «{q}»" + (f" · แฟรนไชส์ {fr} ที่เราขาย" if fr else ""),
                 "external_key": f"news:{it['url'][:180]}",
+            })
+    return ideas
+
+
+# ── แหล่ง 1ข: กระแส TikTok (ทางอ้อม) ───────────────────────────────────
+# TikTok ไม่มี RSS สาธารณะ · Creative Center API ตอบ "no permission" (40101)
+# · RSSHub public instance ตอบ 403 · official API ต้องสมัคร+รออนุมัติ
+# สิ่งที่ทำได้โดยไม่ผิด ToS และไม่ต้องรออนุมัติ คือดักจาก "ข่าวที่พูดถึงกระแส TikTok"
+# ส่วนคลิปที่เห็นเองให้วางลิงก์บนหน้าเว็บ (ระบบดึงชื่อ/ผู้โพสต์ผ่าน oEmbed ให้)
+def collect_tiktok(cfg, keywords):
+    ideas = []
+    for q in cfg.get("tiktok_queries", []):
+        url = ("https://news.google.com/rss/search?q="
+               + urllib.parse.quote(q) + "&hl=th&gl=TH&ceid=TH:th")
+        try:
+            items = rss_items(fetch(url))
+        except Exception as e:
+            log(f"  ⚠️  TikTok '{q}' ดึงไม่ได้: {type(e).__name__}")
+            continue
+        for it in items[: cfg.get("max_per_source", 8)]:
+            sc, fr = score_item(f"{it['title']} {it['summary']}", keywords)
+            if sc < cfg.get("min_score", 1.0):
+                continue
+            ideas.append({
+                "source": "tiktok", "source_label": f"กระแส TikTok · {q}",
+                "title": it["title"][:300],
+                "summary": (it["summary"] or "")[:600] or None,
+                "url": it["url"], "score": sc + 0.5,   # กระแสไวรัลมีอายุสั้น ดันขึ้นมาหน่อย
+                "angle": "ทำคลิปสั้นเกาะกระแสนี้ — เปิดซองที่ตู้ ตัดต่อสไตล์ TikTok",
+                "relevance": f"ข่าวที่พูดถึงกระแส TikTok · ตรงคำค้น «{q}»"
+                             + (f" · แฟรนไชส์ {fr}" if fr else ""),
+                "external_key": f"tt:{it['url'][:180]}",
             })
     return ideas
 
@@ -351,7 +390,7 @@ def save(ideas, dry_run=False):
 def main():
     ap = argparse.ArgumentParser(description="เก็บไอเดียคอนเทนต์จากข่าว/YouTube/ข้อมูลขาย")
     ap.add_argument("--dry-run", action="store_true", help="ดูอย่างเดียว ไม่เขียน DB")
-    ap.add_argument("--only", choices=["news", "youtube", "internal"], help="เก็บเฉพาะแหล่งเดียว")
+    ap.add_argument("--only", choices=["news", "tiktok", "youtube", "internal"], help="เก็บเฉพาะแหล่งเดียว")
     args = ap.parse_args()
 
     cfg = json.loads(SOURCES_FILE.read_text(encoding="utf-8-sig"))
@@ -361,6 +400,8 @@ def main():
     ideas = []
     if args.only in (None, "news"):
         n = collect_news(cfg, keywords); ideas += n; log(f"[ideas] ข่าว: {len(n)}")
+    if args.only in (None, "tiktok"):
+        t = collect_tiktok(cfg, keywords); ideas += t; log(f"[ideas] TikTok: {len(t)}")
     if args.only in (None, "youtube"):
         y = collect_youtube(cfg, keywords); ideas += y; log(f"[ideas] YouTube: {len(y)}")
     if args.only in (None, "internal"):

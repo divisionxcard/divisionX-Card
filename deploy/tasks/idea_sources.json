@@ -13,6 +13,13 @@
   "_youtube_note": "YouTube channel RSS — ไม่ต้องมี API key · หา channel_id ได้จาก view-source ของหน้าช่อง (ค้น 'channelId')",
   "youtube_channels": [],
 
+  "_tiktok_note": "TikTok ไม่มี RSS สาธารณะ · Creative Center API ตอบ 'no permission' · การค้นคลิปไวรัลอัตโนมัติทำไม่ได้ถ้าไม่สมัคร official API — ที่ทำได้คือ (1) ข่าวที่พูดถึงกระแส TikTok ผ่าน Google News (2) วางลิงก์คลิปเองบนหน้าเว็บ ระบบดึงชื่อ/ผู้โพสต์ให้ผ่าน oEmbed",
+  "tiktok_queries": [
+    "TikTok ไวรัล การ์ดสะสม",
+    "คลิปไวรัล เปิดซองการ์ด",
+    "TikTok เทรนด์ ของสะสม ไทย"
+  ],
+
   "_internal_note": "สัญญาณจากข้อมูลขายของเราเอง — เปิด/ปิดได้ทีละอย่าง",
   "internal_signals": {
     "hot_sku": true,

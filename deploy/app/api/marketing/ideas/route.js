@@ -55,6 +55,84 @@ export async function GET(req) {
   }
 }
 
+// ── POST: วางลิงก์คลิปที่เห็นว่าไวรัลแล้วเก็บเป็นไอเดีย ─────────────────
+//
+// ทำไมต้องมีทางนี้: TikTok ไม่มี RSS สาธารณะ · Creative Center API ตอบ "no permission"
+// · official API ต้องสมัครและรออนุมัติ — การไล่หาคลิปไวรัลอัตโนมัติจึงยังทำไม่ได้
+// สิ่งที่ทำได้คือตอนเลื่อนเจอเองแล้ววางลิงก์ ระบบดึงชื่อ/ผู้โพสต์/ปกให้ผ่าน oEmbed
+// (oEmbed เป็นช่องทางสาธารณะที่ตัวแพลตฟอร์มเปิดให้ใช้เอง ไม่ใช่การ scrape)
+const OEMBED = [
+  { test: /tiktok\.com/i,               source: "tiktok",
+    api: (u) => `https://www.tiktok.com/oembed?url=${encodeURIComponent(u)}` },
+  { test: /(youtube\.com|youtu\.be)/i,  source: "youtube",
+    api: (u) => `https://www.youtube.com/oembed?url=${encodeURIComponent(u)}&format=json` },
+]
+
+export async function POST(req) {
+  const gate = await requireAdmin(req)
+  if (gate.error) return gate.error
+
+  let body
+  try { body = await req.json() } catch { return NextResponse.json({ error: "bad json" }, { status: 400 }) }
+
+  const url = (body.url || "").trim()
+  if (!/^https?:\/\//i.test(url)) {
+    return NextResponse.json({ error: "ต้องเป็นลิงก์ที่ขึ้นต้นด้วย http(s)://" }, { status: 400 })
+  }
+
+  const provider = OEMBED.find(p => p.test.test(url))
+  let title = body.title?.trim() || null
+  let author = null, thumb = null
+
+  if (provider) {
+    try {
+      const res = await fetch(provider.api(url), {
+        headers: { "User-Agent": "Mozilla/5.0 (compatible; DivisionX/1.0)" },
+        signal: AbortSignal.timeout(12000),
+      })
+      if (res.ok) {
+        const meta = await res.json()
+        title = title || meta.title || null
+        author = meta.author_name || null
+        thumb = meta.thumbnail_url || null
+      }
+    } catch {
+      // oEmbed ล้มไม่ควรทำให้เพิ่มไอเดียไม่ได้ — แค่ไม่มีชื่ออัตโนมัติ
+    }
+  }
+
+  if (!title) {
+    return NextResponse.json(
+      { error: "ดึงชื่อคลิปไม่ได้ (คลิปอาจเป็นส่วนตัวหรือถูกลบ) — ใส่ title มาด้วย" },
+      { status: 422 })
+  }
+
+  try {
+    const { data, error } = await db.from("marketing_ideas").insert({
+      status: "new",
+      source: provider?.source || "manual",
+      source_label: author ? `${provider ? provider.source : "ลิงก์"} · @${author}` : "วางลิงก์เอง",
+      title: title.slice(0, 300),
+      summary: thumb ? `ปก: ${thumb}` : null,
+      url,
+      // คนวางเองแปลว่าเห็นว่าน่าสนใจอยู่แล้ว — ให้คะแนนสูงกว่าที่ระบบเก็บมา
+      score: 6,
+      angle: body.angle?.trim() || "ทำคลิปสั้นเกาะกระแสนี้ — เปิดซองที่ตู้ ตัดต่อสไตล์คลิปต้นทาง",
+      relevance: "คนเห็นเองแล้ววางลิงก์ไว้",
+      external_key: `manual:${url.slice(0, 180)}`,
+    }).select().single()
+    if (error) {
+      if (error.code === "23505") {
+        return NextResponse.json({ error: "ลิงก์นี้เก็บไว้แล้ว" }, { status: 409 })
+      }
+      throw error
+    }
+    return NextResponse.json(data, { status: 201 })
+  } catch (err) {
+    return NextResponse.json({ error: err.message }, { status: 500 })
+  }
+}
+
 export async function PATCH(req) {
   const gate = await requireAdmin(req)
   if (gate.error) return gate.error
