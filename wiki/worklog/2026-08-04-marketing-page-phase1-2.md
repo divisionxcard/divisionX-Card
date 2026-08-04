@@ -2,8 +2,8 @@
 type: worklog
 date: 2026-08-04
 tags: [marketing, frontend, nextjs, supabase, postgrest, bug]
-commits: [324e8a9]
-status: ⏳ โค้ดเสร็จ+build ผ่าน — รอ apply migration 059 แล้ว seed ถึงจะใช้ได้จริง
+commits: [324e8a9, 8492d43, 6f6b2cb]
+status: ✅ apply migration + seed 11 ชิ้นเข้าตารางแล้ว · เหลือดูหน้าจอจริงด้วย user admin
 ---
 
 # หน้า /marketing เฟส 1+2 — กล่องอนุมัติ + สายพาน + ตัวเลข
@@ -58,14 +58,32 @@ Python → 368,230 บาท · 1,643 ซอง   ← ต่างกัน 82,0
 - **"โพสต์ช่วยไหม" มีธงเตือนเมื่อข้อมูลน้อย** — ถ้าวันที่โพสต์ < 3 วัน จะขึ้นสีเหลืองว่า
   ยังสรุปไม่ได้ กันตีความ correlation จาก sample เล็กเกินไป
 
-## ค้าง — ต้องทำก่อนใช้จริง
-1. **apply `059_marketing_content.sql`** ใน Supabase SQL Editor (ตามกติกา repo — รันมือ)
-2. `py deploy/agents/seed_marketing_content.py --dry-run` แล้วรันจริง
-3. เปิด `/marketing` ด้วย user role=admin
+## 🐛 บั๊กที่ 2 — PostgREST batch insert ต้องมี key ชุดเดียวกัน
+
+ตอน seed ยิง 11 แถวทีเดียวได้ `400 Bad Request` แต่ยิงทีละแถวผ่านหมด
+สาเหตุ: **PostgREST บังคับให้ทุก object ในอาร์เรย์ insert มี key ชุดเดียวกัน**
+(`All object keys must match`) — record จาก `content_suggestions` มี `source_sku`
+แต่จาก `content_queue` ไม่มี
+
+แก้ด้วยการ normalize ให้ครบชุด `FIELDS` ก่อนส่ง · รันซ้ำแล้วได้ `จะเพิ่ม 0` (idempotent ยังทำงาน)
+
+## ผล seed
+11 แถว — `pending` 3 (ร่าง AI · จะขึ้นในโซน A) · `approved` 8 (คิวเดิมที่คนคัดแล้ว)
+
+### 🔍 ปัญหาคุณภาพข้อมูลที่เห็นตอน seed (ของเดิม ไม่ใช่ของใหม่)
+- **แถว 2 เป็นภาษาญี่ปุ่นทั้งโพสต์** — Ollama หลุดโทนแบรนด์ตอนสร้าง
+  `content_suggestions.json` · ควรใส่ข้อบังคับภาษาไทยใน prompt ของ `content_suggester.py`
+- **แถว 7 เขียนว่า "มี 11 สาขาแล้ว"** แต่ตอนนี้ตู้ active 13 ตู้ — คอนเทนต์ค้างเก่า
+  ถ้าโพสต์ออกไปจะให้ข้อมูลผิด · ควรดึงจำนวนสาขาจาก `machines` ตอนสร้างคอนเทนต์
+
+ทั้งสองข้อเป็นเหตุผลที่โซน A ต้องมีคนกดอนุมัติ — ไม่ใช่ปล่อยโพสต์อัตโนมัติ
+
+## ค้าง
+- เปิด `/marketing` ด้วย user role=admin ดูหน้าจอจริง (**ยังไม่ได้ทดสอบด้วย token admin** — ไม่มี credential)
+- ปุ่ม "โพสต์แล้ว" ยังไม่มีบน UI — ต้องมีถึงจะเริ่มเก็บ `posted_at` ให้กราฟหมุดวันโพสต์ทำงาน
 
 ทดสอบไปแล้ว: `npm run build` ผ่าน · `/marketing` ตอบ 200 · API ทั้ง 3 เส้นตอบ 401
-เมื่อไม่มี token · ตัวเลข metrics ตรงกับ `dvx_data`
-**ยังไม่ได้ทดสอบด้วย token admin จริง** (ไม่มี credential)
+เมื่อไม่มี token · ตัวเลข metrics ตรงกับ `dvx_data` · seed idempotent
 
 ## 🔗 เกี่ยวข้อง
 [[marketing-os-page]] · [[2026-08-04-mcp-server-phase2]] · [[project_marketing_assignment]] · [[feedback_kpi_card_design]] · [[reference_supabase_rest_access]]
