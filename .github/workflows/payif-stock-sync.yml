@@ -6,7 +6,8 @@ on:
   schedule:
     # ดึก 00:20 น. ไทย (17:20 UTC วันก่อน)
     - cron: "20 17 * * *"
-    # เช้า 09:20 น. ไทย (02:20 UTC) — จับการเติมข้ามคืน ก่อนห้างเปิด
+    # เช้า 09:20 น. ไทย (02:20 UTC) — จับการเติมข้ามคืน
+    # ⚠️ GitHub cron เลื่อนจริงเป็นชั่วโมง มักลงหลังห้างเปิด → ต้องพึ่ง step ดึงยอดขายก่อนข้างล่าง
     - cron: "20 2 * * *"
   workflow_dispatch:
 
@@ -25,6 +26,25 @@ jobs:
 
       - name: Install dependencies
         run: pip install requests supabase
+
+      # ── ยอดขายก่อน แล้วค่อยสต็อก ─────────────────────────────────────
+      # slot_tracking คำนวณ qty_added = (after − before) + sold_between โดยอ่าน sales
+      # *ตอนนี้* → ถ้ายอดขายยังไม่เข้า DB จะได้ sold_between = 0 → qty_added ต่ำกว่าจริง
+      # รอบเช้าโดนเต็ม ๆ เพราะ GitHub cron เลื่อนไปรันหลังห้างเปิด
+      # ดึง 2 วัน (เมื่อวาน+วันนี้ เวลาไทย) กันรอบดึกที่ข้ามเที่ยงคืน · sales upsert ซ้ำได้
+      - name: Sync ยอดขายล่าสุดก่อน (ให้ sold_between ถูกต้อง)
+        continue-on-error: true   # ล้มได้ ไม่ให้ฉุดงานหลัก — สต็อกสำคัญกว่า
+        env:
+          VENDOS_USERNAME:      ${{ secrets.VENDOS_USERNAME }}
+          VENDOS_PASSWORD:      ${{ secrets.VENDOS_PASSWORD }}
+          SUPABASE_URL:         ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        working-directory: deploy/scraper
+        run: |
+          TODAY=$(TZ=Asia/Bangkok date +%F)
+          YDAY=$(TZ=Asia/Bangkok date -d 'yesterday' +%F)
+          echo "🗓  ยอดขาย $YDAY → $TODAY (เวลาไทย)"
+          python payif_sales_sync.py --from-date "$YDAY" --to-date "$TODAY"
 
       - name: Payif Stock Sync
         env:

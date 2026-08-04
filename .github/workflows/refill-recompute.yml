@@ -1,0 +1,76 @@
+name: Refill Events Recompute
+
+# ตาข่ายกันพลาดของ slot_refill_events
+#
+# ปกติ stock sync จะดึงยอดขายล่าสุดก่อนแล้วค่อย sync สต็อก (ดู *-stock-sync.yml)
+# → sold_between ถูกตั้งแต่แรก · workflow นี้ไม่ต้องแก้อะไร
+#
+# แต่ถ้า step ดึงยอดขายนั้นล้ม (ตั้ง continue-on-error ไว้ ไม่ให้ฉุดงานหลัก)
+# sold_between จะเป็น 0 → qty_added ต่ำกว่าจริง · ตัวนี้จะมาซ่อมให้ทีหลัง
+#
+# idempotent — รันซ้ำได้ ถ้าไม่มีอะไรคลาดเคลื่อนจะไม่แตะ DB เลย
+
+on:
+  schedule:
+    # ทุกวัน 03:00 น. ไทย (20:00 UTC วันก่อน) — หลังยอดขายทุกยี่ห้อเข้าครบ
+    # (GitHub cron เลื่อนได้เป็นชั่วโมง ไม่เป็นไร — งานนี้ซ่อมย้อนหลังอยู่แล้ว)
+    - cron: "0 20 * * *"
+  workflow_dispatch:
+    inputs:
+      days:
+        description: "ย้อนหลังกี่วัน (default 3)"
+        required: false
+        default: "3"
+      all:
+        description: "ซ่อมทั้งตาราง (ไม่สนใจ days)"
+        type: boolean
+        default: false
+      dry_run:
+        description: "ดูอย่างเดียว ไม่ update"
+        type: boolean
+        default: false
+
+jobs:
+  recompute:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+        # ไม่ต้อง pip install — สคริปต์ใช้ stdlib (urllib) ล้วน
+
+      - name: Recompute refill events
+        env:
+          SUPABASE_URL:         ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          IN_DAYS:    ${{ inputs.days }}
+          IN_ALL:     ${{ inputs.all }}
+          IN_DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          ARGS=()
+          if [ "$IN_ALL" = "true" ]; then
+            ARGS+=(--all); echo "🔁 ทั้งตาราง"
+          else
+            ARGS+=(--days "${IN_DAYS:-3}"); echo "🔁 ${IN_DAYS:-3} วันล่าสุด"
+          fi
+          if [ "$IN_DRY_RUN" = "true" ]; then ARGS+=(--dry-run); echo "🧪 DRY-RUN"; fi
+          python deploy/agents/recompute_refill_events.py "${ARGS[@]}"
+
+      - name: Telegram alert on failure
+        if: failure()
+        env:
+          TELEGRAM_BOT_TOKEN:     ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_OWNER_CHAT_ID: ${{ secrets.TELEGRAM_OWNER_CHAT_ID }}
+        run: |
+          if [ -n "$TELEGRAM_BOT_TOKEN" ] && [ -n "$TELEGRAM_OWNER_CHAT_ID" ]; then
+            RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+              -H "Content-Type: application/json" \
+              -d "{\"chat_id\":\"$TELEGRAM_OWNER_CHAT_ID\",\"parse_mode\":\"HTML\",\"text\":\"🚨 <b>Cron FAIL</b>\\n\\nJob: <code>Refill Events Recompute</code>\\n<a href=\\\"$RUN_URL\\\">ดู log บน GitHub</a>\"}"
+          fi

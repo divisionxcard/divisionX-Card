@@ -4,7 +4,9 @@ on:
   schedule:
     # รันทุกวัน เวลา 00:05 น. ไทย (17:05 UTC วันก่อน)
     - cron: "5 17 * * *"
-    # รอบเช้า 09:00 น. ไทย (02:00 UTC) — จับการเติมข้ามคืน · ก่อนห้างเปิด 10:00 ไม่มีขาย = window สะอาด
+    # รอบเช้า 09:00 น. ไทย (02:00 UTC) — จับการเติมข้ามคืน
+    # ⚠️ GitHub cron เลื่อนจริงเฉลี่ย ~234 นาที (วัด 52 รอบ · ไม่มีรอบไหนลงก่อน 10:00 เลย)
+    #    → window ไม่สะอาดอย่างที่เคยคิด ต้องพึ่ง step ดึงยอดขายก่อนข้างล่างแทน
     - cron: "0 2 * * *"
   workflow_dispatch:  # กดรันมือได้
 
@@ -24,6 +26,24 @@ jobs:
 
       - name: Install dependencies
         run: pip install requests supabase
+
+      # ── ยอดขายก่อน แล้วค่อยสต็อก ─────────────────────────────────────
+      # slot_tracking คำนวณ qty_added = (after − before) + sold_between โดยอ่าน sales
+      # *ตอนนี้* → ถ้ายอดขายยังไม่เข้า DB จะได้ sold_between = 0 → qty_added ต่ำกว่าจริง
+      # รอบเช้าโดนเต็ม ๆ เพราะ GitHub cron เลื่อนไปรันหลังห้างเปิด (วัดจริง: ช้าเฉลี่ย 234 นาที)
+      # ดึง 2 วัน (เมื่อวาน+วันนี้ เวลาไทย) กันรอบดึกที่ข้ามเที่ยงคืน · sales upsert ซ้ำได้
+      - name: Sync ยอดขายล่าสุดก่อน (ให้ sold_between ถูกต้อง)
+        continue-on-error: true   # ล้มได้ ไม่ให้ฉุดงานหลัก — สต็อกสำคัญกว่า
+        env:
+          VMS_USERNAME:           ${{ secrets.VMS_USERNAME }}
+          VMS_PASSWORD:           ${{ secrets.VMS_PASSWORD }}
+          SUPABASE_URL:           ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY:   ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: |
+          TODAY=$(TZ=Asia/Bangkok date +%F)
+          YDAY=$(TZ=Asia/Bangkok date -d 'yesterday' +%F)
+          echo "🗓  ยอดขาย $YDAY → $TODAY (เวลาไทย)"
+          python deploy/scraper/vms_sales_api.py --from-date "$YDAY" --to-date "$TODAY"
 
       - name: Sync Machine Stock
         env:

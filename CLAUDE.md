@@ -210,7 +210,9 @@ GitHub Actions → VMS Daily Sync → Run workflow:
 ### 3. ยอดขาย
 - **Backfill อย่าเกิน 5 วัน/ครั้ง** — XLSX จาก VMS อาจถูกตัดถ้าข้อมูลมาก
 - ถ้ายอดไม่ตรง → ตรวจสอบทีละวัน → ดาวน์โหลด XLSX จาก VMS เองแล้ว import ผ่าน SQL
-- Sales API ถูก block (403) → ระบบ fallback ไป Playwright อัตโนมัติ
+- Sales API ใช้งานได้แล้ว (เคยถูก block 403) → ถ้าล้มระบบยัง fallback ไป Playwright อัตโนมัติ
+- **stock sync จะดึงยอดขายล่าสุดก่อนเสมอ** — `slot_refill_events` ต้องใช้ `sold_between` คำนวณ `qty_added`
+  ถ้ายอดขายยังไม่เข้า DB ตัวเลขการเติมจะต่ำกว่าจริง (workflow `refill-recompute` คอยซ่อมให้อีกชั้น)
 
 ### 4. สต็อกหน้าตู้
 - ข้อมูลอัปเดตวันละ 1 ครั้ง (00:05 น.) หรือกดปุ่มดึงเอง
