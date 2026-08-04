@@ -2,7 +2,7 @@
 type: worklog
 date: 2026-08-04
 tags: [mcp, openclaw, claude-code, agents, refactor, supabase]
-commits: []
+commits: [81b2bbc]
 status: ✅ เฟส 2 เสร็จ — MCP server 6 tools · OpenClaw probe เห็นครบ · รวมชั้นข้อมูลเหลือแหล่งเดียว
 ---
 
