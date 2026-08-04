@@ -36,7 +36,11 @@ export async function GET(req) {
   }
 
   try {
-    let q = db.from(TABLE).select("*").order("created_at", { ascending: false }).limit(limit)
+    // ดึงไอเดียต้นทางมาด้วย (embed) — การ์ดจะได้มีลิงก์ "ดูต้นทาง"
+    // โดยไม่ต้องแปะ URL ยาว ๆ ไว้ในตัวแคปชั่น
+    let q = db.from(TABLE)
+      .select("*, idea:marketing_ideas!marketing_content_idea_id_fkey(id,url,source,source_label)")
+      .order("created_at", { ascending: false }).limit(limit)
     if (status !== "all") q = wanted.length > 1 ? q.in("status", wanted) : q.eq("status", wanted[0])
     const { data, error } = await q
     if (error) throw error

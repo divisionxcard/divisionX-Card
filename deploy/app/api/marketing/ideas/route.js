@@ -23,7 +23,10 @@ export async function GET(req) {
 
   const { searchParams } = new URL(req.url)
   const status = searchParams.get("status") || "new"
-  const limit = Math.min(parseInt(searchParams.get("limit") || "30", 10) || 30, 100)
+  const limit = Math.min(parseInt(searchParams.get("limit") || "200", 10) || 200, 500)
+  // คัดเฉพาะ "เด็ดสุด N ชิ้นต่อช่องทาง" — 40 ชิ้นรวดเดียวสแกนไม่ไหว
+  // 0 = ไม่คัด (เอาทั้งหมด)
+  const perSource = Math.max(parseInt(searchParams.get("per_source") ?? "3", 10) || 0, 0)
 
   if (status !== "all" && !STATUSES.includes(status)) {
     return NextResponse.json({ error: `status ไม่ถูกต้อง: ${status}` }, { status: 400 })
@@ -38,13 +41,33 @@ export async function GET(req) {
     const { data, error } = await q
     if (error) throw error
 
+    // ตัดให้เหลือ N ต่อช่องทาง (ข้อมูลเรียงตามคะแนนมาแล้ว → หัวแถวคือเด็ดสุด)
+    // แล้วเรียงรวมตามคะแนนอีกที ให้ของดีที่สุดอยู่บนสุดไม่ว่ามาจากช่องทางไหน
+    let items = data || []
+    const hiddenBySource = {}
+    if (perSource > 0) {
+      const kept = {}
+      const picked = []
+      for (const r of items) {
+        kept[r.source] = (kept[r.source] || 0) + 1
+        if (kept[r.source] <= perSource) picked.push(r)
+        else hiddenBySource[r.source] = (hiddenBySource[r.source] || 0) + 1
+      }
+      items = picked.sort((a, b) => Number(b.score) - Number(a.score))
+    }
+
     const { data: all } = await db.from("marketing_ideas").select("status,source")
     const counts = {}, bySource = {}
     for (const r of all || []) {
       counts[r.status] = (counts[r.status] || 0) + 1
       if (r.status === "new") bySource[r.source] = (bySource[r.source] || 0) + 1
     }
-    return NextResponse.json({ items: data || [], counts, by_source: bySource })
+    return NextResponse.json({
+      items, counts, by_source: bySource,
+      per_source: perSource,
+      hidden: Object.values(hiddenBySource).reduce((s, n) => s + n, 0),
+      hidden_by_source: hiddenBySource,
+    })
   } catch (err) {
     // ยังไม่ได้ apply migration 060 → ให้หน้าเว็บแสดงข้อความแทนที่จะพังทั้งหน้า
     if (/marketing_ideas/.test(err.message || "")) {
@@ -166,13 +189,12 @@ export async function PATCH(req) {
       return NextResponse.json({ error: "ไอเดียนี้เริ่มทำไปแล้ว" }, { status: 409 })
     }
 
-    // caption ตอนนี้เป็น "โจทย์" ให้คนหรือ Ollama เขียนต่อ — ไม่ใช่แคปชั่นจริง
-    const brief = [
-      `[ร่างจากไอเดีย] ${idea.title}`,
-      idea.angle ? `\nมุมที่จะเล่า: ${idea.angle}` : "",
-      idea.url ? `\nอ้างอิง: ${idea.url}` : "",
-      "\n\n(ยังไม่ใช่แคปชั่นจริง — รันตัวเขียนแคปชั่นในเครื่อง หรือแก้เองแล้วอนุมัติ)",
-    ].join("")
+    // caption ของร่างคือ "โจทย์" ให้คนหรือ Ollama เขียนต่อ — ไม่ใช่แคปชั่นจริง
+    //
+    // เก็บให้สั้นที่สุด: ใส่แค่ "มุมที่จะเล่า" อย่างเดียว
+    // ชื่อไอเดีย/เหตุผลไปอยู่ใน source_reason (บรรทัด 💡 จาก:) และลิงก์ต้นทาง
+    // ดึงจาก idea ผ่าน idea_id — ไม่ต้องแปะ URL ยาว ๆ ลงในแคปชั่นให้รก
+    const brief = idea.angle || `เขียนแคปชั่นเรื่อง: ${idea.title}`
 
     const { data: content, error: e1 } = await db.from("marketing_content").insert({
       status: "draft",

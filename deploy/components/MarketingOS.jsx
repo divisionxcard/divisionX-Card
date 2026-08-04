@@ -70,6 +70,7 @@ export default function MarketingOS() {
   const [dismissText, setDismissText] = useState("")
   const [pasteUrl, setPasteUrl] = useState("")
   const [pasting, setPasting] = useState(false)
+  const [perSource, setPerSource] = useState(3)   // เด็ดสุดกี่ชิ้นต่อช่องทาง
 
   const [editingId, setEditingId] = useState(null)
   const [editText, setEditText] = useState("")
@@ -105,7 +106,7 @@ export default function MarketingOS() {
     if (!token) return
     setLoading(true); setErr("")
     const [i, c, p, m] = await Promise.allSettled([
-      api("ideas?status=new"),
+      api(`ideas?status=new&per_source=${perSource}`),
       api("content?status=draft,pending"),
       api("pipeline"),
       api(`metrics?days=${days}`),
@@ -117,7 +118,7 @@ export default function MarketingOS() {
     const failed = [i, c, p, m].filter(r => r.status === "rejected")
     if (failed.length) setErr(failed.map(f => f.reason.message).join(" · "))
     setLoading(false)
-  }, [api, token, days])
+  }, [api, token, days, perSource])
 
   useEffect(() => { if (authState === "ok") loadAll() }, [authState, loadAll])
 
@@ -207,18 +208,31 @@ export default function MarketingOS() {
         {/* ── สถานี 1 · ไอเดียวันนี้ ──
             AI ไปหาข่าว/เทรนด์ + อ่านข้อมูลขายของเราเอง มาวางบนโต๊ะ คนแค่สแกนแล้วเลือก */}
         <section>
-          <h2 className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
-            <Lightbulb size={16} className="text-amber-500" />
-            ไอเดียวันนี้
-            <span className="px-2 py-0.5 rounded-full bg-amber-500 text-white text-xs">
-              {(ideas.items || []).length}
-            </span>
-            {Object.entries(ideas.by_source || {}).map(([s, n]) => (
-              <span key={s} className={`px-2 py-0.5 rounded text-xs ${IDEA_SOURCE[s]?.cls || "bg-gray-100 text-gray-600"}`}>
-                {IDEA_SOURCE[s]?.label || s} {n}
+          <div className="flex items-center flex-wrap gap-2 mb-2">
+            <h2 className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+              <Lightbulb size={16} className="text-amber-500" />
+              ไอเดียวันนี้
+              <span className="px-2 py-0.5 rounded-full bg-amber-500 text-white text-xs">
+                {(ideas.items || []).length}
               </span>
-            ))}
-          </h2>
+            </h2>
+            {/* chip บอก "แสดง/ทั้งหมด" ต่อช่องทาง — จะได้รู้ว่ายังมีของที่ถูกซ่อนอยู่ */}
+            {Object.entries(ideas.by_source || {}).map(([s, total]) => {
+              const shown = (ideas.items || []).filter(i => i.source === s).length
+              return (
+                <span key={s} className={`px-2 py-0.5 rounded text-xs ${IDEA_SOURCE[s]?.cls || "bg-gray-100 text-gray-600"}`}>
+                  {IDEA_SOURCE[s]?.label || s} {shown}
+                  {total > shown && <span className="opacity-60">/{total}</span>}
+                </span>
+              )
+            })}
+            {ideas.hidden > 0 && (
+              <button onClick={() => setPerSource(p => (p === 3 ? 10 : 3))}
+                className="ml-auto text-xs text-blue-500 hover:underline">
+                {perSource === 3 ? `ดูเพิ่ม (ซ่อนอยู่ ${ideas.hidden})` : "แสดงแค่ 3 ต่อช่องทาง"}
+              </button>
+            )}
+          </div>
 
           {/* วางลิงก์เอง — ทางเดียวที่เก็บ "คลิปไวรัลที่เห็นกับตา" ได้
               (TikTok ไม่มี RSS · Creative Center API ตอบ no permission) */}
@@ -364,9 +378,17 @@ export default function MarketingOS() {
 
                   {/* บรรทัดนี้คือหัวใจ — บอกว่าทำไม AI ถึงเสนอชิ้นนี้ ตัดสินใจได้ใน 2 วินาที */}
                   {item.source_reason && (
-                    <p className="text-xs text-amber-700 bg-amber-50 rounded-lg px-2.5 py-1.5 mb-3">
+                    <p className="text-xs text-amber-700 bg-amber-50 rounded-lg px-2.5 py-1.5 mb-2">
                       💡 จาก: {item.source_reason}
                     </p>
+                  )}
+
+                  {/* ลิงก์ต้นทางอยู่ตรงนี้ ไม่ใช่ในตัวแคปชั่น — URL ข่าวยาวมากจนอ่านแคปชั่นไม่ออก */}
+                  {item.idea?.url && (
+                    <a href={item.idea.url} target="_blank" rel="noreferrer"
+                      className="inline-flex items-center gap-1 text-xs text-blue-500 mb-3">
+                      ดูต้นทาง <ExternalLink size={11} />
+                    </a>
                   )}
 
                   {rejectingId === item.id ? (
