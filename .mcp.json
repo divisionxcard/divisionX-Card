@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "divisionx": {
+      "command": "py",
+      "args": ["-3", "deploy/mcp/dvx_mcp_server.py"],
+      "env": {}
+    }
+  }
+}

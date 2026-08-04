@@ -86,7 +86,11 @@ py deploy/agents/restock_guard.py --dry-run
 py deploy/agents/trigger_workflow.py --list
 ```
 
-## ถัดไป (เฟส 2)
+## เฟส 2 — MCP server (เสร็จแล้ว ✅)
 
-ห่อ query เหล่านี้เป็น **MCP server** — จะได้ให้ agent ถาม-ตอบข้อมูลได้อิสระกว่าการเรียกสคริปต์ตายตัว
-และใช้ตัวเดียวกันได้ทั้ง OpenClaw, Claude Code และเครื่องมืออื่น
+[`deploy/mcp/`](../deploy/mcp/README.md) เปิด 6 tools ให้ agent เรียกเองพร้อม argument ที่มันคิดเอง
+ลงทะเบียนกับ OpenClaw แล้ว (`openclaw mcp probe` → `divisionx: 6 tools`)
+
+**skill กับ MCP ต่างกันยังไง:** skill = สคริปต์ตายตัวที่เตรียมไว้ล่วงหน้า เหมาะกับงานประจำ ·
+MCP = tool ที่ agent เลือกเรียกเอง ตอบคำถามที่เราไม่ได้เตรียมไว้ได้ (เช่น "เทียบยอด 2 สัปดาห์
+แล้วบอกว่าตู้ไหนตก") ใช้คู่กันได้ ไม่ต้องเลือกอย่างใดอย่างหนึ่ง
