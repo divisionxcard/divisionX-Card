@@ -10,7 +10,8 @@
 import { useState, useEffect, useCallback } from "react"
 import {
   Megaphone, RefreshCw, Check, X, Pencil, Clock, AlertTriangle,
-  Wallet, Package, Receipt, TrendingUp, Trophy, MessageSquare, Lock, Send,
+  Wallet, Package, Receipt, TrendingUp, Trophy, MessageSquare, Lock,
+  Lightbulb, Newspaper, Youtube, BarChart3, ExternalLink, Sparkles,
 } from "lucide-react"
 import {
   ResponsiveContainer, ComposedChart, Bar, Line, XAxis, YAxis,
@@ -22,6 +23,15 @@ import KpiCard from "./shared/KpiCard"
 const PLATFORM_LABEL = { fb: "FB เพจ", line: "LINE OA", ig: "Instagram", tiktok: "TikTok" }
 const SLOT_LABEL = { morning: "เช้า", evening: "เย็น" }
 const baht = (n) => (n ?? 0).toLocaleString("th-TH")
+
+// แหล่งที่มาของไอเดีย — ไอคอนช่วยให้สแกนเร็วว่าอันไหนข่าวนอก อันไหนข้อมูลเราเอง
+const IDEA_SOURCE = {
+  news:     { icon: Newspaper, label: "ข่าว/เทรนด์", cls: "bg-sky-50 text-sky-700" },
+  youtube:  { icon: Youtube,   label: "YouTube",     cls: "bg-red-50 text-red-600" },
+  internal: { icon: BarChart3, label: "ข้อมูลเราเอง", cls: "bg-emerald-50 text-emerald-700" },
+  comment:  { icon: MessageSquare, label: "เสียงลูกค้า", cls: "bg-purple-50 text-purple-700" },
+  manual:   { icon: Pencil,    label: "เพิ่มเอง",    cls: "bg-gray-100 text-gray-600" },
+}
 
 // ── สถานะสายพาน ────────────────────────────────────────────────────────
 const PIPE_STATE = {
@@ -50,10 +60,13 @@ export default function MarketingOS() {
   const [loading, setLoading] = useState(false)
   const [err, setErr] = useState("")
 
+  const [ideas, setIdeas] = useState({ items: [], counts: {}, by_source: {} })
   const [content, setContent] = useState({ items: [], counts: {} })
   const [pipeline, setPipeline] = useState(null)
   const [metrics, setMetrics] = useState(null)
   const [days, setDays] = useState(7)
+  const [dismissingId, setDismissingId] = useState(null)
+  const [dismissText, setDismissText] = useState("")
 
   const [editingId, setEditingId] = useState(null)
   const [editText, setEditText] = useState("")
@@ -88,15 +101,17 @@ export default function MarketingOS() {
   const loadAll = useCallback(async () => {
     if (!token) return
     setLoading(true); setErr("")
-    const [c, p, m] = await Promise.allSettled([
-      api("content?status=pending"),
+    const [i, c, p, m] = await Promise.allSettled([
+      api("ideas?status=new"),
+      api("content?status=draft,pending"),
       api("pipeline"),
       api(`metrics?days=${days}`),
     ])
+    if (i.status === "fulfilled") setIdeas(i.value)
     if (c.status === "fulfilled") setContent(c.value)
     if (p.status === "fulfilled") setPipeline(p.value)
     if (m.status === "fulfilled") setMetrics(m.value)
-    const failed = [c, p, m].filter(r => r.status === "rejected")
+    const failed = [i, c, p, m].filter(r => r.status === "rejected")
     if (failed.length) setErr(failed.map(f => f.reason.message).join(" · "))
     setLoading(false)
   }, [api, token, days])
@@ -113,6 +128,22 @@ export default function MarketingOS() {
         items: c.items.filter(i => i.id !== id),
         counts: { ...c.counts, pending: Math.max(0, (c.counts.pending || 1) - 1) },
       }))
+    } catch (e) { setErr(e.message) } finally { setBusyId(null) }
+  }
+
+  // ── ไอเดีย: กดเลือก → สร้างร่างคอนเทนต์ให้เลย · กดไม่เอา → เก็บเหตุผล ──
+  async function ideaAction(id, action, reason) {
+    setBusyId(`idea-${id}`)
+    try {
+      const res = await api("ideas", {
+        method: "PATCH",
+        body: JSON.stringify({ id, action, reason }),
+      })
+      setIdeas(s => ({ ...s, items: s.items.filter(x => x.id !== id) }))
+      // เลือกแล้วได้ร่างใหม่ทันที — รีเฟรชกล่องอนุมัติให้เห็นผล
+      if (action === "pick" && res.content) {
+        api("content?status=draft,pending").then(setContent).catch(() => {})
+      }
     } catch (e) { setErr(e.message) } finally { setBusyId(null) }
   }
 
@@ -157,8 +188,105 @@ export default function MarketingOS() {
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
-        {/* ── โซน A · กล่องอนุมัติ ── */}
-        <section className="lg:col-span-2">
+        <div className="lg:col-span-2 space-y-5">
+        {/* ── สถานี 1 · ไอเดียวันนี้ ──
+            AI ไปหาข่าว/เทรนด์ + อ่านข้อมูลขายของเราเอง มาวางบนโต๊ะ คนแค่สแกนแล้วเลือก */}
+        <section>
+          <h2 className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
+            <Lightbulb size={16} className="text-amber-500" />
+            ไอเดียวันนี้
+            <span className="px-2 py-0.5 rounded-full bg-amber-500 text-white text-xs">
+              {(ideas.items || []).length}
+            </span>
+            {Object.entries(ideas.by_source || {}).map(([s, n]) => (
+              <span key={s} className={`px-2 py-0.5 rounded text-xs ${IDEA_SOURCE[s]?.cls || "bg-gray-100 text-gray-600"}`}>
+                {IDEA_SOURCE[s]?.label || s} {n}
+              </span>
+            ))}
+          </h2>
+
+          {ideas.warning ? (
+            <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 text-sm text-amber-800">
+              {ideas.warning} — รัน migration 060 แล้วสั่ง{" "}
+              <code className="bg-white/60 px-1 rounded">idea_collector.py</code>
+            </div>
+          ) : (ideas.items || []).length === 0 ? (
+            <div className="bg-white rounded-2xl border border-gray-100 p-6 text-center">
+              <Lightbulb className="mx-auto text-gray-300 mb-2" size={26} />
+              <p className="text-gray-600 text-sm">ยังไม่มีไอเดียใหม่</p>
+              <p className="text-xs text-gray-400 mt-1">ตัวเก็บไอเดียรันทุกเช้า 07:00 น.</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {(ideas.items || []).map(idea => {
+                const src = IDEA_SOURCE[idea.source] || IDEA_SOURCE.manual
+                const SrcIcon = src.icon
+                return (
+                  <article key={idea.id} className="bg-white rounded-xl border border-gray-100 p-3">
+                    <div className="flex items-start gap-2.5">
+                      <span className={`shrink-0 rounded-lg p-1.5 ${src.cls}`}><SrcIcon size={15} /></span>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-0.5">
+                          <span className="text-[11px] text-gray-400">{idea.source_label || src.label}</span>
+                          <span className="text-[11px] text-amber-600 font-medium">
+                            คะแนน {Number(idea.score).toFixed(1)}
+                          </span>
+                          {idea.url && (
+                            <a href={idea.url} target="_blank" rel="noreferrer"
+                              className="text-[11px] text-blue-500 inline-flex items-center gap-0.5">
+                              เปิดต้นทาง <ExternalLink size={10} />
+                            </a>
+                          )}
+                        </div>
+                        <p className="text-sm font-medium text-gray-800 leading-snug">{idea.title}</p>
+                        {idea.angle && (
+                          <p className="text-xs text-gray-600 mt-1">
+                            <span className="text-gray-400">มุมที่จะเล่า:</span> {idea.angle}
+                          </p>
+                        )}
+                        {idea.relevance && (
+                          <p className="text-[11px] text-gray-400 mt-0.5">{idea.relevance}</p>
+                        )}
+
+                        {dismissingId === idea.id ? (
+                          <div className="flex gap-2 mt-2">
+                            <input
+                              value={dismissText}
+                              onChange={e => setDismissText(e.target.value)}
+                              placeholder="ไม่เอาเพราะอะไร?"
+                              className="flex-1 text-xs border border-gray-300 rounded-lg px-2.5 py-1.5"
+                              autoFocus
+                            />
+                            <button onClick={() => {
+                              ideaAction(idea.id, "dismiss", dismissText.trim() || null)
+                              setDismissingId(null); setDismissText("")
+                            }} className="px-2.5 py-1.5 rounded-lg bg-gray-700 text-white text-xs">ไม่เอา</button>
+                            <button onClick={() => setDismissingId(null)}
+                              className="px-2.5 py-1.5 rounded-lg bg-gray-100 text-gray-600 text-xs">ยกเลิก</button>
+                          </div>
+                        ) : (
+                          <div className="flex gap-2 mt-2">
+                            <button
+                              disabled={busyId === `idea-${idea.id}`}
+                              onClick={() => ideaAction(idea.id, "pick")}
+                              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500 text-white text-xs font-medium disabled:opacity-50">
+                              <Sparkles size={13} /> เริ่มทำคอนเทนต์
+                            </button>
+                            <button onClick={() => setDismissingId(idea.id)}
+                              className="px-3 py-1.5 rounded-lg bg-gray-100 text-gray-500 text-xs">ไม่เอา</button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </article>
+                )
+              })}
+            </div>
+          )}
+        </section>
+
+        {/* ── สถานี 2 · กล่องอนุมัติ ── */}
+        <section>
           <h2 className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
             <Megaphone size={16} className="text-blue-600" />
             รออนุมัติ
@@ -183,6 +311,13 @@ export default function MarketingOS() {
                     </span>
                     {item.slot && <span>· {SLOT_LABEL[item.slot] || item.slot}</span>}
                     {item.created_by === "ai" && <span>· 🤖 AI ร่าง</span>}
+                    {/* draft = ตั้งต้นจากไอเดีย ยังไม่มีแคปชั่นจริง — ต้องบอกให้ชัด
+                        ไม่งั้นจะเผลออนุมัติโจทย์แทนแคปชั่น */}
+                    {item.status === "draft" && (
+                      <span className="px-2 py-0.5 rounded bg-amber-100 text-amber-700 font-medium">
+                        ยังไม่มีแคปชั่นจริง
+                      </span>
+                    )}
                   </div>
 
                   {editingId === item.id ? (
@@ -251,6 +386,7 @@ export default function MarketingOS() {
             </div>
           )}
         </section>
+        </div>
 
         <div className="space-y-4">
           {/* ── โซน B · ยังไม่เปิด (เฟส 3) ── */}

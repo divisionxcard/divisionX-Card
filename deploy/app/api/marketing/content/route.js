@@ -24,16 +24,20 @@ export async function GET(req) {
   if (gate.error) return gate.error
 
   const { searchParams } = new URL(req.url)
+  // รับได้หลายสถานะคั่นด้วย comma เช่น "draft,pending" — กล่องอนุมัติใช้แบบนั้น
+  // (draft = ร่างที่ตั้งต้นจากไอเดีย ยังไม่มีแคปชั่นจริง · pending = AI เขียนเสร็จแล้ว)
   const status = searchParams.get("status") || "pending"
+  const wanted = status.split(",").map(s => s.trim()).filter(Boolean)
   const limit = Math.min(parseInt(searchParams.get("limit") || "50", 10) || 50, 200)
 
-  if (status !== "all" && !STATUSES.includes(status)) {
-    return NextResponse.json({ error: `status ไม่ถูกต้อง: ${status}` }, { status: 400 })
+  const bad = status === "all" ? [] : wanted.filter(s => !STATUSES.includes(s))
+  if (bad.length) {
+    return NextResponse.json({ error: `status ไม่ถูกต้อง: ${bad.join(", ")}` }, { status: 400 })
   }
 
   try {
     let q = db.from(TABLE).select("*").order("created_at", { ascending: false }).limit(limit)
-    if (status !== "all") q = q.eq("status", status)
+    if (status !== "all") q = wanted.length > 1 ? q.in("status", wanted) : q.eq("status", wanted[0])
     const { data, error } = await q
     if (error) throw error
 

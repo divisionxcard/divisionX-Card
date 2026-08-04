@@ -1,0 +1,64 @@
+name: Idea Collector
+
+# สถานี 1 ของระบบการตลาด — "ทีมรีเสิร์ช" ที่หาไอเดียคอนเทนต์มาวางบนโต๊ะทุกเช้า
+# เก็บจาก Google News RSS + YouTube RSS + ข้อมูลขายของเราเอง แล้วเขียนลง marketing_ideas
+# ให้หน้า /marketing โซน "ไอเดียวันนี้" เอาไปแสดง (คนเป็นคนเลือกเอง)
+#
+# ทั้งสามแหล่งไม่ต้องมี API key จึงรันบน GitHub Actions ได้
+# ⚠️ GitHub cron เลื่อนได้เป็นชั่วโมง — งานนี้ไม่ซีเรียส (ไอเดียของทั้งวัน)
+#    ต่างจาก stock sync ที่เวลามีผลต่อความถูกต้องของข้อมูล
+
+on:
+  schedule:
+    # ทุกวัน 07:00 น. ไทย (00:00 UTC) — ให้มีไอเดียรออยู่ก่อนเริ่มงานเช้า
+    - cron: "0 0 * * *"
+  workflow_dispatch:
+    inputs:
+      only:
+        description: "เก็บเฉพาะแหล่งเดียว (news | youtube | internal) — ว่าง = ทุกแหล่ง"
+        required: false
+      dry_run:
+        description: "ดูอย่างเดียว ไม่เขียน DB"
+        type: boolean
+        default: false
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+        # ไม่ต้อง pip install — ตัวเก็บใช้ stdlib (urllib) ล้วน และให้คะแนนแบบ rule-based
+        # (ไม่ใช้ LLM เพื่อให้รันฟรีและได้ผลเหมือนเดิมทุกครั้ง)
+
+      - name: Collect ideas
+        env:
+          SUPABASE_URL:         ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          IN_ONLY:    ${{ inputs.only }}
+          IN_DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          ARGS=()
+          if [ -n "$IN_ONLY" ]; then ARGS+=(--only "$IN_ONLY"); echo "🎯 เฉพาะ $IN_ONLY"; fi
+          if [ "$IN_DRY_RUN" = "true" ]; then ARGS+=(--dry-run); echo "🧪 DRY-RUN"; fi
+          python deploy/agents/idea_collector.py "${ARGS[@]}"
+
+      - name: Telegram alert on failure
+        if: failure()
+        env:
+          TELEGRAM_BOT_TOKEN:     ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_OWNER_CHAT_ID: ${{ secrets.TELEGRAM_OWNER_CHAT_ID }}
+        run: |
+          if [ -n "$TELEGRAM_BOT_TOKEN" ] && [ -n "$TELEGRAM_OWNER_CHAT_ID" ]; then
+            RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+              -H "Content-Type: application/json" \
+              -d "{\"chat_id\":\"$TELEGRAM_OWNER_CHAT_ID\",\"parse_mode\":\"HTML\",\"text\":\"🚨 <b>Cron FAIL</b>\\n\\nJob: <code>Idea Collector</code>\\n<a href=\\\"$RUN_URL\\\">ดู log บน GitHub</a>\"}"
+          fi

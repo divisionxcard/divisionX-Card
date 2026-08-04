@@ -1,0 +1,121 @@
+// ไอเดียคอนเทนต์ — สถานี 1 ของหน้า /marketing
+//
+// GET   /api/marketing/ideas?status=new  → ไอเดียที่ AI เก็บมา เรียงตามคะแนน
+// PATCH /api/marketing/ideas             → กด "เริ่มทำคอนเทนต์" (pick) หรือ "ไม่เอา" (dismiss)
+//
+// pick จะสร้างแถวใน marketing_content สถานะ draft ให้ด้วย แล้วโยง idea ↔ content เข้าหากัน
+// (ตัวเขียนแคปชั่นจริงใช้ Ollama ซึ่งรันในเครื่องเท่านั้น — เว็บทำได้แค่ตั้งต้นให้)
+import { createClient } from "@supabase/supabase-js"
+import { NextResponse } from "next/server"
+import { requireAdmin } from "../../../../lib/apiAuth"
+
+const db = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY,
+  { auth: { autoRefreshToken: false, persistSession: false } }
+)
+
+const STATUSES = ["new", "picked", "dismissed"]
+
+export async function GET(req) {
+  const gate = await requireAdmin(req)
+  if (gate.error) return gate.error
+
+  const { searchParams } = new URL(req.url)
+  const status = searchParams.get("status") || "new"
+  const limit = Math.min(parseInt(searchParams.get("limit") || "30", 10) || 30, 100)
+
+  if (status !== "all" && !STATUSES.includes(status)) {
+    return NextResponse.json({ error: `status ไม่ถูกต้อง: ${status}` }, { status: 400 })
+  }
+
+  try {
+    let q = db.from("marketing_ideas").select("*")
+      .order("score", { ascending: false })
+      .order("created_at", { ascending: false })
+      .limit(limit)
+    if (status !== "all") q = q.eq("status", status)
+    const { data, error } = await q
+    if (error) throw error
+
+    const { data: all } = await db.from("marketing_ideas").select("status,source")
+    const counts = {}, bySource = {}
+    for (const r of all || []) {
+      counts[r.status] = (counts[r.status] || 0) + 1
+      if (r.status === "new") bySource[r.source] = (bySource[r.source] || 0) + 1
+    }
+    return NextResponse.json({ items: data || [], counts, by_source: bySource })
+  } catch (err) {
+    // ยังไม่ได้ apply migration 060 → ให้หน้าเว็บแสดงข้อความแทนที่จะพังทั้งหน้า
+    if (/marketing_ideas/.test(err.message || "")) {
+      return NextResponse.json({ items: [], counts: {}, by_source: {},
+        warning: "ยังไม่ได้สร้างตาราง marketing_ideas (migration 060)" })
+    }
+    return NextResponse.json({ error: err.message }, { status: 500 })
+  }
+}
+
+export async function PATCH(req) {
+  const gate = await requireAdmin(req)
+  if (gate.error) return gate.error
+
+  let body
+  try { body = await req.json() } catch { return NextResponse.json({ error: "bad json" }, { status: 400 }) }
+
+  const id = parseInt(body.id, 10)
+  const action = body.action
+  if (!id) return NextResponse.json({ error: "ต้องระบุ id" }, { status: 400 })
+  if (!["pick", "dismiss"].includes(action)) {
+    return NextResponse.json({ error: "action ต้องเป็น pick หรือ dismiss" }, { status: 400 })
+  }
+
+  try {
+    const { data: idea, error: e0 } = await db.from("marketing_ideas")
+      .select("*").eq("id", id).maybeSingle()
+    if (e0) throw e0
+    if (!idea) return NextResponse.json({ error: `ไม่พบไอเดีย id=${id}` }, { status: 404 })
+
+    if (action === "dismiss") {
+      const { data, error } = await db.from("marketing_ideas")
+        .update({ status: "dismissed", dismiss_reason: body.reason || null })
+        .eq("id", id).select().maybeSingle()
+      if (error) throw error
+      return NextResponse.json({ idea: data })
+    }
+
+    // ── pick: ตั้งต้นร่างคอนเทนต์จากไอเดีย ──
+    if (idea.status === "picked" && idea.content_id) {
+      return NextResponse.json({ error: "ไอเดียนี้เริ่มทำไปแล้ว" }, { status: 409 })
+    }
+
+    // caption ตอนนี้เป็น "โจทย์" ให้คนหรือ Ollama เขียนต่อ — ไม่ใช่แคปชั่นจริง
+    const brief = [
+      `[ร่างจากไอเดีย] ${idea.title}`,
+      idea.angle ? `\nมุมที่จะเล่า: ${idea.angle}` : "",
+      idea.url ? `\nอ้างอิง: ${idea.url}` : "",
+      "\n\n(ยังไม่ใช่แคปชั่นจริง — รันตัวเขียนแคปชั่นในเครื่อง หรือแก้เองแล้วอนุมัติ)",
+    ].join("")
+
+    const { data: content, error: e1 } = await db.from("marketing_content").insert({
+      status: "draft",
+      platform: body.platform || "fb",
+      caption: brief,
+      source_reason: idea.relevance
+        ? `${idea.title} · ${idea.relevance}`
+        : idea.title,
+      source_sku: idea.related_sku || null,
+      idea_id: idea.id,
+      created_by: "ai",
+    }).select().single()
+    if (e1) throw e1
+
+    const { data: updated, error: e2 } = await db.from("marketing_ideas")
+      .update({ status: "picked", content_id: content.id })
+      .eq("id", id).select().maybeSingle()
+    if (e2) throw e2
+
+    return NextResponse.json({ idea: updated, content })
+  } catch (err) {
+    return NextResponse.json({ error: err.message }, { status: 500 })
+  }
+}

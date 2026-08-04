@@ -1,0 +1,376 @@
+"""
+Idea Collector — สถานี 1 ของระบบการตลาด: "ทีมรีเสิร์ช" ที่หาไอเดียมาวางบนโต๊ะทุกเช้า
+
+เก็บไอเดียคอนเทนต์จาก 3 แหล่ง แล้วเขียนลงตาราง marketing_ideas
+ให้หน้า /marketing โซนไอเดียเอาไปแสดง (คนเป็นคนกดเลือกเอง)
+
+  news     Google News RSS ภาษาไทย        — ข่าว/เทรนด์วงการการ์ด
+  youtube  YouTube channel RSS            — คลิปใหม่ของช่องที่เราตาม
+  internal ข้อมูลขายของเราเอง             — SKU มาแรง/ตก · ของใกล้หมด · ตู้ยอดตก
+
+ทั้งสามแหล่ง **ไม่ต้องมี API key** จึงรันบน GitHub Actions ได้
+(เสียงลูกค้าจากคอมเมนต์ FB/YT เป็นเฟส 3 — ต้องขอ permission Meta ก่อน)
+
+การให้คะแนน: นับคำที่ตรงกับแฟรนไชส์/ชื่อ SKU ที่เราขายจริง (ดึงจากตาราง skus)
+ไม่ใช้ LLM — เพื่อให้รันฟรีและได้ผลเหมือนเดิมทุกครั้ง
+
+รัน:
+  py deploy/agents/idea_collector.py --dry-run
+  py deploy/agents/idea_collector.py
+  py deploy/agents/idea_collector.py --only news
+"""
+import os
+import re
+import sys
+import json
+import html
+import argparse
+import urllib.parse
+import urllib.request
+import urllib.error
+from pathlib import Path
+from datetime import datetime, timedelta, timezone
+
+if sys.stdout.encoding and sys.stdout.encoding.lower() != "utf-8":
+    sys.stdout.reconfigure(encoding="utf-8")
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import dvx_data as data  # noqa: E402
+
+ROOT = Path(__file__).resolve().parents[2]
+SOURCES_FILE = ROOT / "deploy" / "tasks" / "idea_sources.json"
+UA = "Mozilla/5.0 (compatible; DivisionX-IdeaCollector/1.0)"
+
+# คำที่บอกว่าข่าวนี้ "น่าเอามาทำคอนเทนต์" ไม่ใช่แค่เอ่ยชื่อผ่าน ๆ
+INTENT_WORDS = {
+    "เปิดตัว": 1.5, "วางจำหน่าย": 1.5, "ออกใหม่": 1.5, "เปิดแล้ว": 1.2,
+    "อีเวนต์": 1.2, "งาน": 0.5, "แข่ง": 1.0, "ทัวร์นาเมนต์": 1.5,
+    "ราคา": 0.8, "หายาก": 1.2, "ชุดใหม่": 1.5, "pop-up": 1.5,
+}
+
+
+def log(msg):
+    print(msg, flush=True)
+
+
+def fetch(url, timeout=25):
+    req = urllib.request.Request(url, headers={"User-Agent": UA})
+    with urllib.request.urlopen(req, timeout=timeout) as r:
+        return r.read().decode("utf-8", "ignore")
+
+
+def clean(s):
+    """ถอด CDATA / tag / entity ออกจากข้อความใน RSS"""
+    s = re.sub(r"<!\[CDATA\[(.*?)\]\]>", r"\1", s or "", flags=re.S)
+    s = re.sub(r"<[^>]+>", " ", s)
+    return re.sub(r"\s+", " ", html.unescape(s)).strip()
+
+
+def rss_items(xml):
+    """ดึง <item> (RSS) และ <entry> (Atom/YouTube) ออกมาเป็น dict"""
+    out = []
+    for block in re.findall(r"<(?:item|entry)\b.*?</(?:item|entry)>", xml, re.S):
+        def pick(tag):
+            m = re.search(rf"<{tag}\b[^>]*>(.*?)</{tag}>", block, re.S)
+            return clean(m.group(1)) if m else None
+        link = pick("link")
+        if not link:  # Atom เก็บ link ไว้ใน attribute
+            m = re.search(r'<link[^>]*href="([^"]+)"', block)
+            link = m.group(1) if m else None
+        out.append({
+            "title": pick("title"),
+            "url": link,
+            "summary": pick("description") or pick("media:description") or "",
+            "published": pick("pubDate") or pick("published") or "",
+            "author": pick("source") or pick("name") or "",
+        })
+    return [i for i in out if i.get("title") and i.get("url")]
+
+
+# ── คำสำคัญจากสินค้าที่เราขายจริง ─────────────────────────────────────────
+FRANCHISE_WORDS = {
+    "OP":  ["one piece", "วันพีซ", "วันพีช", "onepiece"],
+    "DB":  ["dragon ball", "dragonball", "ดราก้อนบอล", "fusion world"],
+    "PKM": ["pokemon", "pokémon", "โปเกมอน", "โปเกม่อน"],
+    "YGH": ["yu-gi-oh", "yugioh", "ยูกิ", "ยูกิโอ"],
+    "NRT": ["naruto", "นารูโตะ", "นารุโตะ"],
+    "SL":  ["solo leveling", "โซโล เลเวลลิ่ง"],
+}
+GENERIC_WORDS = ["การ์ดสะสม", "การ์ดเกม", "tcg", "เปิดซอง", "booster", "ตู้กดการ์ด"]
+
+
+def build_keywords():
+    """แฟรนไชส์ที่เราขายจริง → คำค้น (data-driven จากตาราง skus)"""
+    skus = data.sb_get("skus?select=sku_id,name,franchise&is_active=eq.true")
+    have = {s.get("franchise") for s in skus if s.get("franchise")}
+    kw = {}
+    for f in have:
+        for w in FRANCHISE_WORDS.get(f, []):
+            kw[w] = f
+    for w in GENERIC_WORDS:
+        kw.setdefault(w, None)
+    return kw, skus
+
+
+def score_item(text, keywords):
+    """คืน (คะแนน, แฟรนไชส์ที่ตรง) — คะแนนสูง = เกี่ยวกับเรามาก"""
+    low = (text or "").lower()
+    score, hit_franchise = 0.0, None
+    for w, fr in keywords.items():
+        if w in low:
+            score += 2.0 if fr else 0.7
+            hit_franchise = hit_franchise or fr
+    for w, weight in INTENT_WORDS.items():
+        if w in low:
+            score += weight
+    return round(score, 2), hit_franchise
+
+
+def angle_for(franchise, title):
+    """มุมที่เสนอให้เอาไปทำคอนเทนต์ — คนอ่านแล้วตัดสินใจได้เลยว่าจะทำไหม"""
+    name = {"OP": "One Piece", "DB": "Dragon Ball", "PKM": "Pokémon",
+            "YGH": "Yu-Gi-Oh!", "NRT": "Naruto", "SL": "Solo Leveling"}.get(franchise)
+    if name:
+        return f"เกาะกระแส {name} — โยงเข้าซอง {name} ที่มีในตู้ ชวนมาเปิดที่สาขาใกล้บ้าน"
+    return "เกาะกระแสวงการการ์ด — โยงเข้าตู้ DivisionX ว่ามีอะไรให้เปิดบ้าง"
+
+
+# ── แหล่ง 1: ข่าว ────────────────────────────────────────────────────────
+def collect_news(cfg, keywords):
+    ideas = []
+    for q in cfg.get("news_queries", []):
+        url = ("https://news.google.com/rss/search?q="
+               + urllib.parse.quote(q) + "&hl=th&gl=TH&ceid=TH:th")
+        try:
+            items = rss_items(fetch(url))
+        except Exception as e:
+            log(f"  ⚠️  ข่าว '{q}' ดึงไม่ได้: {type(e).__name__}")
+            continue
+        for it in items[: cfg.get("max_per_source", 8)]:
+            sc, fr = score_item(f"{it['title']} {it['summary']}", keywords)
+            if sc < cfg.get("min_score", 1.0):
+                continue
+            ideas.append({
+                "source": "news", "source_label": f"Google News · {q}",
+                "title": it["title"][:300],
+                "summary": (it["summary"] or "")[:600] or None,
+                "url": it["url"], "score": sc,
+                "angle": angle_for(fr, it["title"]),
+                "relevance": f"ตรงคำค้น «{q}»" + (f" · แฟรนไชส์ {fr} ที่เราขาย" if fr else ""),
+                "external_key": f"news:{it['url'][:180]}",
+            })
+    return ideas
+
+
+# ── แหล่ง 2: YouTube ────────────────────────────────────────────────────
+def collect_youtube(cfg, keywords):
+    ideas = []
+    for ch in cfg.get("youtube_channels", []):
+        cid = ch.get("channel_id") if isinstance(ch, dict) else ch
+        label = (ch.get("label") if isinstance(ch, dict) else None) or cid
+        if not cid:
+            continue
+        url = f"https://www.youtube.com/feeds/videos.xml?channel_id={cid}"
+        try:
+            items = rss_items(fetch(url))
+        except Exception as e:
+            log(f"  ⚠️  ช่อง {label} ดึงไม่ได้: {type(e).__name__}")
+            continue
+        for it in items[: cfg.get("max_per_source", 8)]:
+            sc, fr = score_item(f"{it['title']} {it['summary']}", keywords)
+            ideas.append({
+                "source": "youtube", "source_label": f"YouTube · {label}",
+                "title": it["title"][:300],
+                "summary": (it["summary"] or "")[:600] or None,
+                "url": it["url"], "score": max(sc, 0.5),   # คลิปจากช่องที่เราตามเอง = สนใจอยู่แล้ว
+                "angle": angle_for(fr, it["title"]),
+                "relevance": f"คลิปใหม่จากช่องที่เราตาม ({label})",
+                "external_key": f"yt:{it['url'][:180]}",
+            })
+    return ideas
+
+
+# ── แหล่ง 3: ข้อมูลขายของเราเอง ─────────────────────────────────────────
+def collect_internal(cfg, skus):
+    """สัญญาณจากยอดขายจริง — แหล่งที่คู่แข่งลอกไม่ได้ เพราะเป็นข้อมูลของเราเอง"""
+    sig = cfg.get("internal_signals", {})
+    today = data.th_today().isoformat()
+    sku_name = {s["sku_id"]: (s.get("name") or s["sku_id"]) for s in skus}
+    ideas = []
+
+    cur = data.query_sales(days=7, group_by="sku", top=30)
+    prev = data.query_sales(from_date=str(data.th_today() - timedelta(days=13)),
+                            to_date=str(data.th_today() - timedelta(days=7)),
+                            group_by="sku", top=30)
+    prev_rev = {b["sku_id"]: b["revenue"] for b in prev["breakdown"]}
+
+    # SKU มาแรง — ยอดโตขึ้นชัดเจน
+    if sig.get("hot_sku", True):
+        for b in cur["breakdown"][:12]:
+            before = prev_rev.get(b["sku_id"], 0)
+            if before <= 0 or b["revenue"] < 3000:
+                continue
+            growth = (b["revenue"] - before) / before * 100
+            if growth < 25:
+                continue
+            ideas.append({
+                "source": "internal", "source_label": "ยอดขาย 7 วัน",
+                "title": f"{b['name']} กำลังมาแรง — ยอดโต {growth:.0f}%",
+                "summary": (f"รายรับ 7 วันล่าสุด {b['revenue']:,} บาท ({b['packs']} ซอง) "
+                            f"เทียบ 7 วันก่อนหน้า {before:,} บาท"),
+                "url": None, "score": round(4 + growth / 50, 2),
+                "angle": f"ทำคอนเทนต์ดัน {b['name']} ตอนกระแสกำลังขึ้น — โชว์ของในซอง/การ์ดเด่น",
+                "relevance": f"ข้อมูลขายจริงของเรา · โต {growth:.0f}%",
+                "related_sku": b["sku_id"],
+                "external_key": f"hot:{b['sku_id']}:{today}",
+            })
+
+    # SKU ที่ยอดตก — ต้องกระตุ้น
+    if sig.get("falling_sku", True):
+        for sku, before in sorted(prev_rev.items(), key=lambda kv: -kv[1])[:12]:
+            now = next((b["revenue"] for b in cur["breakdown"] if b["sku_id"] == sku), 0)
+            if before < 5000:
+                continue
+            drop = (before - now) / before * 100
+            if drop < 40:
+                continue
+            ideas.append({
+                "source": "internal", "source_label": "ยอดขาย 7 วัน",
+                "title": f"{sku_name.get(sku, sku)} ยอดตก {drop:.0f}% — ควรกระตุ้น",
+                "summary": f"จาก {before:,} บาท เหลือ {now:,} บาท ใน 7 วัน",
+                "url": None, "score": round(3 + drop / 50, 2),
+                "angle": f"คอนเทนต์กระตุ้น {sku_name.get(sku, sku)} — รีวิวการ์ดเด่น หรือจัดโปรร่วมกับตัวขายดี",
+                "relevance": f"ข้อมูลขายจริงของเรา · ตก {drop:.0f}%",
+                "related_sku": sku,
+                "external_key": f"fall:{sku}:{today}",
+            })
+
+    # ของใกล้หมด/หมดแล้วแต่ขายดี — คอนเทนต์ "รีบมาก่อนหมด"
+    if sig.get("restock_alert", True):
+        alerts = data.query_restock_alerts(threshold_days=1.5, min_velocity=2.0)
+        for a in alerts["alerts"][:5]:
+            ideas.append({
+                "source": "internal", "source_label": "เตือนเติมสต็อก",
+                "title": f"{a['sku']} ที่ {a['machine']} — {a['severity']}",
+                "summary": (f"เหลือ {a['stock_packs']} ซอง · ขาย {a['velocity_per_day']} ซอง/วัน "
+                            f"· พอใช้อีก {a['days_cover']} วัน"),
+                "url": None, "score": 3.5,
+                "angle": ("คอนเทนต์ความเร่งด่วน «ใกล้หมดแล้ว» — แต่ต้องเติมของก่อนโพสต์ "
+                          "ไม่งั้นลูกค้าไปถึงแล้วผิดหวัง"),
+                "relevance": "ข้อมูลสต็อกจริงของเรา",
+                "related_sku": a["sku_id"],
+                "external_key": f"restock:{a['machine_id']}:{a['sku_id']}:{today}",
+            })
+
+    # ตู้ที่ยอดตก — คอนเทนต์เจาะสาขา
+    if sig.get("machine_drop", True):
+        cur_m = {b["machine_id"]: b["revenue"] for b in
+                 data.query_sales(days=7, group_by="machine")["breakdown"]}
+        prev_m = {b["machine_id"]: b["revenue"] for b in
+                  data.query_sales(from_date=str(data.th_today() - timedelta(days=13)),
+                                   to_date=str(data.th_today() - timedelta(days=7)),
+                                   group_by="machine")["breakdown"]}
+        names = {b["machine_id"]: b["name"] for b in
+                 data.query_sales(days=7, group_by="machine")["breakdown"]}
+        for mid, before in prev_m.items():
+            now = cur_m.get(mid, 0)
+            if before < 8000:
+                continue
+            drop = (before - now) / before * 100
+            if drop < 35:
+                continue
+            ideas.append({
+                "source": "internal", "source_label": "ยอดขายรายสาขา",
+                "title": f"{names.get(mid, mid)} ยอดตก {drop:.0f}%",
+                "summary": f"จาก {before:,} บาท เหลือ {now:,} บาท ใน 7 วัน",
+                "url": None, "score": round(3 + drop / 50, 2),
+                "angle": "คอนเทนต์เจาะสาขานี้ — โพสต์บอกทำเล/ของที่มี หรือยิงแอดรัศมีรอบห้าง",
+                "relevance": "ข้อมูลขายจริงของเรา · ระดับสาขา",
+                "external_key": f"mdrop:{mid}:{today}",
+            })
+
+    return ideas
+
+
+# ── บันทึกลง DB ─────────────────────────────────────────────────────────
+FIELDS = ("status", "source", "source_label", "title", "summary", "url",
+          "angle", "relevance", "score", "related_sku", "external_key")
+
+
+def save(ideas, dry_run=False):
+    if not ideas:
+        log("[ideas] ไม่มีไอเดียใหม่")
+        return 0
+
+    # dry-run ต้องพรีวิวได้แม้ยังไม่ได้ apply migration 060
+    try:
+        have = {r["external_key"] for r in data.sb_get("marketing_ideas?select=external_key")}
+    except data.DvxError as e:
+        if "404" not in str(e):
+            raise
+        if not dry_run:
+            sys.exit("❌ ยังไม่มีตาราง marketing_ideas — รัน migration 060 ใน Supabase SQL Editor ก่อน")
+        log("  ⚠️  ยังไม่มีตาราง marketing_ideas — พรีวิวอย่างเดียว")
+        have = set()
+    new = [i for i in ideas if i["external_key"] not in have]
+    # กันซ้ำในรอบเดียวกันด้วย (คำค้นหลายอันอาจเจอข่าวเดียวกัน)
+    seen, uniq = set(), []
+    for i in new:
+        if i["external_key"] in seen:
+            continue
+        seen.add(i["external_key"])
+        uniq.append({k: i.get(k) for k in FIELDS} | {"status": "new"})
+
+    log(f"[ideas] เก็บได้ {len(ideas)} · มีอยู่แล้ว {len(ideas) - len(new)} · ใหม่ {len(uniq)}")
+    for i in sorted(uniq, key=lambda x: -x["score"])[:15]:
+        log(f"   {i['score']:>5.2f} [{i['source']:<8}] {i['title'][:62]}")
+    if not uniq:
+        return 0
+    if dry_run:
+        log("\n── DRY RUN — ไม่ได้เขียน ──")
+        return 0
+
+    req = urllib.request.Request(
+        f"{data.SB_URL}/rest/v1/marketing_ideas",
+        data=json.dumps(uniq, ensure_ascii=False).encode("utf-8"),
+        headers={"apikey": data.SB_KEY, "Authorization": f"Bearer {data.SB_KEY}",
+                 "Content-Type": "application/json", "Prefer": "return=representation"},
+        method="POST")
+    try:
+        with urllib.request.urlopen(req, timeout=40) as r:
+            created = json.loads(r.read().decode("utf-8"))
+    except urllib.error.HTTPError as e:
+        detail = e.read().decode("utf-8", "ignore")[:300]
+        if e.code == 404:
+            sys.exit("❌ ยังไม่มีตาราง marketing_ideas — รัน migration 060 ก่อน")
+        sys.exit(f"❌ Supabase HTTP {e.code}: {detail}")
+    log(f"\n[ideas] ✅ บันทึก {len(created)} ไอเดีย")
+    return len(created)
+
+
+def main():
+    ap = argparse.ArgumentParser(description="เก็บไอเดียคอนเทนต์จากข่าว/YouTube/ข้อมูลขาย")
+    ap.add_argument("--dry-run", action="store_true", help="ดูอย่างเดียว ไม่เขียน DB")
+    ap.add_argument("--only", choices=["news", "youtube", "internal"], help="เก็บเฉพาะแหล่งเดียว")
+    args = ap.parse_args()
+
+    cfg = json.loads(SOURCES_FILE.read_text(encoding="utf-8-sig"))
+    keywords, skus = build_keywords()
+    log(f"[ideas] คำสำคัญจากสินค้าที่ขายจริง {len(keywords)} คำ")
+
+    ideas = []
+    if args.only in (None, "news"):
+        n = collect_news(cfg, keywords); ideas += n; log(f"[ideas] ข่าว: {len(n)}")
+    if args.only in (None, "youtube"):
+        y = collect_youtube(cfg, keywords); ideas += y; log(f"[ideas] YouTube: {len(y)}")
+    if args.only in (None, "internal"):
+        try:
+            i = collect_internal(cfg, skus); ideas += i; log(f"[ideas] ภายใน: {len(i)}")
+        except Exception as e:
+            log(f"  ⚠️  สัญญาณภายในล้ม: {type(e).__name__}: {e}")
+
+    save(ideas, dry_run=args.dry_run)
+
+
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,27 @@
+{
+  "_comment": "แหล่งข้อมูลของตัวเก็บไอเดีย (deploy/agents/idea_collector.py) · แก้ไฟล์นี้ได้เลย ไม่ต้องแก้โค้ด",
+
+  "_news_note": "Google News RSS ภาษาไทย — ไม่ต้องมี API key · คำค้นควรกว้างพอจะเจอข่าว แต่แคบพอจะไม่เจอเรื่องไม่เกี่ยว",
+  "news_queries": [
+    "One Piece Card Game การ์ด",
+    "Pokemon การ์ดสะสม ไทย",
+    "Dragon Ball Fusion World การ์ด",
+    "การ์ดเกม TCG ไทย",
+    "ตู้กดการ์ด การ์ดสะสม"
+  ],
+
+  "_youtube_note": "YouTube channel RSS — ไม่ต้องมี API key · หา channel_id ได้จาก view-source ของหน้าช่อง (ค้น 'channelId')",
+  "youtube_channels": [],
+
+  "_internal_note": "สัญญาณจากข้อมูลขายของเราเอง — เปิด/ปิดได้ทีละอย่าง",
+  "internal_signals": {
+    "hot_sku": true,
+    "falling_sku": true,
+    "restock_alert": true,
+    "machine_drop": true
+  },
+
+  "_tuning": "max_per_source = เก็บสูงสุดกี่ชิ้นต่อแหล่งต่อรอบ · min_score = คะแนนต่ำกว่านี้ทิ้ง",
+  "max_per_source": 8,
+  "min_score": 1.0
+}
