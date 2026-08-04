@@ -67,8 +67,13 @@ def read_json(name):
     return json.loads(p.read_text(encoding="utf-8-sig"))
 
 
+# PostgREST batch insert บังคับให้ทุก object ในอาร์เรย์มี key ชุดเดียวกัน
+# (ไม่งั้น 400 "All object keys must match") — จึงต้อง normalize ก่อนส่ง
+FIELDS = ("status", "platform", "caption", "slot", "source_reason", "source_sku", "created_by")
+
+
 def collect():
-    """คืน list ของ record ที่จะ insert"""
+    """คืน list ของ record ที่จะ insert (ทุกตัวมี key ครบชุดเดียวกัน)"""
     out = []
 
     # ── ร่าง AI (รออนุมัติ) ──
@@ -105,7 +110,8 @@ def collect():
             "source_reason": f"คิวเดิมจาก content_queue.json ({days_txt})" if days_txt else "คิวเดิมจาก content_queue.json",
             "created_by": "human",
         })
-    return out
+
+    return [{k: r.get(k) for k in FIELDS} for r in out]
 
 
 def main():
