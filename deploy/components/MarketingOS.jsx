@@ -71,6 +71,7 @@ export default function MarketingOS() {
   const [pasteUrl, setPasteUrl] = useState("")
   const [pasting, setPasting] = useState(false)
   const [perSource, setPerSource] = useState(3)   // เด็ดสุดกี่ชิ้นต่อช่องทาง
+  const [generating, setGenerating] = useState(new Set())   // id ที่ AI กำลังเขียนแคปชั่นให้
 
   const [editingId, setEditingId] = useState(null)
   const [editText, setEditText] = useState("")
@@ -135,7 +136,25 @@ export default function MarketingOS() {
     } catch (e) { setErr(e.message) } finally { setBusyId(null) }
   }
 
-  // ── ไอเดีย: กดเลือก → สร้างร่างคอนเทนต์ให้เลย · กดไม่เอา → เก็บเหตุผล ──
+  // ให้ AI เขียนแคปชั่นจริงจากไอเดีย (Ollama บนเครื่อง) — ใช้เวลา ~15-60 วินาที
+  const generate = useCallback(async (contentId) => {
+    setGenerating(s => new Set(s).add(contentId))
+    try {
+      const updated = await api("content/generate", {
+        method: "POST", body: JSON.stringify({ id: contentId }),
+      })
+      setContent(c => ({
+        ...c,
+        items: (c.items || []).map(i => (i.id === contentId ? updated : i)),
+      }))
+    } catch (e) {
+      setErr(e.message)   // ร่างยังอยู่ในคิว กดเขียนใหม่ได้
+    } finally {
+      setGenerating(s => { const n = new Set(s); n.delete(contentId); return n })
+    }
+  }, [api])
+
+  // ── ไอเดีย: กดเลือก → สร้างร่าง แล้วให้ AI เขียนแคปชั่นต่อทันที ──
   async function ideaAction(id, action, reason) {
     setBusyId(`idea-${id}`)
     try {
@@ -144,9 +163,11 @@ export default function MarketingOS() {
         body: JSON.stringify({ id, action, reason }),
       })
       setIdeas(s => ({ ...s, items: s.items.filter(x => x.id !== id) }))
-      // เลือกแล้วได้ร่างใหม่ทันที — รีเฟรชกล่องอนุมัติให้เห็นผล
       if (action === "pick" && res.content) {
-        api("content?status=draft,pending").then(setContent).catch(() => {})
+        // เอาร่างขึ้นกล่องอนุมัติก่อน แล้วค่อยให้ AI เขียนแคปชั่นทับ
+        // (ไม่รอ generate ให้เสร็จ ไม่งั้นปุ่มค้างเป็นนาที)
+        setContent(c => ({ ...c, items: [res.content, ...(c.items || [])] }))
+        generate(res.content.id)
       }
     } catch (e) { setErr(e.message) } finally { setBusyId(null) }
   }
@@ -358,9 +379,14 @@ export default function MarketingOS() {
                     {item.created_by === "ai" && <span>· 🤖 AI ร่าง</span>}
                     {/* draft = ตั้งต้นจากไอเดีย ยังไม่มีแคปชั่นจริง — ต้องบอกให้ชัด
                         ไม่งั้นจะเผลออนุมัติโจทย์แทนแคปชั่น */}
-                    {item.status === "draft" && (
+                    {item.status === "draft" && !generating.has(item.id) && (
                       <span className="px-2 py-0.5 rounded bg-amber-100 text-amber-700 font-medium">
                         ยังไม่มีแคปชั่นจริง
+                      </span>
+                    )}
+                    {generating.has(item.id) && (
+                      <span className="px-2 py-0.5 rounded bg-blue-100 text-blue-700 font-medium inline-flex items-center gap-1">
+                        <Sparkles size={11} className="animate-pulse" /> AI กำลังเขียน…
                       </span>
                     )}
                   </div>
@@ -429,6 +455,19 @@ export default function MarketingOS() {
                           <button onClick={() => setRejectingId(item.id)}
                             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-100 text-gray-500 text-sm">
                             <X size={14} /> ทิ้ง
+                          </button>
+                          {/* ให้ AI เขียน/เขียนใหม่ — ร่างที่ยังไม่มีแคปชั่นจริงจะเน้นปุ่มนี้ */}
+                          <button
+                            disabled={generating.has(item.id)}
+                            onClick={() => generate(item.id)}
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm disabled:opacity-50 ${
+                              item.status === "draft"
+                                ? "bg-blue-600 text-white font-medium"
+                                : "bg-gray-100 text-gray-600"}`}>
+                            <Sparkles size={14} />
+                            {generating.has(item.id)
+                              ? "กำลังเขียน…"
+                              : item.status === "draft" ? "ให้ AI เขียน" : "เขียนใหม่"}
                           </button>
                         </>
                       )}
