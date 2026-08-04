@@ -158,7 +158,7 @@ def collect_news(cfg, keywords):
             if sc < cfg.get("min_score", 1.0):
                 continue
             ideas.append({
-                "source": "news", "source_label": f"Google News · {q}",
+                "source": "news", "source_label": f"Google News · {q}", "subtype": q,
                 "title": it["title"][:300],
                 "summary": (it["summary"] or "")[:600] or None,
                 "url": it["url"], "score": sc,
@@ -189,7 +189,7 @@ def collect_tiktok(cfg, keywords):
             if sc < cfg.get("min_score", 1.0):
                 continue
             ideas.append({
-                "source": "tiktok", "source_label": f"กระแส TikTok · {q}",
+                "source": "tiktok", "source_label": f"กระแส TikTok · {q}", "subtype": q,
                 "title": it["title"][:300],
                 "summary": (it["summary"] or "")[:600] or None,
                 "url": it["url"], "score": sc + 0.5,   # กระแสไวรัลมีอายุสั้น ดันขึ้นมาหน่อย
@@ -218,7 +218,7 @@ def collect_youtube(cfg, keywords):
         for it in items[: cfg.get("max_per_source", 8)]:
             sc, fr = score_item(f"{it['title']} {it['summary']}", keywords)
             ideas.append({
-                "source": "youtube", "source_label": f"YouTube · {label}",
+                "source": "youtube", "source_label": f"YouTube · {label}", "subtype": label,
                 "title": it["title"][:300],
                 "summary": (it["summary"] or "")[:600] or None,
                 "url": it["url"], "score": max(sc, 0.5),   # คลิปจากช่องที่เราตามเอง = สนใจอยู่แล้ว
@@ -253,7 +253,7 @@ def collect_internal(cfg, skus):
             if growth < 25:
                 continue
             ideas.append({
-                "source": "internal", "source_label": "ยอดขาย 7 วัน",
+                "source": "internal", "source_label": "ยอดขาย 7 วัน", "subtype": "hot_sku",
                 "title": f"{b['name']} กำลังมาแรง — ยอดโต {growth:.0f}%",
                 "summary": (f"รายรับ 7 วันล่าสุด {b['revenue']:,} บาท ({b['packs']} ซอง) "
                             f"เทียบ 7 วันก่อนหน้า {before:,} บาท"),
@@ -274,7 +274,7 @@ def collect_internal(cfg, skus):
             if drop < 40:
                 continue
             ideas.append({
-                "source": "internal", "source_label": "ยอดขาย 7 วัน",
+                "source": "internal", "source_label": "ยอดขาย 7 วัน", "subtype": "falling_sku",
                 "title": f"{sku_name.get(sku, sku)} ยอดตก {drop:.0f}% — ควรกระตุ้น",
                 "summary": f"จาก {before:,} บาท เหลือ {now:,} บาท ใน 7 วัน",
                 "url": None, "score": round(3 + drop / 50, 2),
@@ -289,7 +289,7 @@ def collect_internal(cfg, skus):
         alerts = data.query_restock_alerts(threshold_days=1.5, min_velocity=2.0)
         for a in alerts["alerts"][:5]:
             ideas.append({
-                "source": "internal", "source_label": "เตือนเติมสต็อก",
+                "source": "internal", "source_label": "เตือนเติมสต็อก", "subtype": "restock",
                 "title": f"{a['sku']} ที่ {a['machine']} — {a['severity']}",
                 "summary": (f"เหลือ {a['stock_packs']} ซอง · ขาย {a['velocity_per_day']} ซอง/วัน "
                             f"· พอใช้อีก {a['days_cover']} วัน"),
@@ -319,7 +319,7 @@ def collect_internal(cfg, skus):
             if drop < 35:
                 continue
             ideas.append({
-                "source": "internal", "source_label": "ยอดขายรายสาขา",
+                "source": "internal", "source_label": "ยอดขายรายสาขา", "subtype": "machine_drop",
                 "title": f"{names.get(mid, mid)} ยอดตก {drop:.0f}%",
                 "summary": f"จาก {before:,} บาท เหลือ {now:,} บาท ใน 7 วัน",
                 "url": None, "score": round(3 + drop / 50, 2),
@@ -332,7 +332,7 @@ def collect_internal(cfg, skus):
 
 
 # ── บันทึกลง DB ─────────────────────────────────────────────────────────
-FIELDS = ("status", "source", "source_label", "title", "summary", "url",
+FIELDS = ("status", "source", "source_label", "subtype", "title", "summary", "url",
           "angle", "relevance", "score", "related_sku", "external_key")
 
 

@@ -41,17 +41,39 @@ export async function GET(req) {
     const { data, error } = await q
     if (error) throw error
 
-    // ตัดให้เหลือ N ต่อช่องทาง (ข้อมูลเรียงตามคะแนนมาแล้ว → หัวแถวคือเด็ดสุด)
-    // แล้วเรียงรวมตามคะแนนอีกที ให้ของดีที่สุดอยู่บนสุดไม่ว่ามาจากช่องทางไหน
+    // ตัดให้เหลือ N ต่อช่องทาง — แต่ **วนเลือกข้ามประเภทย่อย (subtype)** ไม่ใช่เอาคะแนนสูงสุดล้วน
+    //
+    // ทำไม: ถ้าเรียงตามคะแนนอย่างเดียว ช่องทาง internal จะได้ "SKU มาแรง" ทั้ง 3 อัน
+    // เพราะคะแนนสูงสุดหมด ส่วน "SKU ยอดตก" ที่ควรได้คอนเทนต์ดันจะไม่มีวันโผล่
+    // วนเลือกทีละประเภททำให้ได้ มาแรง 1 · ยอดตก 1 · ของใกล้หมด 1
+    // (ใช้กับข่าวด้วย — 3 ชิ้นจะมาจาก 3 คำค้นต่างกัน ไม่กระจุกที่คำค้นเดียว)
     let items = data || []
     const hiddenBySource = {}
     if (perSource > 0) {
-      const kept = {}
-      const picked = []
+      const bySource = new Map()
       for (const r of items) {
-        kept[r.source] = (kept[r.source] || 0) + 1
-        if (kept[r.source] <= perSource) picked.push(r)
-        else hiddenBySource[r.source] = (hiddenBySource[r.source] || 0) + 1
+        if (!bySource.has(r.source)) bySource.set(r.source, new Map())
+        const buckets = bySource.get(r.source)
+        const key = r.subtype || r.source
+        if (!buckets.has(key)) buckets.set(key, [])
+        buckets.get(key).push(r)   // เรียงตามคะแนนอยู่แล้วจาก query
+      }
+
+      const picked = []
+      for (const [source, buckets] of bySource) {
+        const lists = [...buckets.values()]
+        let taken = 0
+        // รอบที่ 1..n: หยิบตัวท็อปของแต่ละประเภทไล่ไปเรื่อย ๆ จนครบโควตา
+        for (let round = 0; taken < perSource; round++) {
+          let addedThisRound = 0
+          for (const list of lists) {
+            if (taken >= perSource) break
+            if (list.length > round) { picked.push(list[round]); taken++; addedThisRound++ }
+          }
+          if (!addedThisRound) break   // ของหมดทุกประเภทแล้ว
+        }
+        const total = lists.reduce((s, l) => s + l.length, 0)
+        if (total > taken) hiddenBySource[source] = total - taken
       }
       items = picked.sort((a, b) => Number(b.score) - Number(a.score))
     }
