@@ -35,6 +35,13 @@ from datetime import datetime, timedelta, timezone
 if sys.stdout.encoding and sys.stdout.encoding.lower() != "utf-8":
     sys.stdout.reconfigure(encoding="utf-8")
 
+# รันในเครื่อง (เช่นถูกเรียกจาก OpenClaw skill) → อ่าน deploy/.env.local ให้เอง
+# บน GitHub Actions ไม่มีไฟล์นี้ → เงียบ ๆ ใช้ secrets ตามเดิม
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from envload import load_env_local  # noqa: E402
+
+load_env_local()
+
 SB_URL = os.environ.get("SUPABASE_URL") or os.environ.get("NEXT_PUBLIC_SUPABASE_URL")
 SB_KEY = os.environ.get("SUPABASE_SERVICE_KEY") or os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
 TG_TOKEN = os.environ.get("TELEGRAM_MKT_BOT_TOKEN")
