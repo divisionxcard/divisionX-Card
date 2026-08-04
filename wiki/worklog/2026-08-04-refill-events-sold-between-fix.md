@@ -2,7 +2,7 @@
 type: worklog
 date: 2026-08-04
 tags: [slot-refill-events, github-actions, cron, data-quality, stock-sync, incident]
-commits: []
+commits: [5118a81]
 status: ✅ แก้ครบ — A (กันเกิดใหม่) + B (ซ่อมข้อมูลเก่า 135 แถว) + ตาข่ายกันพลาดรายวัน
 ---
 
