@@ -3,13 +3,18 @@
 // ไอเดียที่เก็บมาเป็นแค่ "ข้อมูลอ้างอิง" ตัวนี้เปลี่ยนให้เป็นแคปชั่นที่อ่านแล้วตรวจได้เลย
 // แล้วเลื่อนสถานะ draft → pending (เข้ากล่องรออนุมัติ)
 //
-// ⚠️ ใช้ Ollama ที่ localhost — รันได้เฉพาะตอนเปิดเว็บบนเครื่องที่มี Ollama
-//    ถ้า deploy ขึ้น Vercel จะต่อไม่ได้ (serverless อยู่คนละเครื่อง) → คืน 503 พร้อมบอกเหตุผล
-//    ทางแก้ถ้าอยากให้ทำงานบน Vercel: ใส่ ANTHROPIC_API_KEY แล้วต่อ Claude แทน (ดู TODO ล่างสุด)
+// เลือกผู้เขียนอัตโนมัติ:
+//   มี ANTHROPIC_API_KEY  → Claude (ทำงานได้ทุกที่ รวม Vercel · มีค่าใช้จ่ายต่อครั้ง)
+//   ไม่มี                 → Ollama บนเครื่อง (ฟรี · ใช้ได้เฉพาะตอนเปิดเว็บจากเครื่องที่มี Ollama)
+//
+// ทำไมเลือกแบบนี้: Vercel เป็น serverless คนละเครื่องกับคอมที่รัน Ollama จึงต่อ
+// localhost:11434 ไม่ได้เลย — ถ้าไม่มี key จะคืน 503 พร้อมบอกวิธีแก้ ไม่ใช่ error งง ๆ
+// ไม่ใส่ key = ไม่มีค่าใช้จ่าย พฤติกรรมเดิมทุกอย่าง
 import { createClient } from "@supabase/supabase-js"
 import { NextResponse } from "next/server"
 import { readFile } from "fs/promises"
 import path from "path"
+import Anthropic from "@anthropic-ai/sdk"
 import { requireAdmin } from "../../../../../lib/apiAuth"
 
 const db = createClient(
@@ -95,6 +100,25 @@ async function probeOllama(voice) {
   }
 }
 
+// ── Claude — ใช้เมื่อมี ANTHROPIC_API_KEY (ทำงานบน Vercel ได้) ──────────
+async function askClaude(voice, prompt) {
+  const client = new Anthropic()   // อ่าน ANTHROPIC_API_KEY จาก env เอง
+  const model = process.env.ANTHROPIC_MODEL || voice.claude_model || "claude-opus-5"
+  const res = await client.messages.create({
+    model,
+    max_tokens: 1024,                        // แคปชั่นสั้น ไม่ต้องเผื่อเยอะ
+    output_config: { effort: "low" },        // งานเขียนสั้น ไม่ต้องคิดหนัก — ประหยัดทั้งเวลาและเงิน
+    system: prompt.system,
+    messages: [{ role: "user", content: prompt.user }],
+  })
+  // safety classifier ปฏิเสธได้ — ต้องเช็กก่อนอ่าน content ไม่งั้น content[0] จะพัง
+  if (res.stop_reason === "refusal") {
+    throw new Error("Claude ปฏิเสธคำขอนี้ (safety) — ลองแก้หัวข้อไอเดียแล้วสั่งใหม่")
+  }
+  const text = res.content.filter(b => b.type === "text").map(b => b.text).join("\n").trim()
+  return { text, model }
+}
+
 async function askOllama(voice, prompt, signal) {
   const host = ollamaHost(voice)
   const model = process.env.OLLAMA_MODEL || voice.ollama_model || "qwen2.5:14b"
@@ -160,31 +184,46 @@ export async function POST(req) {
     }
 
     const voice = await loadVoice()
-
-    // เช็กการเชื่อมต่อ + ว่ามีโมเดลจริงไหม ก่อนเริ่มงานยาว
-    const probe = await probeOllama(voice)
-    if (!probe.ok) {
-      return NextResponse.json({ error: probe.reason, host: probe.host }, { status: 503 })
-    }
-
     const prompt = buildPrompt(voice, idea, content, sku)
+    const useClaude = !!process.env.ANTHROPIC_API_KEY
 
-    // qwen2.5:14b บนเครื่องทั่วไปใช้เวลาราว 15-60 วิ · รอบแรกที่โหลดโมเดลเข้าแรมนานกว่านั้นได้
-    const ac = new AbortController()
-    const timer = setTimeout(() => ac.abort(), 180000)
     let out
-    try {
-      out = await askOllama(voice, prompt, ac.signal)
-    } catch (e) {
-      // ต่อติดแล้ว (ผ่าน probe มา) → ที่พังตรงนี้คือ "เขียนไม่เสร็จ" ไม่ใช่ "ต่อไม่ได้"
-      const timedOut = ac.signal.aborted
-      return NextResponse.json({
-        error: timedOut
-          ? `โมเดล ${probe.models?.join("/") || ""} เขียนไม่เสร็จใน 3 นาที — ` +
-            `ลองเปลี่ยนเป็นโมเดลเล็กลง (qwen2.5:7b) ใน deploy/tasks/content_voice.json`
-          : `Ollama ตอบผิดพลาด: ${String(e).slice(0, 200)}`,
-      }, { status: 504 })
-    } finally { clearTimeout(timer) }
+    if (useClaude) {
+      try {
+        out = await askClaude(voice, prompt)
+      } catch (e) {
+        return NextResponse.json(
+          { error: `Claude ตอบผิดพลาด: ${String(e.message || e).slice(0, 250)}` },
+          { status: 502 })
+      }
+    } else {
+      // เช็กการเชื่อมต่อ + ว่ามีโมเดลจริงไหม ก่อนเริ่มงานยาว
+      const probe = await probeOllama(voice)
+      if (!probe.ok) {
+        return NextResponse.json({
+          error: probe.reason,
+          host: probe.host,
+          hint: "ถ้าอยากให้ใช้ได้จากทุกที่ (รวมเว็บบน Vercel) ให้ตั้ง ANTHROPIC_API_KEY " +
+                "แล้วระบบจะสลับไปใช้ Claude เขียนแทนอัตโนมัติ",
+        }, { status: 503 })
+      }
+
+      // qwen2.5:14b บนเครื่องทั่วไปใช้เวลาราว 15-60 วิ · รอบแรกที่โหลดโมเดลเข้าแรมนานกว่านั้นได้
+      const ac = new AbortController()
+      const timer = setTimeout(() => ac.abort(), 180000)
+      try {
+        out = await askOllama(voice, prompt, ac.signal)
+      } catch (e) {
+        // ต่อติดแล้ว (ผ่าน probe มา) → ที่พังตรงนี้คือ "เขียนไม่เสร็จ" ไม่ใช่ "ต่อไม่ได้"
+        const timedOut = ac.signal.aborted
+        return NextResponse.json({
+          error: timedOut
+            ? `โมเดล ${probe.models?.join("/") || ""} เขียนไม่เสร็จใน 3 นาที — ` +
+              `ลองเปลี่ยนเป็นโมเดลเล็กลง (qwen2.5:7b) ใน deploy/tasks/content_voice.json`
+            : `Ollama ตอบผิดพลาด: ${String(e).slice(0, 200)}`,
+        }, { status: 504 })
+      } finally { clearTimeout(timer) }
+    }
 
     const caption = tidy(out.text)
     if (!caption) {
@@ -205,11 +244,12 @@ export async function POST(req) {
       ).maybeSingle()
     if (e1) throw e1
 
-    return NextResponse.json({ ...updated, generated_by: out.model })
+    return NextResponse.json({
+      ...updated,
+      generated_by: out.model,
+      provider: useClaude ? "claude" : "ollama",
+    })
   } catch (err) {
     return NextResponse.json({ error: err.message }, { status: 500 })
   }
 }
-
-// TODO (ถ้าจะ deploy ให้ใช้บน Vercel ได้): เพิ่มทางเลือกเรียก Claude เมื่อ Ollama ต่อไม่ได้
-// — ต้องมี ANTHROPIC_API_KEY และยอมรับค่าใช้จ่ายต่อครั้ง ตอนนี้เลือก Ollama ก่อนเพราะฟรี
