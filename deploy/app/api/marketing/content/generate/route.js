@@ -3,13 +3,16 @@
 // ไอเดียที่เก็บมาเป็นแค่ "ข้อมูลอ้างอิง" ตัวนี้เปลี่ยนให้เป็นแคปชั่นที่อ่านแล้วตรวจได้เลย
 // แล้วเลื่อนสถานะ draft → pending (เข้ากล่องรออนุมัติ)
 //
-// เลือกผู้เขียนอัตโนมัติ:
-//   มี ANTHROPIC_API_KEY  → Claude (ทำงานได้ทุกที่ รวม Vercel · มีค่าใช้จ่ายต่อครั้ง)
-//   ไม่มี                 → Ollama บนเครื่อง (ฟรี · ใช้ได้เฉพาะตอนเปิดเว็บจากเครื่องที่มี Ollama)
+// เลือกผู้เขียนอัตโนมัติตามลำดับ (หรือบังคับด้วย AI_PROVIDER=claude|gemini|ollama):
+//   1. ANTHROPIC_API_KEY → Claude   ทำงานทุกที่ · เสียเงินต่อครั้ง · คุณภาพสูงสุด
+//   2. GEMINI_API_KEY    → Gemini   ทำงานทุกที่ · free tier 1,500 ครั้ง/วัน ไม่ต้องใช้บัตร
+//   3. ไม่มี key เลย     → Ollama   ฟรี 100% · ใช้ได้เฉพาะเปิดเว็บจากเครื่องที่มี Ollama
 //
-// ทำไมเลือกแบบนี้: Vercel เป็น serverless คนละเครื่องกับคอมที่รัน Ollama จึงต่อ
-// localhost:11434 ไม่ได้เลย — ถ้าไม่มี key จะคืน 503 พร้อมบอกวิธีแก้ ไม่ใช่ error งง ๆ
-// ไม่ใส่ key = ไม่มีค่าใช้จ่าย พฤติกรรมเดิมทุกอย่าง
+// ทำไมต้องมีหลายทาง: Vercel เป็น serverless คนละเครื่องกับคอมที่รัน Ollama จึงต่อ
+// localhost:11434 ไม่ได้เลย — บน production ต้องใช้ provider ที่เรียกผ่านเน็ตได้
+//
+// ⚠️ free tier ของทุกเจ้ามักเอา prompt ไปเทรนโมเดลต่อ — งานนี้ส่งแค่หัวข้อข่าวสาธารณะ
+//    กับชื่อสินค้า ไม่มีข้อมูลลูกค้า/ยอดขาย จึงรับได้ · อย่าเอา provider ฟรีไปใช้กับข้อมูลลับ
 import { createClient } from "@supabase/supabase-js"
 import { NextResponse } from "next/server"
 import { readFile } from "fs/promises"
@@ -100,6 +103,67 @@ async function probeOllama(voice) {
   }
 }
 
+// ── Gemini — free tier 1,500 ครั้ง/วัน ไม่ต้องผูกบัตร (ทำงานบน Vercel ได้) ──
+// เรียกผ่าน REST ตรง ๆ ไม่ลง SDK เพิ่ม — request shape ของ generateContent เรียบง่ายและนิ่ง
+const GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta"
+
+async function askGemini(voice, prompt) {
+  const key = process.env.GEMINI_API_KEY
+  const model = process.env.GEMINI_MODEL || voice.gemini_model || "gemini-2.5-flash"
+  const res = await fetch(`${GEMINI_BASE}/models/${model}:generateContent`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "x-goog-api-key": key },
+    body: JSON.stringify({
+      system_instruction: { parts: [{ text: prompt.system }] },
+      contents: [{ role: "user", parts: [{ text: prompt.user }] }],
+      generationConfig: { temperature: 0.8, maxOutputTokens: 1024 },
+    }),
+    signal: AbortSignal.timeout(60000),
+  })
+
+  const json = await res.json().catch(() => ({}))
+  if (!res.ok) {
+    const msg = json?.error?.message || `HTTP ${res.status}`
+    // 429 = ใช้เกินโควตาฟรีของวันนี้ — บอกให้ชัดว่าไม่ใช่ระบบพัง
+    if (res.status === 429) {
+      throw new Error(`ใช้โควตาฟรีของ Gemini ครบแล้ววันนี้ (${msg}) — รอพรุ่งนี้ หรือสลับไปใช้ Ollama บนเครื่อง`)
+    }
+    throw new Error(msg)
+  }
+  // ถูกบล็อกด้วย safety filter — ไม่มี candidates กลับมา
+  const blocked = json?.promptFeedback?.blockReason
+  if (blocked) throw new Error(`Gemini บล็อกคำขอนี้ (${blocked}) — ลองแก้หัวข้อไอเดียแล้วสั่งใหม่`)
+
+  const text = (json?.candidates?.[0]?.content?.parts || [])
+    .map(p => p.text).filter(Boolean).join("\n").trim()
+  return { text, model }
+}
+
+// เช็ก key + ว่ามีโมเดลนั้นจริงไหม ก่อนเริ่มงาน (แบบเดียวกับ probeOllama)
+async function probeGemini(voice) {
+  const model = process.env.GEMINI_MODEL || voice.gemini_model || "gemini-2.5-flash"
+  try {
+    const res = await fetch(`${GEMINI_BASE}/models`, {
+      headers: { "x-goog-api-key": process.env.GEMINI_API_KEY },
+      signal: AbortSignal.timeout(10000),
+    })
+    const json = await res.json().catch(() => ({}))
+    if (!res.ok) {
+      return { ok: false, reason: `Gemini API key ใช้ไม่ได้: ${json?.error?.message || res.status}` }
+    }
+    const names = (json.models || []).map(m => (m.name || "").replace(/^models\//, ""))
+    if (names.length && !names.includes(model)) {
+      const flash = names.filter(n => n.includes("flash")).slice(0, 6)
+      return { ok: false, reason:
+        `ไม่พบโมเดล "${model}" — ที่ใช้ได้เช่น: ${flash.join(", ") || names.slice(0, 6).join(", ")} ` +
+        `(แก้ gemini_model ใน deploy/tasks/content_voice.json)` }
+    }
+    return { ok: true, model }
+  } catch (e) {
+    return { ok: false, reason: `ต่อ Gemini ไม่ได้: ${String(e.message || e).slice(0, 150)}` }
+  }
+}
+
 // ── Claude — ใช้เมื่อมี ANTHROPIC_API_KEY (ทำงานบน Vercel ได้) ──────────
 async function askClaude(voice, prompt) {
   const client = new Anthropic()   // อ่าน ANTHROPIC_API_KEY จาก env เอง
@@ -185,15 +249,40 @@ export async function POST(req) {
 
     const voice = await loadVoice()
     const prompt = buildPrompt(voice, idea, content, sku)
-    const useClaude = !!process.env.ANTHROPIC_API_KEY
+
+    // บังคับด้วย AI_PROVIDER ได้ ไม่งั้นเลือกตัวแรกที่พร้อมใช้
+    const forced = (process.env.AI_PROVIDER || "").toLowerCase()
+    const provider = forced || (
+      process.env.ANTHROPIC_API_KEY ? "claude"
+      : process.env.GEMINI_API_KEY ? "gemini"
+      : "ollama")
 
     let out
-    if (useClaude) {
+    if (provider === "claude") {
+      if (!process.env.ANTHROPIC_API_KEY) {
+        return NextResponse.json({ error: "ตั้ง AI_PROVIDER=claude แต่ไม่มี ANTHROPIC_API_KEY" }, { status: 503 })
+      }
       try {
         out = await askClaude(voice, prompt)
       } catch (e) {
         return NextResponse.json(
           { error: `Claude ตอบผิดพลาด: ${String(e.message || e).slice(0, 250)}` },
+          { status: 502 })
+      }
+    } else if (provider === "gemini") {
+      if (!process.env.GEMINI_API_KEY) {
+        return NextResponse.json({
+          error: "ยังไม่ได้ตั้ง GEMINI_API_KEY",
+          hint: "ขอฟรีที่ ai.google.dev (ใช้ Google account ไม่ต้องผูกบัตร) แล้วใส่เป็น environment variable",
+        }, { status: 503 })
+      }
+      const probe = await probeGemini(voice)
+      if (!probe.ok) return NextResponse.json({ error: probe.reason }, { status: 503 })
+      try {
+        out = await askGemini(voice, prompt)
+      } catch (e) {
+        return NextResponse.json(
+          { error: `Gemini: ${String(e.message || e).slice(0, 250)}` },
           { status: 502 })
       }
     } else {
@@ -203,8 +292,9 @@ export async function POST(req) {
         return NextResponse.json({
           error: probe.reason,
           host: probe.host,
-          hint: "ถ้าอยากให้ใช้ได้จากทุกที่ (รวมเว็บบน Vercel) ให้ตั้ง ANTHROPIC_API_KEY " +
-                "แล้วระบบจะสลับไปใช้ Claude เขียนแทนอัตโนมัติ",
+          hint: "ถ้าอยากให้ใช้ได้จากทุกที่ (รวมเว็บบน Vercel) ให้ตั้ง GEMINI_API_KEY " +
+                "(ฟรี 1,500 ครั้ง/วัน · ขอที่ ai.google.dev ไม่ต้องผูกบัตร) " +
+                "หรือ ANTHROPIC_API_KEY ถ้าต้องการคุณภาพสูงสุด",
         }, { status: 503 })
       }
 
@@ -247,7 +337,7 @@ export async function POST(req) {
     return NextResponse.json({
       ...updated,
       generated_by: out.model,
-      provider: useClaude ? "claude" : "ollama",
+      provider,
     })
   } catch (err) {
     return NextResponse.json({ error: err.message }, { status: 500 })
