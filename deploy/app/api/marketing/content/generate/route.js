@@ -69,8 +69,34 @@ ${facts}
   return { system, user }
 }
 
+const ollamaHost = (voice) =>
+  process.env.OLLAMA_HOST || voice.ollama_host || "http://localhost:11434"
+
+// เช็กก่อนว่าต่อติดไหม (timeout สั้น) — แยกให้ชัดระหว่าง "ต่อไม่ได้" กับ "เขียนนานเกินไป"
+// ถ้าไม่แยก ตอน generate ช้าแล้ว abort จะขึ้นข้อความว่า "เปิดแอป Ollama ก่อน" ทั้งที่เปิดอยู่
+async function probeOllama(voice) {
+  const host = ollamaHost(voice)
+  try {
+    const res = await fetch(`${host}/api/tags`, { signal: AbortSignal.timeout(5000) })
+    if (!res.ok) return { ok: false, reason: `Ollama ตอบ ${res.status}`, host }
+    const json = await res.json()
+    const models = (json.models || []).map(m => m.name)
+    const want = process.env.OLLAMA_MODEL || voice.ollama_model
+    if (want && !models.includes(want)) {
+      return { ok: false, host, models,
+        reason: `ไม่พบโมเดล "${want}" บนเครื่องนี้ (มีอยู่: ${models.join(", ") || "ไม่มีเลย"}) — ` +
+                `รัน \`ollama pull ${want}\` หรือแก้ ollama_model ใน deploy/tasks/content_voice.json` }
+    }
+    return { ok: true, host, models }
+  } catch (e) {
+    return { ok: false, host, reason:
+      `ต่อ Ollama ที่ ${host} ไม่ได้ — เปิดแอป Ollama บนเครื่องที่รันเว็บนี้ก่อน ` +
+      `(ถ้าเปิดหน้าเว็บจาก Vercel จะใช้ไม่ได้ เพราะ Ollama อยู่บนเครื่องคุณคนละที่กับ server)` }
+  }
+}
+
 async function askOllama(voice, prompt, signal) {
-  const host = process.env.OLLAMA_HOST || voice.ollama_host || "http://localhost:11434"
+  const host = ollamaHost(voice)
   const model = process.env.OLLAMA_MODEL || voice.ollama_model || "qwen2.5:14b"
   const res = await fetch(`${host}/api/chat`, {
     method: "POST",
@@ -134,21 +160,30 @@ export async function POST(req) {
     }
 
     const voice = await loadVoice()
+
+    // เช็กการเชื่อมต่อ + ว่ามีโมเดลจริงไหม ก่อนเริ่มงานยาว
+    const probe = await probeOllama(voice)
+    if (!probe.ok) {
+      return NextResponse.json({ error: probe.reason, host: probe.host }, { status: 503 })
+    }
+
     const prompt = buildPrompt(voice, idea, content, sku)
 
-    // qwen2.5:14b บนเครื่องทั่วไปใช้เวลาราว 15-60 วิ — เผื่อไว้ 3 นาที
+    // qwen2.5:14b บนเครื่องทั่วไปใช้เวลาราว 15-60 วิ · รอบแรกที่โหลดโมเดลเข้าแรมนานกว่านั้นได้
     const ac = new AbortController()
     const timer = setTimeout(() => ac.abort(), 180000)
     let out
     try {
       out = await askOllama(voice, prompt, ac.signal)
     } catch (e) {
-      const offline = /ECONNREFUSED|fetch failed|aborted|ENOTFOUND/i.test(String(e))
+      // ต่อติดแล้ว (ผ่าน probe มา) → ที่พังตรงนี้คือ "เขียนไม่เสร็จ" ไม่ใช่ "ต่อไม่ได้"
+      const timedOut = ac.signal.aborted
       return NextResponse.json({
-        error: offline
-          ? "ต่อ Ollama ไม่ได้ — เปิดแอป Ollama บนเครื่องนี้ก่อน (ถ้าเปิดเว็บจาก Vercel จะใช้ไม่ได้ เพราะอยู่คนละเครื่อง)"
+        error: timedOut
+          ? `โมเดล ${probe.models?.join("/") || ""} เขียนไม่เสร็จใน 3 นาที — ` +
+            `ลองเปลี่ยนเป็นโมเดลเล็กลง (qwen2.5:7b) ใน deploy/tasks/content_voice.json`
           : `Ollama ตอบผิดพลาด: ${String(e).slice(0, 200)}`,
-      }, { status: 503 })
+      }, { status: 504 })
     } finally { clearTimeout(timer) }
 
     const caption = tidy(out.text)
