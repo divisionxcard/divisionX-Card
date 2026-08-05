@@ -2,8 +2,8 @@
 type: worklog
 date: 2026-08-04
 tags: [marketing, ollama, prompt, llm, content, bug]
-commits: [25af2f3, 0c8e696]
-status: ✅ ใช้งานได้ · ทดสอบกับ Ollama จริงแล้ว ~13 วิ/ชิ้น — ยังไม่ได้กดจากหน้าเว็บจริง
+commits: [f3bcc38, 25af2f3, 0c8e696]
+status: ✅ Ollama ใช้ได้จริง (ทดสอบแล้ว) · เพิ่มทาง Claude สำหรับ Vercel — ยังไม่ได้ทดสอบเส้นทาง Claude (ไม่มี key)
 ---
 
 # ให้ AI เขียนแคปชั่นจริงจากไอเดีย
@@ -85,7 +85,30 @@ const offline = /ECONNREFUSED|fetch failed|aborted|ENOTFOUND/i.test(String(e))
 > **บทเรียน:** ข้อความ error ที่เดาสาเหตุผิด แย่กว่าข้อความที่บอกว่าไม่รู้สาเหตุ
 > เพราะมันพาไปแก้ผิดจุด — ควรแยกด่านให้ชัดว่าอะไรพังตรงไหน
 
+## เพิ่มทาง Claude สำหรับ production (f3bcc38)
+
+หลัง push ขึ้น Vercel เจ้าของกดปุ่มจาก `division-x-card.vercel.app/marketing` แล้วได้ 503
+— **ไม่ใช่บั๊ก แต่เป็นข้อจำกัดที่รู้ตั้งแต่ออกแบบ**: Vercel เป็น serverless คนละเครื่องกับ
+คอมที่รัน Ollama จึงต่อ `localhost:11434` ไม่ได้เลย
+
+แก้ด้วยการ**เลือก provider อัตโนมัติจากการมี `ANTHROPIC_API_KEY`**:
+
+| สภาพแวดล้อม | ผู้เขียน | ค่าใช้จ่าย |
+|---|---|---|
+| มี key (Vercel/ที่ไหนก็ได้) | Claude `claude-opus-5` · effort `low` | ~0.28 บาท/ชิ้น |
+| ไม่มี key (เครื่องตัวเอง) | Ollama `qwen2.5:14b` | ฟรี |
+
+- **ไม่ใส่ key = ไม่มีค่าใช้จ่าย พฤติกรรมเดิมทุกอย่าง** — เป็น opt-in ล้วน
+- ใช้ `effort: "low"` เพราะเป็นงานเขียนสั้น ไม่ต้องคิดหนัก (ตรวจแล้วว่า SDK 0.115 รองรับ)
+- เช็ก `stop_reason === "refusal"` ก่อนอ่าน `content` — ไม่งั้น `content[0]` พังตอนถูกปฏิเสธ
+- ข้อความ 503 ของ Ollama เพิ่ม hint บอกวิธีเปิดใช้ Claude
+- `claude_model` ปรับได้ใน `content_voice.json` (สลับเป็น sonnet-5 ลดค่าใช้จ่าย ~40%)
+
+**⚠️ ยังไม่ได้ทดสอบเส้นทาง Claude จริง** — เครื่องนี้ไม่มี `ANTHROPIC_API_KEY`
+ตรวจได้แค่ว่า SDK รองรับพารามิเตอร์ที่ใช้ และ build ผ่าน
+
 ## ค้าง
+- **ทดสอบเส้นทาง Claude** หลังตั้ง env var บน Vercel
 - ยังไม่ได้กดจากหน้าเว็บจริง (ไม่มี admin credential) — ทดสอบ prompt กับ Ollama ตรง ๆ เท่านั้น
 - ถ้าจะ deploy ให้ใช้บน Vercel ต้องต่อ Claude เพิ่ม
 
