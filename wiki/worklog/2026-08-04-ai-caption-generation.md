@@ -2,8 +2,8 @@
 type: worklog
 date: 2026-08-04
 tags: [marketing, ollama, prompt, llm, content, bug]
-commits: [f3bcc38, 25af2f3, 0c8e696]
-status: ✅ Ollama ใช้ได้จริง (ทดสอบแล้ว) · เพิ่มทาง Claude สำหรับ Vercel — ยังไม่ได้ทดสอบเส้นทาง Claude (ไม่มี key)
+commits: [0b99077, f3bcc38, 25af2f3, 0c8e696]
+status: ✅ Ollama ทดสอบแล้วใช้ได้ · เพิ่ม Gemini (ฟรี) + Claude สำหรับ Vercel — ยังไม่ได้ทดสอบ 2 ตัวหลัง (ไม่มี key)
 ---
 
 # ให้ AI เขียนแคปชั่นจริงจากไอเดีย
@@ -107,7 +107,52 @@ const offline = /ECONNREFUSED|fetch failed|aborted|ENOTFOUND/i.test(String(e))
 **⚠️ ยังไม่ได้ทดสอบเส้นทาง Claude จริง** — เครื่องนี้ไม่มี `ANTHROPIC_API_KEY`
 ตรวจได้แค่ว่า SDK รองรับพารามิเตอร์ที่ใช้ และ build ผ่าน
 
+## เพิ่ม Gemini free tier (0b99077) — ทางที่ใช้บน Vercel ได้โดยไม่เสียเงิน
+
+เจ้าของถามว่า n8n ช่วยเรื่องค่า API ไหม → **ไม่ช่วย** n8n เป็น "ท่อ" ไม่ใช่ "สมอง"
+ใช้ n8n ก็ยังต้องมี LLM อยู่ดี · ปัญหาจริงคือ Vercel ต่อ Ollama บนคอมไม่ได้ ไม่ใช่เรื่อง orchestrator
+
+ค้นหาทางที่ฟรีจริง แล้วเลือก **Google Gemini free tier**:
+
+| ทางเลือก | ฟรี | บน Vercel | ตัดสินใจ |
+|---|---|---|---|
+| เปิดจาก localhost | ✅ 100% | ❌ | ใช้ได้อยู่แล้ว แต่ต้องเปิดคอม |
+| **Gemini free tier** | ✅ 1,500/วัน ไม่ต้องผูกบัตร | ✅ | **เลือกอันนี้** |
+| Groq free tier | ✅ 1,000/วัน | ✅ | สำรอง |
+| tunnel Ollama ออกเน็ต | ✅ | ✅ | ⛔ เสี่ยง + ต้องเปิดคอมตลอด |
+| Claude | ❌ ~0.28 บาท/ชิ้น | ✅ | เก็บไว้เป็นทางเลือกคุณภาพสูง |
+
+ใช้จริงราว 10 ครั้ง/วัน — โควตาฟรี 1,500 เหลือเฟือ 150 เท่า
+
+### วิธีทำ
+เลือก provider อัตโนมัติตามลำดับ (บังคับได้ด้วย `AI_PROVIDER`):
+`ANTHROPIC_API_KEY` → Claude · `GEMINI_API_KEY` → Gemini · ไม่มีเลย → Ollama
+
+- **เรียก Gemini ผ่าน REST ตรง ๆ ไม่ลง SDK เพิ่ม** — `generateContent` shape เรียบง่ายและนิ่ง
+  ไม่ต้องเดาเวอร์ชัน SDK และไม่เพิ่ม dependency
+- `probeGemini` เช็ก key + ว่ามีโมเดลนั้นจริงไหมก่อนเริ่ม ถ้าไม่มีจะบอกชื่อโมเดลที่ใช้ได้
+- แยก **429 = โควตาฟรีหมดวันนี้** ออกจาก error ทั่วไป (คนละสาเหตุ คนละวิธีแก้)
+- จับ `promptFeedback.blockReason` (safety filter) แยกต่างหาก
+
+### ตรวจ request shape โดยไม่มี key
+เทียบ error 2 แบบ — ถ้า shape ผิด Google จะฟ้องคนละอย่าง:
+```
+body ของเรา (key ปลอม)  → "API key not valid"        ← parse ผ่าน shape ถูก ✅
+body จงใจผิด            → "Unknown name bogus_field"  ← ฟ้องที่ body
+```
+
+### ⚠️ ข้อควรระวังที่บอกเจ้าของไปแล้ว
+free tier ของทุกเจ้ามักเอา prompt ไปเทรนโมเดลต่อ — งานนี้ส่งแค่หัวข้อข่าวสาธารณะกับชื่อสินค้า
+ไม่มีข้อมูลลูกค้า/ยอดขาย จึงรับได้ · เขียนคอมเมนต์เตือนไว้ในไฟล์แล้วว่าอย่าเอา provider ฟรี
+ไปใช้กับข้อมูลลับ
+
+### เรื่อง n8n (ตอบคำถาม ไม่ได้ทำ)
+ตอนนี้ยังไม่จำเป็น — GitHub Actions + Python scripts ทำงานเดียวกันอยู่แล้วและฟรี
+จุดที่ n8n จะคุ้มคือ **เฟส 3** ตอนต่อ Meta (คอมเมนต์) + LINE (แชท) เพราะมี node OAuth
+สำเร็จรูป ไม่ต้องเขียน token refresh เอง · เอามาตอนนี้จะกลายเป็นระบบอีกชิ้นที่ต้องดูแล
+
 ## ค้าง
+- **ทดสอบเส้นทาง Gemini** หลังตั้ง `GEMINI_API_KEY` บน Vercel
 - **ทดสอบเส้นทาง Claude** หลังตั้ง env var บน Vercel
 - ยังไม่ได้กดจากหน้าเว็บจริง (ไม่มี admin credential) — ทดสอบ prompt กับ Ollama ตรง ๆ เท่านั้น
 - ถ้าจะ deploy ให้ใช้บน Vercel ต้องต่อ Claude เพิ่ม
