@@ -158,7 +158,8 @@ export default function MarketingOS() {
       })
       setContent(c => ({
         ...c,
-        items: (c.items || []).map(i => (i.id === contentId ? updated : i)),
+        // route ไม่ได้ embed sku กลับมา — คงของเดิมไว้ ไม่งั้นปุ่ม "ใช้รูป SKU" หายหลังกดเขียน
+        items: (c.items || []).map(i => (i.id === contentId ? { ...updated, sku: i.sku } : i)),
       }))
     } catch (e) {
       setErr(e.message)   // ร่างยังอยู่ในคิว กดเขียนใหม่ได้
@@ -475,7 +476,32 @@ export default function MarketingOS() {
                         <Sparkles size={11} className="animate-pulse" /> AI กำลังเขียน…
                       </span>
                     )}
+                    {/* รูปแบบที่สุ่มได้รอบนี้ — กด "เขียนใหม่" แล้วจะเปลี่ยนเป็นแบบอื่น */}
+                    {item.format?.label && (
+                      <span className="px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 font-medium">
+                        {item.format.label}
+                      </span>
+                    )}
+                    {item.retried && (
+                      <span className="text-gray-400">· เขียนใหม่ให้แล้ว 1 รอบ (รอบแรกซ้ำของเก่า)</span>
+                    )}
                   </div>
+
+                  {/* ยังคล้ายของเก่าอยู่แม้เขียนใหม่แล้ว — ให้คนตัดสิน ระบบไม่ทิ้งให้เอง
+                      เพราะบางทีซ้ำโครงแต่เนื้อต่าง ซึ่งอาจตั้งใจก็ได้ */}
+                  {item.similar && (
+                    <div className="mb-2 flex items-start gap-1.5 bg-amber-50 border border-amber-200
+                                    text-amber-800 rounded-lg px-2.5 py-1.5 text-xs">
+                      <AlertTriangle size={13} className="mt-0.5 shrink-0" />
+                      <span>
+                        คล้ายโพสต์ #{item.similar.id} อยู่ <b>{item.similar.score}%</b> — โพสต์ซ้ำแนวเดิมเอ็นเกจเมนต์จะตก
+                        <br />
+                        <span className="text-amber-700/70">“{item.similar.preview}”</span>
+                        <br />
+                        กด <b>เขียนใหม่</b> เพื่อให้ AI ลองมุมอื่น
+                      </span>
+                    </div>
+                  )}
 
                   {editingId === item.id ? (
                     <textarea

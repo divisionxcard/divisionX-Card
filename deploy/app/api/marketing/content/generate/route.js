@@ -32,7 +32,65 @@ async function loadVoice() {
   return JSON.parse(await readFile(p, "utf-8"))
 }
 
-function buildPrompt(voice, idea, content, sku) {
+// summary ของข่าวจาก Google News RSS เป็น <a href> ล้วน ไม่มีเนื้อข่าวเลย (เช็กแล้ว 28/28 ชิ้น)
+// ถ้าปล่อยเข้า prompt เป็น "รายละเอียดเพิ่ม" = ยัดขยะให้โมเดลอ่าน
+// ล้าง tag ทิ้งแล้วเหลืออะไรที่อ่านได้จริงค่อยส่ง
+function cleanSummary(s) {
+  if (!s) return null
+  if (s.startsWith("ปก:")) return null              // tiktok เก็บ url รูปปกไว้ตรงนี้
+  const txt = s.replace(/<[^>]*>/g, " ")
+    .replace(/https?:\/\/\S+/g, " ")
+    .replace(/&[a-z]+;|&#\d+;/gi, " ")
+    .replace(/\s+/g, " ").trim()
+  // ต้องมีเนื้อความจริงพอสมควร ไม่ใช่เศษคำที่เหลือจากการล้าง tag
+  return txt.length >= 25 ? txt : null
+}
+
+// ── กันเขียนซ้ำ ──────────────────────────────────────────────────────────
+// ถอด emoji/แฮชแท็ก/ช่องว่างออกก่อนเทียบ เพราะสองโพสต์ที่ "ต่างแค่ emoji"
+// คือซ้ำในสายตาคนอ่าน (เจอจริง: #1 กับ #3 ต่างกันแค่ FB-09 กับ FB-06)
+function normalize(s) {
+  return (s || "").toLowerCase()
+    .replace(/#\S+/g, " ")
+    .replace(/[^฀-๿a-z0-9]+/g, " ")
+    .replace(/\s+/g, " ").trim()
+}
+
+// Jaccard บน 4-gram ระดับตัวอักษร — ทนการสลับคำ/เปลี่ยนชื่อ SKU มากกว่าเทียบทั้งสตริง
+function similarity(a, b) {
+  const gram = (s) => {
+    const t = normalize(s), out = new Set()
+    for (let i = 0; i + 4 <= t.length; i++) out.add(t.slice(i, i + 4))
+    return out
+  }
+  const A = gram(a), B = gram(b)
+  if (!A.size || !B.size) return 0
+  let inter = 0
+  for (const g of A) if (B.has(g)) inter++
+  return inter / (A.size + B.size - inter)
+}
+
+function closestRecent(caption, recent) {
+  let best = { score: 0, item: null }
+  for (const r of recent) {
+    const s = similarity(caption, r.caption)
+    if (s > best.score) best = { score: s, item: r }
+  }
+  return best
+}
+
+// เลือกรูปแบบโพสต์ — เลี่ยงอันที่เพิ่งใช้ไปในแคปชั่นล่าสุด
+// สุ่มจริง (ไม่ใช่ hash จาก id) เพื่อให้ปุ่ม "เขียนใหม่" ได้ของต่างจริง ๆ
+function pickFormat(voice, recent) {
+  const all = voice.content_formats || []
+  if (!all.length) return null
+  const used = new Set(recent.map(r => r.format).filter(Boolean))
+  const fresh = all.filter(f => !used.has(f.key))
+  const pool = fresh.length ? fresh : all
+  return pool[Math.floor(Math.random() * pool.length)]
+}
+
+function buildPrompt(voice, idea, content, sku, recent = [], format = null) {
   const rules = voice.rules.map((r, i) => `${i + 1}. ${r}`).join("\n")
   const phrases = voice.catchphrases.map(p => `- "${p}"`).join("\n")
 
@@ -59,17 +117,33 @@ ${example}
 
   const facts = [
     `หัวข้อ/ที่มา: ${idea?.title || content.source_reason || "-"}`,
-    idea?.angle ? `มุมที่อยากเล่า: ${idea.angle}` : null,
-    idea?.summary && !idea.summary.startsWith("ปก:") ? `รายละเอียดเพิ่ม: ${idea.summary}` : null,
+    // angle จากตัวเก็บไอเดียเป็น template ซ้ำ ๆ (ข่าว One Piece 8 ชิ้นได้ข้อความเดียวกัน)
+    // ใส่ไว้เป็นบริบทได้ แต่ต้องบอกชัดว่าห้ามลอก ไม่งั้นโมเดลจะคายมันกลับมาเป็นแคปชั่น
+    // (เกิดจริงกับ #13 — แคปชั่นที่บันทึกไว้คือข้อความ angle เป๊ะ ๆ)
+    idea?.angle ? `ทิศทางคร่าว ๆ (เป็นแค่บริบท ห้ามลอกข้อความนี้ไปใช้): ${idea.angle}` : null,
+    cleanSummary(idea?.summary) ? `รายละเอียดเพิ่ม: ${cleanSummary(idea.summary)}` : null,
     sku ? `สินค้าที่โยงถึง: ${sku.name} (${sku.sku_id})` : null,
     `แพลตฟอร์ม: ${content.platform === "line" ? "LINE OA" : "Facebook เพจ"}`,
   ].filter(Boolean).join("\n")
+
+  const fmt = format
+    ? `\nรูปแบบโพสต์ที่ต้องใช้รอบนี้: **${format.label}**\n${format.brief}\n`
+    : ""
+
+  // ให้เห็นของเก่าเพื่อ "เลี่ยง" ไม่ใช่เพื่อ "เลียนแบบ" — ต้องบอกให้ชัด
+  // ไม่งั้นโมเดลมองเป็นตัวอย่างแล้วเขียนคล้ายเดิมยิ่งกว่าเดิม
+  const avoid = recent.length
+    ? `\nโพสต์ที่เพิ่งลงไปแล้ว — **ห้ามเขียนซ้ำแนวนี้**:\n` +
+      recent.map((r, i) => `${i + 1}. ${(r.caption || "").split("\n")[0].slice(0, 80)}`).join("\n") +
+      `\n\nชิ้นใหม่ต้องต่างจากข้างบนทั้ง 3 อย่าง: ประโยคเปิด · โครงสร้าง · มุมที่เล่า\n` +
+      `ถ้าเผลอเขียนคล้ายอันไหน ให้ทิ้งแล้วคิดใหม่\n`
+    : ""
 
   // คำสั่งภาษาย้ำท้ายสุด — โมเดลให้น้ำหนักกับสิ่งที่อยู่ท้าย prompt มากกว่า
   const user = `เขียนแคปชั่น 1 ชิ้นจากข้อมูลนี้:
 
 ${facts}
-
+${fmt}${avoid}
 อย่าลอกหัวข้อข่าวมาตรง ๆ ให้เอาแก่นของเรื่องมาเล่าใหม่ในมุมของตู้ DivisionX
 
 ⚠️ เขียนเป็นภาษาไทยเท่านั้น`
@@ -241,6 +315,24 @@ function looksThai(text) {
   return thai >= 20 && thai > cjk
 }
 
+// แคปชั่นล่าสุดที่ยังมีชีวิต (ไม่นับที่ถูกทิ้ง) — ใช้เป็นรายการ "ห้ามเขียนซ้ำ"
+//
+// content_format มาจาก migration 062 · ถ้ายังไม่ได้รัน select จะ error
+// เลยลองแบบมีคอลัมน์ก่อนแล้ว fallback — ฟีเจอร์กันซ้ำต้องใช้ได้ทันทีโดยไม่ต้องรอ migration
+async function fetchRecent(limit) {
+  const base = () => db.from("marketing_content")
+    .in("status", ["posted", "approved", "pending"])
+    .not("caption", "is", null)
+    .order("created_at", { ascending: false })
+    .limit(limit)
+  let { data, error } = await base().select("id,caption,content_format")
+  if (error) ({ data } = await base().select("id,caption"))
+  return (data || []).map(r => ({ ...r, format: r.content_format || null }))
+}
+
+// เกินเท่านี้ถือว่าซ้ำจนคนอ่านจับได้ — 0.5 มาจากลองกับ #1 vs #3 ที่ต่างกันแค่รหัส SKU
+const SIMILAR_LIMIT = 0.5
+
 export async function POST(req) {
   const gate = await requireAdmin(req)
   if (gate.error) return gate.error
@@ -266,7 +358,9 @@ export async function POST(req) {
     }
 
     const voice = await loadVoice()
-    const prompt = buildPrompt(voice, idea, content, sku)
+    const recent = await fetchRecent(voice.recent_captions_shown || 8)
+    const format = pickFormat(voice, recent)
+    const prompt = buildPrompt(voice, idea, content, sku, recent, format)
 
     // บังคับด้วย AI_PROVIDER ได้ ไม่งั้นเลือกตัวแรกที่พร้อมใช้
     const forced = (process.env.AI_PROVIDER || "").toLowerCase()
@@ -333,7 +427,7 @@ export async function POST(req) {
       } finally { clearTimeout(timer) }
     }
 
-    const caption = tidy(out.text)
+    let caption = tidy(out.text)
     if (!caption) {
       return NextResponse.json({ error: "โมเดลตอบว่าง — ลองกดเขียนใหม่อีกครั้ง" }, { status: 502 })
     }
@@ -345,17 +439,57 @@ export async function POST(req) {
       }, { status: 422 })
     }
 
-    const { data: updated, error: e1 } = await db.from("marketing_content")
-      .update({ caption, status: "pending", created_by: "ai" })
-      .eq("id", id).select(
-        "*, idea:marketing_ideas!marketing_content_idea_id_fkey(id,url,source,source_label)"
-      ).maybeSingle()
+    // ── เขียนซ้ำของเก่า? ให้โอกาสแก้ตัวรอบเดียว ──
+    // ไม่ throw ทิ้งเพราะผู้ใช้จะต้องมานั่งกดเองซ้ำ ๆ · แต่ก็ไม่บันทึกเงียบ ๆ
+    // ถ้ายังซ้ำอยู่ ส่ง similar กลับไปให้การ์ดขึ้นเตือน แล้วให้คนตัดสิน
+    let dup = closestRecent(caption, recent)
+    let usedFormat = format
+    let retried = false
+    if (recent.length && dup.score >= SIMILAR_LIMIT) {
+      retried = true
+      const altFormat = pickFormat(voice, [...recent, { format: format?.key }])
+      const harder = buildPrompt(voice, idea, content, sku, recent, altFormat)
+      harder.user +=
+        `\n\n⚠️ รอบที่แล้วคุณเขียนออกมาคล้ายโพสต์เก่าถึง ${Math.round(dup.score * 100)}%:\n` +
+        `"${(dup.item?.caption || "").split("\n")[0].slice(0, 90)}"\n` +
+        `รอบนี้ต้องเปลี่ยน**ทั้งประโยคเปิดและมุมที่เล่า** ห้ามใช้โครงเดิม`
+      try {
+        const second =
+          provider === "claude" ? await askClaude(voice, harder)
+          : provider === "gemini" ? await askGemini(voice, harder)
+          : await askOllama(voice, harder, AbortSignal.timeout(180000))
+        const c2 = tidy(second.text)
+        const d2 = closestRecent(c2, recent)
+        // รับเฉพาะตอนที่ "ดีขึ้นจริง" — ไม่งั้นเก็บของรอบแรกไว้ดีกว่า
+        if (c2 && looksThai(c2) && d2.score < dup.score) {
+          caption = c2; dup = d2; out = second; usedFormat = altFormat
+        }
+      } catch { /* รอบสองล้มก็ใช้ของรอบแรก ดีกว่าไม่ได้อะไรเลย */ }
+    }
+
+    const EMBED = "*, idea:marketing_ideas!marketing_content_idea_id_fkey(id,url,source,source_label)"
+    const base = { caption, status: "pending", created_by: "ai" }
+    // content_format มาจาก migration 062 — ถ้ายังไม่ได้รันให้บันทึกแบบไม่มีคอลัมน์นี้
+    let { data: updated, error: e1 } = await db.from("marketing_content")
+      .update({ ...base, content_format: usedFormat?.key || null })
+      .eq("id", id).select(EMBED).maybeSingle()
+    if (e1) {
+      ;({ data: updated, error: e1 } = await db.from("marketing_content")
+        .update(base).eq("id", id).select(EMBED).maybeSingle())
+    }
     if (e1) throw e1
 
     return NextResponse.json({
       ...updated,
       generated_by: out.model,
       provider,
+      format: usedFormat ? { key: usedFormat.key, label: usedFormat.label } : null,
+      retried,
+      // การ์ดเอาไปขึ้นป้ายเตือนว่า "คล้ายของเก่า" ให้คนตรวจก่อนอนุมัติ
+      similar: dup.score >= SIMILAR_LIMIT
+        ? { score: Math.round(dup.score * 100), id: dup.item?.id,
+            preview: (dup.item?.caption || "").split("\n")[0].slice(0, 90) }
+        : null,
     })
   } catch (err) {
     return NextResponse.json({ error: err.message }, { status: 500 })
