@@ -218,10 +218,22 @@ export async function PATCH(req) {
     // ดึงจาก idea ผ่าน idea_id — ไม่ต้องแปะ URL ยาว ๆ ลงในแคปชั่นให้รก
     const brief = idea.angle || `เขียนแคปชั่นเรื่อง: ${idea.title}`
 
+    // แนบรูปจริงของสินค้าให้เลยถ้าไอเดียโยงถึง SKU
+    // ใช้รูปจริงจาก Supabase Storage แทนการให้ AI สร้างภาพ — คนซื้อการ์ดอยากเห็นของจริง
+    // ไม่ใช่ภาพที่โมเดลจินตนาการ (และ AI ไม่รู้ว่าการ์ดชุดนั้นหน้าตายังไงอยู่แล้ว)
+    let media_url = null
+    if (idea.related_sku) {
+      const { data: sku } = await db.from("skus")
+        .select("image_url,image_url_box").eq("sku_id", idea.related_sku).maybeSingle()
+      media_url = sku?.image_url || sku?.image_url_box || null
+    }
+
     const { data: content, error: e1 } = await db.from("marketing_content").insert({
       status: "draft",
       platform: body.platform || "fb",
       caption: brief,
+      media_url,
+      media_type: media_url ? "image" : null,
       source_reason: idea.relevance
         ? `${idea.title} · ${idea.relevance}`
         : idea.title,

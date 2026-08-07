@@ -39,7 +39,8 @@ export async function GET(req) {
     // ดึงไอเดียต้นทางมาด้วย (embed) — การ์ดจะได้มีลิงก์ "ดูต้นทาง"
     // โดยไม่ต้องแปะ URL ยาว ๆ ไว้ในตัวแคปชั่น
     let q = db.from(TABLE)
-      .select("*, idea:marketing_ideas!marketing_content_idea_id_fkey(id,url,source,source_label)")
+      .select("*, idea:marketing_ideas!marketing_content_idea_id_fkey(id,url,source,source_label)," +
+              "sku:skus(sku_id,name,image_url,image_url_box)")
       .order("created_at", { ascending: false }).limit(limit)
     if (status !== "all") q = wanted.length > 1 ? q.in("status", wanted) : q.eq("status", wanted[0])
     const { data, error } = await q
@@ -94,6 +95,15 @@ export async function PATCH(req) {
   }
   if (body.scheduled_at !== undefined) patch.scheduled_at = body.scheduled_at || null
   if (body.slot !== undefined) patch.slot = body.slot || null
+  // แก้/ลบรูปประกอบ — ส่ง "" มาเพื่อเอารูปออก
+  if (body.media_url !== undefined) {
+    const url = (body.media_url || "").trim()
+    if (url && !/^https?:\/\//i.test(url)) {
+      return NextResponse.json({ error: "media_url ต้องขึ้นต้นด้วย http(s)://" }, { status: 400 })
+    }
+    patch.media_url = url || null
+    patch.media_type = url ? "image" : null
+  }
   // เหตุผลที่ทิ้ง — เก็บไว้ป้อนกลับ prompt รอบหน้า
   if (body.reject_reason !== undefined) patch.reject_reason = body.reject_reason || null
 

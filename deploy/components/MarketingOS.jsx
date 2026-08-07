@@ -12,6 +12,7 @@ import {
   Megaphone, RefreshCw, Check, X, Pencil, Clock, AlertTriangle,
   Wallet, Package, Receipt, TrendingUp, Trophy, MessageSquare, Lock,
   Lightbulb, Newspaper, Youtube, BarChart3, ExternalLink, Sparkles, Music2, Plus,
+  Image as ImageIcon,
 } from "lucide-react"
 import {
   ResponsiveContainer, ComposedChart, Bar, Line, XAxis, YAxis,
@@ -124,15 +125,22 @@ export default function MarketingOS() {
   useEffect(() => { if (authState === "ok") loadAll() }, [authState, loadAll])
 
   // ── การกระทำบนการ์ด ──
+  // เปลี่ยน status = ออกจากคิว (อนุมัติ/ทิ้ง) · แก้อย่างอื่น (เช่นรูป) = อยู่ในคิวต่อ แค่อัปเดตในที่
   async function patch(id, body) {
     setBusyId(id)
     try {
-      await api("content", { method: "PATCH", body: JSON.stringify({ id, ...body }) })
-      setContent(c => ({
-        ...c,
-        items: c.items.filter(i => i.id !== id),
-        counts: { ...c.counts, pending: Math.max(0, (c.counts.pending || 1) - 1) },
-      }))
+      const updated = await api("content", { method: "PATCH", body: JSON.stringify({ id, ...body }) })
+      setContent(c => body.status
+        ? {
+            ...c,
+            items: c.items.filter(i => i.id !== id),
+            counts: { ...c.counts, pending: Math.max(0, (c.counts.pending || 1) - 1) },
+          }
+        : {
+            ...c,
+            // PATCH ไม่ได้ embed sku/idea กลับมา — คงของเดิมไว้ ไม่งั้นปุ่ม "ใช้รูป SKU" หายไป
+            items: c.items.map(i => (i.id === id ? { ...i, ...updated, sku: i.sku, idea: i.idea } : i)),
+          })
     } catch (e) { setErr(e.message) } finally { setBusyId(null) }
   }
 
@@ -371,7 +379,49 @@ export default function MarketingOS() {
             <div className="space-y-3">
               {pending.map(item => (
                 <article key={item.id} className="bg-white rounded-2xl border border-gray-100 p-4">
-                  <div className="flex items-center gap-2 text-xs text-gray-500 mb-2">
+                 <div className="flex flex-col sm:flex-row gap-3">
+                  {/* ── ช่องภาพ — ดูตัวอย่างก่อนอนุมัติ ──
+                      รูปมาจาก SKU จริงใน Supabase Storage ไม่ใช่ AI สร้าง
+                      (คนซื้อการ์ดอยากเห็นของจริง และ AI ไม่รู้ว่าการ์ดชุดนั้นหน้าตายังไง) */}
+                  <div className="sm:w-36 shrink-0">
+                    {item.media_url ? (
+                      <div className="relative group">
+                        <img src={item.media_url} alt=""
+                          className="w-full sm:w-36 h-36 object-contain rounded-xl bg-black/20 border border-gray-200" />
+                        <button
+                          onClick={() => patch(item.id, { media_url: "" })}
+                          title="เอารูปออก"
+                          className="absolute top-1 right-1 w-6 h-6 rounded-full bg-black/60 text-white text-xs opacity-0 group-hover:opacity-100 transition">
+                          ✕
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="w-full sm:w-36 h-36 rounded-xl border border-dashed border-gray-300 flex flex-col items-center justify-center gap-1.5 text-center px-2">
+                        <ImageIcon size={20} className="text-gray-400" />
+                        <span className="text-[11px] text-gray-400">ยังไม่มีภาพ</span>
+                        {(item.sku?.image_url || item.sku?.image_url_box) && (
+                          <button
+                            onClick={() => patch(item.id, {
+                              media_url: item.sku.image_url || item.sku.image_url_box,
+                            })}
+                            className="text-[11px] text-blue-500 underline">
+                            ใช้รูป {item.sku.sku_id}
+                          </button>
+                        )}
+                        <button
+                          onClick={() => {
+                            const u = window.prompt("วางลิงก์รูป (https://...)")
+                            if (u) patch(item.id, { media_url: u })
+                          }}
+                          className="text-[11px] text-gray-400 underline">
+                          วางลิงก์เอง
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex-1 min-w-0">
+                  <div className="flex items-center flex-wrap gap-2 text-xs text-gray-500 mb-2">
                     <span className="px-2 py-0.5 rounded bg-gray-100 font-medium text-gray-700">
                       {PLATFORM_LABEL[item.platform] || item.platform}
                     </span>
@@ -473,6 +523,8 @@ export default function MarketingOS() {
                       )}
                     </div>
                   )}
+                  </div>
+                 </div>
                 </article>
               ))}
             </div>
