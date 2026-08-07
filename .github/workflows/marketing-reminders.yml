@@ -32,4 +32,7 @@ jobs:
         env:
           TELEGRAM_MKT_BOT_TOKEN: ${{ secrets.TELEGRAM_MKT_BOT_TOKEN }}
           TELEGRAM_MKT_CHAT_ID:   ${{ secrets.TELEGRAM_MKT_CHAT_ID }}
+          # ต้องมี เพื่อดึงคอนเทนต์ที่อนุมัติจากหน้า /marketing มาแนบไปด้วย
+          SUPABASE_URL:           ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY:   ${{ secrets.SUPABASE_SERVICE_KEY }}
         run: python deploy/scraper/marketing_reminder.py ${{ github.event.inputs.slot }}

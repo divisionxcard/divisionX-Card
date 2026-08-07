@@ -12,7 +12,7 @@ import {
   Megaphone, RefreshCw, Check, X, Pencil, Clock, AlertTriangle,
   Wallet, Package, Receipt, TrendingUp, Trophy, MessageSquare, Lock,
   Lightbulb, Newspaper, Youtube, BarChart3, ExternalLink, Sparkles, Music2, Plus,
-  Image as ImageIcon,
+  Image as ImageIcon, Send, Copy,
 } from "lucide-react"
 import {
   ResponsiveContainer, ComposedChart, Bar, Line, XAxis, YAxis,
@@ -64,6 +64,8 @@ export default function MarketingOS() {
 
   const [ideas, setIdeas] = useState({ items: [], counts: {}, by_source: {} })
   const [content, setContent] = useState({ items: [], counts: {} })
+  // อนุมัติแล้วแต่ยังไม่ได้โพสต์ — แยก state จาก content เพราะเป็นคนละคิว คนละปุ่ม
+  const [ready, setReady] = useState({ items: [] })
   const [pipeline, setPipeline] = useState(null)
   const [metrics, setMetrics] = useState(null)
   const [days, setDays] = useState(7)
@@ -107,17 +109,20 @@ export default function MarketingOS() {
   const loadAll = useCallback(async () => {
     if (!token) return
     setLoading(true); setErr("")
-    const [i, c, p, m] = await Promise.allSettled([
+    const [i, c, p, m, a] = await Promise.allSettled([
       api(`ideas?status=new&per_source=${perSource}`),
       api("content?status=draft,pending"),
       api("pipeline"),
       api(`metrics?days=${days}`),
+      api("content?status=approved"),
     ])
     if (i.status === "fulfilled") setIdeas(i.value)
     if (c.status === "fulfilled") setContent(c.value)
     if (p.status === "fulfilled") setPipeline(p.value)
     if (m.status === "fulfilled") setMetrics(m.value)
-    const failed = [i, c, p, m].filter(r => r.status === "rejected")
+    // กันของที่โพสต์ไปแล้วหลุดเข้ามา (status ค้างเป็น approved แต่มี posted_at)
+    if (a.status === "fulfilled") setReady({ items: (a.value.items || []).filter(x => !x.posted_at) })
+    const failed = [i, c, p, m, a].filter(r => r.status === "rejected")
     if (failed.length) setErr(failed.map(f => f.reason.message).join(" · "))
     setLoading(false)
   }, [api, token, days, perSource])
@@ -192,12 +197,43 @@ export default function MarketingOS() {
     } catch (e) { setErr(e.message) } finally { setPasting(false) }
   }
 
-  const approve = (id) => patch(id, { status: "approved" })
-  const saveEdit = (id) => { patch(id, { status: "approved", caption: editText }); setEditingId(null) }
+  // อนุมัติ = ย้ายจากคิว "รออนุมัติ" ไป "รอโพสต์" — ต้องเด้งขึ้นกล่องล่างทันที
+  // ไม่งั้นกดอนุมัติแล้วการ์ดหายไปเฉย ๆ เหมือนงานหลุดมือ (พฤติกรรมเดิม)
+  const moveToReady = (id, extra = {}) => {
+    const item = (content.items || []).find(i => i.id === id)
+    if (item) setReady(s => ({ items: [{ ...item, ...extra, status: "approved" }, ...(s.items || [])] }))
+  }
+  const approve = (id) => { moveToReady(id); patch(id, { status: "approved" }) }
+  const saveEdit = (id) => {
+    moveToReady(id, { caption: editText })
+    patch(id, { status: "approved", caption: editText })
+    setEditingId(null)
+  }
   const reject = (id) => {
     patch(id, { status: "rejected", reject_reason: rejectText.trim() || null })
     setRejectingId(null); setRejectText("")
   }
+
+  // โพสต์แล้ว — route จะเซ็ต posted_at ให้เอง · ตัวเลข "โพสต์ช่วยไหม" ในโซน D พึ่งค่านี้
+  async function markPosted(id) {
+    setBusyId(id)
+    try {
+      await api("content", { method: "PATCH", body: JSON.stringify({ id, status: "posted" }) })
+      setReady(s => ({ items: (s.items || []).filter(i => i.id !== id) }))
+    } catch (e) { setErr(e.message) } finally { setBusyId(null) }
+  }
+  // เอากลับมาแก้ — เผลออนุมัติ หรือแคปชั่นยังมีช่องว่างค้าง
+  async function unapprove(id) {
+    setBusyId(id)
+    try {
+      const back = await api("content", { method: "PATCH", body: JSON.stringify({ id, status: "pending" }) })
+      setReady(s => ({ items: (s.items || []).filter(i => i.id !== id) }))
+      setContent(c => ({ ...c, items: [back, ...(c.items || [])] }))
+    } catch (e) { setErr(e.message) } finally { setBusyId(null) }
+  }
+
+  // ช่องว่างที่ยังไม่ได้เติม เช่น {ชื่อการ์ด} — ห้ามปล่อยให้โพสต์ทั้งอย่างนั้น
+  const holesIn = (s) => (s || "").match(/\{[^}]{1,40}\}/g) || []
 
   // ── หน้าจอสถานะ ──
   if (authState === "checking") return <Shell><p className="text-gray-500">กำลังตรวจสิทธิ์…</p></Shell>
@@ -530,6 +566,81 @@ export default function MarketingOS() {
             </div>
           )}
         </section>
+
+        {/* ── สถานี 3 · รอโพสต์ ──
+            ปลายทางของวงจร: อนุมัติแล้ว → ก๊อปไปโพสต์ → กดยืนยัน
+            ต้องมีขั้นนี้ ไม่งั้น posted_at ว่างตลอด แล้วกราฟ "โพสต์ช่วยไหม" ในโซน D
+            ก็ไม่มีข้อมูลจะคำนวณ · Telegram ก็จะส่งซ้ำเรื่อย ๆ เพราะไม่รู้ว่าโพสต์ไปแล้ว */}
+        {(ready.items || []).length > 0 && (
+          <section className="mt-6">
+            <h2 className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
+              <Send size={16} className="text-emerald-600" />
+              รอโพสต์
+              <span className="px-2 py-0.5 rounded-full bg-emerald-600 text-white text-xs">
+                {ready.items.length}
+              </span>
+            </h2>
+            <p className="text-xs text-gray-400 mb-2">
+              ก๊อปไปโพสต์แล้วกด “โพสต์แล้ว” · ตัวที่ยังไม่กดจะถูกส่งซ้ำเข้า Telegram ทุกเช้า
+            </p>
+
+            <div className="space-y-3">
+              {ready.items.map(item => {
+                const holes = holesIn(item.caption)
+                return (
+                  <article key={item.id}
+                    className="bg-white rounded-2xl border border-gray-100 p-4 flex flex-col sm:flex-row gap-3">
+                    {item.media_url && (
+                      <img src={item.media_url} alt=""
+                        className="w-full sm:w-24 h-24 object-cover rounded-xl border border-gray-100 shrink-0" />
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1.5 text-xs">
+                        <span className="px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">
+                          {PLATFORM_LABEL[item.platform] || item.platform}
+                        </span>
+                        <span className="text-gray-300">#{item.id}</span>
+                        {item.source_sku && <span className="text-gray-400">{item.source_sku}</span>}
+                      </div>
+
+                      {holes.length > 0 && (
+                        <div className="mb-2 flex items-start gap-1.5 bg-amber-50 border border-amber-200
+                                        text-amber-800 rounded-lg px-2.5 py-1.5 text-xs">
+                          <AlertTriangle size={13} className="mt-0.5 shrink-0" />
+                          <span>ยังมีช่องว่างต้องเติมก่อนโพสต์: <b>{holes.join(", ")}</b></span>
+                        </div>
+                      )}
+
+                      <p className="text-sm text-gray-700 whitespace-pre-wrap">{item.caption}</p>
+
+                      <div className="flex flex-wrap gap-2 mt-3">
+                        <button
+                          disabled={busyId === item.id}
+                          onClick={() => navigator.clipboard?.writeText(item.caption || "")}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-100 text-gray-600 text-sm">
+                          <Copy size={14} /> ก๊อปแคปชั่น
+                        </button>
+                        <button
+                          disabled={busyId === item.id}
+                          onClick={() => markPosted(item.id)}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600
+                                     text-white text-sm font-medium disabled:opacity-50">
+                          <Check size={14} /> โพสต์แล้ว
+                        </button>
+                        <button
+                          disabled={busyId === item.id}
+                          onClick={() => unapprove(item.id)}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-100 text-gray-500 text-sm">
+                          <Pencil size={14} /> เอากลับไปแก้
+                        </button>
+                      </div>
+                    </div>
+                  </article>
+                )
+              })}
+            </div>
+          </section>
+        )}
         </div>
 
         <div className="space-y-4">
