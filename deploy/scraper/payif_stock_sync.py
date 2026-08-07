@@ -44,8 +44,19 @@ def map_name_to_sku(name: str) -> str | None:
     if m:
         return f"{m.group(1)} {m.group(2).zfill(2)}"
     lower = re.sub(r'\s+', ' ', name.lower().strip())
+
+    # ── ตัวที่มีเลขชุด ต้องจับด้วย regex "ก่อน" substring map ข้างล่าง ──
+    # ไม่งั้น "Naruto Jin - 2" จะไปโดน ("jin", "NRT Jin - 1") กลืนเป็น Jin-1 เงียบ ๆ
+    # (ชุดใหม่ที่เพิ่มมาทีหลังจะได้ไม่ถูกนับรวมกับชุดเก่า)
+    m = re.search(r'jin\s*[-–]?\s*(\d+)', lower)
+    if m:
+        return f"NRT Jin - {int(m.group(1))}"
+    m = re.search(r'hand\s*of\s*destiny\s*[-–]?\s*(\d+)', lower)
+    if m:
+        return f"MLBB HOD - {m.group(1).zfill(2)}"
+
     for sub, sku in (
-        ("jin",           "NRT Jin - 1"),
+        ("jin",           "NRT Jin - 1"),   # ไม่มีเลข = ชุดแรก (ของเดิม)
         ("serie 2",       "NRT Series - 02"),
         ("serie2",        "NRT Series - 02"),
         ("serie 1",       "NRT Series - 01"),

@@ -43,8 +43,17 @@ def map_goods_to_sku(goods_name: str) -> str | None:
     m = re.search(r'\b(OP|EB|PRB|FB)\s*[-]?\s*(\d+)', upper)
     if m:
         return f"{m.group(1)} {m.group(2).zfill(2)}"
-    # Fallback: direct map สำหรับ Naruto/Pokemon/SOLO
     lower = goods_name.lower().strip()
+    # Naruto Jin — "naruto jin - 1" / "naruto jin2" (เลขเดี่ยว ไม่ zero-pad ตาม sku เดิม)
+    # ต้องมาก่อน direct map ข้างล่าง ไม่งั้น Jin-2 จะโดน "naruto jin - 1" กลืน
+    m = re.search(r'naruto\s*jin\s*[-–]?\s*(\d+)', lower)
+    if m:
+        return f"NRT Jin - {int(m.group(1))}"
+    # MLBB Hand of Destiny — "mlbb hand of destiny 02"
+    m = re.search(r'hand\s*of\s*destiny\s*[-–]?\s*(\d+)', lower)
+    if m:
+        return f"MLBB HOD - {m.group(1).zfill(2)}"
+    # Fallback: direct map สำหรับ Naruto/Pokemon/SOLO
     for sub, sku in (
         # canonical names — check ก่อน
         ("naruto series - 02", "NRT Series - 02"),
