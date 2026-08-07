@@ -32,6 +32,58 @@ async function loadVoice() {
   return JSON.parse(await readFile(p, "utf-8"))
 }
 
+// หลักการเขียนเชิงวิชาชีพ — แยกไฟล์จาก voice เพราะเปลี่ยนคนละจังหวะกัน
+// voice = เราเป็นใคร (เปลี่ยนตอนรีแบรนด์) · craft = ฝีมือการเขียน (เป็นหลักสากล แทบไม่เปลี่ยน)
+// ถ้าไฟล์หาย/พัง ต้องยังเขียนได้ตามปกติ แค่ไม่มีหลักกำกับ — ห้ามพังทั้งฟีเจอร์
+async function loadCraft() {
+  try {
+    const p = path.join(process.cwd(), "tasks", "content_craft.json")
+    return JSON.parse(await readFile(p, "utf-8"))
+  } catch { return null }
+}
+
+// ประกอบเฉพาะส่วนที่ตรงกับรูปแบบโพสต์รอบนี้
+//
+// ทำไมไม่ยัดทั้งไฟล์: craft มีหลายพันตัวอักษร ถ้าใส่หมดทุกครั้ง
+// (ก) qwen/gemini-flash จะจมข้อมูลจนลืมโจทย์จริง (ข) เปลืองโควตา
+// (ค) ให้ framework มาทั้ง 8 แบบพร้อมกัน = ไม่ได้บังคับให้ใช้แบบไหนเลย
+// หยิบทีละอันทำให้แต่ละรูปแบบ "เขียนคนละท่า" จริง ๆ ซึ่งคือเป้าหมายของทั้งเรื่อง
+function craftBlock(craft, format, platform) {
+  if (!craft) return ""
+  const parts = []
+
+  if (craft.principles?.length) {
+    parts.push("หลักการเขียนที่ต้องยึดทุกโพสต์:\n" +
+      craft.principles.map(p => `- ${p}`).join("\n"))
+  }
+
+  const hook = craft.hooks?.[format?.hook]
+  if (hook) {
+    parts.push(`วิธีเปิดเรื่องรอบนี้ — ${hook.label}:\n` +
+      `${hook.how}` +
+      (hook.watch_out ? `\nระวัง: ${hook.watch_out}` : ""))
+  }
+
+  const fw = craft.frameworks?.[format?.framework]
+  if (fw) {
+    parts.push(`โครงสร้างที่ต้องใช้ — ${fw.label}:\n` +
+      fw.steps.map((s, i) => `${i + 1}) ${s}`).join("\n") +
+      (fw.watch_out ? `\nระวัง: ${fw.watch_out}` : ""))
+  }
+
+  const plat = craft.platform?.[platform]
+  if (plat) parts.push(`ธรรมเนียมของแพลตฟอร์มนี้:\n${plat}`)
+
+  if (craft.cta?.rules?.length) {
+    parts.push("คำชวนท้ายโพสต์:\n" + craft.cta.rules.map(r => `- ${r}`).join("\n"))
+  }
+  if (craft.avoid?.length) {
+    parts.push("ห้ามทำ (ทำแล้วเอ็นเกจเมนต์ตก):\n" + craft.avoid.map(a => `- ${a}`).join("\n"))
+  }
+
+  return parts.join("\n\n")
+}
+
 // summary ของข่าวจาก Google News RSS เป็น <a href> ล้วน ไม่มีเนื้อข่าวเลย (เช็กแล้ว 28/28 ชิ้น)
 // ถ้าปล่อยเข้า prompt เป็น "รายละเอียดเพิ่ม" = ยัดขยะให้โมเดลอ่าน
 // ล้าง tag ทิ้งแล้วเหลืออะไรที่อ่านได้จริงค่อยส่ง
@@ -90,7 +142,7 @@ function pickFormat(voice, recent) {
   return pool[Math.floor(Math.random() * pool.length)]
 }
 
-function buildPrompt(voice, idea, content, sku, recent = [], format = null) {
+function buildPrompt(voice, idea, content, sku, recent = [], format = null, craft = null) {
   const rules = voice.rules.map((r, i) => `${i + 1}. ${r}`).join("\n")
   const phrases = voice.catchphrases.map(p => `- "${p}"`).join("\n")
 
@@ -100,7 +152,11 @@ function buildPrompt(voice, idea, content, sku, recent = [], format = null) {
     ? `\nตัวอย่างแคปชั่นที่ถูกต้อง (ใช้เป็นแบบอย่างของ "ภาษา/โทน" เท่านั้น ห้ามลอกเนื้อหา):\n---\n${voice.example}\n---\n`
     : ""
 
-  const system = `คุณเป็นคนเขียนคอนเทนต์ให้ ${voice.brand}
+  // หลักการเขียน — วางไว้ในระบบ (ไม่ใช่ user) เพราะเป็นตัวตนของคนเขียน ไม่ใช่โจทย์ของงานชิ้นนี้
+  const craftText = craftBlock(craft, format, content.platform)
+  const craftPart = craftText ? `\n━━━ หลักการเขียนเชิงวิชาชีพ ━━━\n${craftText}\n` : ""
+
+  const system = `คุณเป็นนักเขียนคอนเทนต์มืออาชีพที่เขียนให้ ${voice.brand}
 สโลแกน: "${voice.slogan}" · กลุ่มเป้าหมาย: ${voice.audience}
 โทนเสียง: ${voice.tone}
 
@@ -112,7 +168,7 @@ ${phrases}
 
 กฎเข้ม:
 ${rules}
-${example}
+${craftPart}${example}
 ตอบกลับเป็น "ตัวแคปชั่นล้วน ๆ" เท่านั้น ห้ามมีคำอธิบาย ห้ามมีหัวข้อ ห้ามครอบด้วยเครื่องหมายคำพูด`
 
   const facts = [
@@ -139,13 +195,20 @@ ${example}
       `ถ้าเผลอเขียนคล้ายอันไหน ให้ทิ้งแล้วคิดใหม่\n`
     : ""
 
+  // ให้ตรวจงานตัวเองก่อนส่ง — วางท้ายสุดเพราะเป็นขั้นสุดท้ายที่อยากให้ทำ
+  // ย้ำว่าตรวจ "ในใจ" ไม่งั้นบางโมเดลจะพิมพ์คำตอบของ checklist ออกมาด้วย
+  const check = craft?.self_check?.length
+    ? `\nก่อนส่ง ตรวจในใจ (ห้ามพิมพ์คำตอบออกมา) — ถ้าข้อไหนไม่ผ่านให้แก้ก่อน:\n` +
+      craft.self_check.map((c, i) => `${i + 1}. ${c}`).join("\n") + "\n"
+    : ""
+
   // คำสั่งภาษาย้ำท้ายสุด — โมเดลให้น้ำหนักกับสิ่งที่อยู่ท้าย prompt มากกว่า
   const user = `เขียนแคปชั่น 1 ชิ้นจากข้อมูลนี้:
 
 ${facts}
 ${fmt}${avoid}
 อย่าลอกหัวข้อข่าวมาตรง ๆ ให้เอาแก่นของเรื่องมาเล่าใหม่ในมุมของตู้ DivisionX
-
+${check}
 ⚠️ เขียนเป็นภาษาไทยเท่านั้น`
 
   return { system, user }
@@ -357,10 +420,10 @@ export async function POST(req) {
       sku = data
     }
 
-    const voice = await loadVoice()
+    const [voice, craft] = await Promise.all([loadVoice(), loadCraft()])
     const recent = await fetchRecent(voice.recent_captions_shown || 8)
     const format = pickFormat(voice, recent)
-    const prompt = buildPrompt(voice, idea, content, sku, recent, format)
+    const prompt = buildPrompt(voice, idea, content, sku, recent, format, craft)
 
     // บังคับด้วย AI_PROVIDER ได้ ไม่งั้นเลือกตัวแรกที่พร้อมใช้
     const forced = (process.env.AI_PROVIDER || "").toLowerCase()
@@ -448,7 +511,7 @@ export async function POST(req) {
     if (recent.length && dup.score >= SIMILAR_LIMIT) {
       retried = true
       const altFormat = pickFormat(voice, [...recent, { format: format?.key }])
-      const harder = buildPrompt(voice, idea, content, sku, recent, altFormat)
+      const harder = buildPrompt(voice, idea, content, sku, recent, altFormat, craft)
       harder.user +=
         `\n\n⚠️ รอบที่แล้วคุณเขียนออกมาคล้ายโพสต์เก่าถึง ${Math.round(dup.score * 100)}%:\n` +
         `"${(dup.item?.caption || "").split("\n")[0].slice(0, 90)}"\n` +

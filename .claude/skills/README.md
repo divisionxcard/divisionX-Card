@@ -12,6 +12,7 @@
 | [dvx-machine](dvx-machine/SKILL.md) | เพิ่มตู้ใหม่ · ย้าย/สลับตู้ · แก้ข้อมูลสาขา · ตู้ไหน sync ไม่เข้า |
 | [dvx-sync](dvx-sync/SKILL.md) | sync ข้อมูลจากตู้ · backfill ย้อนหลัง · แก้ GitHub Actions |
 | [dvx-web](dvx-web/SKILL.md) | แก้หน้าเว็บ · เพิ่มหน้า · Print/PDF · API route · dev server มีปัญหา |
+| [dvx-content](dvx-content/SKILL.md) | ระบบเขียนคอนเทนต์ · ปรับโทน/หลักการเขียน · คอนเทนต์ซ้ำ · หน้า /marketing |
 
 ## หลักที่ใช้เขียนสกิลชุดนี้
 
@@ -30,5 +31,4 @@
 
 ## ที่ยังไม่ได้ทำ (เพิ่มได้ถ้าต้องการ)
 
-- `dvx-marketing` — ระบบ `/marketing` (ไอเดีย → ร่างคอนเทนต์ → อนุมัติ → โพสต์) ยังพัฒนาไม่จบ
 - `dvx-worklog` — ยังไม่ต้อง เพราะมี hook เตือนตอน commit + กติกาอยู่ใน `wiki/worklog/README.md` แล้ว
