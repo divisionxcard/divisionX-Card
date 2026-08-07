@@ -1,12 +1,13 @@
 """
 แจ้งเตือนงานการตลาดประจำวันเข้า Telegram (แยก bot/chat จาก scraper)
 
-แหล่งแคปชั่นมี 2 ชั้น — **DB มาก่อนเสมอ**:
-  1. marketing_content ที่ status='approved' และยังไม่ได้โพสต์  ← ของจริงจากหน้า /marketing
-  2. content_queue.json (template หมุนตามวัน)                   ← ใช้เฉพาะตอน DB ไม่มีของ
+แคปชั่นมาจากที่เดียว: ตาราง marketing_content ที่ status='approved'
+และ posted_at ยังว่าง — คือของที่ผ่านตาเจ้าของมาแล้วจากหน้า /marketing
 
-ทำแบบนี้เพื่อไม่ให้มีแหล่งความจริง 2 ที่พร้อมกัน — ถ้าอนุมัติของไว้แล้ว
-ต้องเห็นของนั้น ไม่ใช่ template เก่าที่ยังเขียนว่า "11 สาขา"
+เดิมมี fallback ไป tasks/content_queue.json (template หมุนตามวัน) ตัดออกแล้ว
+8 ส.ค. 2026 เพราะเจ้าของทิ้ง seed ที่มาจากไฟล์นั้นทั้งหมดว่า "ไม่ค่อยมีประสิทธิภาพ"
+ถ้ายัง fallback อยู่ ของที่เพิ่งทิ้งจะกลับมาโผล่ทุกเช้าที่คิวว่าง
+(ไฟล์ยังอยู่เป็นคลังไอเดียให้คนอ่าน แต่ไม่ถูกส่งอัตโนมัติแล้ว)
 
 Env vars (GitHub Secrets — ชุดใหม่ ไม่ปนกับ scraper):
   - TELEGRAM_MKT_BOT_TOKEN   bot สำหรับงานการตลาด (ใหม่ หรือ reuse ก็ได้)
@@ -41,7 +42,6 @@ SB_KEY = (os.environ.get("SUPABASE_SERVICE_KEY") or os.environ.get("SUPABASE_SER
 MAX_PER_MESSAGE = 3
 
 CONFIG = os.path.join(os.path.dirname(__file__), "..", "tasks", "marketing_reminders.json")
-QUEUE = os.path.join(os.path.dirname(__file__), "..", "tasks", "content_queue.json")
 
 WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 DAY_TH = {"Mon": "จันทร์", "Tue": "อังคาร", "Wed": "พุธ", "Thu": "พฤหัสบดี",
@@ -140,22 +140,6 @@ def render_approved(rows, total):
     return out
 
 
-def load_captions(slot, wd):
-    """ดึงแคปชั่นจาก content_queue ที่ตรง slot + วัน (ถ้ามีไฟล์)"""
-    if not os.path.exists(QUEUE):
-        return []
-    try:
-        with open(QUEUE, encoding="utf-8") as f:
-            q = json.load(f)
-    except Exception:
-        return []
-    return [
-        p for p in q.get("posts", [])
-        if p.get("slot") == slot
-        and (p.get("days") == "daily" or wd in (p.get("days") or []))
-    ]
-
-
 def main():
     now = thai_now()
     wd = WEEKDAYS[now.weekday()]
@@ -202,17 +186,16 @@ def main():
         # ของจริงที่ผ่านตาเจ้าของมาแล้ว
         text += f"\n\n✅ <b>อนุมัติแล้ว รอโพสต์ ({total_approved} ชิ้น)</b>" + body_approved
     else:
-        # ไม่มีของใน DB → ค่อยใช้ template หมุนตามวัน (ระดับ 2)
-        for c in load_captions(slot, wd):
-            cap = (c.get("caption") or "").strip()
-            if not cap:
-                continue
-            text += (
-                f"\n\n📝 <b>แคปชั่น · {html.escape(c.get('platform', 'FB'))}</b> (ก๊อปไปโพสต์ได้เลย)\n"
-                f"<code>{html.escape(cap)}</code>"
-            )
-            if c.get("link"):
-                text += f"\n🔗 {html.escape(c['link'])} <i>(ใส่ในคอมเมนต์ ไม่ใส่ในโพสต์)</i>"
+        # เดิมตรงนี้ fallback ไปหยิบ template จาก content_queue.json
+        # ตัดออก 8 ส.ค. 2026 — เจ้าของทิ้ง seed ทั้ง 8 ชิ้นที่มาจากไฟล์นั้นเพราะ
+        # "คอนเทนต์ที่ไม่ค่อยมีประสิทธิภาพ" ถ้ายัง fallback อยู่ ของที่เพิ่งทิ้ง
+        # จะกลับมาโผล่ใน Telegram ทุกเช้าที่คิวว่าง = ย้อนกลับการตัดสินใจของเจ้าของ
+        # (ไฟล์ยังอยู่เป็นคลังไอเดียให้คนอ่าน แต่ไม่ถูกส่งอัตโนมัติแล้ว)
+        text += (
+            "\n\n📭 <b>ยังไม่มีคอนเทนต์รอโพสต์</b>\n"
+            "<i>ไปที่ /marketing กด “ให้ AI เขียน” จากไอเดียของวันนี้ แล้วอนุมัติ "
+            "เดี๋ยวรอบหน้าจะส่งมาให้ก๊อปโพสต์</i>"
+        )
 
     if dry:
         print("──── ข้อความที่จะส่ง (dry-run ไม่ได้ส่งจริง) ────")
