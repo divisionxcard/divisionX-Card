@@ -394,14 +394,19 @@ function looksThai(text) {
 //
 // content_format มาจาก migration 062 · ถ้ายังไม่ได้รัน select จะ error
 // เลยลองแบบมีคอลัมน์ก่อนแล้ว fallback — ฟีเจอร์กันซ้ำต้องใช้ได้ทันทีโดยไม่ต้องรอ migration
+// ⚠️ ลำดับสำคัญ: ต้อง .select() ก่อนเสมอ
+// from() คืน query builder ที่มีแค่ select/insert/update/delete — ตัวกรอง (.in .eq .not)
+// อยู่บน filter builder ที่ได้ "หลัง" select · เขียนสลับจะได้ TypeError:
+// "p.from(...).in is not a function" ซึ่งอ่านแล้วไม่รู้เลยว่าเกิดจากลำดับ
 async function fetchRecent(limit) {
-  const base = () => db.from("marketing_content")
+  const q = (cols) => db.from("marketing_content")
+    .select(cols)
     .in("status", ["posted", "approved", "pending"])
     .not("caption", "is", null)
     .order("created_at", { ascending: false })
     .limit(limit)
-  let { data, error } = await base().select("id,caption,content_format")
-  if (error) ({ data } = await base().select("id,caption"))
+  let { data, error } = await q("id,caption,content_format")
+  if (error) ({ data } = await q("id,caption"))   // ยังไม่ได้รัน migration 062
   return (data || []).map(r => ({ ...r, format: r.content_format || null }))
 }
 
