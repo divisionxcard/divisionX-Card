@@ -133,12 +133,24 @@ function closestRecent(caption, recent) {
 
 // เลือกรูปแบบโพสต์ — เลี่ยงอันที่เพิ่งใช้ไปในแคปชั่นล่าสุด
 // สุ่มจริง (ไม่ใช่ hash จาก id) เพื่อให้ปุ่ม "เขียนใหม่" ได้ของต่างจริง ๆ
+//
+// ⚠️ จุดที่เคยพลาด: ถ้า fallback เป็น "สุ่มจากทั้งหมด" ตอนที่ใช้ครบทุกแบบแล้ว
+// พอหน้าต่าง recent (8) เต็มด้วยครบ 8 แบบพอดี มันจะรีเซ็ตกลับไปสุ่มมั่ว
+// ทำให้ยังซ้ำติดกันอยู่ ~2% · แก้เป็นถอยไปเลี่ยงแค่ 3 อันล่าสุดแทน
+// จะได้เหลือ pool เสมอและไม่มีวันหยิบซ้ำกับที่เพิ่งใช้
+const AVOID_LAST = 3
+
 function pickFormat(voice, recent) {
   const all = voice.content_formats || []
   if (!all.length) return null
-  const used = new Set(recent.map(r => r.format).filter(Boolean))
-  const fresh = all.filter(f => !used.has(f.key))
-  const pool = fresh.length ? fresh : all
+  const seq = recent.map(r => r.format).filter(Boolean)   // ใหม่สุดอยู่หน้า
+  const used = new Set(seq)
+  let pool = all.filter(f => !used.has(f.key))
+  if (!pool.length) {
+    const lastFew = new Set(seq.slice(0, AVOID_LAST))
+    pool = all.filter(f => !lastFew.has(f.key))
+  }
+  if (!pool.length) pool = all                            // กันกรณีมี format น้อยกว่า 4 อัน
   return pool[Math.floor(Math.random() * pool.length)]
 }
 
