@@ -27,7 +27,8 @@
   "example": "🔥 OP-13 เข้าตู้แล้ว! ใครรอชุดนี้อยู่ รีบเลย\nของจริง ลุ้นจริง กดเองสะดวก — ไม่ต้องต่อคิว ไม่ต้องจอง\nมาก่อนได้ก่อนนะ ของหมดเร็วมาก 👀\nเช็กหน้าตู้สาขาใกล้บ้านได้เลย\n#OnePieceTCG #ตู้กดการ์ด #DivisionXCard",
   "_provider_note": "เลือกอัตโนมัติตามลำดับ (บังคับได้ด้วย AI_PROVIDER): ANTHROPIC_API_KEY → Claude (เสียเงิน คุณภาพสูงสุด) · GEMINI_API_KEY → Gemini (ฟรี 1,500 ครั้ง/วัน ไม่ต้องผูกบัตร ทำงานบน Vercel ได้) · ไม่มี key → Ollama บนเครื่อง (ฟรี 100% แต่ใช้ได้เฉพาะเปิดเว็บจากเครื่องที่มี Ollama)",
   "claude_model": "claude-opus-5",
-  "gemini_model": "gemini-2.5-flash",
+  "gemini_model": "gemini-flash-latest",
   "ollama_model": "qwen2.5:14b",
-  "ollama_host": "http://localhost:11434"
+  "ollama_host": "http://localhost:11434",
+  "_gemini_model_note": "ใช้ alias -latest เพราะ Google ปลดรุ่นเก่าออกจากผู้ใช้ใหม่เป็นระยะ (gemini-2.5-flash โดนไปแล้ว) · alias จะชี้รุ่นปัจจุบันเสมอ · ตัวที่ทดสอบแล้วใช้ได้: gemini-flash-latest, gemini-flash-lite-latest, gemini-3-flash-preview"
 }

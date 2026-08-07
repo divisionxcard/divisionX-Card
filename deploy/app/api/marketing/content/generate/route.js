@@ -107,16 +107,24 @@ async function probeOllama(voice) {
 // เรียกผ่าน REST ตรง ๆ ไม่ลง SDK เพิ่ม — request shape ของ generateContent เรียบง่ายและนิ่ง
 const GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta"
 
+// ใช้ alias "-latest" เป็นค่าตั้งต้น — Google ปลดรุ่นเก่าออกจากผู้ใช้ใหม่เป็นระยะ
+// (gemini-2.5-flash โดนไปแล้วทั้งที่ยังโผล่ใน ListModels) alias จะชี้รุ่นปัจจุบันเสมอ
+const GEMINI_DEFAULT = "gemini-flash-latest"
+
 async function askGemini(voice, prompt) {
   const key = process.env.GEMINI_API_KEY
-  const model = process.env.GEMINI_MODEL || voice.gemini_model || "gemini-2.5-flash"
+  const model = process.env.GEMINI_MODEL || voice.gemini_model || GEMINI_DEFAULT
   const res = await fetch(`${GEMINI_BASE}/models/${model}:generateContent`, {
     method: "POST",
     headers: { "Content-Type": "application/json", "x-goog-api-key": key },
     body: JSON.stringify({
       system_instruction: { parts: [{ text: prompt.system }] },
       contents: [{ role: "user", parts: [{ text: prompt.user }] }],
-      generationConfig: { temperature: 0.8, maxOutputTokens: 1024 },
+      // 2048 ไม่ใช่เพราะแคปชั่นยาว — แคปชั่นใช้จริงแค่ ~40 token
+      // แต่รุ่นใหม่ "คิด" ก่อนตอบ และ thinking กินโควตา output ด้วย (วัดได้ ~550 token/ครั้ง)
+      // ถ้าตั้ง 1024 แล้ววันไหนคิดนานกว่าปกติ จะได้ finishReason=MAX_TOKENS พร้อมข้อความว่าง
+      // ปิด thinking ไม่ได้ — thinkingConfig.thinkingBudget=0 ถูกปฏิเสธในรุ่นนี้ (ทดสอบแล้ว)
+      generationConfig: { temperature: 0.8, maxOutputTokens: 2048 },
     }),
     signal: AbortSignal.timeout(60000),
   })
@@ -128,37 +136,47 @@ async function askGemini(voice, prompt) {
     if (res.status === 429) {
       throw new Error(`ใช้โควตาฟรีของ Gemini ครบแล้ววันนี้ (${msg}) — รอพรุ่งนี้ หรือสลับไปใช้ Ollama บนเครื่อง`)
     }
+    // Google ปลดรุ่นเก่าเป็นระยะ และ ListModels ยังโชว์อยู่ → probe จับไม่ได้ ต้องดักตรงนี้
+    if (/no longer available|not found|is not supported/i.test(msg)) {
+      throw new Error(
+        `โมเดล "${model}" ใช้ไม่ได้แล้ว (${msg.slice(0, 120)}) — ` +
+        `แก้ gemini_model ใน deploy/tasks/content_voice.json เป็น "${GEMINI_DEFAULT}" ` +
+        `หรือ gemini-flash-lite-latest`)
+    }
     throw new Error(msg)
   }
   // ถูกบล็อกด้วย safety filter — ไม่มี candidates กลับมา
   const blocked = json?.promptFeedback?.blockReason
   if (blocked) throw new Error(`Gemini บล็อกคำขอนี้ (${blocked}) — ลองแก้หัวข้อไอเดียแล้วสั่งใหม่`)
 
-  const text = (json?.candidates?.[0]?.content?.parts || [])
+  const cand = json?.candidates?.[0]
+  const text = (cand?.content?.parts || [])
     .map(p => p.text).filter(Boolean).join("\n").trim()
+
+  // ตอบว่างเพราะโควตา output หมดไปกับ thinking — บอกทางแก้ให้ชัด ไม่ใช่แค่ "โมเดลตอบว่าง"
+  if (!text && cand?.finishReason === "MAX_TOKENS") {
+    throw new Error(
+      `โมเดลใช้โควตาไปกับการคิดจนไม่เหลือเขียน (thinking ${json?.usageMetadata?.thoughtsTokenCount || "?"} token) — ` +
+      `เพิ่ม maxOutputTokens ในโค้ด หรือสลับเป็น gemini-flash-lite-latest ที่คิดน้อยกว่า`)
+  }
   return { text, model }
 }
 
-// เช็ก key + ว่ามีโมเดลนั้นจริงไหม ก่อนเริ่มงาน (แบบเดียวกับ probeOllama)
-async function probeGemini(voice) {
-  const model = process.env.GEMINI_MODEL || voice.gemini_model || "gemini-2.5-flash"
+// เช็กเฉพาะว่า key ใช้ได้ไหม — **ไม่เช็กชื่อโมเดล**
+//
+// ทำไมไม่เช็ก: ListModels ยังคืนรุ่นที่ถูกปลดไปแล้วมาด้วย (เจอจริงกับ gemini-2.5-flash
+// ที่ list ขึ้นแต่ generateContent ตอบ "no longer available to new users")
+// probe ที่ผ่านทั้งที่ใช้จริงไม่ได้ = ให้ความมั่นใจผิด แย่กว่าไม่เช็กเลย
+// ปล่อยให้ askGemini ดักจาก error จริงแทน (ข้อความชัดกว่าและถูกต้องเสมอ)
+async function probeGemini() {
   try {
     const res = await fetch(`${GEMINI_BASE}/models`, {
       headers: { "x-goog-api-key": process.env.GEMINI_API_KEY },
       signal: AbortSignal.timeout(10000),
     })
+    if (res.ok) return { ok: true }
     const json = await res.json().catch(() => ({}))
-    if (!res.ok) {
-      return { ok: false, reason: `Gemini API key ใช้ไม่ได้: ${json?.error?.message || res.status}` }
-    }
-    const names = (json.models || []).map(m => (m.name || "").replace(/^models\//, ""))
-    if (names.length && !names.includes(model)) {
-      const flash = names.filter(n => n.includes("flash")).slice(0, 6)
-      return { ok: false, reason:
-        `ไม่พบโมเดล "${model}" — ที่ใช้ได้เช่น: ${flash.join(", ") || names.slice(0, 6).join(", ")} ` +
-        `(แก้ gemini_model ใน deploy/tasks/content_voice.json)` }
-    }
-    return { ok: true, model }
+    return { ok: false, reason: `Gemini API key ใช้ไม่ได้: ${json?.error?.message || res.status}` }
   } catch (e) {
     return { ok: false, reason: `ต่อ Gemini ไม่ได้: ${String(e.message || e).slice(0, 150)}` }
   }
@@ -276,7 +294,7 @@ export async function POST(req) {
           hint: "ขอฟรีที่ ai.google.dev (ใช้ Google account ไม่ต้องผูกบัตร) แล้วใส่เป็น environment variable",
         }, { status: 503 })
       }
-      const probe = await probeGemini(voice)
+      const probe = await probeGemini()
       if (!probe.ok) return NextResponse.json({ error: probe.reason }, { status: 503 })
       try {
         out = await askGemini(voice, prompt)
