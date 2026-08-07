@@ -54,6 +54,11 @@ def map_name_to_sku(name: str) -> str | None:
     m = re.search(r'hand\s*of\s*destiny\s*[-–]?\s*(\d+)', lower)
     if m:
         return f"MLBB HOD - {m.group(1).zfill(2)}"
+    # Naruto Series — รับได้ทั้งชื่อเดิมหลังบ้าน payif ('Naturo Serie 1' — สะกดผิดด้วย)
+    # และชื่อ canonical ('Naruto Series - 01') เผื่อวันหน้าแก้ชื่อในหลังบ้านให้ตรง contract
+    m = re.search(r'series?\s*[-–]?\s*(\d+)', lower)
+    if m:
+        return f"NRT Series - {m.group(1).zfill(2)}"
 
     for sub, sku in (
         ("jin",           "NRT Jin - 1"),   # ไม่มีเลข = ชุดแรก (ของเดิม)
