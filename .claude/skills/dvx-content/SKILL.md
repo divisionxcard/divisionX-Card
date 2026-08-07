@@ -109,6 +109,29 @@ eval(['normalize','similarity','cleanSummary','pickFormat','craftBlock','buildPr
 **ทดสอบคุณภาพต้องเทียบ A/B เสมอ** (มีหลัก vs ไม่มีหลัก, ก่อนแก้ vs หลังแก้)
 ดูแค่ output เดี่ยว ๆ ตัดสินไม่ได้ว่าดีขึ้นจริงหรือแค่สุ่มได้ดี
 
+### 🔴 วิธีนี้ทดสอบ query กับ DB ไม่ได้ — ต้องแยกทดสอบต่างหาก
+
+การ `eval` ฟังก์ชันล้วนครอบคลุมแค่ตรรกะ **ไม่แตะ supabase client เลย**
+เคยพลาดมาแล้ว: ปุ่ม "ให้ AI เขียน" พังทุกครั้งด้วย `p.from(...).in is not a function`
+แต่เทสต์ผ่านหมด เพราะเส้นทางที่เทสต์ไม่ได้ผ่านโค้ดที่พัง
+
+ถ้าแตะโค้ดที่ query DB **ต้องรันกับ client จริง**:
+```bash
+cd deploy && node -e "
+const { createClient } = require('@supabase/supabase-js')
+// ...อ่าน .env.local แล้วรัน query แบบเดียวกับใน route
+"
+```
+
+**⚠️ ลำดับ chain ของ supabase-js** — `from()` คืน query builder ที่มีแค่
+`select/insert/update/delete` · ตัวกรอง (`.in .eq .not .order .limit`) อยู่บน
+filter builder ที่ได้ **หลัง** `select()` เขียนสลับจะได้ TypeError ที่อ่านแล้ว
+ไม่รู้เลยว่าเกิดจากลำดับ
+```js
+db.from(t).in(...).select(...)   // ❌ พัง
+db.from(t).select(...).in(...)   // ✅
+```
+
 ## ค้างอยู่
 - `idea_collector.angle_for()` ยังเป็น template ตายตัว
 - `content_suggester.py` เป็นระบบเก่าคนละทางกับ API นี้ — prompt ยังไม่บังคับภาษาไทย
