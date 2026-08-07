@@ -42,3 +42,7 @@ ww-backfill.bat
 # --- Binary Office docs (POS manual reference) ---
 *.doc
 *.docx
+
+# --- Agent tooling configs (like .claude) ---
+openclaw/
+.mcp.json

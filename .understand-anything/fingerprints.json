@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
-  "gitCommitHash": "f0447ee92196461b3c189a05f88d1ee3874c7944",
-  "generatedAt": "2026-07-25T10:10:52.568Z",
+  "gitCommitHash": "5541bf37b3a8a1bc675e1536feac3a8ccfb1d2b3",
+  "generatedAt": "2026-08-07T16:01:26.718Z",
   "files": {
     ".env.example": {
       "filePath": ".env.example",
@@ -22,6 +22,16 @@
       "exports": [],
       "totalLines": 3,
       "hasStructuralAnalysis": false
+    },
+    ".github/workflows/idea-collector.yml": {
+      "filePath": ".github/workflows/idea-collector.yml",
+      "contentHash": "e7bf0391af2ee5585c1abaa8e7eac35ca26da6d3324044a8ce0484e72462b160",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 65,
+      "hasStructuralAnalysis": true
     },
     ".github/workflows/marketing-reminders.yml": {
       "filePath": ".github/workflows/marketing-reminders.yml",
@@ -45,17 +55,27 @@
     },
     ".github/workflows/payif-stock-sync.yml": {
       "filePath": ".github/workflows/payif-stock-sync.yml",
-      "contentHash": "f4180a74f38d619824ac908c3ef89433819988192cc7a4bd430a033f05353756",
+      "contentHash": "5e1f73b36309f1fd78aaa27b8744287918f997dae9d8d9cc0d321524906cc5fa",
       "functions": [],
       "classes": [],
       "imports": [],
       "exports": [],
-      "totalLines": 49,
+      "totalLines": 69,
       "hasStructuralAnalysis": true
     },
     ".github/workflows/payif-sync.yml": {
       "filePath": ".github/workflows/payif-sync.yml",
       "contentHash": "3e9816b3b144ad66841475e9e18fb606b0592e0d513200f979c312d581af3229",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 77,
+      "hasStructuralAnalysis": true
+    },
+    ".github/workflows/refill-recompute.yml": {
+      "filePath": ".github/workflows/refill-recompute.yml",
+      "contentHash": "dc3356c5d2596921e22e3f70feada1abb0aeb4eae0a269895c9454a3a12c58f1",
       "functions": [],
       "classes": [],
       "imports": [],
@@ -85,12 +105,12 @@
     },
     ".github/workflows/vms-stock-sync.yml": {
       "filePath": ".github/workflows/vms-stock-sync.yml",
-      "contentHash": "346e5b5bb0c6233fcb3c85438cbdd22992c5d6b5f6a445bff70cb5c481169778",
+      "contentHash": "9fceaa6669951916513cbb2e2950bd72c6508b237c0a96fe2704a6eb89c72c38",
       "functions": [],
       "classes": [],
       "imports": [],
       "exports": [],
-      "totalLines": 51,
+      "totalLines": 71,
       "hasStructuralAnalysis": true
     },
     ".github/workflows/vms-sync.yml": {
@@ -125,12 +145,12 @@
     },
     ".github/workflows/worldwide-stock-sync.yml": {
       "filePath": ".github/workflows/worldwide-stock-sync.yml",
-      "contentHash": "f2cdbb9d0af9eb28c7fd1eb4b11532ad775e5d43efde8ac6a76a6f6fdc4de340",
+      "contentHash": "94dbbff44ed4506cbba67e3747eeb75175cbf6e3dfaae48a6bb8ca3e7105f4dc",
       "functions": [],
       "classes": [],
       "imports": [],
       "exports": [],
-      "totalLines": 51,
+      "totalLines": 71,
       "hasStructuralAnalysis": true
     },
     ".github/workflows/worldwide-sync.yml": {
@@ -141,6 +161,16 @@
       "imports": [],
       "exports": [],
       "totalLines": 74,
+      "hasStructuralAnalysis": true
+    },
+    "AGENTS.md": {
+      "filePath": "AGENTS.md",
+      "contentHash": "9b63c49a3a86be3cd45039e4cbe4a40c4cb2b52863437f58270314ceb77fbdae",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 271,
       "hasStructuralAnalysis": true
     },
     "AUDIT_REPORT.md": {
@@ -1247,6 +1277,66 @@
       "totalLines": 32,
       "hasStructuralAnalysis": true
     },
+    "backend/database/migrations/056_branch_display_config.sql": {
+      "filePath": "backend/database/migrations/056_branch_display_config.sql",
+      "contentHash": "d29e54fc2d153f741914ef448803f627680763e629a5d28065c03dd87abfe310",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 38,
+      "hasStructuralAnalysis": true
+    },
+    "backend/database/migrations/057_pf01_branch_floor_landmark.sql": {
+      "filePath": "backend/database/migrations/057_pf01_branch_floor_landmark.sql",
+      "contentHash": "fd03a9be160ca23b74db7cb57de697ade96e47d73009b4d1ecc694c55b4f21b5",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 14,
+      "hasStructuralAnalysis": true
+    },
+    "backend/database/migrations/058_ygh_chaos_origins_packs_per_box.sql": {
+      "filePath": "backend/database/migrations/058_ygh_chaos_origins_packs_per_box.sql",
+      "contentHash": "1b2bd42adc26268e221e4cac6f5b6968e0d67f3fa3e04782189f5fa4bb0def70",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 14,
+      "hasStructuralAnalysis": true
+    },
+    "backend/database/migrations/059_marketing_content.sql": {
+      "filePath": "backend/database/migrations/059_marketing_content.sql",
+      "contentHash": "b9d72fd8620dfed6b98f81852d79aa33068193effb6d3b93c53194b40f4cd552",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 67,
+      "hasStructuralAnalysis": true
+    },
+    "backend/database/migrations/060_marketing_ideas.sql": {
+      "filePath": "backend/database/migrations/060_marketing_ideas.sql",
+      "contentHash": "2266aff2ca10497c6159839b44ce028631e0614ae67e579919edc0f4365cebb8",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 76,
+      "hasStructuralAnalysis": true
+    },
+    "backend/database/migrations/061_marketing_ideas_subtype.sql": {
+      "filePath": "backend/database/migrations/061_marketing_ideas_subtype.sql",
+      "contentHash": "41f9be8bfec403a12988f30d66fb63d5305885d83967345fe5f7637e4a8d1a24",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 41,
+      "hasStructuralAnalysis": true
+    },
     "backend/database/migrations/README.md": {
       "filePath": "backend/database/migrations/README.md",
       "contentHash": "451b82e8df66c0cdcefde8fd9c82662973d16daeedea0cf43ff151632da20599",
@@ -1660,12 +1750,12 @@
     },
     "CLAUDE.md": {
       "filePath": "CLAUDE.md",
-      "contentHash": "3cc6e21f90c4a15bd7b250e7cbdf9c0e7a2cb27eed78643e0a12876365bd9b48",
+      "contentHash": "de2a4d9b938f6fffe16fdbd49d5ccb020e98df3755849208dd556e658f2ab439",
       "functions": [],
       "classes": [],
       "imports": [],
       "exports": [],
-      "totalLines": 271,
+      "totalLines": 273,
       "hasStructuralAnalysis": true
     },
     "deploy/.env.example": {
@@ -1824,6 +1914,547 @@
       "totalLines": 244,
       "hasStructuralAnalysis": true
     },
+    "deploy/agents/dvx_data.py": {
+      "filePath": "deploy/agents/dvx_data.py",
+      "contentHash": "b74fb49d06783c650aa7c9d52d56690017e5d15bd5e42639843047f26da0da05",
+      "functions": [
+        {
+          "name": "sb_get",
+          "params": [
+            "path"
+          ],
+          "exported": true,
+          "lineCount": 21
+        },
+        {
+          "name": "th_today",
+          "params": [],
+          "exported": true,
+          "lineCount": 2
+        },
+        {
+          "name": "thai_date",
+          "params": [
+            "d"
+          ],
+          "exported": true,
+          "lineCount": 2
+        },
+        {
+          "name": "utc_bound",
+          "params": [
+            "day_th",
+            "end"
+          ],
+          "exported": true,
+          "lineCount": 6
+        },
+        {
+          "name": "parse_date",
+          "params": [
+            "s"
+          ],
+          "exported": true,
+          "lineCount": 5
+        },
+        {
+          "name": "resolve_range",
+          "params": [
+            "days",
+            "date",
+            "from_date",
+            "to_date"
+          ],
+          "exported": true,
+          "lineCount": 15
+        },
+        {
+          "name": "load_machines",
+          "params": [
+            "active_only"
+          ],
+          "exported": true,
+          "lineCount": 5
+        },
+        {
+          "name": "machine_label",
+          "params": [
+            "m"
+          ],
+          "exported": true,
+          "lineCount": 2
+        },
+        {
+          "name": "resolve_machine",
+          "params": [
+            "mid",
+            "machines"
+          ],
+          "exported": true,
+          "lineCount": 14
+        },
+        {
+          "name": "query_sales",
+          "params": [
+            "days",
+            "date",
+            "from_date",
+            "to_date",
+            "machine",
+            "group_by",
+            "top"
+          ],
+          "exported": true,
+          "lineCount": 73
+        },
+        {
+          "name": "_is_box",
+          "params": [
+            "product_name"
+          ],
+          "exported": true,
+          "lineCount": 2
+        },
+        {
+          "name": "query_stock",
+          "params": [
+            "machine",
+            "low_only",
+            "low_threshold"
+          ],
+          "exported": true,
+          "lineCount": 54
+        },
+        {
+          "name": "query_restock_alerts",
+          "params": [
+            "threshold_days",
+            "min_velocity"
+          ],
+          "exported": true,
+          "lineCount": 72
+        }
+      ],
+      "classes": [
+        {
+          "name": "DvxError",
+          "methods": [],
+          "properties": [],
+          "exported": true,
+          "lineCount": 2
+        }
+      ],
+      "imports": [
+        {
+          "source": "os",
+          "specifiers": [
+            "os"
+          ]
+        },
+        {
+          "source": "sys",
+          "specifiers": [
+            "sys"
+          ]
+        },
+        {
+          "source": "json",
+          "specifiers": [
+            "json"
+          ]
+        },
+        {
+          "source": "collections",
+          "specifiers": [
+            "collections"
+          ]
+        },
+        {
+          "source": "urllib.request",
+          "specifiers": [
+            "urllib.request"
+          ]
+        },
+        {
+          "source": "urllib.error",
+          "specifiers": [
+            "urllib.error"
+          ]
+        },
+        {
+          "source": "datetime",
+          "specifiers": [
+            "datetime",
+            "timedelta",
+            "timezone"
+          ]
+        },
+        {
+          "source": "envload",
+          "specifiers": [
+            "load_env_local"
+          ]
+        }
+      ],
+      "exports": [
+        "DvxError",
+        "sb_get",
+        "th_today",
+        "thai_date",
+        "utc_bound",
+        "parse_date",
+        "resolve_range",
+        "load_machines",
+        "machine_label",
+        "resolve_machine",
+        "query_sales",
+        "_is_box",
+        "query_stock",
+        "query_restock_alerts"
+      ],
+      "totalLines": 342,
+      "hasStructuralAnalysis": true
+    },
+    "deploy/agents/dvx_query.py": {
+      "filePath": "deploy/agents/dvx_query.py",
+      "contentHash": "46a3de304da374ebf65b0f803041d2abd7e571f6e8044ec9c2ce990c8624ce51",
+      "functions": [
+        {
+          "name": "baht",
+          "params": [
+            "x"
+          ],
+          "exported": true,
+          "lineCount": 2
+        },
+        {
+          "name": "cmd_machines",
+          "params": [
+            "args"
+          ],
+          "exported": true,
+          "lineCount": 9
+        },
+        {
+          "name": "cmd_sales",
+          "params": [
+            "args"
+          ],
+          "exported": true,
+          "lineCount": 34
+        },
+        {
+          "name": "cmd_stock",
+          "params": [
+            "args"
+          ],
+          "exported": true,
+          "lineCount": 34
+        },
+        {
+          "name": "main",
+          "params": [],
+          "exported": true,
+          "lineCount": 32
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "os",
+          "specifiers": [
+            "os"
+          ]
+        },
+        {
+          "source": "sys",
+          "specifiers": [
+            "sys"
+          ]
+        },
+        {
+          "source": "json",
+          "specifiers": [
+            "json"
+          ]
+        },
+        {
+          "source": "argparse",
+          "specifiers": [
+            "argparse"
+          ]
+        },
+        {
+          "source": "datetime",
+          "specifiers": [
+            "datetime"
+          ]
+        },
+        {
+          "source": "dvx_data",
+          "specifiers": [
+            "data"
+          ]
+        },
+        {
+          "source": "dvx_data",
+          "specifiers": [
+            "DvxError"
+          ]
+        }
+      ],
+      "exports": [
+        "baht",
+        "cmd_machines",
+        "cmd_sales",
+        "cmd_stock",
+        "main"
+      ],
+      "totalLines": 156,
+      "hasStructuralAnalysis": true
+    },
+    "deploy/agents/envload.py": {
+      "filePath": "deploy/agents/envload.py",
+      "contentHash": "bfa02f8cfdfb9fed067876762558f2d0ae1ef322b5472803c962e76601540413",
+      "functions": [
+        {
+          "name": "load_env_local",
+          "params": [
+            "path"
+          ],
+          "exported": true,
+          "lineCount": 21
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "os",
+          "specifiers": [
+            "os"
+          ]
+        },
+        {
+          "source": "pathlib",
+          "specifiers": [
+            "Path"
+          ]
+        }
+      ],
+      "exports": [
+        "load_env_local"
+      ],
+      "totalLines": 43,
+      "hasStructuralAnalysis": true
+    },
+    "deploy/agents/idea_collector.py": {
+      "filePath": "deploy/agents/idea_collector.py",
+      "contentHash": "8a257103b46d2a76392e4ea5da48a152b9244554f098eeb717c8e4dee403381c",
+      "functions": [
+        {
+          "name": "log",
+          "params": [
+            "msg"
+          ],
+          "exported": true,
+          "lineCount": 2
+        },
+        {
+          "name": "fetch",
+          "params": [
+            "url",
+            "timeout"
+          ],
+          "exported": true,
+          "lineCount": 4
+        },
+        {
+          "name": "clean",
+          "params": [
+            "s"
+          ],
+          "exported": true,
+          "lineCount": 5
+        },
+        {
+          "name": "rss_items",
+          "params": [
+            "xml"
+          ],
+          "exported": true,
+          "lineCount": 19
+        },
+        {
+          "name": "build_keywords",
+          "params": [],
+          "exported": true,
+          "lineCount": 11
+        },
+        {
+          "name": "score_item",
+          "params": [
+            "text",
+            "keywords"
+          ],
+          "exported": true,
+          "lineCount": 12
+        },
+        {
+          "name": "angle_for",
+          "params": [
+            "franchise",
+            "title"
+          ],
+          "exported": true,
+          "lineCount": 7
+        },
+        {
+          "name": "collect_news",
+          "params": [
+            "cfg",
+            "keywords"
+          ],
+          "exported": true,
+          "lineCount": 24
+        },
+        {
+          "name": "collect_tiktok",
+          "params": [
+            "cfg",
+            "keywords"
+          ],
+          "exported": true,
+          "lineCount": 25
+        },
+        {
+          "name": "collect_youtube",
+          "params": [
+            "cfg",
+            "keywords"
+          ],
+          "exported": true,
+          "lineCount": 25
+        },
+        {
+          "name": "collect_internal",
+          "params": [
+            "cfg",
+            "skus"
+          ],
+          "exported": true,
+          "lineCount": 99
+        },
+        {
+          "name": "save",
+          "params": [
+            "ideas",
+            "dry_run"
+          ],
+          "exported": true,
+          "lineCount": 49
+        },
+        {
+          "name": "main",
+          "params": [],
+          "exported": true,
+          "lineCount": 24
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "os",
+          "specifiers": [
+            "os"
+          ]
+        },
+        {
+          "source": "re",
+          "specifiers": [
+            "re"
+          ]
+        },
+        {
+          "source": "sys",
+          "specifiers": [
+            "sys"
+          ]
+        },
+        {
+          "source": "json",
+          "specifiers": [
+            "json"
+          ]
+        },
+        {
+          "source": "html",
+          "specifiers": [
+            "html"
+          ]
+        },
+        {
+          "source": "argparse",
+          "specifiers": [
+            "argparse"
+          ]
+        },
+        {
+          "source": "urllib.parse",
+          "specifiers": [
+            "urllib.parse"
+          ]
+        },
+        {
+          "source": "urllib.request",
+          "specifiers": [
+            "urllib.request"
+          ]
+        },
+        {
+          "source": "urllib.error",
+          "specifiers": [
+            "urllib.error"
+          ]
+        },
+        {
+          "source": "pathlib",
+          "specifiers": [
+            "Path"
+          ]
+        },
+        {
+          "source": "datetime",
+          "specifiers": [
+            "datetime",
+            "timedelta",
+            "timezone"
+          ]
+        },
+        {
+          "source": "dvx_data",
+          "specifiers": [
+            "data"
+          ]
+        }
+      ],
+      "exports": [
+        "log",
+        "fetch",
+        "clean",
+        "rss_items",
+        "build_keywords",
+        "score_item",
+        "angle_for",
+        "collect_news",
+        "collect_tiktok",
+        "collect_youtube",
+        "collect_internal",
+        "save",
+        "main"
+      ],
+      "totalLines": 418,
+      "hasStructuralAnalysis": true
+    },
     "deploy/agents/inspect_db.py": {
       "filePath": "deploy/agents/inspect_db.py",
       "contentHash": "4f080beb88f9fab99b931fe7bcaa2a6cc9b1ae79f6da6a5da6455313f9c3dbf3",
@@ -1892,6 +2523,120 @@
       ],
       "exports": [],
       "totalLines": 27,
+      "hasStructuralAnalysis": true
+    },
+    "deploy/agents/recompute_refill_events.py": {
+      "filePath": "deploy/agents/recompute_refill_events.py",
+      "contentHash": "59ce196643d7a98e83875de01f3fedb99d77934c34f41a6558c0b95c39be0af6",
+      "functions": [
+        {
+          "name": "sb_get",
+          "params": [
+            "path"
+          ],
+          "exported": true,
+          "lineCount": 15
+        },
+        {
+          "name": "sb_patch",
+          "params": [
+            "event_id",
+            "body"
+          ],
+          "exported": true,
+          "lineCount": 10
+        },
+        {
+          "name": "parse_dt",
+          "params": [
+            "value"
+          ],
+          "exported": true,
+          "lineCount": 5
+        },
+        {
+          "name": "compute_sold",
+          "params": [
+            "events",
+            "sales"
+          ],
+          "exported": true,
+          "lineCount": 42
+        },
+        {
+          "name": "main",
+          "params": [],
+          "exported": true,
+          "lineCount": 71
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "os",
+          "specifiers": [
+            "os"
+          ]
+        },
+        {
+          "source": "sys",
+          "specifiers": [
+            "sys"
+          ]
+        },
+        {
+          "source": "json",
+          "specifiers": [
+            "json"
+          ]
+        },
+        {
+          "source": "argparse",
+          "specifiers": [
+            "argparse"
+          ]
+        },
+        {
+          "source": "collections",
+          "specifiers": [
+            "collections"
+          ]
+        },
+        {
+          "source": "urllib.request",
+          "specifiers": [
+            "urllib.request"
+          ]
+        },
+        {
+          "source": "urllib.error",
+          "specifiers": [
+            "urllib.error"
+          ]
+        },
+        {
+          "source": "datetime",
+          "specifiers": [
+            "datetime",
+            "timedelta",
+            "timezone"
+          ]
+        },
+        {
+          "source": "envload",
+          "specifiers": [
+            "load_env_local"
+          ]
+        }
+      ],
+      "exports": [
+        "sb_get",
+        "sb_patch",
+        "parse_dt",
+        "compute_sold",
+        "main"
+      ],
+      "totalLines": 204,
       "hasStructuralAnalysis": true
     },
     "deploy/agents/reconcile_agent.py": {
@@ -2093,17 +2838,17 @@
     },
     "deploy/agents/requirements.txt": {
       "filePath": "deploy/agents/requirements.txt",
-      "contentHash": "3a858525b4ce6d000b5103ad88ba587de02855e1e2645ade0453e3a2aefb8610",
+      "contentHash": "7e66b700ebb6422a6a431172f1eb1c464cb88d894ad80f458c1820082ba110e3",
       "functions": [],
       "classes": [],
       "imports": [],
       "exports": [],
-      "totalLines": 4,
+      "totalLines": 5,
       "hasStructuralAnalysis": false
     },
     "deploy/agents/restock_guard.py": {
       "filePath": "deploy/agents/restock_guard.py",
-      "contentHash": "334d820c1b60ec670c8c3a26ec33582baa5955539077dc8ff6aa369aea67e8e5",
+      "contentHash": "6cc2738594fa9845318dcf2dd4082a602c1c8c957815da2f71ed96af0f0c59db",
       "functions": [
         {
           "name": "sb_get",
@@ -2187,6 +2932,12 @@
             "timedelta",
             "timezone"
           ]
+        },
+        {
+          "source": "envload",
+          "specifiers": [
+            "load_env_local"
+          ]
         }
       ],
       "exports": [
@@ -2195,7 +2946,7 @@
         "is_box",
         "main"
       ],
-      "totalLines": 212,
+      "totalLines": 219,
       "hasStructuralAnalysis": true
     },
     "deploy/agents/run_weekly_brief.ps1": {
@@ -2208,9 +2959,113 @@
       "totalLines": 24,
       "hasStructuralAnalysis": false
     },
+    "deploy/agents/seed_marketing_content.py": {
+      "filePath": "deploy/agents/seed_marketing_content.py",
+      "contentHash": "16190bd14cdeafc14cda04f2358f88761159eb2c1729a41ff2401ef0bc5a8737",
+      "functions": [
+        {
+          "name": "sb",
+          "params": [
+            "path",
+            "method",
+            "body"
+          ],
+          "exported": true,
+          "lineCount": 11
+        },
+        {
+          "name": "norm_platform",
+          "params": [
+            "p"
+          ],
+          "exported": true,
+          "lineCount": 2
+        },
+        {
+          "name": "read_json",
+          "params": [
+            "name"
+          ],
+          "exported": true,
+          "lineCount": 6
+        },
+        {
+          "name": "collect",
+          "params": [],
+          "exported": true,
+          "lineCount": 40
+        },
+        {
+          "name": "main",
+          "params": [],
+          "exported": true,
+          "lineCount": 33
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "os",
+          "specifiers": [
+            "os"
+          ]
+        },
+        {
+          "source": "sys",
+          "specifiers": [
+            "sys"
+          ]
+        },
+        {
+          "source": "json",
+          "specifiers": [
+            "json"
+          ]
+        },
+        {
+          "source": "argparse",
+          "specifiers": [
+            "argparse"
+          ]
+        },
+        {
+          "source": "urllib.request",
+          "specifiers": [
+            "urllib.request"
+          ]
+        },
+        {
+          "source": "urllib.error",
+          "specifiers": [
+            "urllib.error"
+          ]
+        },
+        {
+          "source": "pathlib",
+          "specifiers": [
+            "Path"
+          ]
+        },
+        {
+          "source": "envload",
+          "specifiers": [
+            "load_env_local"
+          ]
+        }
+      ],
+      "exports": [
+        "sb",
+        "norm_platform",
+        "read_json",
+        "collect",
+        "main"
+      ],
+      "totalLines": 154,
+      "hasStructuralAnalysis": true
+    },
     "deploy/agents/shared.py": {
       "filePath": "deploy/agents/shared.py",
-      "contentHash": "d4c6f70ed24d2e3817de8632fb56b72db14e6b925c3fb1540311ee6132ebf128",
+      "contentHash": "5ea67dcd5dc0d7fabaede70112615eacc617e1b8930deed5a5cd48de00cb5aa0",
       "functions": [
         {
           "name": "map_product_to_sku",
@@ -2219,7 +3074,7 @@
           ],
           "returnType": "str | None",
           "exported": true,
-          "lineCount": 45
+          "lineCount": 53
         },
         {
           "name": "is_box_slot",
@@ -2291,7 +3146,7 @@
         "ksher_fee_pct",
         "calc_ksher_fee"
       ],
-      "totalLines": 98,
+      "totalLines": 106,
       "hasStructuralAnalysis": true
     },
     "deploy/agents/sku_profile_agent.py": {
@@ -2544,6 +3399,121 @@
         "main"
       ],
       "totalLines": 618,
+      "hasStructuralAnalysis": true
+    },
+    "deploy/agents/trigger_workflow.py": {
+      "filePath": "deploy/agents/trigger_workflow.py",
+      "contentHash": "32d047b4df7752080bb7dbcba66000ff010247c0f597050e09be9f89e6992c28",
+      "functions": [
+        {
+          "name": "gh",
+          "params": [
+            "path",
+            "method",
+            "body"
+          ],
+          "exported": true,
+          "lineCount": 15
+        },
+        {
+          "name": "cmd_list",
+          "params": [],
+          "exported": true,
+          "lineCount": 8
+        },
+        {
+          "name": "cmd_status",
+          "params": [
+            "job"
+          ],
+          "exported": true,
+          "lineCount": 16
+        },
+        {
+          "name": "build_inputs",
+          "params": [
+            "job",
+            "args"
+          ],
+          "exported": true,
+          "lineCount": 20
+        },
+        {
+          "name": "dispatch",
+          "params": [
+            "job",
+            "inputs"
+          ],
+          "exported": true,
+          "lineCount": 8
+        },
+        {
+          "name": "main",
+          "params": [],
+          "exported": true,
+          "lineCount": 41
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "os",
+          "specifiers": [
+            "os"
+          ]
+        },
+        {
+          "source": "sys",
+          "specifiers": [
+            "sys"
+          ]
+        },
+        {
+          "source": "json",
+          "specifiers": [
+            "json"
+          ]
+        },
+        {
+          "source": "argparse",
+          "specifiers": [
+            "argparse"
+          ]
+        },
+        {
+          "source": "urllib.request",
+          "specifiers": [
+            "urllib.request"
+          ]
+        },
+        {
+          "source": "urllib.error",
+          "specifiers": [
+            "urllib.error"
+          ]
+        },
+        {
+          "source": "datetime",
+          "specifiers": [
+            "datetime"
+          ]
+        },
+        {
+          "source": "envload",
+          "specifiers": [
+            "load_env_local"
+          ]
+        }
+      ],
+      "exports": [
+        "gh",
+        "cmd_list",
+        "cmd_status",
+        "build_inputs",
+        "dispatch",
+        "main"
+      ],
+      "totalLines": 178,
       "hasStructuralAnalysis": true
     },
     "deploy/agents/weekly_marketing_brief.py": {
@@ -2939,6 +3909,378 @@
       "totalLines": 50,
       "hasStructuralAnalysis": true
     },
+    "deploy/app/api/marketing/content/generate/route.js": {
+      "filePath": "deploy/app/api/marketing/content/generate/route.js",
+      "contentHash": "085c80851c85c43b45933bd2ca8a50108d8fc4be33cd47656067642253a7b6b8",
+      "functions": [
+        {
+          "name": "loadVoice",
+          "params": [],
+          "exported": false,
+          "lineCount": 4
+        },
+        {
+          "name": "buildPrompt",
+          "params": [
+            "voice",
+            "idea",
+            "content",
+            "sku"
+          ],
+          "exported": false,
+          "lineCount": 44
+        },
+        {
+          "name": "ollamaHost",
+          "params": [
+            "voice"
+          ],
+          "exported": false,
+          "lineCount": 2
+        },
+        {
+          "name": "probeOllama",
+          "params": [
+            "voice"
+          ],
+          "exported": false,
+          "lineCount": 20
+        },
+        {
+          "name": "askGemini",
+          "params": [
+            "voice",
+            "prompt"
+          ],
+          "exported": false,
+          "lineCount": 50
+        },
+        {
+          "name": "probeGemini",
+          "params": [],
+          "exported": false,
+          "lineCount": 13
+        },
+        {
+          "name": "askClaude",
+          "params": [
+            "voice",
+            "prompt"
+          ],
+          "exported": false,
+          "lineCount": 17
+        },
+        {
+          "name": "askOllama",
+          "params": [
+            "voice",
+            "prompt",
+            "signal"
+          ],
+          "exported": false,
+          "lineCount": 21
+        },
+        {
+          "name": "tidy",
+          "params": [
+            "text"
+          ],
+          "exported": false,
+          "lineCount": 9
+        },
+        {
+          "name": "looksThai",
+          "params": [
+            "text"
+          ],
+          "exported": false,
+          "lineCount": 5
+        },
+        {
+          "name": "POST",
+          "params": [
+            "req"
+          ],
+          "exported": true,
+          "lineCount": 120
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "@supabase/supabase-js",
+          "specifiers": [
+            "createClient"
+          ]
+        },
+        {
+          "source": "next/server",
+          "specifiers": [
+            "NextResponse"
+          ]
+        },
+        {
+          "source": "fs/promises",
+          "specifiers": [
+            "readFile"
+          ]
+        },
+        {
+          "source": "path",
+          "specifiers": [
+            "path"
+          ]
+        },
+        {
+          "source": "@anthropic-ai/sdk",
+          "specifiers": [
+            "Anthropic"
+          ]
+        },
+        {
+          "source": "../../../../../lib/apiAuth",
+          "specifiers": [
+            "requireAdmin"
+          ]
+        }
+      ],
+      "exports": [
+        "POST"
+      ],
+      "totalLines": 364,
+      "hasStructuralAnalysis": true
+    },
+    "deploy/app/api/marketing/content/route.js": {
+      "filePath": "deploy/app/api/marketing/content/route.js",
+      "contentHash": "7fabd7c62d77f906acdb17b591bedd97173aaaa98071d7be5c4726032a36ccf9",
+      "functions": [
+        {
+          "name": "GET",
+          "params": [
+            "req"
+          ],
+          "exported": true,
+          "lineCount": 37
+        },
+        {
+          "name": "PATCH",
+          "params": [
+            "req"
+          ],
+          "exported": true,
+          "lineCount": 63
+        },
+        {
+          "name": "POST",
+          "params": [
+            "req"
+          ],
+          "exported": true,
+          "lineCount": 34
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "@supabase/supabase-js",
+          "specifiers": [
+            "createClient"
+          ]
+        },
+        {
+          "source": "next/server",
+          "specifiers": [
+            "NextResponse"
+          ]
+        },
+        {
+          "source": "../../../../lib/apiAuth",
+          "specifiers": [
+            "requireAdmin"
+          ]
+        }
+      ],
+      "exports": [
+        "GET",
+        "PATCH",
+        "POST"
+      ],
+      "totalLines": 158,
+      "hasStructuralAnalysis": true
+    },
+    "deploy/app/api/marketing/ideas/route.js": {
+      "filePath": "deploy/app/api/marketing/ideas/route.js",
+      "contentHash": "1bc113b5da9e705482a79eb88ca9dec0beaceecfcaa56c77576f64d8aeb0f9f7",
+      "functions": [
+        {
+          "name": "GET",
+          "params": [
+            "req"
+          ],
+          "exported": true,
+          "lineCount": 82
+        },
+        {
+          "name": "POST",
+          "params": [
+            "req"
+          ],
+          "exported": true,
+          "lineCount": 64
+        },
+        {
+          "name": "PATCH",
+          "params": [
+            "req"
+          ],
+          "exported": true,
+          "lineCount": 75
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "@supabase/supabase-js",
+          "specifiers": [
+            "createClient"
+          ]
+        },
+        {
+          "source": "next/server",
+          "specifiers": [
+            "NextResponse"
+          ]
+        },
+        {
+          "source": "../../../../lib/apiAuth",
+          "specifiers": [
+            "requireAdmin"
+          ]
+        }
+      ],
+      "exports": [
+        "GET",
+        "POST",
+        "PATCH"
+      ],
+      "totalLines": 256,
+      "hasStructuralAnalysis": true
+    },
+    "deploy/app/api/marketing/metrics/route.js": {
+      "filePath": "deploy/app/api/marketing/metrics/route.js",
+      "contentHash": "e3efaeace0574dec8061765dada839f8d046d7c650a09b594df0df6dcab1f405",
+      "functions": [
+        {
+          "name": "thDate",
+          "params": [
+            "iso"
+          ],
+          "exported": false,
+          "lineCount": 1
+        },
+        {
+          "name": "utcBound",
+          "params": [
+            "thDay"
+          ],
+          "exported": false,
+          "lineCount": 4
+        },
+        {
+          "name": "addDays",
+          "params": [
+            "thDay",
+            "n"
+          ],
+          "exported": false,
+          "lineCount": 5
+        },
+        {
+          "name": "fetchAll",
+          "params": [
+            "build"
+          ],
+          "exported": false,
+          "lineCount": 9
+        },
+        {
+          "name": "GET",
+          "params": [
+            "req"
+          ],
+          "exported": true,
+          "lineCount": 116
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "@supabase/supabase-js",
+          "specifiers": [
+            "createClient"
+          ]
+        },
+        {
+          "source": "next/server",
+          "specifiers": [
+            "NextResponse"
+          ]
+        },
+        {
+          "source": "../../../../lib/apiAuth",
+          "specifiers": [
+            "requireAdmin"
+          ]
+        }
+      ],
+      "exports": [
+        "GET"
+      ],
+      "totalLines": 160,
+      "hasStructuralAnalysis": true
+    },
+    "deploy/app/api/marketing/pipeline/route.js": {
+      "filePath": "deploy/app/api/marketing/pipeline/route.js",
+      "contentHash": "336db0a2fdbf55822387e144cad13ce8e6ec9e77ff506eeb0cb7d8a69f0a1793",
+      "functions": [
+        {
+          "name": "latestRun",
+          "params": [
+            "file"
+          ],
+          "exported": false,
+          "lineCount": 24
+        },
+        {
+          "name": "GET",
+          "params": [
+            "req"
+          ],
+          "exported": true,
+          "lineCount": 21
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "next/server",
+          "specifiers": [
+            "NextResponse"
+          ]
+        },
+        {
+          "source": "../../../../lib/apiAuth",
+          "specifiers": [
+            "requireAdmin"
+          ]
+        }
+      ],
+      "exports": [
+        "GET"
+      ],
+      "totalLines": 70,
+      "hasStructuralAnalysis": true
+    },
     "deploy/app/api/payif-stock-sync/route.js": {
       "filePath": "deploy/app/api/payif-stock-sync/route.js",
       "contentHash": "0397f91aab9d0bf56d647ecef0d8aba27149b78c4404ddc1a06de7018c8782b2",
@@ -3303,8 +4645,14 @@
     },
     "deploy/app/branches/page.jsx": {
       "filePath": "deploy/app/branches/page.jsx",
-      "contentHash": "815b09daa1b25d1078df5d0c667e33d38274628c963286f4800f1b1368ea385e",
+      "contentHash": "e202635afee82b8fd0e3124f25ad6f99079914cf7bc6f6781b8955f065aed68f",
       "functions": [
+        {
+          "name": "getBranches",
+          "params": [],
+          "exported": false,
+          "lineCount": 18
+        },
         {
           "name": "mapHref",
           "params": [
@@ -3317,7 +4665,7 @@
           "name": "BranchesPage",
           "params": [],
           "exported": true,
-          "lineCount": 82
+          "lineCount": 83
         }
       ],
       "classes": [],
@@ -3329,9 +4677,10 @@
       ],
       "exports": [
         "metadata",
+        "revalidate",
         "BranchesPage"
       ],
-      "totalLines": 107,
+      "totalLines": 116,
       "hasStructuralAnalysis": true
     },
     "deploy/app/design-system/page.jsx": {
@@ -3466,6 +4815,32 @@
       "totalLines": 15,
       "hasStructuralAnalysis": true
     },
+    "deploy/app/marketing/page.jsx": {
+      "filePath": "deploy/app/marketing/page.jsx",
+      "contentHash": "bf094ff9330e04eae5859400b7da0d1663d0864c239cf380b3b89c917c0f0803",
+      "functions": [
+        {
+          "name": "MarketingPage",
+          "params": [],
+          "exported": true,
+          "lineCount": 3
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "../../components/MarketingOS",
+          "specifiers": [
+            "MarketingOS"
+          ]
+        }
+      ],
+      "exports": [
+        "MarketingPage"
+      ],
+      "totalLines": 9,
+      "hasStructuralAnalysis": true
+    },
     "deploy/app/page.jsx": {
       "filePath": "deploy/app/page.jsx",
       "contentHash": "11fc49e7ef5e88f615e994c8073de2e1a7a8a50e4342dad33f64535bb971f15d",
@@ -3589,7 +4964,7 @@
     },
     "deploy/components/DivisionXApp.jsx": {
       "filePath": "deploy/components/DivisionXApp.jsx",
-      "contentHash": "e6041b915efccb0662923d496d4a2389dec1791f55cc8a581b6b5e62f3ed1ccf",
+      "contentHash": "8c74018fe2ccdb4a74d0a6e0fedc80bb405fe4d32a21a6841c4d842717928d8d",
       "functions": [
         {
           "name": "RealtimeClock",
@@ -3631,7 +5006,7 @@
           "name": "DivisionXApp",
           "params": [],
           "exported": true,
-          "lineCount": 539
+          "lineCount": 551
         }
       ],
       "classes": [],
@@ -3696,7 +5071,9 @@
             "Monitor",
             "Send",
             "ClipboardList",
-            "Boxes"
+            "Boxes",
+            "Megaphone",
+            "ExternalLink"
           ]
         },
         {
@@ -3867,7 +5244,111 @@
       "exports": [
         "DivisionXApp"
       ],
-      "totalLines": 874,
+      "totalLines": 889,
+      "hasStructuralAnalysis": true
+    },
+    "deploy/components/MarketingOS.jsx": {
+      "filePath": "deploy/components/MarketingOS.jsx",
+      "contentHash": "8b8640b9550995f02fb9eb403fe982673068fdffb709c8da3af37a12121d41f0",
+      "functions": [
+        {
+          "name": "baht",
+          "params": [
+            "n"
+          ],
+          "exported": false,
+          "lineCount": 1
+        },
+        {
+          "name": "thaiAgo",
+          "params": [
+            "iso"
+          ],
+          "exported": false,
+          "lineCount": 9
+        },
+        {
+          "name": "MarketingOS",
+          "params": [],
+          "exported": true,
+          "lineCount": 658
+        },
+        {
+          "name": "Shell",
+          "params": [],
+          "exported": false,
+          "lineCount": 23
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "react",
+          "specifiers": [
+            "useState",
+            "useEffect",
+            "useCallback"
+          ]
+        },
+        {
+          "source": "lucide-react",
+          "specifiers": [
+            "Megaphone",
+            "RefreshCw",
+            "Check",
+            "X",
+            "Pencil",
+            "Clock",
+            "AlertTriangle",
+            "Wallet",
+            "Package",
+            "Receipt",
+            "TrendingUp",
+            "Trophy",
+            "MessageSquare",
+            "Lock",
+            "Lightbulb",
+            "Newspaper",
+            "Youtube",
+            "BarChart3",
+            "ExternalLink",
+            "Sparkles",
+            "Music2",
+            "Plus",
+            "ImageIcon"
+          ]
+        },
+        {
+          "source": "recharts",
+          "specifiers": [
+            "ResponsiveContainer",
+            "ComposedChart",
+            "Bar",
+            "Line",
+            "XAxis",
+            "YAxis",
+            "CartesianGrid",
+            "Tooltip",
+            "ReferenceDot"
+          ]
+        },
+        {
+          "source": "../lib/supabase",
+          "specifiers": [
+            "supabase"
+          ]
+        },
+        {
+          "source": "./shared/KpiCard",
+          "specifiers": [
+            "KpiCard"
+          ]
+        }
+      ],
+      "exports": [
+        "MarketingOS"
+      ],
+      "totalLines": 741,
       "hasStructuralAnalysis": true
     },
     "deploy/components/pages/EditStockInModal.jsx": {
@@ -6479,6 +7960,152 @@
       "totalLines": 107,
       "hasStructuralAnalysis": true
     },
+    "deploy/mcp/dvx_mcp_server.py": {
+      "filePath": "deploy/mcp/dvx_mcp_server.py",
+      "contentHash": "a688b9036ddbe83f28185d7528fc751c7ed54072bc3415718c8ba068f2265d8d",
+      "functions": [
+        {
+          "name": "_fail",
+          "params": [
+            "e"
+          ],
+          "exported": true,
+          "lineCount": 3
+        },
+        {
+          "name": "list_machines",
+          "params": [
+            "active_only"
+          ],
+          "returnType": "dict",
+          "exported": true,
+          "lineCount": 14
+        },
+        {
+          "name": "get_sales",
+          "params": [
+            "days",
+            "date",
+            "from_date",
+            "to_date",
+            "machine",
+            "group_by",
+            "top"
+          ],
+          "returnType": "dict",
+          "exported": true,
+          "lineCount": 18
+        },
+        {
+          "name": "get_stock",
+          "params": [
+            "machine",
+            "low_only",
+            "low_threshold"
+          ],
+          "returnType": "dict",
+          "exported": true,
+          "lineCount": 12
+        },
+        {
+          "name": "get_restock_alerts",
+          "params": [
+            "threshold_days",
+            "min_velocity"
+          ],
+          "returnType": "dict",
+          "exported": true,
+          "lineCount": 11
+        },
+        {
+          "name": "get_sync_status",
+          "params": [
+            "job"
+          ],
+          "returnType": "dict",
+          "exported": true,
+          "lineCount": 19
+        },
+        {
+          "name": "sync_data",
+          "params": [
+            "job",
+            "days",
+            "from_date",
+            "to_date"
+          ],
+          "returnType": "dict",
+          "exported": true,
+          "lineCount": 55
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "os",
+          "specifiers": [
+            "os"
+          ]
+        },
+        {
+          "source": "sys",
+          "specifiers": [
+            "sys"
+          ]
+        },
+        {
+          "source": "datetime",
+          "specifiers": [
+            "datetime"
+          ]
+        },
+        {
+          "source": "dvx_data",
+          "specifiers": [
+            "data"
+          ]
+        },
+        {
+          "source": "trigger_workflow",
+          "specifiers": [
+            "tw"
+          ]
+        },
+        {
+          "source": "mcp.server",
+          "specifiers": [
+            "MCPServer"
+          ]
+        },
+        {
+          "source": "mcp.types",
+          "specifiers": [
+            "ToolAnnotations"
+          ]
+        }
+      ],
+      "exports": [
+        "_fail",
+        "list_machines",
+        "get_sales",
+        "get_stock",
+        "get_restock_alerts",
+        "get_sync_status",
+        "sync_data"
+      ],
+      "totalLines": 232,
+      "hasStructuralAnalysis": true
+    },
+    "deploy/mcp/README.md": {
+      "filePath": "deploy/mcp/README.md",
+      "contentHash": "3fa7368fdb4b8fa9b3aecc05d35c0eebb2b9b0840e9ec54d688d16a7144c3cf8",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 103,
+      "hasStructuralAnalysis": true
+    },
     "deploy/next.config.js": {
       "filePath": "deploy/next.config.js",
       "contentHash": "5121e1b7eb0ce8043258b87412be7e3381acc86f855b1d402c4c46205c38eef1",
@@ -6491,12 +8118,12 @@
     },
     "deploy/package.json": {
       "filePath": "deploy/package.json",
-      "contentHash": "96c8093626cffe0be9e5577822811efe1b77149450758e79008f6e227575a238",
+      "contentHash": "61a5bff8ec366797e71aa7b2600c07df062b38875895ebb30d69224fdcfc52f9",
       "functions": [],
       "classes": [],
       "imports": [],
       "exports": [],
-      "totalLines": 24,
+      "totalLines": 25,
       "hasStructuralAnalysis": true
     },
     "deploy/postcss.config.js": {
@@ -6677,7 +8304,7 @@
     },
     "deploy/scraper/payif_sales_sync.py": {
       "filePath": "deploy/scraper/payif_sales_sync.py",
-      "contentHash": "4e86cd0075d8c0a769684c61216b6d82abcde9b827f81227f3e771064453951f",
+      "contentHash": "dc202ad135500ebaadc2cb45b40b620cd4870e807876a2d37dffdbe5fd229f4f",
       "functions": [
         {
           "name": "dec",
@@ -6848,7 +8475,7 @@
     },
     "deploy/scraper/payif_stock_sync.py": {
       "filePath": "deploy/scraper/payif_stock_sync.py",
-      "contentHash": "0cf76f697fae5273b0849812f5e103db4810c08e810c972f7b1deaae489d4da9",
+      "contentHash": "c0a7a9ea09a45104615dda63b99a9b2728c260a260102c4a3c816152edd008d1",
       "functions": [
         {
           "name": "map_name_to_sku",
@@ -6857,7 +8484,7 @@
           ],
           "returnType": "str | None",
           "exported": true,
-          "lineCount": 31
+          "lineCount": 47
         },
         {
           "name": "login",
@@ -6969,7 +8596,7 @@
         "save_to_supabase",
         "main"
       ],
-      "totalLines": 242,
+      "totalLines": 258,
       "hasStructuralAnalysis": true
     },
     "deploy/scraper/requirements.txt": {
@@ -7247,7 +8874,7 @@
     },
     "deploy/scraper/vms_sales_api.py": {
       "filePath": "deploy/scraper/vms_sales_api.py",
-      "contentHash": "8289d1b115f44317a464772903f8ebf79bd66204e90c57e2a14cbeabc835bf4d",
+      "contentHash": "9795306a17bf0742b26225d1287831b062f72f0c4cfab316de76478e2d245514",
       "functions": [
         {
           "name": "map_product_to_sku",
@@ -7256,7 +8883,7 @@
           ],
           "returnType": "str | None",
           "exported": true,
-          "lineCount": 19
+          "lineCount": 27
         },
         {
           "name": "normalize",
@@ -7369,12 +8996,12 @@
         "save_to_supabase",
         "main"
       ],
-      "totalLines": 323,
+      "totalLines": 333,
       "hasStructuralAnalysis": true
     },
     "deploy/scraper/vms_scraper.py": {
       "filePath": "deploy/scraper/vms_scraper.py",
-      "contentHash": "080dfbb13af7e5c18a0ff514d0a2e1d8f3b60c9caa9218f1a451ad06cf8e303a",
+      "contentHash": "31c390efafa170595e1d4ecbe10bc441f2c62f9742449af18a3aae6e39eb9cd0",
       "functions": [
         {
           "name": "normalize",
@@ -7505,12 +9132,12 @@
         "save_to_supabase",
         "main"
       ],
-      "totalLines": 372,
+      "totalLines": 374,
       "hasStructuralAnalysis": true
     },
     "deploy/scraper/vms_stock_sync.py": {
       "filePath": "deploy/scraper/vms_stock_sync.py",
-      "contentHash": "178efb71b998abac87fbe1ddeb9f8625853c3349f908ba0ab7ff27590f3e98bf",
+      "contentHash": "e1d63cb4827854203ecc863910037b7594012a9bce92ce262380c8bb76e3f11b",
       "functions": [
         {
           "name": "cache_vms_image",
@@ -7530,7 +9157,7 @@
           ],
           "returnType": "str | None",
           "exported": true,
-          "lineCount": 48
+          "lineCount": 56
         },
         {
           "name": "login",
@@ -7618,12 +9245,12 @@
         "detect_slot_changes",
         "main"
       ],
-      "totalLines": 411,
+      "totalLines": 419,
       "hasStructuralAnalysis": true
     },
     "deploy/scraper/worldwide_sales_api.py": {
       "filePath": "deploy/scraper/worldwide_sales_api.py",
-      "contentHash": "46bfd9862ff0e0241edf3e935335c1741d27d574ff4f0b11e58cc43bc58aa6cd",
+      "contentHash": "fa0e3877c25f134e2899db6ff90e99c6456c4c787efc4b771a7bef82d1b45edc",
       "functions": [
         {
           "name": "map_goods_to_sku",
@@ -7632,7 +9259,7 @@
           ],
           "returnType": "str | None",
           "exported": true,
-          "lineCount": 45
+          "lineCount": 54
         },
         {
           "name": "is_box",
@@ -7802,12 +9429,12 @@
         "save_ship_fails",
         "main"
       ],
-      "totalLines": 484,
+      "totalLines": 493,
       "hasStructuralAnalysis": true
     },
     "deploy/scraper/worldwide_stock_sync.py": {
       "filePath": "deploy/scraper/worldwide_stock_sync.py",
-      "contentHash": "fd932e5cde6daf29bdc661ed364da559783f2bee6704bdef50a871cb20047369",
+      "contentHash": "903fec6b4684783f5fe43adc97dbd67b67834c7f052942a52871e3ceb0341c07",
       "functions": [
         {
           "name": "map_goods_to_sku",
@@ -7816,7 +9443,7 @@
           ],
           "returnType": "str | None",
           "exported": true,
-          "lineCount": 40
+          "lineCount": 49
         },
         {
           "name": "login",
@@ -7930,7 +9557,7 @@
         "save_to_supabase",
         "main"
       ],
-      "totalLines": 265,
+      "totalLines": 274,
       "hasStructuralAnalysis": true
     },
     "deploy/scripts/backup-tables.js": {
@@ -7987,6 +9614,26 @@
       "imports": [],
       "exports": [],
       "totalLines": 46,
+      "hasStructuralAnalysis": true
+    },
+    "deploy/tasks/content_voice.json": {
+      "filePath": "deploy/tasks/content_voice.json",
+      "contentHash": "08a5313dda73054ed51c3186658f68c3fa1f847a5b55393c5728e51710eb0904",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 35,
+      "hasStructuralAnalysis": true
+    },
+    "deploy/tasks/idea_sources.json": {
+      "filePath": "deploy/tasks/idea_sources.json",
+      "contentHash": "d5183154e9c0f09941ada3013b993ed973e689f25492cef671fa017149935eef",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 35,
       "hasStructuralAnalysis": true
     },
     "deploy/tasks/marketing_reminders.json": {
@@ -8509,6 +10156,16 @@
       "totalLines": 81,
       "hasStructuralAnalysis": true
     },
+    "wiki/projects/marketing-os-page.md": {
+      "filePath": "wiki/projects/marketing-os-page.md",
+      "contentHash": "0f9c6bb07cb2fe260891be2c98736dc7ea3bf1c4b8ac6daa7110c3f27b56f89f",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 285,
+      "hasStructuralAnalysis": true
+    },
     "wiki/projects/README.md": {
       "filePath": "wiki/projects/README.md",
       "contentHash": "afb9b650647694d16fdc10c7ea491b2a697bc68fab0c715c7535d69c9a808be4",
@@ -8911,7 +10568,7 @@
     },
     "wiki/skus/YGHChaosOrigins.md": {
       "filePath": "wiki/skus/YGHChaosOrigins.md",
-      "contentHash": "3a66a467bbad0cb9a52b9b513f9d63330bee19985ab6e6e4ff0958588beb7f31",
+      "contentHash": "73851ade4657e68d76bd132a5188091ae7e8f452ce87997865d03e99878f98e9",
       "functions": [],
       "classes": [],
       "imports": [],
@@ -9247,6 +10904,116 @@
       "imports": [],
       "exports": [],
       "totalLines": 37,
+      "hasStructuralAnalysis": true
+    },
+    "wiki/worklog/2026-07-25-branches-data-driven.md": {
+      "filePath": "wiki/worklog/2026-07-25-branches-data-driven.md",
+      "contentHash": "0b79791d7c53ad614f411320060c63f44a67b869a9f9c6291cf78d17512230b9",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 37,
+      "hasStructuralAnalysis": true
+    },
+    "wiki/worklog/2026-07-29-ygh-chaos-origins-packs-per-box.md": {
+      "filePath": "wiki/worklog/2026-07-29-ygh-chaos-origins-packs-per-box.md",
+      "contentHash": "3e7f4f5573754be2498634208a8827ed2781dbd10f3a9327d324b85115bdebea",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 35,
+      "hasStructuralAnalysis": true
+    },
+    "wiki/worklog/2026-08-01-repo-cleanup-gitignore.md": {
+      "filePath": "wiki/worklog/2026-08-01-repo-cleanup-gitignore.md",
+      "contentHash": "94da6f7c11895fdc7216260ac368b9a7c08f7d95416bc521ff8962ab9c84ce98",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 39,
+      "hasStructuralAnalysis": true
+    },
+    "wiki/worklog/2026-08-04-ai-caption-generation.md": {
+      "filePath": "wiki/worklog/2026-08-04-ai-caption-generation.md",
+      "contentHash": "582ef8da81c83007858260b6594da7479872b00b7a97a236556e3b86517ee189",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 206,
+      "hasStructuralAnalysis": true
+    },
+    "wiki/worklog/2026-08-04-idea-collector-station1.md": {
+      "filePath": "wiki/worklog/2026-08-04-idea-collector-station1.md",
+      "contentHash": "c8dcabdaa0568897066ee8334886b4d89b17cf3e74a579a47eb89813145feee9",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 141,
+      "hasStructuralAnalysis": true
+    },
+    "wiki/worklog/2026-08-04-marketing-page-phase1-2.md": {
+      "filePath": "wiki/worklog/2026-08-04-marketing-page-phase1-2.md",
+      "contentHash": "2e8efaef19891c6a7aa244b1617c35ce06a28e61ac4524fd93ac4151196136c1",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 90,
+      "hasStructuralAnalysis": true
+    },
+    "wiki/worklog/2026-08-04-mcp-server-phase2.md": {
+      "filePath": "wiki/worklog/2026-08-04-mcp-server-phase2.md",
+      "contentHash": "d9d3b8a1d67917647262b597c201d981fd4fe453d520120068fd6f0b6c2e02e0",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 72,
+      "hasStructuralAnalysis": true
+    },
+    "wiki/worklog/2026-08-04-openclaw-skills-phase1.md": {
+      "filePath": "wiki/worklog/2026-08-04-openclaw-skills-phase1.md",
+      "contentHash": "9c155e46e01fd9a265a1d5e7bfa9000c6b16ace13224612f62f40d441a9c8ff0",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 66,
+      "hasStructuralAnalysis": true
+    },
+    "wiki/worklog/2026-08-04-refill-events-sold-between-fix.md": {
+      "filePath": "wiki/worklog/2026-08-04-refill-events-sold-between-fix.md",
+      "contentHash": "f1fd346edc86e8c85d0ddec897b8fd26c535cb6c5c3ea2315034ac5948083ef2",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 77,
+      "hasStructuralAnalysis": true
+    },
+    "wiki/worklog/2026-08-07-content-image-panel.md": {
+      "filePath": "wiki/worklog/2026-08-07-content-image-panel.md",
+      "contentHash": "7776308c1c68392fccd6b37ed5b1acfa462000be5addf6b6ac67529c07a9462c",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 68,
+      "hasStructuralAnalysis": true
+    },
+    "wiki/worklog/2026-08-07-wwv01-new-sku-mapping.md": {
+      "filePath": "wiki/worklog/2026-08-07-wwv01-new-sku-mapping.md",
+      "contentHash": "a566caeaedff5a4cfa9f888899e001cea52a51fa70474848462c7105877dc02d",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 100,
       "hasStructuralAnalysis": true
     },
     "wiki/worklog/README.md": {
