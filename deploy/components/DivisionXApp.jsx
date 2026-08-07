@@ -10,7 +10,7 @@ import {
   CheckCircle, Clock, Search, RefreshCw, ArrowUpCircle, Loader2,
   Pencil, Trash2, ChevronDown, ChevronUp, Layers,
   LogOut, UserPlus, Users, Shield, Eye, EyeOff, Monitor,
-  Send, ClipboardList, Boxes
+  Send, ClipboardList, Boxes, Megaphone, ExternalLink
 } from "lucide-react"
 import {
   supabase,
@@ -313,9 +313,12 @@ const NAV_BASE = [
   { id:"sales",      label:"ยอดขาย",         icon:ShoppingCart  },
   { id:"analytics",  label:"วิเคราะห์ SKU",  icon:BarChart2     },
 ]
+// href = ออกไป route อื่นจริง ๆ (ไม่ใช่ setPage ภายใน) — /marketing แยก route
+// เพราะไฟล์นี้ใหญ่มากอยู่แล้ว แต่ใช้ session/auth เดียวกัน
 const NAV_ADMIN_ITEMS = [
   { id:"slots",     label:"จัดการ Slot",   icon:Layers },
   { id:"users",     label:"จัดการผู้ใช้",  icon:Users },
+  { id:"marketing", label:"การตลาด",       icon:Megaphone, href:"/marketing" },
 ]
 
 // ─────────────────────────────────────────────
@@ -727,6 +730,18 @@ export default function DivisionXApp() {
         <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
           {NAV.filter(n => showHidden || !n.hidden || n.id === page).map(n => {
             const Icon   = n.icon
+
+            // รายการที่เป็นลิงก์ออกนอก route นี้ — ไม่มี active state เพราะพอกดแล้วออกจากหน้านี้เลย
+            if (n.href) return (
+              <a key={n.id} href={n.href} onClick={() => setSideOpen(false)}
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium
+                           text-gray-600 hover:bg-gray-100 transition-all">
+                <Icon size={18}/>
+                <span>{n.label}</span>
+                <ExternalLink size={12} className="ml-auto text-gray-300"/>
+              </a>
+            )
+
             const active = page === n.id
             const isWithdrawal = n.id === "withdrawal"
             const isMachinePage = page.startsWith("machine_")
