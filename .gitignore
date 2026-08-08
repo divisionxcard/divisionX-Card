@@ -77,10 +77,12 @@ scripts/gap_analysis.mjs
 scripts/sellthrough_chukes01.mjs
 
 # ─── Video source (โฮสต์บน Supabase Storage แล้ว · ไฟล์ใหญ่) ──
-Video/
+/Video/
 
-# ─── รูปต้นฉบับ (774MB · โฮสต์บน Supabase Storage แล้ว) ───────
-image/
+# ─── รูปต้นฉบับ (807MB · โฮสต์บน Supabase Storage แล้ว) ───────
+# นำหน้าด้วย / เพื่อผูกกับ root เท่านั้น — เดิมเขียน image/ เฉย ๆ ทำให้โดน
+# ทุกโฟลเดอร์ชื่อ image ทั่วโปรเจกต์ (route /api/marketing/content/image หายไปเงียบ ๆ)
+/image/
 
 # ─── Claude Code local (worktrees + settings เฉพาะเครื่อง) ────
 .claude/settings.local.json

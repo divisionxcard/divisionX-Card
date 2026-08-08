@@ -1,0 +1,42 @@
+{
+  "_comment": "สไตล์ภาพประกอบคอนเทนต์ · แยกไฟล์จาก content_voice/content_craft เพราะเป็นคนละสื่อ (ภาพ ไม่ใช่ตัวอักษร) และคนแก้คนละจังหวะ · prompt เป็นภาษาอังกฤษเพราะโมเดลภาพเข้าใจดีกว่าไทยมาก — ไม่ใช่ความชอบส่วนตัว ทดสอบแล้วต่างกันจริง",
+
+  "_model_note": "Nano Banana 2 = gemini-3.1-flash-image · รับภาพอ้างอิงได้ถึง 14 รูป จึงเอารูปซองจริงป้อนเข้าไปได้ (นี่คือเหตุผลเดียวที่ทำให้เรื่องนี้คุ้มทำ — รอบก่อนตัดสินใจไม่ทำเพราะ AI ไม่รู้ว่าการ์ดชุดนั้นหน้าตายังไง) · lite ถูกกว่าแต่รายละเอียดน้อยกว่า · pro แพงกว่า 3 เท่า เก็บไว้ใช้กับงานที่ต้องคมจริง",
+  "model": "gemini-3.1-flash-image",
+
+  "_identity_note": "อัตลักษณ์แบรนด์ — ฟ้านีออนไฟฟ้า + สายฟ้า + โครเมียม บนกรมท่า (ไม่ใช่ดำ-ทอง) · ตรงกับที่ใช้ในงานออกแบบชิ้นอื่นของแบรนด์",
+  "style": "Premium trading-card retail brand visual. Deep navy blue background (#0B1B3A to #12264F gradient), electric neon blue accents (#00C2FF), sharp lightning-bolt motifs, brushed chrome metallic edges with subtle reflections. Dramatic studio lighting with rim light. Clean, high contrast, modern, slightly futuristic. Square 1:1 composition with the subject centered and breathing room around it.",
+
+  "_negative_note": "ข้อห้าม — 2 กลุ่ม (1) เรื่องคุณภาพ เช่นตัวหนังสือมั่ว ซึ่งโมเดลชอบใส่มาเองแล้วสะกดผิด (2) เรื่องกฎหมาย ห้ามวาดตัวละคร/โลโก้ลิขสิทธิ์ขึ้นใหม่ เพราะเราเป็นแค่ผู้ขายต่อ ใช้รูปสินค้าจริงที่เราขายได้ แต่วาดตัวละครขึ้นเองเป็นงานลิขสิทธิ์ของค่าย",
+  "negative": [
+    "no text, no letters, no words, no typography, no watermark, no logo",
+    "do not draw or invent any anime/manga characters",
+    "do not recreate copyrighted card artwork or brand logos",
+    "no people's faces",
+    "not cluttered, not busy, no random objects"
+  ],
+
+  "_reference_note": "ตอนมีรูปซองจริงแนบไป — ต้องสั่งชัดว่า 'ใช้ตามที่ให้มา ห้ามวาดใหม่' ไม่งั้นโมเดลจะ 'ปรับปรุง' หน้าซองจนกลายเป็นของปลอม",
+  "with_reference": "Use the provided product photo EXACTLY as-is — do not redraw, restyle, or alter the packaging artwork, colors, or any printed details on it. Composite that exact product into the scene described. It must remain recognizable as the real product.",
+
+  "_scene_note": "ฉากตามรูปแบบโพสต์ (คีย์ตรงกับ content_formats ใน content_voice.json) · ไม่มีคีย์ที่ตรงจะใช้ default",
+  "scenes": {
+    "default":   "the product standing upright on a reflective dark surface, neon blue glow behind it",
+    "news_hook": "a dramatic hero shot, product lit from behind with a burst of electric blue light",
+    "question":  "minimal composition with lots of negative space on one side, product slightly off-center",
+    "ranking":   "three identical product packs arranged in a stepped podium layout, spotlight from above",
+    "beginner":  "clean flat-lay from directly above on a dark navy surface, soft even lighting",
+    "story":     "close-up macro shot, shallow depth of field, warm rim light, cinematic mood",
+    "fomo":      "a single pack under a narrow spotlight in near darkness, dramatic and urgent",
+    "compare":   "two packs side by side, symmetrical, equal lighting, thin neon divider between them",
+    "behind":    "product among a few unopened boxes on a workbench, practical warm-cool lighting mix"
+  },
+
+  "_size_note": "1K พอสำหรับโพสต์ Facebook/LINE และถูกที่สุด · ขยับเป็น 2K เฉพาะตอนต้องใช้ทำป้ายหรือพิมพ์",
+  "image_size": "1K",
+  "aspect_ratio": "1:1",
+
+  "_bucket_note": "เก็บใน Supabase Storage bucket 'marketing' (public อยู่แล้ว) · ไม่เก็บ base64 ลง DB เพราะแถวจะบวมและ query ช้า",
+  "bucket": "marketing",
+  "path_prefix": "content"
+}

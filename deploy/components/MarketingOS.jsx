@@ -75,6 +75,7 @@ export default function MarketingOS() {
   const [pasting, setPasting] = useState(false)
   const [perSource, setPerSource] = useState(3)   // เด็ดสุดกี่ชิ้นต่อช่องทาง
   const [generating, setGenerating] = useState(new Set())   // id ที่ AI กำลังเขียนแคปชั่นให้
+  const [imaging, setImaging] = useState(new Set())         // id ที่ AI กำลังสร้างภาพให้
 
   const [editingId, setEditingId] = useState(null)
   const [editText, setEditText] = useState("")
@@ -183,6 +184,26 @@ export default function MarketingOS() {
       setErr(e.message)   // ร่างยังอยู่ในคิว กดเขียนใหม่ได้
     } finally {
       setGenerating(s => { const n = new Set(s); n.delete(contentId); return n })
+    }
+  }, [api])
+
+  // ── ให้ AI สร้างภาพประกอบ ──
+  // ใช้รูป SKU จริงเป็นภาพอ้างอิง ไม่ได้ให้มันวาดการ์ดขึ้นเอง
+  const makeImage = useCallback(async (contentId) => {
+    setImaging(s => new Set(s).add(contentId))
+    try {
+      const updated = await api("content/image", {
+        method: "POST", body: JSON.stringify({ id: contentId }),
+      })
+      setContent(c => ({
+        ...c,
+        // คง sku ไว้เหมือน generate() — route ไม่ได้ embed กลับมา
+        items: (c.items || []).map(i => (i.id === contentId ? { ...updated, sku: i.sku } : i)),
+      }))
+    } catch (e) {
+      setErr(e.message)
+    } finally {
+      setImaging(s => { const n = new Set(s); n.delete(contentId); return n })
     }
   }, [api])
 
@@ -436,9 +457,9 @@ export default function MarketingOS() {
                 <article key={item.id} className="bg-white rounded-2xl border border-gray-100 p-4">
                  <div className="flex flex-col sm:flex-row gap-3">
                   {/* ── ช่องภาพ — ดูตัวอย่างก่อนอนุมัติ ──
-                      รูปมาจาก SKU จริงใน Supabase Storage ไม่ใช่ AI สร้าง
-                      (คนซื้อการ์ดอยากเห็นของจริง และ AI ไม่รู้ว่าการ์ดชุดนั้นหน้าตายังไง) */}
-                  <div className="sm:w-36 shrink-0">
+                      3 ทาง: รูป SKU จริง (ฟรี ทันที) · AI จัดฉากรอบรูปจริง (เสียเงิน) · วางลิงก์เอง
+                      AI ไม่ได้ "วาดการ์ดขึ้นมาเอง" — มันได้รูปซองจริงเป็นภาพอ้างอิงแล้วจัดฉาก/แสงรอบ ๆ */}
+                  <div className="sm:w-36 shrink-0 space-y-1.5">
                     {item.media_url ? (
                       <div className="relative group">
                         <img src={item.media_url} alt=""
@@ -452,27 +473,48 @@ export default function MarketingOS() {
                       </div>
                     ) : (
                       <div className="w-full sm:w-36 h-36 rounded-xl border border-dashed border-gray-300 flex flex-col items-center justify-center gap-1.5 text-center px-2">
-                        <ImageIcon size={20} className="text-gray-400" />
-                        <span className="text-[11px] text-gray-400">ยังไม่มีภาพ</span>
-                        {(item.sku?.image_url || item.sku?.image_url_box) && (
-                          <button
-                            onClick={() => patch(item.id, {
-                              media_url: item.sku.image_url || item.sku.image_url_box,
-                            })}
-                            className="text-[11px] text-blue-500 underline">
-                            ใช้รูป {item.sku.sku_id}
-                          </button>
+                        {imaging.has(item.id) ? (
+                          <>
+                            <ImageIcon size={20} className="text-blue-400 animate-pulse" />
+                            <span className="text-[11px] text-blue-500">AI กำลังสร้างภาพ…</span>
+                            <span className="text-[10px] text-gray-400">ราว 15-40 วิ</span>
+                          </>
+                        ) : (
+                          <>
+                            <ImageIcon size={20} className="text-gray-400" />
+                            <span className="text-[11px] text-gray-400">ยังไม่มีภาพ</span>
+                            {(item.sku?.image_url || item.sku?.image_url_box) && (
+                              <button
+                                onClick={() => patch(item.id, {
+                                  media_url: item.sku.image_url || item.sku.image_url_box,
+                                })}
+                                className="text-[11px] text-blue-500 underline">
+                                ใช้รูป {item.sku.sku_id}
+                              </button>
+                            )}
+                            <button
+                              onClick={() => {
+                                const u = window.prompt("วางลิงก์รูป (https://...)")
+                                if (u) patch(item.id, { media_url: u })
+                              }}
+                              className="text-[11px] text-gray-400 underline">
+                              วางลิงก์เอง
+                            </button>
+                          </>
                         )}
-                        <button
-                          onClick={() => {
-                            const u = window.prompt("วางลิงก์รูป (https://...)")
-                            if (u) patch(item.id, { media_url: u })
-                          }}
-                          className="text-[11px] text-gray-400 underline">
-                          วางลิงก์เอง
-                        </button>
                       </div>
                     )}
+
+                    {/* ให้ AI จัดฉาก — กดซ้ำได้เรื่อย ๆ ถ้าไม่ถูกใจ (ได้ภาพใหม่ทุกครั้ง) */}
+                    <button
+                      disabled={imaging.has(item.id)}
+                      onClick={() => makeImage(item.id)}
+                      title={item.sku ? `ใช้รูป ${item.sku.sku_id} จริงเป็นต้นแบบ` : "ไม่มี SKU โยง — จะได้ภาพบรรยากาศแบรนด์"}
+                      className="w-full sm:w-36 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg
+                                 bg-indigo-50 text-indigo-700 text-[11px] font-medium disabled:opacity-50">
+                      <Sparkles size={12} />
+                      {imaging.has(item.id) ? "กำลังสร้าง…" : item.media_url ? "ให้ AI สร้างใหม่" : "ให้ AI สร้างภาพ"}
+                    </button>
                   </div>
 
                   <div className="flex-1 min-w-0">
