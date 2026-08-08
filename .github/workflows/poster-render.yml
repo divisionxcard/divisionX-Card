@@ -36,9 +36,15 @@ jobs:
 
       # --with-deps ลง system library ที่ chromium ต้องใช้บน ubuntu ด้วย
       # ขาดตัวใดตัวหนึ่งแล้ว browser จะเปิดไม่ขึ้นโดยไม่มี error ที่อ่านรู้เรื่อง
+      #
+      # ⚠️ ห้ามปักหมุด 1.44.0 ตาม deploy/scraper/requirements.txt
+      # รุ่นนั้นสั่งลง libasound2 ซึ่ง Ubuntu 24.04 (noble) เปลี่ยนชื่อเป็น libasound2t64 แล้ว
+      # → "Package 'libasound2' has no installation candidate" แล้วล้มทั้ง job
+      # (รัน #1 #2 ตายด้วยเหตุนี้) · vms-sync.yml รอดเพราะลงแบบไม่ระบุเวอร์ชัน
+      # ใช้เป็นขั้นต่ำแทนการปักหมุด — ได้ของที่แก้ปัญหานี้แล้วและยังอัปเดตตามได้
       - name: Install Playwright + Chromium
         run: |
-          pip install playwright==1.44.0
+          pip install "playwright>=1.49"
           playwright install --with-deps chromium
 
       - name: Render poster
