@@ -1,0 +1,123 @@
+<!doctype html>
+<!--
+  เทมเพลตโปสเตอร์คอนเทนต์ · แก้หน้าตาได้ที่ไฟล์นี้ ไม่ต้องแตะ Python
+
+  ตัวแปรที่ใส่ให้: {{FONT_REGULAR}} {{FONT_BOLD}} (data URI) · {{HEADLINE}} {{SUB}}
+                  {{BODY}} (หลาย <p>) · {{HERO}} (data URI รูปสินค้า หรือว่าง)
+                  {{BRANCHES}} {{TAGS}} {{BG}} (data URI พื้นหลัง AI หรือว่าง)
+
+  ทำไมฝังฟอนต์/รูปเป็น data URI: ตัวเรนเดอร์ใช้ set_content() ไม่ได้เสิร์ฟผ่าน
+  เว็บเซิร์ฟเวอร์ ถ้าอ้างไฟล์ภายนอกจะโหลดไม่ทัน/ไม่ขึ้น และกัน CORS ตอนดึงรูปข้ามโดเมน
+
+  ห้ามใส่อีโมจิลงในข้อความ — Chromium บน ubuntu ของ GitHub Actions ไม่มีฟอนต์
+  อีโมจิสี จะออกมาเป็นสี่เหลี่ยม (บนเครื่อง Windows ไม่เห็นปัญหา เลยพลาดง่าย)
+-->
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<style>
+  @font-face { font-family: 'DX'; src: url({{FONT_REGULAR}}) format('truetype'); font-weight: 400 }
+  @font-face { font-family: 'DX'; src: url({{FONT_BOLD}}) format('truetype'); font-weight: 700 }
+
+  * { margin: 0; padding: 0; box-sizing: border-box }
+  body {
+    width: 1080px; height: 1080px; overflow: hidden;
+    font-family: 'DX', sans-serif; color: #fff;
+    background: #0B1B3A;
+    position: relative;
+  }
+
+  /* พื้นหลัง AI (ถ้ามี) — หรี่ลงเพื่อให้ตัวหนังสืออ่านออกเสมอ ไม่ปล่อยให้ภาพกลืนข้อความ */
+  .bg { position: absolute; inset: 0; background-size: cover; background-position: center;
+        opacity: .38; filter: saturate(1.1) }
+  .grad { position: absolute; inset: 0;
+    background:
+      radial-gradient(900px 620px at 50% 42%, rgba(0,194,255,.20), transparent 70%),
+      linear-gradient(160deg, #0B1B3A 0%, #12264F 55%, #0A1730 100%) }
+  /* เส้นสายฟ้าจาง ๆ — อัตลักษณ์แบรนด์ ไม่ให้แย่งสายตา
+     เดิมเป็นเส้นทแยงตัดกันกลางภาพพอดี กลายเป็นกากบาทใหญ่ดึงสายตาแทนตัวหนังสือ
+     ย้ายลงมุมขวาล่างและหรี่ลง ให้เป็นพื้นผิว ไม่ใช่ลวดลาย */
+  .bolt { position: absolute; inset: 0; opacity: .10;
+    background:
+      linear-gradient(118deg, transparent 72%, #00C2FF 73%, transparent 74%),
+      linear-gradient(104deg, transparent 84%, #00C2FF 85%, transparent 86%) }
+
+  .wrap { position: relative; height: 100%; display: flex; flex-direction: column;
+          padding: 62px 68px 0 }
+
+  /* ── หัว ── */
+  .brand { display: flex; align-items: center; gap: 12px; margin-bottom: 34px }
+  .mark { width: 42px; height: 42px; border-radius: 11px;
+          background: linear-gradient(145deg, #00C2FF, #0075B8);
+          display: flex; align-items: center; justify-content: center;
+          font-weight: 700; font-size: 25px; color: #06132B;
+          box-shadow: 0 0 26px rgba(0,194,255,.55) }
+  .brand span { font-weight: 700; font-size: 21px; letter-spacing: 4px; color: #BFE9FF }
+
+  /* ── พาดหัว ── */
+  h1 { font-weight: 700; font-size: 74px; line-height: 1.16; letter-spacing: -.5px;
+       text-shadow: 0 5px 26px rgba(0,0,0,.6) }
+  h1 em { font-style: normal; color: #00C2FF; text-shadow: 0 0 34px rgba(0,194,255,.75) }
+  .sub { margin-top: 18px; font-size: 33px; line-height: 1.42; color: #CFE4FF; font-weight: 400 }
+
+  /* ── กลาง: รูปสินค้า ── */
+  .hero { flex: 1; display: flex; align-items: center; justify-content: center;
+          margin: 26px 0 10px; position: relative; min-height: 0 }
+  .hero .halo { position: absolute; width: 460px; height: 460px; border-radius: 50%;
+                background: radial-gradient(circle, rgba(0,194,255,.34), transparent 68%) }
+  .hero img { max-height: 400px; max-width: 620px; object-fit: contain; position: relative;
+              filter: drop-shadow(0 26px 46px rgba(0,0,0,.62)) }
+  /* ไม่มีรูปสินค้า = อย่าปล่อยให้กลางภาพโหว่ · หุบพื้นที่แล้วดัน halo เป็นแสงประกอบแทน */
+  .hero.empty { flex: 0 0 auto; height: 210px; margin: 8px 0 0 }
+  .hero.empty .halo { width: 620px; height: 300px; opacity: .8 }
+
+  /* ── เนื้อความ ── */
+  .body { font-size: 31px; line-height: 1.55; color: #E4EEFF; font-weight: 400 }
+  .body p { margin-bottom: 14px }
+  /* ไม่มีรูป → เนื้อความคือพระเอกแทน ขยายให้เต็มพื้นที่ที่ว่าง */
+  .no-hero .body { font-size: 36px; line-height: 1.6 }
+
+  /* ── แถบท้าย ── */
+  .foot { margin: auto -68px 0; padding: 28px 68px 32px;
+          background: linear-gradient(90deg, rgba(0,194,255,.16), rgba(0,194,255,.05));
+          border-top: 2px solid rgba(0,194,255,.42);
+          display: flex; align-items: center; gap: 40px }
+  /* nowrap สำคัญ — ไม่งั้น "ของแท้ 100%" ตัดเป็น 2 บรรทัดแล้วแถบเบี้ยวทั้งแถว */
+  .chip { display: flex; align-items: center; gap: 10px; font-size: 26px; font-weight: 700;
+          color: #EAF6FF; white-space: nowrap }
+  .dot { width: 11px; height: 11px; border-radius: 50%; background: #00C2FF;
+         box-shadow: 0 0 14px #00C2FF; flex: 0 0 auto }
+  .tags { margin-left: auto; font-size: 22px; color: #7FC9EE; font-weight: 400;
+          text-align: right; max-width: 330px; line-height: 1.35 }
+</style>
+</head>
+<body>
+  <div class="bg" style="background-image:url({{BG}})"></div>
+  <div class="grad"></div>
+  <div class="bolt"></div>
+
+  <div class="wrap {{WRAP_CLASS}}">
+    <div class="brand">
+      <div class="mark">X</div>
+      <span>DIVISION X CARD</span>
+    </div>
+
+    <h1>{{HEADLINE}}</h1>
+    <div class="sub">{{SUB}}</div>
+
+    <div class="hero {{HERO_CLASS}}">
+      <div class="halo"></div>
+      {{HERO}}
+    </div>
+
+    <div class="body">{{BODY}}</div>
+
+    <div class="foot">
+      <div class="chip"><i class="dot"></i>ของแท้ 100%</div>
+      <div class="chip"><i class="dot"></i>เปิด 24 ชม.</div>
+      <div class="chip"><i class="dot"></i>{{BRANCHES}} สาขา</div>
+      <div class="tags">{{TAGS}}</div>
+    </div>
+  </div>
+</body>
+</html>
