@@ -1,0 +1,64 @@
+name: Render Content Poster
+
+# สร้างโปสเตอร์คอนเทนต์ด้วย Chromium จริง
+#
+# ทำไมต้องรันที่นี่ ไม่ใช่บน Vercel:
+#   ตัวอักษรไทยต้องใช้ text shaping ของเบราว์เซอร์จริง — next/og (Satori)
+#   ทิ้งวรรณยุกต์เมื่อซ้อนบนสระบน ("ที่" กลายเป็น "ที") ทดสอบยืนยันแล้ว
+#   ดู wiki/worklog/2026-08-08-thai-text-rendering.md
+#
+# เจ้าของเลือกทางนี้เองเพราะ "อยากได้ภาพที่ถูกต้องที่สุด เวลารอไม่ใช่ปัญหา"
+
+on:
+  workflow_dispatch:
+    inputs:
+      content_id:
+        description: "id ของ marketing_content ที่จะสร้างโปสเตอร์"
+        required: true
+        type: string
+      sku:
+        description: "บังคับ SKU ที่จะเอารูปมาใช้ (เว้นว่าง = ใช้ source_sku ของคอนเทนต์)"
+        required: false
+        type: string
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      # --with-deps ลง system library ที่ chromium ต้องใช้บน ubuntu ด้วย
+      # ขาดตัวใดตัวหนึ่งแล้ว browser จะเปิดไม่ขึ้นโดยไม่มี error ที่อ่านรู้เรื่อง
+      - name: Install Playwright + Chromium
+        run: |
+          pip install playwright==1.44.0
+          playwright install --with-deps chromium
+
+      - name: Render poster
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: |
+          ARGS="--id ${{ github.event.inputs.content_id }}"
+          if [ -n "${{ github.event.inputs.sku }}" ]; then
+            ARGS="$ARGS --sku '${{ github.event.inputs.sku }}'"
+          fi
+          eval python deploy/agents/poster_render.py $ARGS
+
+      # เก็บไฟล์ไว้ให้ดาวน์โหลดดูได้ด้วย เผื่อภาพออกมาเพี้ยนจะได้ตรวจย้อนหลัง
+      # โดยไม่ต้องไปรื้อ Storage
+      - name: Upload artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: poster-${{ github.event.inputs.content_id }}
+          path: deploy/agents/poster-*.png
+          if-no-files-found: ignore
+          retention-days: 7

@@ -61,6 +61,7 @@ export default function MarketingOS() {
   const [authState, setAuthState] = useState("checking")   // checking | ok | anon | forbidden
   const [loading, setLoading] = useState(false)
   const [err, setErr] = useState("")
+  const [notice, setNotice] = useState("")   // ข้อความบอกว่าสั่งงาน async ไปแล้ว
 
   const [ideas, setIdeas] = useState({ items: [], counts: {}, by_source: {} })
   const [content, setContent] = useState({ items: [], counts: {} })
@@ -207,6 +208,23 @@ export default function MarketingOS() {
     }
   }, [api])
 
+  // ── สั่งสร้างโปสเตอร์ (ฟรี ไม่ใช้ AI) ──
+  // ยิงไป GitHub Actions เพราะต้องใช้ Chromium จริงเรนเดอร์ตัวอักษรไทย
+  // เป็นงาน async — ภาพจะโผล่เมื่อ workflow เสร็จ ต้องกดรีเฟรชเอง
+  const makePoster = useCallback(async (contentId) => {
+    setImaging(s => new Set(s).add(contentId))
+    try {
+      const r = await api("content/poster", {
+        method: "POST", body: JSON.stringify({ id: contentId }),
+      })
+      setNotice(r.message || "สั่งสร้างโปสเตอร์แล้ว")
+    } catch (e) {
+      setErr(e.message)
+    } finally {
+      setImaging(s => { const n = new Set(s); n.delete(contentId); return n })
+    }
+  }, [api])
+
   // ── ไอเดีย: กดเลือก → สร้างร่าง แล้วให้ AI เขียนแคปชั่นต่อทันที ──
   async function ideaAction(id, action, reason) {
     setBusyId(`idea-${id}`)
@@ -305,6 +323,18 @@ export default function MarketingOS() {
       {err && (
         <div className="mb-4 flex items-start gap-2 bg-red-50 border border-red-200 text-red-700 rounded-xl p-3 text-sm">
           <AlertTriangle size={16} className="mt-0.5 shrink-0" /><span>{err}</span>
+        </div>
+      )}
+
+      {/* งาน async ต้องบอกว่าสั่งไปแล้ว ไม่งั้นกดปุ่มแล้วเงียบ คนจะกดซ้ำ ๆ */}
+      {notice && (
+        <div className="mb-4 flex items-start gap-2 bg-blue-50 border border-blue-200 text-blue-800 rounded-xl p-3 text-sm">
+          <Clock size={16} className="mt-0.5 shrink-0" />
+          <span className="flex-1">{notice}</span>
+          <button onClick={() => { setNotice(""); loadAll() }}
+            className="px-2.5 py-1 rounded-lg bg-blue-600 text-white text-xs font-medium shrink-0">
+            รีเฟรช
+          </button>
         </div>
       )}
 
@@ -505,15 +535,28 @@ export default function MarketingOS() {
                       </div>
                     )}
 
-                    {/* ให้ AI จัดฉาก — กดซ้ำได้เรื่อย ๆ ถ้าไม่ถูกใจ (ได้ภาพใหม่ทุกครั้ง) */}
+                    {/* ทางหลัก — โปสเตอร์จากเทมเพลต · ฟรี ตัวอักษรไทยถูก ตัวเลขมาจาก DB
+                        เป็นงาน async (รันบน GitHub Actions ~1-2 นาที) เพราะต้องใช้ Chromium จริง */}
+                    <button
+                      disabled={imaging.has(item.id)}
+                      onClick={() => makePoster(item.id)}
+                      title="สร้างโปสเตอร์จากเทมเพลตแบรนด์ · ฟรี · ใช้เวลาราว 1-2 นาที"
+                      className="w-full sm:w-36 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg
+                                 bg-blue-600 text-white text-[11px] font-medium disabled:opacity-50">
+                      <ImageIcon size={12} />
+                      {imaging.has(item.id) ? "กำลังสั่ง…" : item.media_url ? "สร้างโปสเตอร์ใหม่" : "สร้างโปสเตอร์"}
+                    </button>
+
+                    {/* ทางเสริม — พื้นหลังจาก AI · ต้องเปิด billing Gemini ก่อนถึงใช้ได้
+                        บอกไว้ในปุ่มเลย ไม่ให้กดแล้วไปเจอ error โดยไม่รู้ตัว */}
                     <button
                       disabled={imaging.has(item.id)}
                       onClick={() => makeImage(item.id)}
-                      title={item.sku ? `ใช้รูป ${item.sku.sku_id} จริงเป็นต้นแบบ` : "ไม่มี SKU โยง — จะได้ภาพบรรยากาศแบรนด์"}
-                      className="w-full sm:w-36 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg
-                                 bg-indigo-50 text-indigo-700 text-[11px] font-medium disabled:opacity-50">
-                      <Sparkles size={12} />
-                      {imaging.has(item.id) ? "กำลังสร้าง…" : item.media_url ? "ให้ AI สร้างใหม่" : "ให้ AI สร้างภาพ"}
+                      title="ให้ AI สร้างภาพฉาก (ต้องเปิด billing Gemini ก่อน)"
+                      className="w-full sm:w-36 flex items-center justify-center gap-1.5 px-2 py-1
+                                 rounded-lg text-[10px] text-gray-400 hover:text-gray-600 disabled:opacity-50">
+                      <Sparkles size={11} />
+                      พื้นหลัง AI (ต้องเปิด billing)
                     </button>
                   </div>
 
