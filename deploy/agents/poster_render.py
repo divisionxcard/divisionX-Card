@@ -183,6 +183,24 @@ def highlight(text):
 
 def build_html(content, sku_img, bg_img, branches):
     tpl = TEMPLATE.read_text(encoding="utf-8")
+    # รูปตู้จริง — ของที่ทำให้โปสเตอร์ดู "มีอยู่จริง" ไม่ใช่ซองลอยบนพื้นสี
+    # hero = ถ่ายตรงเห็นสินค้าเต็มตู้ · scene = ถ่ายเฉียงเห็นบรรยากาศห้าง (เอาไปทำพื้นหลัง)
+    # ไม่มีไฟล์ก็ไม่พัง เทมเพลตต้องดูดีทั้งแบบมีและไม่มี
+    def _pub(rel):
+        f = ROOT / "public" / rel
+        if not f.exists():
+            return ""
+        mime = "image/png" if f.suffix.lower() == ".png" else "image/jpeg"
+        return data_uri(f.read_bytes(), mime)
+
+    machine_hero = _pub("machine/machine-hero.jpg") or _pub("machine/machine-hero.png")
+    machine_scene = _pub("machine/machine-scene.jpg") or _pub("machine/machine-scene.png")
+
+    # โลโก้จริงจาก deploy/public — ดีกว่าวาดกล่องตัวอักษร X เอง
+    logo = ""
+    lp = ROOT / "public" / "logo.png"
+    if lp.exists():
+        logo = data_uri(lp.read_bytes(), "image/png")
     reg = data_uri((FONT_DIR / "Sarabun-Regular.ttf").read_bytes(), "font/ttf")
     bold = data_uri((FONT_DIR / "Sarabun-Bold.ttf").read_bytes(), "font/ttf")
 
@@ -198,6 +216,7 @@ def build_html(content, sku_img, bg_img, branches):
     body = "".join(f"<p>{esc(l)}</p>" for l in rest)
 
     return (tpl
+            .replace("{{LOGO}}", logo)
             .replace("{{FONT_REGULAR}}", reg)
             .replace("{{FONT_BOLD}}", bold)
             .replace("{{HEADLINE}}", head_html)
@@ -206,7 +225,9 @@ def build_html(content, sku_img, bg_img, branches):
             .replace("{{HERO}}", hero)
             .replace("{{HERO_CLASS}}", "" if sku_img else "empty")
             .replace("{{WRAP_CLASS}}", "" if sku_img else "no-hero")
-            .replace("{{BG}}", bg_img or "")
+            .replace("{{BG}}", bg_img or machine_scene or "")
+            .replace("{{MACHINE}}", machine_hero)
+            .replace("{{MACHINE_CLASS}}", "has-machine" if machine_hero else "no-machine")
             .replace("{{HEAD_SIZE}}", str(head_size(head)))
             .replace("{{BRANCHES}}", str(branches))
             .replace("{{TAGS}}", esc(tags)))
@@ -229,7 +250,12 @@ def main():
     ap.add_argument("--dry-run", action="store_true", help="เซฟลงเครื่องอย่างเดียว ไม่อัป ไม่แก้ DB")
     ap.add_argument("--out", help="ที่เก็บไฟล์ตอน dry-run")
     ap.add_argument("--sku", help="บังคับ SKU ที่จะเอารูปมาใช้ (สำหรับลองดีไซน์)")
+    ap.add_argument("--template", help="ไฟล์เทมเพลตอื่น (สำหรับลองดีไซน์หลายแบบ)")
     args = ap.parse_args()
+
+    if args.template:
+        global TEMPLATE
+        TEMPLATE = pathlib.Path(args.template)
 
     load_env_file()
     if not SB_URL or not SB_KEY:
