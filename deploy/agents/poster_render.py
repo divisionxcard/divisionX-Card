@@ -189,7 +189,12 @@ def build_html(content, sku_img, bg_img, branches):
     head, sub, rest, tags = split_caption(content.get("caption"))
     head_html = highlight(head)
 
-    hero = f'<img src="{sku_img}">' if sku_img else ""
+    # ซอง + เงาสะท้อน + แสงพื้น — ใช้รูปเดียวกันสองครั้ง (ตัวที่สองพลิกกลับใน CSS)
+    hero = (
+        f'<div class="stage"><img src="{sku_img}">'
+        f'<div class="floor"></div>'
+        f'<img class="refl" src="{sku_img}"></div>'
+    ) if sku_img else ""
     body = "".join(f"<p>{esc(l)}</p>" for l in rest)
 
     return (tpl
