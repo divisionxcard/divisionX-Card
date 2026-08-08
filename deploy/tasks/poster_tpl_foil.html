@@ -1,0 +1,364 @@
+<!doctype html>
+<!--
+  เทมเพลตโปสเตอร์ "การ์ดสะสมพรีเมียม" (foil)
+
+  แนวคิด: ทั้งโปสเตอร์คือการ์ดหายากหนึ่งใบ
+    · ขอบโครเมียมมุมตัด + เส้นทองด้านใน (ภาษาของกรอบการ์ด)
+    · พื้นผิวฟอยล์โฮโลไล่สีรุ้งจาง ๆ + เส้นฟอยล์ละเอียด
+    · เส้นพลังงานทแยงพาดผ่านทั้งภาพ
+    · หลังซองมีการ์ดโฮโลกางอยู่สองใบ + แสงพุ่งเป็นซี่
+    · พาดหัวเนื้อโครเมียม ตัวเลข/รหัสชุดเป็นทองฟอยล์ (secret rare)
+
+  ตัวแปร: {{FONT_REGULAR}} {{FONT_BOLD}} {{LOGO}} {{HEADLINE}} {{SUB}} {{BODY}}
+          {{HERO}} {{HERO_CLASS}} {{WRAP_CLASS}} {{BG}} {{HEAD_SIZE}} {{BRANCHES}} {{TAGS}}
+
+  ห้ามใส่อีโมจิ — ubuntu บน GitHub Actions ไม่มีฟอนต์อีโมจิสี จะกลายเป็นสี่เหลี่ยม
+  ไอคอนทุกตัวในไฟล์นี้จึงเป็น inline SVG / CSS shape ล้วน
+-->
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<style>
+  @font-face { font-family: 'DX'; src: url({{FONT_REGULAR}}) format('truetype'); font-weight: 400 }
+  @font-face { font-family: 'DX'; src: url({{FONT_BOLD}}) format('truetype'); font-weight: 700 }
+
+  :root {
+    --cyan: #00C2FF;
+    /* ทอง = "สีของความหายาก" ในภาษาการ์ด (secret rare) ใช้เฉพาะจุดเน้น —
+       ริบบิ้น · เส้นขอบใน · ตัวเลขในพาดหัว · หัวข้อย่อย
+       พื้นยังเป็นกรมท่า-ฟ้าตามอัตลักษณ์แบรนด์ ไม่ได้กลายเป็นโปสเตอร์ดำ-ทอง */
+    --chrome: linear-gradient(178deg,#FFFFFF 0%,#FFFFFF 27%,#C7E4F8 43%,#8FBEE2 50%,
+                              #FFFFFF 56%,#F2FAFF 73%,#B2D5F0 100%);
+    --foilgold: linear-gradient(178deg,#FFFDF0 0%,#FFEFBC 23%,#FFD053 44%,#C8830F 52%,
+                                #FFE185 60%,#FFF8DA 79%,#E7A824 100%);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box }
+  body {
+    width: 1080px; height: 1080px; overflow: hidden; position: relative;
+    font-family: 'DX', sans-serif; color: #fff; background: #061127;
+  }
+
+  /* ══ ชั้นบรรยากาศ ══════════════════════════════════════════════ */
+
+  /* พื้นหลัง AI — เบลอหนักโดยตั้งใจ
+     media_url ที่ส่งเข้ามาบางครั้งคือ "โปสเตอร์รอบก่อน" ซึ่งมีตัวหนังสือเต็มภาพ
+     ถ้าแค่หรี่จะเห็นตัวหนังสือผีซ้อนอยู่ข้างหลัง เบลอ+ซูมทำให้เหลือแค่สีกับแสง */
+  .bg { position: absolute; inset: -70px; background-size: cover; background-position: center;
+        filter: blur(30px) saturate(1.4) brightness(.8); opacity: .55 }
+  .grad { position: absolute; inset: 0;
+    background:
+      radial-gradient(660px 520px at 50% 51%, rgba(0,168,240,.40), transparent 72%),
+      radial-gradient(900px 480px at 16% 4%, rgba(0,194,255,.15), transparent 70%),
+      linear-gradient(163deg,#0A1936 0%,#16336A 46%,#070F26 100%) }
+
+  /* แสงพุ่งจากหลังสินค้า — ซี่แสงแบบโปสเตอร์ขายของ
+     mask วงกลมทำให้ซี่จางหายก่อนถึงขอบ ไม่เกิดขอบตัดเป็นสี่เหลี่ยม */
+  .rays { position: absolute; left: 50%; top: 51%; width: 1560px; height: 1560px;
+    transform: translate(-50%,-50%); opacity: .62;
+    background: repeating-conic-gradient(from 7deg,
+      rgba(205,245,255,.42) 0deg 2.1deg, transparent 2.1deg 9.2deg);
+    -webkit-mask-image: radial-gradient(circle at 50% 50%,
+      rgba(0,0,0,.08) 5%, #000 17%, rgba(0,0,0,.5) 33%, transparent 54%) }
+  .glow { position: absolute; left: 50%; top: 52%; width: 900px; height: 640px;
+    transform: translate(-50%,-50%);
+    background:
+      radial-gradient(ellipse 44% 52% at 50% 46%, rgba(120,225,255,.45), transparent 70%),
+      radial-gradient(ellipse 60% 40% at 50% 84%, rgba(255,180,60,.16), transparent 72%) }
+
+  /* ฟอยล์โฮโล — แถบไล่สีรุ้งจาง ๆ ทับด้วยเส้นฟอยล์ละเอียด
+     screen ทำให้เป็น "แสงบนผิว" ไม่ใช่ "สีทับ" ซึ่งคือสิ่งที่ทำให้ดูเป็นฟอยล์จริง */
+  .holo { position: absolute; inset: 0; mix-blend-mode: screen; opacity: .42;
+    background: repeating-linear-gradient(112deg,
+      rgba(255,60,160,.00) 0px, rgba(120,80,255,.17) 90px, rgba(0,230,220,.21) 180px,
+      rgba(255,190,60,.15) 265px, rgba(0,170,255,.19) 350px, rgba(255,60,160,.00) 460px) }
+  .foil { position: absolute; inset: 0; opacity: .09; mix-blend-mode: screen;
+    background: repeating-linear-gradient(64deg,
+      rgba(255,255,255,.85) 0px, rgba(255,255,255,.85) 1px, transparent 1px, transparent 8px) }
+
+  /* เส้นพลังงานทแยง — วางเยื้องจากกึ่งกลาง ไม่ให้ตัดกันเป็นกากบาทแย่งสายตาพาดหัว */
+  .streak { position: absolute; inset: -20%; pointer-events: none;
+    background:
+      linear-gradient(64deg, transparent 26.6%, rgba(255,255,255,.32) 27%, transparent 27.4%),
+      linear-gradient(64deg, transparent 29.4%, rgba(0,194,255,.45) 29.8%, transparent 30.3%),
+      linear-gradient(64deg, transparent 70%, rgba(255,255,255,.16) 70.5%, transparent 71.2%),
+      linear-gradient(64deg, transparent 74.4%, rgba(255,214,110,.34) 74.8%, transparent 75.2%);
+    filter: blur(.4px) }
+
+  .vig { position: absolute; inset: 0;
+    background: radial-gradient(128% 98% at 50% 48%, transparent 40%, rgba(1,5,16,.84) 100%) }
+
+  /* กรอบการ์ดโครเมียมมุมตัด — วาดด้วย inline SVG ไม่ใช่ mask-composite
+     ถ้า mask ไม่ทำงานจะกลายเป็นแผ่นทึบทับทั้งภาพ ส่วน SVG พลาดแล้วแค่ไม่มีกรอบ */
+  .frame { position: absolute; inset: 0; pointer-events: none; z-index: 4 }
+
+  /* ══ โครงเนื้อหา ═══════════════════════════════════════════════ */
+  .wrap { position: relative; height: 100%; display: flex; flex-direction: column;
+          padding: 42px 58px 40px; z-index: 3 }
+
+  /* ── หัว ── */
+  .head { display: flex; align-items: center; gap: 16px; flex: 0 0 auto }
+  /* โลโก้ต้นฉบับเป็น "DC ขาวบนพื้นดำทึบ" — วางตรง ๆ จะเห็นกล่องดำกลางพื้นสว่าง
+     mix-blend-mode: screen ใช้ไม่ได้ที่นี่ เพราะ .wrap เป็น stacking context ของตัวเอง
+     backdrop จึงโปร่งใส แล้วพื้นดำก็ยังดำอยู่ (ลองแล้วรอบแรก เห็นเป็นกล่องดำจริง)
+     ทางที่ชัวร์กว่าคือทำให้ "ตั้งใจให้ดำ" — วางบนแผ่นดำเงาขอบโครเมียมมุมตัด
+     เหมือนสแตมป์ฟอยล์บนการ์ด */
+  /* พื้นแผ่นต้องเป็นดำระดับเดียวกับพื้นในไฟล์โลโก้ (#020202) ไม่งั้นจะเห็นเป็น
+     "สี่เหลี่ยมดำอีกชั้น" ซ้อนอยู่ในแผ่น (เกิดจริงตอนลอง v3 ตอนใช้กรมท่าไล่สี) */
+  .mark { position: relative; width: 104px; height: 79px; flex: 0 0 auto; display: flex;
+          align-items: center; justify-content: center; background: #020304;
+          clip-path: polygon(15px 0,100% 0,100% calc(100% - 15px),calc(100% - 15px) 100%,0 100%,0 15px);
+          box-shadow: inset 0 0 0 2px rgba(175,222,250,.62), 0 0 26px rgba(0,194,255,.5) }
+  /* ประกายฟอยล์พาดบนแผ่น — ทำให้แผ่นดำดูเป็นวัสดุ ไม่ใช่รูสี่เหลี่ยม */
+  .mark:after { content: ''; position: absolute; inset: 0; pointer-events: none;
+    background: linear-gradient(146deg, rgba(255,255,255,.16) 0 18%, transparent 34%,
+                                rgba(0,205,255,.12) 52%, transparent 68%,
+                                rgba(255,214,110,.14) 100%) }
+  /* หน้าต่างครอบเฉพาะตัว "DC" — ตัวเลขมาจากขนาดจริงของ logo.png
+     (457x414 · DC อยู่ที่ 90,85 → 347,255 · คำว่า DIVISION X CARD เริ่มที่ y=270)
+     ถ้าไม่ครอบ คำเล็ก ๆ ใต้ DC จะโผล่มาเป็นเศษขยะที่มุมล่าง (เกิดจริงตอนลอง v2) */
+  .crop { position: relative; width: 76px; height: 51px; overflow: hidden }
+  .crop img { position: absolute; width: 135.2px; left: -26.6px; top: -25.2px;
+              filter: drop-shadow(0 0 10px rgba(130,225,255,.8)) }
+  .head .nm { font-weight: 700; font-size: 26px; letter-spacing: 6.5px; color: #EAF7FF;
+              text-shadow: 0 0 20px rgba(0,194,255,.65), 0 2px 6px rgba(0,0,0,.6) }
+  .head b { width: 12px; height: 12px; transform: rotate(45deg); background: var(--foilgold);
+            box-shadow: 0 0 14px rgba(255,205,80,.85); flex: 0 0 auto }
+  .head b.s2 { width: 8px; height: 8px; opacity: .75 }
+  .head b.s3 { width: 6px; height: 6px; opacity: .5 }
+  .head .rule { flex: 1 1 auto; height: 2px; margin-right: 128px;
+                background: linear-gradient(90deg, rgba(255,214,110,.9), rgba(0,194,255,.5) 40%, transparent) }
+
+  /* ── ริบบิ้นมุมขวาบน — ป้ายความน่าเชื่อถือแบบโปสเตอร์ขายของไทย ── */
+  .ribbon { position: absolute; top: 0; right: 0; width: 300px; height: 300px;
+            overflow: hidden; z-index: 6 }
+  .ribbon i { position: absolute; right: -96px; top: 74px; width: 420px;
+              transform: rotate(45deg); text-align: center; font-style: normal;
+              font-weight: 700; font-size: 27px; letter-spacing: .5px; color: #3A2402;
+              padding: 12px 0 13px; background: var(--foilgold);
+              box-shadow: 0 10px 26px rgba(0,0,0,.6), inset 0 0 0 1px rgba(255,255,255,.55) }
+
+  /* ── พาดหัว ── */
+  h1 { margin-top: 22px; font-weight: 700; font-size: {{HEAD_SIZE}}px; line-height: 1.1;
+       letter-spacing: -.6px; flex: 0 0 auto;
+       /* พื้นผิวโลหะ — background-size = 1 บรรทัด + repeat ทำให้ทุกบรรทัดได้ไล่แสงชุดเดียวกัน
+          ถ้าปล่อยให้ไล่ทั้งก้อน บรรทัดล่างจะกลายเป็นเทาทึบอ่านยาก */
+       background: var(--chrome); background-size: 100% 1.1em; background-repeat: repeat;
+       -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+       /* ต้องใช้ filter ไม่ใช่ text-shadow — text-shadow วาดหลังตัวอักษร พอ fill โปร่งใส
+          เงาจะทะลุขึ้นมาเห็นในตัวอักษรจนเนื้อโลหะเสีย ส่วน drop-shadow อ่านจาก alpha จริง
+          ขอบ 1.6px รอบทิศ: ทดสอบกับ ที่ / สั่น / ผู้ / เด็ด แล้ววรรณยุกต์ยังแยกตัวครบ
+          (ห้ามใช้ -webkit-text-stroke หนา ๆ — มันจะกลืนวรรณยุกต์เป็นก้อนเดียว) */
+       filter:
+         drop-shadow(1.6px 0 0 #07142F) drop-shadow(-1.6px 0 0 #07142F)
+         drop-shadow(0 1.6px 0 #07142F) drop-shadow(0 -1.6px 0 #07142F)
+         drop-shadow(0 5px 0 #0C2C5E)
+         drop-shadow(0 16px 22px rgba(0,0,0,.62))
+         drop-shadow(0 0 42px rgba(0,194,255,.36)) }
+  h1 em { font-style: normal;
+          background: var(--foilgold); background-size: 100% 1.1em; background-repeat: repeat;
+          -webkit-background-clip: text; -webkit-text-fill-color: transparent }
+  /* ที่กันชนรูปสามเหลี่ยมมุมขวาบนของพาดหัว — ริบบิ้นทองพาดเฉียงลงมาถึงราว y=170px
+     พาดหัวยาว ๆ บรรทัดแรกจะชนพอดี (วัดจากรอบทดสอบ เหลือระยะแค่ ~60px)
+     ใช้ float + shape-outside เพื่อ "เว้นเฉพาะบรรทัดแรก" ไม่ใช่ padding ที่กินทุกบรรทัด */
+     ขนาดคิดจากของจริง: ขอบซ้ายของริบบิ้นอยู่ที่ x = 823 + y ส่วนขอบขวาของเนื้อหาคือ 1022
+     บรรทัดแรกเริ่มที่ y≈143 → ต้องเว้นราว 56px ที่หัวบรรทัด แล้วลดลงเป็นศูนย์
+     (เคยลอง 84x88 แล้วเว้นเกินไป พาดหัวที่เคยพอดีบรรทัดเดียวถูกดันตกบรรทัด) */
+  h1 .cut { float: right; width: 62px; height: 66px;
+            shape-outside: polygon(0 0, 100% 0, 100% 100%); shape-margin: 6px }
+
+  .sub { margin-top: 14px; font-size: 31px; line-height: 1.34; font-weight: 400; color: #D9EDFF;
+         flex: 0 0 auto; padding-left: 18px; position: relative;
+         text-shadow: 0 3px 14px rgba(0,0,0,.85) }
+  .sub:before { content: ''; position: absolute; left: 0; top: 5px; bottom: 5px; width: 4px;
+                background: linear-gradient(180deg, var(--cyan), rgba(0,194,255,0));
+                box-shadow: 0 0 12px rgba(0,194,255,.9) }
+
+  /* ── กลาง: สินค้า ── */
+  /* overflow:hidden + min-height:0 กันรูปดันทะลุไปทับบรรทัดรอง
+     flex-basis 0 ทำให้ .hero มีความสูงชัดเจน ลูกที่ใช้ % จึง resolve ได้ */
+  .hero { flex: 1 1 0; min-height: 0; position: relative; overflow: hidden; margin: 10px 0 12px }
+  /* การ์ดโฮโลสองใบกางอยู่ข้างหลัง — เพิ่มมวลให้กลางภาพ และประกาศว่านี่คือแบรนด์การ์ด
+     ต้องกำหนด z-index เพราะ ::after อยู่หลัง .stage ใน paint order ไม่งั้นจะทับซองด้านหน้า
+     ขอบใช้ inset box-shadow สองชั้น (โครเมียม + เส้นทอง) เลียนกรอบการ์ดจริง */
+  .hero:before, .hero:after { content: ''; position: absolute; top: 6%; height: 86%;
+    aspect-ratio: 63 / 88; border-radius: 14px; z-index: 0;
+    background:
+      /* ดวงพลังงานกลางหลังการ์ด */
+      radial-gradient(circle at 50% 40%, rgba(120,235,255,.55) 0 9%, rgba(0,190,255,.30) 22%,
+                      transparent 40%),
+      /* ลายทแยงบนหลังการ์ด — ต้องคอนทราสต์พอจะเห็น ไม่งั้นเหลือแต่แผ่นกระจกเปล่า */
+      repeating-linear-gradient(45deg, rgba(125,205,255,.24) 0 5px, transparent 5px 14px),
+      /* ประกายฟอยล์พาดเฉียง */
+      linear-gradient(148deg, rgba(255,255,255,.22) 0 10%, transparent 28%,
+                      rgba(0,235,255,.18) 46%, transparent 62%, rgba(255,205,90,.20) 92%),
+      linear-gradient(160deg,#0A1C3E,#02070F 58%,#0C2149);
+    /* หรี่ลงกว่าซองชัดเจน — การ์ดสองใบนี้มีหน้าที่ให้มวลกับกลางภาพ ไม่ใช่แย่งความสนใจ */
+    filter: brightness(.72) saturate(1.05);
+    box-shadow: 0 26px 54px rgba(0,0,0,.8),
+                inset 0 0 0 3px rgba(190,228,252,.55),
+                inset 0 0 0 9px rgba(255,214,110,.20),
+                inset 0 0 44px rgba(0,0,0,.6) }
+  .hero:before { left: 50%; transform: translateX(-50%) translate(-152px, 16px) rotate(-15deg) }
+  .hero:after  { left: 50%; transform: translateX(-50%) translate(152px, 16px) rotate(15deg) }
+  .hero.empty:before, .hero.empty:after { display: none }
+
+  .hero .stage { position: relative; z-index: 2; height: 100%; width: 100% }
+  /* รูป SKU เป็นภาพจัตุรัสที่มีขอบโปร่งซ้าย-ขวาเยอะ ถ้าใช้ max-height เป็น %
+     ซองจะเล็กกว่าที่ตาคาดว่าเป็น "พระเอก" มาก จึงตรึง height:100% แล้ว width:auto */
+  .hero .stage img { position: absolute; left: 50%; top: 0; height: 96%; width: auto;
+    transform: translateX(-50%) rotate(-4deg);
+    filter: drop-shadow(0 20px 38px rgba(0,0,0,.75))
+            drop-shadow(0 0 28px rgba(0,194,255,.55))
+            drop-shadow(0 0 44px rgba(255,190,70,.2)) }
+  .hero .floor { position: absolute; left: 50%; bottom: 6%; transform: translateX(-50%);
+    width: 420px; height: 24px; border-radius: 50%; z-index: 1;
+    background: radial-gradient(ellipse, rgba(0,194,255,.8), transparent 70%); filter: blur(8px) }
+  /* เงาสะท้อน — ต้องเจาะจงกว่ากฎของ img ด้านบน (img.refl) ไม่งั้น top:0 ของกฎนั้นชนะ
+     แล้วเงาจะไปซ้อนทับตัวซองพอดีจนมองไม่เห็นว่ามีเงา (เกิดจริงตอนลอง v2)
+     กล่องสูงเท่ารูปจริงเพื่อให้สเกลเท่ากัน แล้ว clip เอาเฉพาะแถบก้นซอง (83–93% ของภาพ
+     ที่เหลือคือขอบโปร่ง) · clip-path ทำงานในพิกัดก่อน transform แถบนั้นจึงไปโผล่
+     ด้านบนของกล่องหลังโดน scaleY(-1) — ข้อดีคือไม่กินพื้นที่แนวตั้งเลย ซองจึงใหญ่เต็มกรอบ */
+  .hero .stage img.refl { top: 82%; opacity: .40; filter: blur(1.2px);
+    transform: translateX(-50%) scaleY(-1) rotate(-4deg);
+    clip-path: inset(80% 0 7% 0);
+    -webkit-mask-image: linear-gradient(to bottom, transparent 6%, rgba(0,0,0,.95)) }
+  /* ประกายบนผิวฟอยล์ — ดาวสี่แฉกวาดด้วย clip-path (ห้ามใช้อีโมจิ/อักขระพิเศษ
+     เพราะฟอนต์บน CI ไม่มีกลิฟ จะกลายเป็นสี่เหลี่ยม) */
+  .spark { position: absolute; z-index: 3; background: #FFFFFF;
+    clip-path: polygon(50% 0, 57% 43%, 100% 50%, 57% 57%, 50% 100%, 43% 57%, 0 50%, 43% 43%);
+    filter: drop-shadow(0 0 12px rgba(150,240,255,.95)) }
+  .spark.a { width: 44px; height: 44px; left: 25%; top: 19% }
+  .spark.b { width: 26px; height: 26px; left: 74%; top: 26%; opacity: .8 }
+  .spark.c { width: 34px; height: 34px; left: 67%; top: 73%; background: #FFEDB4;
+             filter: drop-shadow(0 0 12px rgba(255,205,90,.95)) }
+  .spark.d { width: 19px; height: 19px; left: 31%; top: 72%; opacity: .65 }
+  /* ไม่มีรูปสินค้า — หุบพื้นที่ ไม่ปล่อยให้กลางภาพโหว่ */
+  .hero.empty { flex: 0 0 auto; height: 132px; margin: 8px 0 6px }
+  .hero.empty .spark { display: none }
+
+  /* ── เนื้อความบนแผ่นกระจก ── */
+  /* พื้นหลังมีลายเยอะ ตัวหนังสือเล็กลอยบนลายจะอ่านยาก แผ่นกระจกไม่ใช่ของตกแต่ง
+     แต่เป็นตัวคืนคอนทราสต์ให้เนื้อความ */
+  .body { flex: 0 0 auto; position: relative; padding: 18px 26px 6px 30px;
+          font-size: 28px; line-height: 1.46; font-weight: 400; color: #E9F4FF;
+          background: linear-gradient(180deg, rgba(4,13,34,.86), rgba(4,13,34,.64));
+          border: 1px solid rgba(150,210,255,.22); border-left: 0;
+          clip-path: polygon(0 0, 100% 0, 100% calc(100% - 16px), calc(100% - 16px) 100%, 0 100%) }
+  .body:before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 5px;
+                 background: linear-gradient(180deg, var(--cyan), rgba(255,214,110,.95));
+                 box-shadow: 0 0 14px rgba(0,194,255,.75) }
+  .body p { position: relative; padding-left: 26px; margin-bottom: 12px }
+  .body p:before { content: ''; position: absolute; left: 0; top: .52em; width: 10px; height: 10px;
+                   transform: rotate(45deg); background: var(--foilgold);
+                   box-shadow: 0 0 10px rgba(255,205,80,.7) }
+  /* ไม่มีรูปสินค้า = เนื้อความคือพระเอก
+     ต้องให้ .body เป็นตัวยืด (flex:1) ด้วย ไม่ใช่แค่ขยายฟอนต์ — ทุกบล็อกในคอลัมน์นี้
+     เป็น flex:0 0 auto หมด ถ้า .hero หุบแล้วไม่มีใครยืด จะเหลือช่องว่างดำ ~28%
+     ค้างอยู่ท้ายภาพ แล้วแถบท้ายลอยกลางภาพ (เกิดจริงตอนลอง --sku ที่ไม่มีรูป) */
+  .no-hero .body { flex: 1 1 auto; display: flex; flex-direction: column; justify-content: center;
+                   font-size: 34px; line-height: 1.56; padding: 26px 30px 26px 34px }
+  .no-hero .body p { margin-bottom: 22px }
+  .no-hero .body p:last-child { margin-bottom: 0 }
+
+  /* ── แถบท้าย ── */
+  .foot { flex: 0 0 auto; margin-top: 14px; padding: 13px 22px; display: flex;
+          align-items: center; gap: 24px;
+          background: linear-gradient(90deg, rgba(0,125,195,.48), rgba(6,20,46,.78) 46%,
+                                             rgba(0,115,185,.38));
+          border-top: 2px solid rgba(0,194,255,.62);
+          clip-path: polygon(18px 0, 100% 0, 100% calc(100% - 18px), calc(100% - 18px) 100%,
+                             0 100%, 0 18px) }
+  /* nowrap สำคัญ — "เปิด 24 ชม." ตัดสองบรรทัดแล้วแถบเบี้ยวทั้งแถว */
+  .chip { display: flex; align-items: center; gap: 9px; font-size: 24px; font-weight: 700;
+          color: #F1F9FF; white-space: nowrap; text-shadow: 0 2px 8px rgba(0,0,0,.7) }
+  .chip svg { flex: 0 0 auto; display: block }
+  .tags { margin-left: auto; font-size: 20px; line-height: 1.3; font-weight: 400;
+          color: #93D6F5; text-align: right; max-width: 290px }
+</style>
+</head>
+<body>
+  <div class="bg" style="background-image:url({{BG}})"></div>
+  <div class="grad"></div>
+  <div class="rays"></div>
+  <div class="glow"></div>
+  <div class="holo"></div>
+  <div class="foil"></div>
+  <div class="streak"></div>
+  <div class="vig"></div>
+
+  <svg class="frame" viewBox="0 0 1080 1080" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <linearGradient id="chr" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0"    stop-color="#FFFFFF"/>
+        <stop offset=".22"  stop-color="#9EC9E6"/>
+        <stop offset=".40"  stop-color="#FFFFFF"/>
+        <stop offset=".55"  stop-color="#5D8CB4"/>
+        <stop offset=".72"  stop-color="#EAF7FF"/>
+        <stop offset="1"    stop-color="#8FB9D8"/>
+      </linearGradient>
+      <linearGradient id="gld" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0"   stop-color="#FFF3C4"/>
+        <stop offset=".45" stop-color="#E8A62A"/>
+        <stop offset=".72" stop-color="#FFE79A"/>
+        <stop offset="1"   stop-color="#C88512"/>
+      </linearGradient>
+    </defs>
+    <polygon points="64,20 1016,20 1060,64 1060,1016 1016,1060 64,1060 20,1016 20,64"
+             fill="none" stroke="url(#chr)" stroke-width="5" opacity=".92"/>
+    <polygon points="76,32 1004,32 1048,76 1048,1004 1004,1048 76,1048 32,1004 32,76"
+             fill="none" stroke="url(#gld)" stroke-width="1.6" opacity=".7"/>
+    <g stroke="#00C2FF" stroke-width="4" opacity=".85" fill="none">
+      <path d="M20 190 L20 64 L64 20 L190 20"/>
+      <path d="M1060 890 L1060 1016 L1016 1060 L890 1060"/>
+    </g>
+    <g stroke="#FFD86E" stroke-width="3" opacity=".6" fill="none">
+      <path d="M1060 190 L1060 64 L1016 20 L890 20"/>
+      <path d="M20 890 L20 1016 L64 1060 L190 1060"/>
+    </g>
+  </svg>
+
+  <div class="ribbon"><i>ของแท้ 100%</i></div>
+
+  <div class="wrap {{WRAP_CLASS}}">
+    <div class="head">
+      <div class="mark"><span class="crop"><img src="{{LOGO}}"></span></div>
+      <div class="nm">DIVISION X CARD</div>
+      <b></b><b class="s2"></b><b class="s3"></b>
+      <div class="rule"></div>
+    </div>
+
+    <h1><i class="cut"></i>{{HEADLINE}}</h1>
+    <div class="sub">{{SUB}}</div>
+
+    <div class="hero {{HERO_CLASS}}">
+      <i class="spark a"></i><i class="spark b"></i><i class="spark c"></i><i class="spark d"></i>
+      {{HERO}}
+    </div>
+
+    <div class="body">{{BODY}}</div>
+
+    <div class="foot">
+      <div class="chip">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#5FD8FF"
+             stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/>
+        </svg>เปิด 24 ชม.
+      </div>
+      <div class="chip">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#5FD8FF"
+             stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 21s7-5.4 7-11a7 7 0 1 0-14 0c0 5.6 7 11 7 11z"/><circle cx="12" cy="10" r="2.6"/>
+        </svg>{{BRANCHES}} สาขา
+      </div>
+      <div class="chip">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#FFD86E"
+             stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M13 2 4 14h6l-1 8 9-12h-6l1-8z"/>
+        </svg>กดเองที่ตู้
+      </div>
+      <div class="tags">{{TAGS}}</div>
+    </div>
+  </div>
+</body>
+</html>

@@ -1,0 +1,359 @@
+<!doctype html>
+<!--
+  เทมเพลตโปสเตอร์ "เวทีสปอตไลต์" (poster_tpl_stage.html)
+
+  แนวคิด: สินค้าตั้งอยู่บนเวทีสตูดิโอมืด มีลำแสงสปอตไลต์ตกลงมา มีพื้นสะท้อนเงา
+  ฝุ่นแสงลอย ขอบทองบาง ๆ ตัดกับฟ้านีออน — ให้รู้สึกว่า "ของข้างในมีค่า"
+
+  สี: ฟ้านีออน #00C2FF = แสงและบรรยากาศ (อัตลักษณ์แบรนด์)
+      ทอง/โครเมียม = ตัวอักษรเน้น ขอบ เหรียญ (ฟ้าบนกรมท่าคอนทราสต์ต่ำเกินจะเป็นตัวเน้น)
+
+  [สำคัญ] ห้ามใส่อีโมจิ — ubuntu บน CI ไม่มีฟอนต์อีโมจิสี จะกลายเป็นสี่เหลี่ยม
+     ไอคอนทุกตัวในไฟล์นี้เป็น inline SVG หรือรูปทรง CSS ล้วน
+
+  ตัวแปร: {{FONT_REGULAR}} {{FONT_BOLD}} {{LOGO}} {{HEADLINE}} {{SUB}} {{BODY}}
+          {{HERO}} {{HERO_CLASS}} {{WRAP_CLASS}} {{BG}} {{HEAD_SIZE}} {{BRANCHES}} {{TAGS}}
+-->
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<style>
+  @font-face { font-family: 'DX'; src: url({{FONT_REGULAR}}) format('truetype'); font-weight: 400 }
+  @font-face { font-family: 'DX'; src: url({{FONT_BOLD}}) format('truetype'); font-weight: 700 }
+
+  * { margin: 0; padding: 0; box-sizing: border-box }
+
+  body {
+    width: 1080px; height: 1080px; overflow: hidden; position: relative;
+    font-family: 'DX', sans-serif; color: #fff;
+    background: #04091A;
+  }
+
+  /* ══ ชั้นบรรยากาศ (หลังทั้งหมด) ══ */
+
+  /* พื้นหลัง AI ถ้ามี — เบลอแรงจนเหลือแค่ "สี" ไม่เหลือรายละเอียด
+     เพราะ media_url ที่ส่งมาบางทีเป็นโปสเตอร์เก่าที่มีตัวหนังสือ ถ้าไม่เบลอจะอ่านซ้อนกันมั่ว */
+  .bg { position: absolute; inset: -40px; background-size: cover; background-position: center;
+        opacity: .22; filter: blur(26px) saturate(1.3) }
+
+  /* พื้นสตูดิโอ: มืดลึกที่ขอบ สว่างเป็นวงตรงกลางบนซึ่งเป็นจุดที่ไฟส่อง */
+  .grad { position: absolute; inset: 0;
+    background:
+      radial-gradient(1000px 640px at 50% 4%,  rgba(54,126,206,.34), transparent 66%),
+      radial-gradient(700px 420px at 50% 62%,  rgba(0,150,220,.14), transparent 72%),
+      linear-gradient(180deg, #0B1E40 0%, #091733 38%, #050D24 72%, #020610 100%) }
+
+  /* ลำแสงพุ่งเป็นซี่ ๆ จากด้านบน — "แสงพุ่ง/ประกาย" แบบโปสเตอร์ขายของ แต่หรี่ให้เป็นบรรยากาศ */
+  .rays { position: absolute; left: 50%; top: -420px; width: 1720px; height: 1500px;
+          transform: translateX(-50%); opacity: .55;
+          background: repeating-conic-gradient(from 156deg at 50% 0%,
+            rgba(190,228,255,.10) 0deg 1.4deg, transparent 1.4deg 5.5deg,
+            rgba(255,214,150,.07) 5.5deg 6.6deg, transparent 6.6deg 12deg);
+          -webkit-mask-image: radial-gradient(58% 62% at 50% 2%, #000 6%, transparent 74%) }
+
+  /* กรวยสปอตไลต์หลัก — บานลงมาคลุมตัวสินค้าพอดี */
+  .beam { position: absolute; left: 50%; top: -70px; width: 1000px; height: 880px;
+          transform: translateX(-50%);
+          background: linear-gradient(180deg,
+            rgba(214,240,255,.26) 0%, rgba(0,194,255,.13) 38%, rgba(0,194,255,.04) 66%, transparent 88%);
+          clip-path: polygon(43% 0, 57% 0, 96% 100%, 4% 100%);
+          filter: blur(26px) }
+
+  /* ฝุ่นแสงลอยในลำไฟ — จุดเล็กคมสลับจุดใหญ่เบลอ ให้อากาศดูมีเนื้อ ไม่ใช่สีเรียบ */
+  .dust { position: absolute; inset: 0; opacity: .85;
+    background-image:
+      radial-gradient(1.6px 1.6px at 21% 26%, rgba(214,240,255,.95), transparent),
+      radial-gradient(1.2px 1.2px at 33% 51%, rgba(255,226,170,.85), transparent),
+      radial-gradient(2.0px 2.0px at 44% 17%, rgba(214,240,255,.80), transparent),
+      radial-gradient(1.3px 1.3px at 57% 38%, rgba(255,226,170,.90), transparent),
+      radial-gradient(1.8px 1.8px at 69% 23%, rgba(214,240,255,.85), transparent),
+      radial-gradient(1.1px 1.1px at 76% 47%, rgba(214,240,255,.75), transparent),
+      radial-gradient(1.5px 1.5px at 28% 62%, rgba(255,226,170,.70), transparent),
+      radial-gradient(1.2px 1.2px at 63% 66%, rgba(214,240,255,.80), transparent),
+      radial-gradient(1.9px 1.9px at 49% 72%, rgba(214,240,255,.65), transparent),
+      radial-gradient(1.2px 1.2px at 38% 34%, rgba(214,240,255,.85), transparent),
+      radial-gradient(1.4px 1.4px at 72% 58%, rgba(255,226,170,.65), transparent),
+      radial-gradient(1.1px 1.1px at 55% 29%, rgba(214,240,255,.90), transparent);
+    -webkit-mask-image: radial-gradient(52% 56% at 50% 34%, #000 10%, transparent 82%) }
+  /* โบเก้ก้อนใหญ่เบลอ — เพิ่มระยะลึก ให้รู้สึกว่ามีอากาศระหว่างกล้องกับสินค้า */
+  .bokeh { position: absolute; inset: 0; opacity: .5; filter: blur(4px);
+    background-image:
+      radial-gradient(7px 7px at 24% 41%, rgba(150,215,255,.30), transparent),
+      radial-gradient(5px 5px at 78% 31%, rgba(255,205,130,.28), transparent),
+      radial-gradient(9px 9px at 66% 60%, rgba(150,215,255,.20), transparent),
+      radial-gradient(6px 6px at 35% 68%, rgba(255,205,130,.18), transparent) }
+
+  /* พื้นเวที — ไล่เฉดนุ่ม ๆ ไม่มีขอบคม
+     v1 ใช้เส้นขอบฟ้า 1px + แถบทึบ แล้วมันกลายเป็น "รอยต่อ" พาดขวางภาพเหมือนตัดแปะ
+     เอาออก ปล่อยให้แสงพื้นมาจาก .floor ซึ่งเกาะฐานสินค้าจริงแทน */
+  .stagefloor { position: absolute; left: 0; right: 0; top: 560px; height: 520px;
+    background: linear-gradient(180deg,
+      rgba(120,190,255,0) 0%, rgba(120,190,255,.09) 26%, rgba(90,170,255,.05) 52%, transparent 84%) }
+
+  /* ขอบมืดรอบภาพ — ดันสายตาเข้ากลาง */
+  .vig { position: absolute; inset: 0;
+    background: radial-gradient(112% 84% at 50% 40%, transparent 34%, rgba(1,4,12,.82) 100%) }
+
+  /* กรอบบาง 2 ชั้น + ฉากมุมทอง = สัญญาณ "ของพรีเมียม" ที่ถูกที่สุดในเชิงพื้นที่ */
+  .frame { position: absolute; inset: 24px; border: 1px solid rgba(150,200,255,.16); border-radius: 4px }
+  .frame::before { content: ''; position: absolute; inset: 8px; border: 1px solid rgba(255,206,130,.16) }
+  .frame::after { content: ''; position: absolute; inset: -1px; background-repeat: no-repeat;
+    background-image:
+      linear-gradient(#FFD68C,#FFD68C), linear-gradient(#FFD68C,#FFD68C),
+      linear-gradient(#FFD68C,#FFD68C), linear-gradient(#FFD68C,#FFD68C),
+      linear-gradient(#FFD68C,#FFD68C), linear-gradient(#FFD68C,#FFD68C),
+      linear-gradient(#FFD68C,#FFD68C), linear-gradient(#FFD68C,#FFD68C);
+    background-size: 62px 2px, 2px 62px, 62px 2px, 2px 62px, 62px 2px, 2px 62px, 62px 2px, 2px 62px;
+    background-position: left top, left top, right top, right top,
+                         left bottom, left bottom, right bottom, right bottom;
+    opacity: .8 }
+
+  /* ══ เนื้อหา ══ */
+
+  /* [สำคัญ] ห้ามใส่ z-index ที่ .wrap — มันจะกลายเป็น stacking context แล้ว mix-blend-mode
+     ของโลโก้จะไปผสมกับ "ข้างในกล่องนี้" ซึ่งโปร่งใส ผลคือพื้นดำของโลโก้ไม่หาย
+     เห็นเป็นกล่องดำกลางหัวโปสเตอร์ (เกิดจริงตอนลอง v1)
+     ไม่ต้องมี z-index อยู่แล้ว เพราะ .wrap อยู่ท้าย DOM จึงทับชั้นบรรยากาศเองโดยธรรมชาติ */
+  .wrap { position: relative; height: 100%;
+          display: flex; flex-direction: column; align-items: center; text-align: center;
+          padding: 36px 58px 0 }
+
+  /* ── หัว: โลโก้ซ้าย · เหรียญขวา ── */
+  .top { width: 100%; display: flex; align-items: center; justify-content: space-between }
+  .brand { display: flex; align-items: center; gap: 15px }
+  /* โลโก้จริงเป็น PNG พื้นดำทึบ · ครอปเอาเฉพาะตัว DC (วัดมาแล้ว: x90-347 y85-264 จาก 457x414)
+     แล้วใช้ mix-blend-mode:screen ให้พื้นดำหายไปกับฉากมืด — ไม่งั้นจะเห็นเป็นกล่องดำ */
+  .logo { width: 84px; height: 58px; background-repeat: no-repeat;
+          background-size: 149px 135px; background-position: -29px -27px;
+          mix-blend-mode: screen; filter: drop-shadow(0 0 16px rgba(120,205,255,.55)) }
+  .wm { text-align: left; line-height: 1 }
+  .wm b { display: block; font-size: 23px; font-weight: 700; letter-spacing: 4.5px;
+          background: linear-gradient(180deg, #FFFFFF 0%, #D7E9FF 46%, #8FB4DA 100%);
+          -webkit-background-clip: text; -webkit-text-fill-color: transparent }
+  .wm span { display: block; margin-top: 6px; font-size: 14px; letter-spacing: 2.2px; color: #7FA8CF }
+
+  /* เหรียญรับรอง — ตัวเลขสาขามาจากฐานข้อมูลจริง ไม่ใช่ตัวเลขประดับ */
+  .seal { position: relative; width: 92px; height: 92px; border-radius: 50%; flex: 0 0 auto;
+          background: conic-gradient(from 210deg, #FFF0C4, #C4832A 22%, #FFE29A 42%,
+                                     #9C6218 62%, #FFDE92 80%, #FFF0C4 100%);
+          box-shadow: 0 10px 26px rgba(0,0,0,.6), 0 0 34px rgba(255,190,90,.28) }
+  .seal::before { content: ''; position: absolute; inset: 6px; border-radius: 50%;
+          background: radial-gradient(circle at 50% 26%, #16305B, #060F26 78%) }
+  .seal::after { content: ''; position: absolute; inset: 13px; border-radius: 50%;
+          border: 1px dashed rgba(255,216,146,.5) }
+  .sealin { position: absolute; inset: 0; z-index: 1;
+            display: flex; flex-direction: column; align-items: center; justify-content: center }
+  .sealin b { font-size: 34px; font-weight: 700; line-height: 1;
+              background: linear-gradient(180deg, #FFF6DC, #FFD173);
+              -webkit-background-clip: text; -webkit-text-fill-color: transparent }
+  .sealin span { margin-top: 3px; font-size: 15px; letter-spacing: 1px; color: #EDC583 }
+
+  /* ── ริบบิ้นกำกับ ── */
+  .ribbon { margin-top: 16px; padding: 7px 34px; position: relative;
+            clip-path: polygon(14px 0, calc(100% - 14px) 0, 100% 50%,
+                               calc(100% - 14px) 100%, 14px 100%, 0 50%);
+            background: linear-gradient(180deg, rgba(255,206,130,.22), rgba(255,164,44,.08));
+            border-top: 1px solid rgba(255,214,150,.55); border-bottom: 1px solid rgba(255,214,150,.55) }
+  .ribbon span { font-size: 18px; font-weight: 700; letter-spacing: 3.5px; color: #FFDE9F;
+                 text-shadow: 0 0 18px rgba(255,180,70,.5) }
+
+  /* ── พาดหัว ── */
+  /* ขนาดมาจาก Python ตามความยาว · balance ทำให้พาดหัว 2 บรรทัดแบ่งสวยเสมอ
+     ใช้ text-shadow เป็น "ขอบ" 4 ทิศแทน -webkit-text-stroke เพราะ stroke กินเข้าไปในตัวอักษร
+     แล้ววรรณยุกต์ไทยจะจมหาย (่ ้ ี) — text-shadow วาดอยู่ข้างหลัง ตัวอักษรจึงยังครบ */
+  h1 { margin-top: 14px; max-width: 960px;
+       /* 1.18 ไม่ใช่ 1.10 — ไทยซ้อนสระบน+วรรณยุกต์ 2 ชั้น ("ที่" = ท+ี+่)
+          ถ้าบีบบรรทัดแน่นกว่านี้ วรรณยุกต์ของบรรทัดล่างจะไปชนหางบรรทัดบน */
+       font-weight: 700; font-size: {{HEAD_SIZE}}px; line-height: 1.18; letter-spacing: -.5px;
+       text-wrap: balance; color: #FFFFFF;
+       text-shadow:
+         0 2px 0 rgba(2,8,22,.95), 2px 0 0 rgba(2,8,22,.95),
+         -2px 0 0 rgba(2,8,22,.95), 0 -2px 0 rgba(2,8,22,.95),
+         0 10px 22px rgba(0,0,0,.65),
+         0 0 52px rgba(60,170,255,.45),
+         0 0 96px rgba(255,168,60,.22) }
+  /* ตัวเลข/รหัสชุด = ทองไล่สี · ทองบนกรมท่าคอนทราสต์สูงกว่าฟ้ามาก เลยเด้งกว่าเยอะ
+     background-size 1.06em + repeat = ทุกบรรทัดได้ไล่สีชุดเดียวกัน ไม่ใช่บรรทัดล่างสีจมกว่า */
+  h1 em { font-style: normal; text-shadow: none;
+          background-image: linear-gradient(178deg,
+            #FFF9E4 0%, #FFE9A8 24%, #FFC64F 48%, #EE9A1C 62%, #FFD470 82%, #FFF3CE 100%);
+          background-size: 100% 1.06em; background-repeat: repeat;
+          -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+          filter: drop-shadow(0 2px 0 rgba(48,20,0,.75))
+                  drop-shadow(0 0 26px rgba(255,168,50,.65)) }
+
+  .sub { margin-top: 11px; max-width: 880px; text-wrap: balance;
+         font-size: 28px; line-height: 1.34; font-weight: 400; color: #CFE6FF;
+         text-shadow: 0 3px 14px rgba(0,0,0,.7) }
+
+  /* ── เวที: สินค้า ── */
+  /* .stage วางแบบ absolute inset:0 เพื่อให้ความสูงเป็นค่าที่แน่นอนเสมอ
+     (% ของลูกจะ resolve ก็ต่อเมื่อพ่อมีความสูงชัดเจน — flex item บางเคสไม่ชัดเจนพอ)
+     margin-bottom ติดลบ = ปล่อยให้เงาสะท้อนไหลลงไปหลังเนื้อความ ได้พื้นที่สินค้าคืนมา ~64px */
+  .hero { position: relative; width: 100%; flex: 1 1 auto; min-height: 0;
+          margin: 2px 0 -74px; overflow: hidden }
+  .stage { position: absolute; inset: 0 }
+  /* วงแสงหลังสินค้า — ทำให้ซองเด้งออกจากฉากหลัง และ "ดูใหญ่" กว่าขนาดจริง */
+  /* หรี่ไว้เยอะ — v4 ตั้ง .32 แล้วกลางภาพขาวโพลนเป็นหมอก เสียความ "มืดลึกแบบสตูดิโอ"
+     ซึ่งเป็นตัวที่ทำให้ดูแพงตั้งแต่แรก */
+  .stage::before { content: ''; position: absolute; left: 50%; top: 46%;
+                  transform: translate(-50%,-50%); width: 760px; height: 660px; border-radius: 50%;
+                  background: radial-gradient(ellipse, rgba(130,210,255,.17) 0%,
+                              rgba(0,150,230,.08) 42%, transparent 70%) }
+  /* ประกายแฉก — "แสงประกาย" แบบโปสเตอร์ขายของ วาดด้วยไล่สีไขว้กัน ไม่ใช่อีโมจิ
+     v2 ทำแฉกยาว 30px แล้วมันเด่นเกินจนดูเป็นสติกเกอร์แปะ · ย่อลงให้เป็นประกายจริง ๆ */
+  .stage::after { content: ''; position: absolute; inset: 0; opacity: .75;
+    background-image:
+      radial-gradient(1.1px 17px at 25% 27%, rgba(255,255,255,.85), transparent),
+      radial-gradient(17px 1.1px at 25% 27%, rgba(255,255,255,.85), transparent),
+      radial-gradient(1px 12px at 78% 33%, rgba(255,226,168,.8), transparent),
+      radial-gradient(12px 1px at 78% 33%, rgba(255,226,168,.8), transparent),
+      radial-gradient(.9px 9px at 69% 15%, rgba(255,255,255,.65), transparent),
+      radial-gradient(9px .9px at 69% 15%, rgba(255,255,255,.65), transparent),
+      radial-gradient(.9px 8px at 32% 57%, rgba(255,226,168,.55), transparent),
+      radial-gradient(8px .9px at 32% 57%, rgba(255,226,168,.55), transparent);
+    background-repeat: no-repeat }
+
+  /* ── ขนาดสินค้า: ตัวเลขพวกนี้ผูกกันหมด แก้ตัวเดียวไม่ได้ ──
+     รูป SKU เป็น PNG โปร่ง 1024×1024 "จัตุรัส" แต่ซองกินแค่ ~45% ของความกว้าง
+     และมีขอบโปร่งบน/ล่างอีกด้านละ ~5-10% ผลคือ
+       1. max-width ไปคุมขนาดก่อน max-height เสมอ → ตั้ง max-width เตี้ย ๆ ซองจะจิ๋วทันที (v1/v2)
+       2. "ก้นกล่อง" ไม่ใช่ "ก้นซอง" — แสงพื้นกับเงาสะท้อนต้องเลื่อนลงมาชดเชยขอบโปร่ง (p)
+     กำหนด: ก้นกล่อง = 16% · สูง 84% (ยอดกล่องพอดี 100%) · p ≈ 6% ของเวที
+       แสงพื้น  = 16% + p        = 22%
+       เงาสะท้อน = 100% - 22% - p = 72%   (ยอดเงาไปแตะก้นซองพอดี ไม่เหลือช่องโหว่) */
+  .stage img { position: absolute; left: 50%; bottom: 16%; transform: translateX(-50%);
+               height: 84%; width: auto; max-width: 560px; object-fit: contain;
+               filter: drop-shadow(0 24px 34px rgba(0,0,0,.75))
+                       drop-shadow(0 0 60px rgba(120,205,255,.32)) }
+  /* แอ่งแสงบนพื้นตรงฐานสินค้า — ตัวที่ทำให้ของ "ตั้งอยู่" จริง ๆ ไม่ใช่ลอยกลางอากาศ
+     อย่าสว่างเกิน ไม่งั้นมันกลบเงาสะท้อนจนหาย (v3 เป็นแบบนั้น) */
+  .stage .floor { position: absolute; left: 50%; bottom: 22%; transform: translate(-50%, 50%);
+                  width: 400px; height: 26px; border-radius: 50%;
+                  background: radial-gradient(ellipse, rgba(220,246,255,.8), rgba(0,180,255,.34) 42%, transparent 74%);
+                  filter: blur(6px) }
+  .stage .floor::before { content: ''; position: absolute; left: 50%; top: 50%;
+                  transform: translate(-50%,-50%); width: 820px; height: 190px; border-radius: 50%;
+                  background: radial-gradient(ellipse, rgba(0,178,255,.26), transparent 66%);
+                  filter: blur(24px) }
+  /* วงเวที — เส้นรีบาง ๆ บนพื้น ช่วยกินพื้นที่ว่างซ้าย-ขวาที่โล่งเกิน และบอกว่านี่คือ "เวที" */
+  .stage .floor::after { content: ''; position: absolute; left: 50%; top: 50%;
+                  transform: translate(-50%,-50%); width: 700px; height: 116px; border-radius: 50%;
+                  border: 1px solid rgba(150,215,255,.20);
+                  box-shadow: 0 0 0 1px rgba(255,205,130,.07), inset 0 10px 26px rgba(120,200,255,.07) }
+  /* เงาสะท้อน: ต้องใช้ height/max-width ชุดเดียวกับรูปหลักเป๊ะ ๆ ไม่งั้นเงาจะ "แคบ" กว่าตัวจริง
+     ซึ่งผิดหลักการสะท้อนทันที (คนดูจับได้แม้ไม่รู้ว่าผิดตรงไหน)
+     mask อยู่ในพิกัดก่อน transform — ด้านล่างของกล่อง = ด้านที่ติดพื้นหลังพลิก จึงต้องทึบ
+     ไล่ให้จางหมดตั้งแต่ 52% เพื่อไม่ให้เงาไปแย่งอ่านกับเนื้อความข้างล่าง (ปัญหาที่เจอใน v2) */
+  .stage .refl { top: 74%; bottom: auto; transform: translateX(-50%) scaleY(-1);
+                 height: 84%; max-width: 560px; opacity: .46; filter: blur(1.2px);
+                 -webkit-mask-image: linear-gradient(to bottom, transparent 56%, rgba(0,0,0,.95) 100%) }
+
+  /* ไม่มีรูปสินค้า → ใส่ตราสายฟ้าแทน ไม่ปล่อยให้กลางภาพโหว่
+     ต้องเป็น flex:1 ไม่ใช่ height ตายตัว — ถ้าตรึงความสูง พื้นที่เหลือจะไปตกที่ margin:auto
+     ของแถบท้าย กลายเป็นช่องว่างเปล่า ~400px คั่นระหว่างเนื้อความกับแถบท้าย (เกิดจริงตอนลอง) */
+  .hero.empty { flex: 1 1 auto; min-height: 200px; margin: 10px 0 0 }
+  .hero.empty::after { content: ''; position: absolute; left: 50%; top: 50%; width: 116px; height: 156px;
+    transform: translate(-50%,-50%);
+    background: linear-gradient(160deg, #FFF7DF, #FFD173 40%, #F0A22A 62%, #FFE6AE 100%);
+    clip-path: polygon(62% 0, 16% 56%, 45% 56%, 34% 100%, 84% 40%, 53% 40%);
+    filter: drop-shadow(0 0 44px rgba(255,180,70,.6)) }
+
+  /* ── เนื้อความ ── */
+  /* z-index สูงกว่าเวที + scrim จาง ๆ ข้างหลัง เพราะเงาสะท้อนไหลลงมาถึงตรงนี้ */
+  .body { position: relative; z-index: 3; margin-top: 8px; max-width: 856px;
+          font-size: 25px; line-height: 1.42; font-weight: 400; color: #D6E7FB;
+          text-shadow: 0 3px 16px rgba(2,7,20,.95), 0 0 26px rgba(2,7,20,.9) }
+  /* ม่านมืดหลังเนื้อความ — เงาสะท้อนไหลลงมาถึงตรงนี้ ถ้าไม่มีม่าน ตัวหนังสือจะซ้อนกับ
+     ตัวหนังสือบนซองที่สะท้อนอยู่ อ่านยากทันที (เห็นชัดใน v2) */
+  .body::before { content: ''; position: absolute; left: -90px; right: -90px; top: -34px; bottom: -26px;
+          z-index: -1; border-radius: 50%/24%;
+          background: radial-gradient(ellipse at center, rgba(3,9,22,.92) 32%, rgba(3,9,22,.55) 62%, transparent 78%) }
+  /* balance = เกลี่ยความยาวบรรทัดในย่อหน้า จำเป็นมากกับข้อความจัดกึ่งกลาง
+     ไม่งั้นบรรทัดแรกยาวเต็มแล้วบรรทัดท้ายเหลือ "ตู้สะใจสุด" โดด ๆ ดูเหมือนจัดหน้าพัง
+     ที่ลองแล้วไม่ได้ผลกับไทย (อย่าเสียเวลาลองซ้ำ):
+       text-wrap: pretty   — ไม่ขยับอะไรเลย เพราะไทยไม่มีช่องว่างระหว่างคำให้มันเลื่อน
+       word-break: keep-all — Chromium ยังตัดตามพจนานุกรมไทยอยู่ดี ("กดเองสนุก / กว่า")
+     break-word คือตาข่ายกันตก เผื่อเจอคำ/URL ยาวเกินบรรทัด ยอมตัดดีกว่าล้นกรอบ */
+  .body p { margin-bottom: 6px; text-wrap: balance; overflow-wrap: break-word }
+  /* บรรทัดสุดท้ายมักเป็นคำชวน — ย้อมทองให้เป็นจุดพักสายตาก่อนถึงแถบท้าย */
+  .body p:last-child { color: #FFD9A2; font-weight: 700; margin-bottom: 0 }
+  /* เนื้อความยาว (3 ย่อหน้าขึ้นไป) ต้องหดเอง ไม่งั้นเวทีโดนบีบจนสินค้าจิ๋ว
+     :has() ทำงานบน Chromium — ใช้จำนวนย่อหน้าเป็นสัญญาณความยาวได้ตรง ๆ */
+  .body:has(p:nth-child(3)) { font-size: 23px; line-height: 1.38 }
+  .body:has(p:nth-child(4)) { font-size: 21px; line-height: 1.36 }
+  .no-hero .body { margin-top: 26px; font-size: 34px; line-height: 1.55 }
+  .no-hero .body:has(p:nth-child(3)) { font-size: 29px }
+
+  /* ── แถบท้าย ── */
+  /* วางเป็นแผ่นในกรอบ ไม่ full-bleed เพราะจะตัดกรอบทองจนดูเลอะ */
+  .foot { margin: auto 0 28px; width: 100%; border-radius: 14px;
+          padding: 14px 24px; display: flex; align-items: center; gap: 20px;
+          background: linear-gradient(180deg, rgba(12,32,64,.82), rgba(5,14,32,.86));
+          border: 1px solid rgba(255,206,130,.30);
+          box-shadow: 0 -10px 40px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,226,170,.16) }
+  .chip { display: flex; align-items: center; gap: 9px; font-size: 24px; font-weight: 700;
+          color: #EDF6FF; white-space: nowrap }
+  .chip svg { width: 26px; height: 26px; flex: 0 0 auto; color: #FFCE7A;
+              filter: drop-shadow(0 0 8px rgba(255,180,70,.55)) }
+  .sep { width: 1px; height: 30px; flex: 0 0 auto;
+         background: linear-gradient(180deg, transparent, rgba(255,206,130,.5), transparent) }
+  .tags { margin-left: auto; text-align: right; max-width: 310px;
+          font-size: 18px; line-height: 1.28; font-weight: 400; color: #7FB6DE }
+</style>
+</head>
+<body>
+  <div class="bg" style="background-image:url({{BG}})"></div>
+  <div class="grad"></div>
+  <div class="rays"></div>
+  <div class="beam"></div>
+  <div class="stagefloor"></div>
+  <div class="bokeh"></div>
+  <div class="dust"></div>
+  <div class="vig"></div>
+  <div class="frame"></div>
+
+  <div class="wrap {{WRAP_CLASS}}">
+    <div class="top">
+      <div class="brand">
+        <div class="logo" style="background-image:url({{LOGO}})"></div>
+        <div class="wm"><b>DIVISION X CARD</b><span>PREMIUM CARD VENDING</span></div>
+      </div>
+      <div class="seal"><div class="sealin"><b>{{BRANCHES}}</b><span>สาขา</span></div></div>
+    </div>
+
+    <div class="ribbon"><span>ตู้กดการ์ดสะสมอัตโนมัติ</span></div>
+
+    <h1>{{HEADLINE}}</h1>
+    <div class="sub">{{SUB}}</div>
+
+    <div class="hero {{HERO_CLASS}}">{{HERO}}</div>
+
+    <div class="body">{{BODY}}</div>
+
+    <div class="foot">
+      <div class="chip">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"
+             stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 2.5 4.6 5.4v6.1c0 4.6 3.1 8.5 7.4 9.9 4.3-1.4 7.4-5.3 7.4-9.9V5.4L12 2.5Z"/>
+          <path d="m8.7 11.9 2.4 2.4 4.3-4.4"/></svg>
+        ของแท้ 100%
+      </div>
+      <i class="sep"></i>
+      <div class="chip">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"
+             stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="9"/><path d="M12 6.8v5.4l3.5 2.1"/></svg>
+        เปิด 24 ชม.
+      </div>
+      <i class="sep"></i>
+      <div class="chip">
+        <svg viewBox="0 0 24 24" fill="currentColor">
+          <path d="M13.4 2 5.2 13.6h4.9L9.2 22 18.8 9.9h-5.1L13.4 2Z"/></svg>
+        ลุ้นสดหน้าตู้
+      </div>
+      <div class="tags">{{TAGS}}</div>
+    </div>
+  </div>
+</body>
+</html>

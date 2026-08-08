@@ -1,0 +1,366 @@
+<!doctype html>
+<!--
+  เทมเพลตโปสเตอร์ "ไทยจัดเต็ม" · DivisionX Card
+  เรนเดอร์ด้วย Chromium 1080×1080 · ไม่มี JS ไม่มีไฟล์ภายนอก
+
+  แนวคิด: บรรยากาศ = ฟ้านีออน/โครเมียมบนกรมท่า (อัตลักษณ์แบรนด์)
+          ตัวอักษร/ริบบิ้น/เหรียญ/กรอบ = ทอง-ส้ม (ภาษาโปสเตอร์ขายของไทย)
+          ฟ้ากับทองเป็นคู่สีตรงข้าม → ตัดกันแรงที่สุด สะดุดตาบนฟีดแม้ดูรูปย่อ
+
+  ห้ามใส่อีโมจิ — ubuntu บน CI ไม่มีฟอนต์อีโมจิสี จะกลายเป็นสี่เหลี่ยม
+  ไอคอนทุกตัวในไฟล์นี้เป็น inline SVG / CSS shape ล้วน
+
+  กับดักที่เจอจริงและกันไว้แล้ว:
+   · text-shadow ทับ background-clip:text ไม่ได้ (พื้นหลังวาดก่อน เงาวาดทีหลัง)
+     → พาดหัวหลักใช้สีทึบ + text-shadow ทำขอบ · <em> ทองไล่สีใช้ filter: drop-shadow ทำขอบแทน
+   · ห้ามใช้ -webkit-text-stroke กับไทย — เส้นขอบกินช่องว่างระหว่างสระบนกับวรรณยุกต์
+     ("ที่" เหลือ "ที") · text-shadow วาดหลังตัวอักษร ตัวอักษรเลยยังคมครบ
+   · % ความสูงของลูก resolve ได้ก็ต่อเมื่อพ่อมี height ชัดเจน → .hero ใช้ flex:1 1 0
+     บน column ที่สูง 100% แน่นอน แล้ว .stage ถึงใช้ height:100% ได้
+   · {{BG}} มักเป็น "โปสเตอร์รอบก่อน" ไม่ใช่ภาพศิลป์ → เบลอหนักให้เหลือแค่บรรยากาศสี
+     ไม่งั้นจะเห็นตัวหนังสือเก่าลอยอยู่ข้างหลัง
+-->
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<style>
+  @font-face { font-family: 'DX'; src: url({{FONT_REGULAR}}) format('truetype'); font-weight: 400 }
+  @font-face { font-family: 'DX'; src: url({{FONT_BOLD}}) format('truetype'); font-weight: 700 }
+
+  * { margin: 0; padding: 0; box-sizing: border-box }
+
+  body {
+    width: 1080px; height: 1080px; overflow: hidden;
+    font-family: 'DX', sans-serif; color: #fff;
+    background: #071129;
+    position: relative;
+  }
+
+  /* ───────── ชั้นบรรยากาศ (หลังสุด) ───────── */
+
+  /* พื้นหลังที่ส่งเข้ามา — เบลอหนักจนเหลือแค่คราบสี ใช้เป็นบรรยากาศ ไม่ให้แย่งอ่าน */
+  .bg { position: absolute; inset: -60px; background-size: cover; background-position: center;
+        filter: blur(30px) saturate(1.35) brightness(.72); opacity: .55 }
+
+  /* ฟ้าอยู่ตรงกลาง (บรรยากาศแบรนด์) · ทองอมส้มกินสองมุมตรงข้าม
+     คู่สีตรงข้ามฟ้า-ทอง = ตัดกันแรงสุด ทำให้รูปย่อในฟีดยังจับตาได้ */
+  .grad { position: absolute; inset: 0;
+    background:
+      radial-gradient(720px 540px at 50% 42%, rgba(0,150,255,.30), transparent 72%),
+      radial-gradient(700px 520px at 96% 4%,  rgba(255,150,20,.30), transparent 68%),
+      radial-gradient(660px 500px at 2% 98%,  rgba(255,140,10,.26), transparent 66%),
+      radial-gradient(520px 360px at 4% 6%,   rgba(255,180,50,.14), transparent 70%),
+      linear-gradient(168deg, #0A1B3E 0%, #122A57 46%, #060F24 100%) }
+
+  /* แสงพุ่งเป็นรัศมีจากกลางภาพ — หัวใจของหน้าตาโปสเตอร์ไทย
+     mask ให้จางทั้งตรงกลางและขอบ ไม่งั้นเส้นจะไปกวนตัวหนังสือ */
+  .rays { position: absolute; inset: -26%;
+    background: repeating-conic-gradient(from 92deg at 50% 40%,
+      rgba(255,214,120,.20) 0deg 2.4deg, rgba(255,214,120,0) 2.4deg 10deg);
+    -webkit-mask-image: radial-gradient(circle at 50% 40%,
+      transparent 6%, rgba(0,0,0,.85) 24%, rgba(0,0,0,.55) 48%, transparent 74%) }
+
+  .rays2 { position: absolute; inset: -26%;
+    background: repeating-conic-gradient(from 4deg at 50% 40%,
+      rgba(120,220,255,.22) 0deg 1.2deg, rgba(120,220,255,0) 1.2deg 14deg);
+    -webkit-mask-image: radial-gradient(circle at 50% 40%,
+      transparent 14%, rgba(0,0,0,.7) 40%, transparent 80%) }
+
+  /* เส้นความเร็วเฉียง — เติมพลังมุมภาพ ไม่ให้พื้นโล่ง */
+  .streaks { position: absolute; inset: 0; opacity: .55;
+    background:
+      linear-gradient(108deg, transparent 3.0%, rgba(0,214,255,.55) 3.35%, transparent 3.7%),
+      linear-gradient(108deg, transparent 6.2%, rgba(0,214,255,.28) 6.45%, transparent 6.7%),
+      linear-gradient(108deg, transparent 9.0%, rgba(255,200,90,.30) 9.25%, transparent 9.5%),
+      linear-gradient(288deg, transparent 4.0%, rgba(0,214,255,.42) 4.35%, transparent 4.7%),
+      linear-gradient(288deg, transparent 7.6%, rgba(255,200,90,.26) 7.85%, transparent 8.1%) }
+
+  /* ตารางจาง ๆ ให้พื้นมี "เนื้อ" ไม่แบนเป็นสีเดียว */
+  .grid { position: absolute; inset: 0; opacity: .16;
+    background-image:
+      linear-gradient(rgba(120,200,255,.28) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(120,200,255,.28) 1px, transparent 1px);
+    background-size: 62px 62px;
+    -webkit-mask-image: radial-gradient(circle at 50% 46%, #000 18%, transparent 68%) }
+
+  .vig { position: absolute; inset: 0;
+    background:
+      radial-gradient(124% 96% at 50% 44%, transparent 46%, rgba(2,7,18,.72) 100%),
+      linear-gradient(180deg, rgba(2,7,18,.55) 0%, transparent 16%, transparent 66%, rgba(2,7,18,.80) 100%) }
+
+  /* กรอบทองโครเมียมรอบภาพ — ภาษาโปสเตอร์ไทยแบบคลาสสิก */
+  .frame { position: absolute; inset: 18px; pointer-events: none;
+    border: 3px solid transparent;
+    border-image: linear-gradient(135deg, #FFE9A8 0%, #B4720C 22%, #FFF3CF 40%,
+                                  #8A5A12 58%, #FFD86A 76%, #B4720C 100%) 1;
+    box-shadow: inset 0 0 0 2px rgba(0,194,255,.16), 0 0 44px rgba(0,0,0,.55) }
+
+  /* ประกายดาว 4 แฉก — วาดด้วย clip-path ล้วน ไม่ใช้อีโมจิ */
+  .sp { position: absolute; display: block;
+    background: radial-gradient(circle, #FFFFFF 0%, #FFE9A8 45%, rgba(255,200,90,0) 72%);
+    clip-path: polygon(50% 0%, 59% 41%, 100% 50%, 59% 59%, 50% 100%, 41% 59%, 0% 50%, 41% 41%);
+    filter: drop-shadow(0 0 10px rgba(255,214,120,.95)) }
+  .sp.c { background: radial-gradient(circle, #FFFFFF 0%, #A8ECFF 45%, rgba(0,194,255,0) 72%);
+          filter: drop-shadow(0 0 12px rgba(0,214,255,.95)) }
+  /* วางเฉพาะ "ริมภาพ" กับ "รอบตัวสินค้า" เท่านั้น
+     รอบแรกวางไว้ที่ 268px แล้วไปนั่งทับเลข 5 ของพาดหัวพอดี — เขตพาดหัวต้องปลอดของประดับ
+     ทั้งหมดต้องอยู่ในช่วง y 500-720px ซึ่งเป็น "ปีกซ้าย-ขวาของสินค้า" ที่ว่างจริง
+     ทั้งเคสพาดหัวสั้นและยาว — ต่ำกว่านี้จะไปนั่งทับแผ่นเนื้อความ */
+  .s1 { width: 50px; height: 50px; left: 56px;  top: 566px }
+  .s2 { width: 26px; height: 26px; left: 148px; top: 630px }
+  .s3 { width: 42px; height: 42px; right: 70px; top: 560px }
+  .s4 { width: 24px; height: 24px; right: 162px; top: 624px }
+  .s5 { width: 32px; height: 32px; left: 96px;  top: 496px }
+  .s6 { width: 26px; height: 26px; right: 104px; top: 490px }
+  .s7 { width: 18px; height: 18px; left: 246px; top: 528px }
+
+  /* ───────── โครงเนื้อหา ───────── */
+  .wrap { position: relative; z-index: 3; height: 100%;
+          display: flex; flex-direction: column; padding: 38px 52px 16px }
+  /* แสงทองอุ่นรองหลังบล็อกพาดหัว — ดันตัวอักษรให้ลอยออกจากพื้นฟ้า
+     z-index:-1 อยู่หลังเนื้อหาของ .wrap แต่ยังทับชั้นบรรยากาศ (เพราะ .wrap เป็น stacking context) */
+  .wrap::before { content: ''; position: absolute; z-index: -1; left: 0; right: 0;
+    top: 140px; height: 360px;
+    background: radial-gradient(600px 200px at 36% 46%, rgba(255,168,36,.24), transparent 72%) }
+
+  /* ── หัวกระดาษ ── */
+  .top { display: flex; align-items: center; gap: 18px; flex: 0 0 auto }
+
+  /* โลโก้จริงเป็น PNG พื้นดำทึบ · isolation + mix-blend-mode:screen ทำให้พื้นดำหายไป
+     โดยผสมกับ "แผ่นรอง" ใบนี้เท่านั้น ไม่ไปดูดสีพื้นหลังที่สว่าง ๆ มาให้ซีด */
+  .plate { isolation: isolate; position: relative; flex: 0 0 auto;
+    width: 122px; height: 96px; border-radius: 16px;
+    background: linear-gradient(150deg, #10254C, #050C1C 72%);
+    box-shadow: inset 0 0 0 2px rgba(255,197,61,.6), 0 8px 22px rgba(0,0,0,.5),
+                0 0 26px rgba(0,194,255,.25);
+    display: flex; align-items: center; justify-content: center; overflow: hidden }
+  /* cover + จัดตำแหน่งบน = ตัดคำว่า DIVISION X CARD เล็ก ๆ ในตัวไฟล์โลโก้ทิ้ง
+     เหลือเฉพาะตรา DC ให้ใหญ่อ่านออก · wordmark ใช้ตัวพิมพ์ข้าง ๆ แทน (คมกว่า) */
+  .plate img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 26%;
+               transform: scale(1.62); mix-blend-mode: screen;
+               filter: contrast(1.15) brightness(1.08) }
+
+  .idn { flex: 1 1 auto; min-width: 0 }
+  .idn b { display: block; font-weight: 700; font-size: 21px; letter-spacing: 3.4px;
+    background: linear-gradient(180deg, #FFF6DC 0%, #FFD86A 52%, #C8871A 100%);
+    -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent }
+  .idn i { display: block; font-style: normal; font-weight: 400; font-size: 19px;
+           color: #9FD4F2; letter-spacing: .2px; margin-top: 3px }
+  .idn u { display: block; text-decoration: none; height: 3px; width: 210px; margin-top: 9px;
+           background: linear-gradient(90deg, #FFC53D, rgba(0,194,255,.85) 60%, transparent) }
+
+  /* เหรียญตราท้ายหัวกระดาษ */
+  .seal { position: relative; flex: 0 0 auto; width: 122px; height: 122px;
+          display: flex; align-items: center; justify-content: center; text-align: center }
+  .seal::before { content: ''; position: absolute; inset: 0; z-index: 1; border-radius: 50%;
+    background: repeating-conic-gradient(from 0deg, #FFE9A8 0deg 7deg, #A5670B 7deg 14deg);
+    filter: drop-shadow(0 6px 16px rgba(0,0,0,.55)) }
+  .seal::after { content: ''; position: absolute; inset: 12px; z-index: 2; border-radius: 50%;
+    background: radial-gradient(circle at 38% 30%, #16315F 0%, #071129 78%);
+    box-shadow: inset 0 0 0 2px rgba(255,214,106,.9), inset 0 0 22px rgba(0,194,255,.35) }
+  .seal s { position: relative; z-index: 3; text-decoration: none; line-height: 1.06 }
+  .seal s span { display: block; font-weight: 400; font-size: 19px; color: #BFE9FF }
+  .seal s em { display: block; font-style: normal; font-weight: 700; font-size: 30px;
+    background: linear-gradient(180deg, #FFF6DC, #FFD24A 55%, #EF8B12);
+    -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent }
+
+  /* ── ริบบิ้นเหนือพาดหัว ── */
+  .ribbon { align-self: flex-start; position: relative; margin: 18px 0 0 6px;
+    transform: skewX(-9deg);
+    background: linear-gradient(180deg, #FFF3CF 0%, #FFC53D 46%, #E88A0E 100%);
+    box-shadow: 0 9px 26px rgba(0,0,0,.5), inset 0 0 0 2px rgba(255,255,255,.42),
+                inset 0 -6px 12px rgba(150,80,0,.35) }
+  .ribbon i { position: absolute; top: 6px; bottom: -8px; width: 20px; z-index: -1;
+              background: linear-gradient(180deg, #B4720C, #6E4408) }
+  .ribbon i.l { left: -20px; clip-path: polygon(0 0, 100% 0, 100% 100%, 34% 100%) }
+  .ribbon i.r { right: -20px; clip-path: polygon(0 0, 100% 0, 66% 100%, 0 100%) }
+  .ribbon > span { display: flex; align-items: center; gap: 11px; transform: skewX(9deg);
+    padding: 10px 30px; font-weight: 700; font-size: 25px; letter-spacing: 1.1px;
+    color: #35190A; text-shadow: 0 1px 0 rgba(255,255,255,.45) }
+  .ribbon svg { width: 21px; height: 26px; fill: #35190A; flex: 0 0 auto }
+
+  /* ── พาดหัว ── */
+  /* สีทึบ + ขอบด้วย text-shadow หลายชั้น (ไม่ใช้ text-stroke เพราะกินวรรณยุกต์ไทย)
+     ชั้นล่างสุดเป็นเงาทองนูน ทำให้ตัวอักษรดู "หนาหนัก" แบบป้ายลดราคา */
+  /* margin-top เผื่อ 16px ให้วรรณยุกต์ตัวสูง (ผู้ / ตื้อ) ไม่ไปชนท้องริบบิ้น */
+  /* text-wrap:balance กัน "คำเดียวโดดบรรทัดสอง" (เช่น ว่าแพง!) ซึ่งทำให้บล็อกพาดหัวดูเบี้ยว */
+  h1 { font-weight: 700; font-size: {{HEAD_SIZE}}px; line-height: 1.16; letter-spacing: -.3px;
+       margin-top: 16px; color: #FFFBF0; text-wrap: balance;
+       text-shadow:
+         -3px 0 0 #06122A,  3px 0 0 #06122A,  0 -3px 0 #06122A,  0 3px 0 #06122A,
+         -2px -2px 0 #06122A, 2px -2px 0 #06122A, -2px 2px 0 #06122A, 2px 2px 0 #06122A,
+         0 5px 0 rgba(180,114,12,.95),
+         0 9px 0 rgba(60,32,2,.55),
+         0 16px 30px rgba(0,0,0,.75),
+         0 0 52px rgba(0,180,255,.42) }
+  /* ตัวเลข/รหัสชุด — ทองไล่สี · ขอบทำด้วย drop-shadow เพราะ text-shadow วาดทับ
+     background-clip:text ไม่ได้ (จะกลบตัวอักษรทั้งตัว) */
+  h1 em { font-style: normal; display: inline-block; text-shadow: none;
+    background: linear-gradient(178deg, #FFFEF6 0%, #FFE688 26%, #FFB416 58%, #FFDE7A 78%, #E07C08 100%);
+    -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+    filter:
+      drop-shadow(2.5px 0 0 #22100A) drop-shadow(-2.5px 0 0 #22100A)
+      drop-shadow(0 2.5px 0 #22100A) drop-shadow(0 -2.5px 0 #22100A)
+      drop-shadow(0 6px 0 rgba(120,66,4,.9))
+      drop-shadow(0 12px 24px rgba(0,0,0,.6))
+      drop-shadow(0 0 28px rgba(255,176,40,.75)) }
+
+  /* ── บรรทัดรอง ── */
+  /* แผ่นกระจกเข้มรองหลัง — พื้นหลังตรงนี้มีรัศมีทองวิ่งผ่าน ถ้าไม่รองจะอ่านยาก */
+  .sub { align-self: flex-start; margin-top: 14px; padding: 8px 26px 9px 20px;
+         font-size: 29px; line-height: 1.34; font-weight: 400; color: #F2F8FF; max-width: 900px;
+         border-left: 6px solid transparent;
+         border-image: linear-gradient(180deg, #FFE9A8, #FFC53D 40%, #00C2FF 100%) 1;
+         background: linear-gradient(90deg, rgba(4,12,30,.72), rgba(4,12,30,.30) 82%, transparent);
+         text-shadow: 0 3px 12px rgba(0,0,0,.85) }
+  .sub:empty { display: none }
+
+  /* ── กลางภาพ: สินค้า ── */
+  .hero { position: relative; flex: 1 1 0; min-height: 176px; margin: 8px 0 8px;
+          display: flex; align-items: center; justify-content: center; overflow: hidden }
+  /* รอบแรกวงแสงกว้าง 520-660px ล้อมซองที่กว้างแค่ ~170px → ซองดู "หลงอยู่กลางที่โล่ง"
+     ย่อวงให้กอดตัวสินค้า แล้วสินค้าถึงจะกลายเป็นจุดรวมสายตา */
+  /* วงกว้างกว่ากรอบ .hero → โดน overflow:hidden ตัดบน-ล่าง เหลือรัศมีทองแผ่ออก
+     "สองข้างซอง" พอดี ซึ่งเป็นจุดที่รอบก่อนโล่งที่สุด */
+  .hero .burst { position: absolute; width: 900px; height: 900px; border-radius: 50%;
+    background: repeating-conic-gradient(from 6deg,
+      rgba(255,198,80,.34) 0deg 1.9deg, rgba(255,198,80,0) 1.9deg 8.5deg);
+    -webkit-mask-image: radial-gradient(circle, transparent 9%, rgba(0,0,0,.85) 26%,
+                                        rgba(0,0,0,.55) 44%, transparent 62%) }
+  /* รอบก่อนใส่วงประไว้ข้างใน → อ่านเป็น "วงกลมโหลดข้อมูล" ไม่ใช่แสง
+     เหลือแค่วงเรืองแสงนุ่ม ๆ ให้สินค้ามีฐานรองสายตา */
+  .hero .ring { position: absolute; width: 336px; height: 336px; border-radius: 50%;
+    background: radial-gradient(circle, transparent 58%, rgba(255,214,120,.10) 74%, transparent 88%);
+    box-shadow: 0 0 60px 8px rgba(255,190,60,.16), inset 0 0 70px rgba(0,194,255,.20) }
+  .hero .halo { position: absolute; width: 330px; height: 330px; border-radius: 50%;
+    background: radial-gradient(circle, rgba(120,225,255,.55) 0%, rgba(0,140,255,.26) 42%, transparent 68%);
+    box-shadow: 0 0 90px 30px rgba(0,140,255,.20) }
+  .hero .beam { position: absolute; top: -40px; width: 400px; height: 116%;
+    background: linear-gradient(180deg, rgba(190,240,255,.28), rgba(0,194,255,.06) 54%, transparent 78%);
+    clip-path: polygon(38% 0, 62% 0, 100% 100%, 0 100%) }
+
+  /* height:100% ใช้ได้เพราะ .hero เป็น flex item ที่มีความสูงแน่นอนแล้ว */
+  .hero .stage { position: relative; z-index: 2; height: 100%; min-height: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center }
+  /* คิดเป็น % ของพื้นที่ที่ flex แบ่งให้ ไม่ใช่ px ตายตัว — พาดหัวยาว/สั้นทำให้พื้นที่นี้เปลี่ยน
+     img + floor + refl รวมกันต้องไม่เกิน 100% ไม่งั้น overflow:hidden จะกินขอบล่าง */
+  .hero img { max-height: 86%; max-width: 540px; object-fit: contain;
+    filter: drop-shadow(0 22px 38px rgba(0,0,0,.75))
+            drop-shadow(0 0 26px rgba(0,194,255,.55))
+            drop-shadow(0 0 60px rgba(255,190,60,.35)) }
+  .hero .floor { flex: 0 0 auto; width: 320px; height: 10px; border-radius: 50%; margin-top: 2px;
+    background: radial-gradient(ellipse, rgba(160,235,255,.95), rgba(0,150,255,.30) 42%, transparent 72%);
+    filter: blur(4px) }
+  /* .hero .refl มี 2 class → เฉพาะเจาะจงกว่า .hero img จึงชนะ */
+  .hero .refl { max-height: 11%; margin-top: -2px; transform: scaleY(-1); opacity: .26;
+    -webkit-mask-image: linear-gradient(to bottom, rgba(0,0,0,.9), transparent 72%);
+    filter: blur(1.2px) }
+  /* ไม่มีรูปสินค้า → ให้แถบแสงยืดกินที่ว่างแทน
+     ถ้าตรึงความสูงไว้ ที่เหลือจะไปกองเป็นช่องโหว่ใต้เนื้อความ (เพราะ .foot มี margin-top:auto) */
+  .hero.empty { flex: 1 1 auto; height: auto; min-height: 140px; margin: 10px 0 6px }
+  .hero.empty .burst { width: 940px; height: 380px }
+  .hero.empty .halo { width: 620px; height: 210px }
+  .hero.empty .beam, .hero.empty .ring { display: none }
+
+  /* ── เนื้อความ ── */
+  .body { flex: 0 0 auto; font-size: 25px; line-height: 1.4; font-weight: 400; color: #ECF4FF;
+          margin: 0 -12px; padding: 12px 14px 12px 12px; border-radius: 14px;
+          background: linear-gradient(90deg, rgba(4,12,30,.70), rgba(4,12,30,.60) 68%, rgba(4,12,30,.34));
+          text-shadow: 0 2px 10px rgba(0,0,0,.85) }
+  .body p { position: relative; padding-left: 30px; margin-bottom: 9px }
+  .body p:last-child { margin-bottom: 0 }
+  .body p::before { content: ''; position: absolute; left: 3px; top: .62em; width: 13px; height: 13px;
+    transform: translateY(-50%) rotate(45deg);
+    background: linear-gradient(135deg, #FFF0BE, #FFC53D 45%, #E88A0E);
+    box-shadow: 0 0 12px rgba(255,190,60,.8) }
+  .no-hero .body { font-size: 32px; line-height: 1.52 }
+
+  /* ── แถบท้าย ── */
+  .foot { flex: 0 0 auto; margin: auto -34px 0; padding: 22px 34px 20px;
+    background:
+      linear-gradient(90deg, rgba(255,180,40,.16), rgba(0,150,255,.14) 55%, rgba(255,180,40,.10)),
+      linear-gradient(180deg, rgba(3,10,26,.55), rgba(3,10,26,.9));
+    border-top: 3px solid transparent;
+    border-image: linear-gradient(90deg, #B4720C, #FFD86A 32%, #00C2FF 68%, #B4720C) 1;
+    display: flex; align-items: center; gap: 14px }
+  /* nowrap สำคัญ — "ของแท้ 100%" ตัด 2 บรรทัดเมื่อไหร่ แถบเบี้ยวทั้งแถว */
+  .chip { display: flex; align-items: center; gap: 9px; white-space: nowrap;
+    padding: 9px 18px; border-radius: 999px;
+    font-weight: 700; font-size: 24px; color: #FFF6E2;
+    background: linear-gradient(180deg, rgba(18,42,84,.95), rgba(6,16,38,.95));
+    box-shadow: inset 0 0 0 2px rgba(255,201,74,.6), 0 4px 14px rgba(0,0,0,.5),
+                inset 0 0 16px rgba(0,194,255,.18) }
+  .chip svg { width: 26px; height: 26px; flex: 0 0 auto; fill: #FFC53D;
+              filter: drop-shadow(0 0 6px rgba(255,190,60,.75)) }
+  .tags { margin-left: auto; text-align: right; max-width: 290px;
+          font-size: 20px; line-height: 1.3; font-weight: 400; color: #8ECDEE }
+</style>
+</head>
+<body>
+  <div class="bg" style="background-image:url({{BG}})"></div>
+  <div class="grad"></div>
+  <div class="rays"></div>
+  <div class="rays2"></div>
+  <div class="grid"></div>
+  <div class="streaks"></div>
+  <div class="vig"></div>
+
+  <i class="sp s1"></i><i class="sp c s2"></i><i class="sp s3"></i><i class="sp c s4"></i>
+  <i class="sp c s5"></i><i class="sp s6"></i><i class="sp s7"></i>
+
+  <div class="frame"></div>
+
+  <div class="wrap {{WRAP_CLASS}}">
+
+    <div class="top">
+      <div class="plate"><img src="{{LOGO}}" alt=""></div>
+      <div class="idn">
+        <b>DIVISION X CARD</b>
+        <i>ตู้กดการ์ดสะสมอัตโนมัติ ในห้างใกล้บ้านคุณ</i>
+        <u></u>
+      </div>
+      <div class="seal"><s><span>ของแท้</span><em>100%</em></s></div>
+    </div>
+
+    <div class="ribbon">
+      <i class="l"></i><i class="r"></i>
+      <span>
+        <svg viewBox="0 0 24 30" aria-hidden="true"><path d="M14 0 2 17h7l-3 13 15-19h-8l4-11z"/></svg>
+        กดเองหน้าตู้ ลุ้นเองสด ๆ
+      </span>
+    </div>
+
+    <h1>{{HEADLINE}}</h1>
+    <div class="sub">{{SUB}}</div>
+
+    <div class="hero {{HERO_CLASS}}">
+      <div class="burst"></div>
+      <div class="beam"></div>
+      <div class="ring"></div>
+      <div class="halo"></div>
+      {{HERO}}
+    </div>
+
+    <div class="body">{{BODY}}</div>
+
+    <div class="foot">
+      <!-- เหรียญมุมบนพูด "ของแท้ 100%" อยู่แล้ว แถบนี้จึงเปลี่ยนเป็นตะขออารมณ์ ไม่พูดซ้ำ -->
+      <div class="chip">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1.6l3.1 6.4 7 1-5 4.9 1.2 7-6.3-3.3-6.3 3.3 1.2-7-5-4.9 7-1z"/></svg>
+        ลุ้นทุกซอง
+      </div>
+      <div class="chip">
+        <!-- ต้องใช้ fill-rule=evenodd เจาะรูตรงกลาง ไม่งั้นได้จานกลมทึบ ไม่ใช่หน้าปัดนาฬิกา -->
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path fill-rule="evenodd" d="M12 1.6a10.4 10.4 0 1 0 0 20.8 10.4 10.4 0 0 0 0-20.8zm0 2.6a7.8 7.8 0 1 1 0 15.6 7.8 7.8 0 0 1 0-15.6z"/><path d="M10.9 5.9h2.2v6.3l4.4 2.6-1.1 1.9-5.5-3.2V5.9z"/></svg>
+        เปิด 24 ชม.
+      </div>
+      <div class="chip">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a7 7 0 0 0-7 7c0 5.3 7 13 7 13s7-7.7 7-13a7 7 0 0 0-7-7zm0 9.6A2.6 2.6 0 1 1 12 6.4a2.6 2.6 0 0 1 0 5.2z"/></svg>
+        {{BRANCHES}} สาขา
+      </div>
+      <div class="tags">{{TAGS}}</div>
+    </div>
+
+  </div>
+</body>
+</html>
