@@ -1,7 +1,18 @@
 {
   "_comment": "สไตล์ภาพประกอบคอนเทนต์ · แยกไฟล์จาก content_voice/content_craft เพราะเป็นคนละสื่อ (ภาพ ไม่ใช่ตัวอักษร) และคนแก้คนละจังหวะ · prompt เป็นภาษาอังกฤษเพราะโมเดลภาพเข้าใจดีกว่าไทยมาก — ไม่ใช่ความชอบส่วนตัว ทดสอบแล้วต่างกันจริง",
 
-  "_model_note": "Nano Banana 2 = gemini-3.1-flash-image · รับภาพอ้างอิงได้ถึง 14 รูป จึงเอารูปซองจริงป้อนเข้าไปได้ (นี่คือเหตุผลเดียวที่ทำให้เรื่องนี้คุ้มทำ — รอบก่อนตัดสินใจไม่ทำเพราะ AI ไม่รู้ว่าการ์ดชุดนั้นหน้าตายังไง) · lite ถูกกว่าแต่รายละเอียดน้อยกว่า · pro แพงกว่า 3 เท่า เก็บไว้ใช้กับงานที่ต้องคมจริง",
+  "_provider_note": "เลือกด้วย IMAGE_PROVIDER=openai|gemini · ไม่ตั้งจะเลือกตัวแรกที่มี key (openai ก่อน) · เจ้าของเลือก openai เพราะเห็นผลงานจาก ChatGPT แล้วพอใจกว่าเทมเพลต CSS ที่เราเขียนเอง",
+  "provider": "openai",
+
+  "_openai_note": "เอกสาร 2 หน้าของ OpenAI ให้ชื่อโมเดลไม่ตรงกัน (guide บอก gpt-image-2 · api-reference บอก gpt-image-1.5) จึงทำเป็นค่าตั้งค่า ไม่ฮาร์ดโค้ด · ถ้าโมเดลถูกปลดหรือชื่อผิด route จะแจ้งพร้อมรายการที่ให้ลอง · edits ใช้เมื่อมีรูปอ้างอิง (ซองจริง/ตู้จริง) ไม่งั้นใช้ generations",
+  "openai_model": "gpt-image-2",
+  "openai_model_fallbacks": ["gpt-image-1.5", "gpt-image-1", "chatgpt-image-latest"],
+  "openai_size": "1024x1024",
+  "openai_quality": "high",
+  "_openai_fidelity_note": "input_fidelity=high ทำให้ยึดรูปอ้างอิงแน่นขึ้น — สำคัญมากเพราะเราไม่อยากให้มันวาดซองการ์ดขึ้นใหม่ ต้องใช้ซองจริงของเรา",
+  "openai_input_fidelity": "high",
+
+  "_gemini_note": "Nano Banana 2 = gemini-3.1-flash-image · รับภาพอ้างอิงได้ถึง 14 รูป · ต้องเปิด billing เหมือนกัน (free tier โควตาภาพ = 0)",
   "model": "gemini-3.1-flash-image",
 
   "_identity_note": "อัตลักษณ์แบรนด์ — ฟ้านีออนไฟฟ้า + สายฟ้า + โครเมียม บนกรมท่า (ไม่ใช่ดำ-ทอง) · ตรงกับที่ใช้ในงานออกแบบชิ้นอื่นของแบรนด์",
@@ -18,6 +29,15 @@
 
   "_reference_note": "ตอนมีรูปซองจริงแนบไป — ต้องสั่งชัดว่า 'ใช้ตามที่ให้มา ห้ามวาดใหม่' ไม่งั้นโมเดลจะ 'ปรับปรุง' หน้าซองจนกลายเป็นของปลอม",
   "with_reference": "Use the provided product photo EXACTLY as-is — do not redraw, restyle, or alter the packaging artwork, colors, or any printed details on it. Composite that exact product into the scene described. It must remain recognizable as the real product.",
+
+  "_poster_mode_note": "โหมดของภาพที่ให้ AI ทำ · full = โปสเตอร์ทั้งใบรวมตัวหนังสือ (แบบที่ ChatGPT ทำให้ เจ้าของชอบแบบนี้) · art = ทำเฉพาะงานศิลป์ ไม่มีตัวอักษร แล้วให้เทมเพลตวางข้อความทับ (ตัวเลขถูกแน่นอนกว่า) · เลือกได้จากหน้าเว็บ",
+  "poster_mode": "full",
+
+  "_facts_note": "⚠️ จุดสำคัญที่สุดของการต่อ API แทนการใช้ ChatGPT ผ่านหน้าเว็บ — เราส่ง 'ข้อมูลจริง' เข้าไปใน prompt ได้ (จำนวนสาขาจริง ชื่อชุดจริง แคปชั่นที่อนุมัติแล้ว) โมเดลจึงไม่มีเหตุผลต้องแต่งตัวเลขขึ้นเอง · โปสเตอร์จาก ChatGPT ที่เจ้าของชอบมีราคาการ์ด 15,000/9,000 ซึ่งมันแต่งขึ้นมาเพราะไม่รู้ข้อมูลเรา",
+  "facts_rule": "CRITICAL: Only use numbers, prices, branch counts, set names and Thai text that are explicitly given in the FACTS section below. Never invent prices, card values, percentages, dates, or branch counts. If a number is not in FACTS, do not put any number there.",
+
+  "_thai_note": "ภาษาไทยบนภาพเป็นจุดเสี่ยง — โมเดลภาพส่วนใหญ่สะกดไทยเพี้ยน ต้องสั่งให้คัดลอกตรงตัวและห้ามแต่งคำใหม่ · ถ้าผลออกมาเพี้ยนบ่อย ให้สลับ poster_mode เป็น art แล้วใช้เทมเพลตวางตัวอักษรแทน",
+  "thai_rule": "All Thai text must be copied EXACTLY character-by-character from the text provided. Do not paraphrase, translate, shorten, or invent Thai words. Thai script has vowels above and below consonants plus tone marks — render them precisely. If you cannot render Thai text accurately, leave that area empty rather than writing incorrect Thai.",
 
   "_scene_note": "ฉากตามรูปแบบโพสต์ (คีย์ตรงกับ content_formats ใน content_voice.json) · ไม่มีคีย์ที่ตรงจะใช้ default",
   "scenes": {
