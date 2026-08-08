@@ -115,11 +115,22 @@ def esc(s):
     return (s or "").replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 
 
+# จุดจบประโยค — ใช้เป็นที่ตัดพาดหัว/บรรทัดรอง
+SENT_END = re.compile(r"(?<=[!?！？])\s+|(?<=[!?！？])(?=\S)")
+
+
 def split_caption(caption):
     """แยกแคปชั่นเป็น พาดหัว / รอง / เนื้อ / แฮชแท็ก
 
     บรรทัดแรกของแคปชั่นถูกเขียนมาให้เป็นตะขออยู่แล้ว (กฎในหลักการเขียน)
-    ถ้ายาวเกินจะห้อยท้ายเป็นบรรทัดรอง เพื่อไม่ให้พาดหัวล้นจนต้องย่อฟอนต์
+    ถ้ายาวเกินให้ห้อยท้ายเป็นบรรทัดรอง
+
+    ⚠️ ห้ามตัดตามจำนวนตัวอักษรแล้วหาช่องว่างที่ใกล้ที่สุด — ภาษาไทยไม่เว้นวรรค
+    ระหว่างคำ ช่องว่างที่เจอมักเป็นช่องว่าง "ในชื่อภาษาอังกฤษ" ผลคือตัดกลาง
+    "One Piece" เป็น "...การ์ด One" / "Piece ไม่ใช่..." (เกิดจริงกับคอนเทนต์ #16)
+
+    ตัดที่จุดจบประโยค (! ?) แทน ซึ่งเป็นขอบเขตความหมายจริง
+    ถ้าไม่มีก็ปล่อยทั้งท่อนเป็นพาดหัวแล้วย่อฟอนต์เอา ดีกว่าตัดผิดที่
     """
     lines = [clean(l) for l in (caption or "").split("\n")]
     lines = [l for l in lines if l]
@@ -129,12 +140,23 @@ def split_caption(caption):
     head = body_lines[0] if body_lines else ""
     sub = ""
     if len(head) > 42:
-        # ตัดที่ช่องว่างใกล้ ๆ กลาง ไม่ตัดกลางคำ
-        cut = head.rfind(" ", 0, 46)
-        if cut > 20:
-            head, sub = head[:cut].strip(), head[cut:].strip()
+        parts = [p for p in SENT_END.split(head) if p and p.strip()]
+        if len(parts) > 1 and len(parts[0].strip()) >= 12:
+            head, sub = parts[0].strip(), " ".join(p.strip() for p in parts[1:])
     rest = body_lines[1:]
     return head, sub, rest, " ".join(tags)
+
+
+def head_size(text):
+    """ย่อฟอนต์พาดหัวตามความยาว — พาดหัวที่ตัดไม่ได้ต้องยังอยู่ในกรอบ"""
+    n = len(text)
+    if n <= 28:
+        return 82
+    if n <= 40:
+        return 74
+    if n <= 55:
+        return 64
+    return 56
 
 
 # เน้นสีที่ "ตัวเลขและรหัสชุด" เท่านั้น — ไม่ใช่เลือกคำท้ายมั่ว ๆ
@@ -180,6 +202,7 @@ def build_html(content, sku_img, bg_img, branches):
             .replace("{{HERO_CLASS}}", "" if sku_img else "empty")
             .replace("{{WRAP_CLASS}}", "" if sku_img else "no-hero")
             .replace("{{BG}}", bg_img or "")
+            .replace("{{HEAD_SIZE}}", str(head_size(head)))
             .replace("{{BRANCHES}}", str(branches))
             .replace("{{TAGS}}", esc(tags)))
 
