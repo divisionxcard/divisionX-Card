@@ -7,7 +7,7 @@
 //
 // เฟส 1 = โซน A (อนุมัติคอนเทนต์) · เฟส 2 = โซน C (สายพาน) + D (ตัวเลข)
 // โซน B (ตอบคอมเมนต์) เป็นเฟส 3 — ยังขึ้นเป็นการ์ดอธิบายว่าติดอะไรอยู่
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import {
   Megaphone, RefreshCw, Check, X, Pencil, Clock, AlertTriangle,
   Wallet, Package, Receipt, TrendingUp, Trophy, MessageSquare, Lock,
@@ -62,6 +62,10 @@ export default function MarketingOS() {
   const [loading, setLoading] = useState(false)
   const [err, setErr] = useState("")
   const [notice, setNotice] = useState("")   // ข้อความบอกว่าสั่งงาน async ไปแล้ว
+  // ธงบอกว่ายังอยู่บนหน้านี้ไหม — ลูปรอผลโปสเตอร์ต้องหยุดเองถ้าคนปิดหน้าไปแล้ว
+  // ไม่งั้นจะยิง API ต่อและ setState กับ component ที่ถูก unmount ไปแล้ว
+  const alive = useRef(true)
+  useEffect(() => () => { alive.current = false }, [])
 
   const [ideas, setIdeas] = useState({ items: [], counts: {}, by_source: {} })
   const [content, setContent] = useState({ items: [], counts: {} })
@@ -76,7 +80,16 @@ export default function MarketingOS() {
   const [pasting, setPasting] = useState(false)
   const [perSource, setPerSource] = useState(3)   // เด็ดสุดกี่ชิ้นต่อช่องทาง
   const [generating, setGenerating] = useState(new Set())   // id ที่ AI กำลังเขียนแคปชั่นให้
-  const [imaging, setImaging] = useState(new Set())         // id ที่ AI กำลังสร้างภาพให้
+  const [imaging, setImaging] = useState(new Set())         // id ที่กำลังสร้างภาพ/โปสเตอร์
+  // เวลาที่เริ่มสร้างของแต่ละ id — เอาไปโชว์ว่ารอมากี่วินาทีแล้ว
+  // งานใช้เวลา 1-2 นาที ถ้าไม่มีตัวเลขเดินคนจะคิดว่าค้าง
+  const [imagingSince, setImagingSince] = useState({})
+  const [, tick] = useState(0)
+  useEffect(() => {
+    if (!imaging.size) return
+    const t = setInterval(() => tick(n => n + 1), 1000)
+    return () => clearInterval(t)
+  }, [imaging])
 
   const [editingId, setEditingId] = useState(null)
   const [editText, setEditText] = useState("")
@@ -192,6 +205,7 @@ export default function MarketingOS() {
   // ใช้รูป SKU จริงเป็นภาพอ้างอิง ไม่ได้ให้มันวาดการ์ดขึ้นเอง
   const makeImage = useCallback(async (contentId) => {
     setImaging(s => new Set(s).add(contentId))
+    setImagingSince(m => ({ ...m, [contentId]: Date.now() }))
     try {
       const updated = await api("content/image", {
         method: "POST", body: JSON.stringify({ id: contentId }),
@@ -210,14 +224,45 @@ export default function MarketingOS() {
 
   // ── สั่งสร้างโปสเตอร์ (ฟรี ไม่ใช้ AI) ──
   // ยิงไป GitHub Actions เพราะต้องใช้ Chromium จริงเรนเดอร์ตัวอักษรไทย
-  // เป็นงาน async — ภาพจะโผล่เมื่อ workflow เสร็จ ต้องกดรีเฟรชเอง
-  const makePoster = useCallback(async (contentId) => {
+  //
+  // งานใช้เวลา 1-2 นาที · แทนที่จะให้คนนั่งกดรีเฟรชเอง ตัวนี้จะคอยเช็กให้
+  // แล้วอัปเดตช่องภาพเองเมื่อเสร็จ
+  //
+  // เทียบกับ media_url "ก่อนสั่ง" ไม่ใช่เช็กแค่ว่ามีค่าไหม — เพราะกดสร้างใหม่
+  // ทับของเดิมได้ ถ้าเช็กแค่ว่ามีค่ามันจะคิดว่าเสร็จตั้งแต่รอบแรก
+  const POLL_EVERY = 8000
+  const POLL_LIMIT = 4 * 60 * 1000      // เผื่อ GitHub Actions เข้าคิวนาน
+
+  const makePoster = useCallback(async (contentId, beforeUrl) => {
     setImaging(s => new Set(s).add(contentId))
+    setImagingSince(m => ({ ...m, [contentId]: Date.now() }))
     try {
       const r = await api("content/poster", {
         method: "POST", body: JSON.stringify({ id: contentId }),
       })
-      setNotice(r.message || "สั่งสร้างโปสเตอร์แล้ว")
+      setNotice(r.message || "สั่งสร้างโปสเตอร์แล้ว — กำลังรอผล…")
+
+      const started = Date.now()
+      while (alive.current && Date.now() - started < POLL_LIMIT) {
+        await new Promise(res => setTimeout(res, POLL_EVERY))
+        if (!alive.current) return
+        let fresh
+        try {
+          fresh = await api("content?status=draft,pending")
+        } catch { continue }        // เน็ตสะดุดชั่วคราวไม่ควรทำให้เลิกรอ
+        const found = (fresh.items || []).find(i => i.id === contentId)
+        if (found && found.media_url && found.media_url !== (beforeUrl || null)) {
+          setContent(c => ({
+            ...c,
+            items: (c.items || []).map(i => (i.id === contentId ? { ...found, sku: i.sku } : i)),
+          }))
+          setNotice("")
+          return
+        }
+      }
+      if (alive.current) {
+        setNotice("รอเกิน 4 นาทีแล้วยังไม่เสร็จ — ดูสถานะที่แท็บ Actions บน GitHub หรือกดรีเฟรชเอง")
+      }
     } catch (e) {
       setErr(e.message)
     } finally {
@@ -502,12 +547,25 @@ export default function MarketingOS() {
                         </button>
                       </div>
                     ) : (
-                      <div className="w-full sm:w-36 h-36 rounded-xl border border-dashed border-gray-300 flex flex-col items-center justify-center gap-1.5 text-center px-2">
+                      <div className={`w-full sm:w-36 h-36 rounded-xl flex flex-col items-center justify-center
+                                       gap-1.5 text-center px-2 relative overflow-hidden
+                                       ${imaging.has(item.id)
+                                          ? "border border-blue-300 bg-blue-50/60"
+                                          : "border border-dashed border-gray-300"}`}>
                         {imaging.has(item.id) ? (
                           <>
-                            <ImageIcon size={20} className="text-blue-400 animate-pulse" />
-                            <span className="text-[11px] text-blue-500">AI กำลังสร้างภาพ…</span>
-                            <span className="text-[10px] text-gray-400">ราว 15-40 วิ</span>
+                            {/* แถบแสงกวาด — บอกว่ายังทำงานอยู่แม้ตัวเลขจะเดินช้า */}
+                            <div className="dx-shimmer absolute inset-0" />
+                            {/* วงแหวนหมุน ทำจาก border ล้วน ไม่ต้องพึ่งไอคอนเพิ่ม */}
+                            <div className="relative w-9 h-9 rounded-full border-[3px] border-blue-200
+                                            border-t-blue-600 animate-spin" />
+                            <span className="relative text-[11px] font-medium text-blue-700">
+                              กำลังสร้างโปสเตอร์…
+                            </span>
+                            <span className="relative text-[10px] text-blue-500 tabular-nums">
+                              {Math.floor((Date.now() - (imagingSince[item.id] || Date.now())) / 1000)} วินาที
+                              <span className="text-blue-400"> · ปกติ 60-120 วิ</span>
+                            </span>
                           </>
                         ) : (
                           <>
@@ -539,12 +597,12 @@ export default function MarketingOS() {
                         เป็นงาน async (รันบน GitHub Actions ~1-2 นาที) เพราะต้องใช้ Chromium จริง */}
                     <button
                       disabled={imaging.has(item.id)}
-                      onClick={() => makePoster(item.id)}
+                      onClick={() => makePoster(item.id, item.media_url)}
                       title="สร้างโปสเตอร์จากเทมเพลตแบรนด์ · ฟรี · ใช้เวลาราว 1-2 นาที"
                       className="w-full sm:w-36 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg
                                  bg-blue-600 text-white text-[11px] font-medium disabled:opacity-50">
                       <ImageIcon size={12} />
-                      {imaging.has(item.id) ? "กำลังสั่ง…" : item.media_url ? "สร้างโปสเตอร์ใหม่" : "สร้างโปสเตอร์"}
+                      {imaging.has(item.id) ? "กำลังสร้าง… รออยู่" : item.media_url ? "สร้างโปสเตอร์ใหม่" : "สร้างโปสเตอร์"}
                     </button>
 
                     {/* ทางเสริม — พื้นหลังจาก AI · ต้องเปิด billing Gemini ก่อนถึงใช้ได้
