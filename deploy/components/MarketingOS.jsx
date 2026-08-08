@@ -92,19 +92,37 @@ export default function MarketingOS() {
   }, [])
 
   const api = useCallback(async (path, opts = {}) => {
+    // ⚠️ ต้องดึง token สดทุกครั้ง ห้ามใช้ตัวที่เก็บไว้ใน state ตอน mount
+    //
+    // access_token ของ Supabase หมดอายุใน ~1 ชม. · client ต่ออายุให้เองเบื้องหลัง
+    // แต่ค่าที่ copy ไปเก็บใน state ไม่ได้ต่ออายุตาม → เปิดหน้าค้างไว้นาน ๆ แล้วกดปุ่ม
+    // จะได้ 401 "unauthorized" ทั้งที่ยัง login อยู่ (เกิดจริง เจ้าของเจอตอนกดอนุมัติ)
+    // getSession() คืนตัวล่าสุดเสมอ และต่ออายุให้ถ้าใกล้หมด
+    const { data: s } = await supabase.auth.getSession()
+    const fresh = s?.session?.access_token
+    if (!fresh) {
+      setAuthState("anon")
+      throw new Error("เซสชันหมดอายุ — เข้าสู่ระบบใหม่อีกครั้ง")
+    }
+    // ไม่ setToken ตรงนี้ — จะทำให้ api() ถูกสร้างใหม่ → loadAll ใหม่ → โหลดซ้ำโดยไม่จำเป็น
+    // state token ใช้เป็นแค่ธง "ล็อกอินแล้ว" ตอน mount ไม่ได้ใช้ยิง request แล้ว
     const res = await fetch(`/api/marketing/${path}`, {
       ...opts,
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
+        Authorization: `Bearer ${fresh}`,
         ...(opts.headers || {}),
       },
     })
+    if (res.status === 401) {
+      setAuthState("anon")
+      throw new Error("เซสชันหมดอายุ — เข้าสู่ระบบใหม่อีกครั้ง")
+    }
     if (res.status === 403) { setAuthState("forbidden"); throw new Error("ต้องเป็น admin เท่านั้น") }
     const json = await res.json().catch(() => ({}))
     if (!res.ok) throw new Error(json.error || `HTTP ${res.status}`)
     return json
-  }, [token])
+  }, [])
 
   const loadAll = useCallback(async () => {
     if (!token) return
