@@ -12,7 +12,7 @@ import {
   Megaphone, RefreshCw, Check, X, Pencil, Clock, AlertTriangle,
   Wallet, Package, Receipt, TrendingUp, Trophy, MessageSquare, Lock,
   Lightbulb, Newspaper, Youtube, BarChart3, ExternalLink, Sparkles, Music2, Plus,
-  Image as ImageIcon, Send, Copy,
+  Image as ImageIcon, Send, Copy, Maximize2,
 } from "lucide-react"
 import {
   ResponsiveContainer, ComposedChart, Bar, Line, XAxis, YAxis,
@@ -62,10 +62,19 @@ export default function MarketingOS() {
   const [loading, setLoading] = useState(false)
   const [err, setErr] = useState("")
   const [notice, setNotice] = useState("")   // ข้อความบอกว่าสั่งงาน async ไปแล้ว
+  const [preview, setPreview] = useState(null)   // url ภาพที่กำลังดูเต็มจอ
   // ธงบอกว่ายังอยู่บนหน้านี้ไหม — ลูปรอผลโปสเตอร์ต้องหยุดเองถ้าคนปิดหน้าไปแล้ว
   // ไม่งั้นจะยิง API ต่อและ setState กับ component ที่ถูก unmount ไปแล้ว
   const alive = useRef(true)
   useEffect(() => () => { alive.current = false }, [])
+
+  // Esc ปิดภาพเต็มจอ — คนคาดหวังว่าปุ่มนี้ต้องใช้ได้กับ overlay ทุกแบบ
+  useEffect(() => {
+    if (!preview) return
+    const onKey = (e) => { if (e.key === "Escape") setPreview(null) }
+    window.addEventListener("keydown", onKey)
+    return () => window.removeEventListener("keydown", onKey)
+  }, [preview])
 
   const [ideas, setIdeas] = useState({ items: [], counts: {}, by_source: {} })
   const [content, setContent] = useState({ items: [], counts: {} })
@@ -371,6 +380,31 @@ export default function MarketingOS() {
         </div>
       )}
 
+      {/* ── ดูภาพเต็มจอ ──
+          โปสเตอร์เป็น 1080×1080 แต่ในการ์ดย่อเหลือ 144px ตรวจอะไรไม่ได้เลย
+          ต้องเปิดดูเต็ม ๆ ก่อนอนุมัติ ไม่งั้นตัวหนังสือเพี้ยน/ตกขอบก็ไม่รู้ */}
+      {preview && (
+        <div onClick={() => setPreview(null)}
+          className="fixed inset-0 z-50 bg-black/85 flex items-center justify-center p-4 cursor-zoom-out">
+          <img src={preview} alt=""
+            onClick={(e) => e.stopPropagation()}
+            className="max-h-[90vh] max-w-full object-contain rounded-xl shadow-2xl cursor-default" />
+          <div className="absolute top-4 right-4 flex items-center gap-2"
+            onClick={(e) => e.stopPropagation()}>
+            <a href={preview} target="_blank" rel="noreferrer"
+              className="px-3 py-1.5 rounded-lg bg-white/15 hover:bg-white/25 text-white text-sm
+                         flex items-center gap-1.5">
+              <ExternalLink size={14} /> เปิดแท็บใหม่
+            </a>
+            <button onClick={() => setPreview(null)}
+              className="w-9 h-9 rounded-lg bg-white/15 hover:bg-white/25 text-white flex items-center justify-center">
+              <X size={18} />
+            </button>
+          </div>
+          <p className="absolute bottom-5 text-white/50 text-xs">กดพื้นที่ว่างหรือ Esc เพื่อปิด</p>
+        </div>
+      )}
+
       {/* งาน async ต้องบอกว่าสั่งไปแล้ว ไม่งั้นกดปุ่มแล้วเงียบ คนจะกดซ้ำ ๆ */}
       {notice && (
         <div className="mb-4 flex items-start gap-2 bg-blue-50 border border-blue-200 text-blue-800 rounded-xl p-3 text-sm">
@@ -537,8 +571,19 @@ export default function MarketingOS() {
                   <div className="sm:w-36 shrink-0 space-y-1.5">
                     {item.media_url ? (
                       <div className="relative group">
+                        {/* ภาพย่อ 144px ดูรายละเอียดไม่ออก — กดแล้วเปิดดูเต็มจอ
+                            ต้องดูให้ชัดก่อนอนุมัติ ไม่งั้นตัวหนังสือเพี้ยนก็ไม่รู้ */}
                         <img src={item.media_url} alt=""
-                          className="w-full sm:w-36 h-36 object-contain rounded-xl bg-black/20 border border-gray-200" />
+                          onClick={() => setPreview(item.media_url)}
+                          title="กดเพื่อดูเต็มจอ"
+                          className="w-full sm:w-36 h-36 object-contain rounded-xl bg-black/20
+                                     border border-gray-200 cursor-zoom-in" />
+                        <div onClick={() => setPreview(item.media_url)}
+                          className="absolute inset-0 rounded-xl bg-black/45 text-white text-[11px] font-medium
+                                     flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100
+                                     transition cursor-zoom-in">
+                          <Maximize2 size={13} /> ดูเต็มจอ
+                        </div>
                         <button
                           onClick={() => patch(item.id, { media_url: "" })}
                           title="เอารูปออก"
@@ -779,7 +824,10 @@ export default function MarketingOS() {
                     className="bg-white rounded-2xl border border-gray-100 p-4 flex flex-col sm:flex-row gap-3">
                     {item.media_url && (
                       <img src={item.media_url} alt=""
-                        className="w-full sm:w-24 h-24 object-cover rounded-xl border border-gray-100 shrink-0" />
+                        onClick={() => setPreview(item.media_url)}
+                        title="กดเพื่อดูเต็มจอ"
+                        className="w-full sm:w-24 h-24 object-cover rounded-xl border border-gray-100
+                                   shrink-0 cursor-zoom-in" />
                     )}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1.5 text-xs">
