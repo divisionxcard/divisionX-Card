@@ -28,6 +28,8 @@ import urllib.request
 HERE = pathlib.Path(__file__).resolve().parent
 ROOT = HERE.parent                      # deploy/
 TEMPLATE = ROOT / "tasks" / "poster_template.html"
+CONCEPTS_FILE = ROOT / "tasks" / "poster_concepts.json"
+CONCEPT_CSS_DIR = ROOT / "tasks" / "concept_css"
 FONT_DIR = ROOT / "public" / "fonts"
 
 SB_URL = (os.environ.get("SUPABASE_URL") or os.environ.get("NEXT_PUBLIC_SUPABASE_URL") or "").strip()
@@ -181,7 +183,37 @@ def highlight(text):
     return out
 
 
-def build_html(content, sku_img, bg_img, branches):
+def load_concept(key):
+    """แนวคิดโปสเตอร์ — คุมสี ของประดับ และการจัดวาง
+
+    ทำเป็น CSS แยกไฟล์ต่อแนวคิด แล้วฉีดต่อท้าย CSS หลัก แทนที่จะทำเทมเพลตแยก 10 ชุด
+    เพราะ 10 แนวใช้โครงร่วมกันแค่ 7 แบบ ส่วนใหญ่ต่างกันที่สีกับของประดับ
+    ถ้าแยกเทมเพลตจะต้องไล่แก้บั๊กเดียวกัน 10 ที่
+
+    คืน (key, css) · แนวที่ available=false จะถูกปฏิเสธตั้งแต่ตรงนี้
+    ไม่ปล่อยให้สร้างของครึ่ง ๆ กลาง ๆ ออกไป
+    """
+    if not CONCEPTS_FILE.exists():
+        return "", ""
+    cfg = json.loads(CONCEPTS_FILE.read_text(encoding="utf-8"))
+    by_key = {c["key"]: c for c in cfg.get("concepts", [])}
+    key = key or cfg.get("default") or ""
+    c = by_key.get(key)
+    if not c:
+        avail = ", ".join(k for k, v in by_key.items() if v.get("available"))
+        raise SystemExit(f"[poster] ไม่รู้จักแนวคิด {key!r} — ที่ใช้ได้: {avail}")
+    if not c.get("available", True):
+        need = " · ".join(c.get("needs") or [])
+        raise SystemExit("\n".join([
+            f"[poster] แนวคิด {key!r} ({c['label']}) ยังใช้ไม่ได้",
+            f"         เพราะ: {c.get('blocked_why', '-')}",
+            f"         ต้องมี: {need}",
+        ]))
+    f = CONCEPT_CSS_DIR / f"{key}.css"
+    return key, (f.read_text(encoding="utf-8") if f.exists() else "")
+
+
+def build_html(content, sku_img, bg_img, branches, concept_key="", concept_css=""):
     tpl = TEMPLATE.read_text(encoding="utf-8")
     # รูปตู้จริง — ของที่ทำให้โปสเตอร์ดู "มีอยู่จริง" ไม่ใช่ซองลอยบนพื้นสี
     # hero = ถ่ายตรงเห็นสินค้าเต็มตู้ · scene = ถ่ายเฉียงเห็นบรรยากาศห้าง (เอาไปทำพื้นหลัง)
@@ -229,6 +261,8 @@ def build_html(content, sku_img, bg_img, branches):
             .replace("{{MACHINE}}", machine_hero)
             .replace("{{MACHINE_CLASS}}", "has-machine" if machine_hero else "no-machine")
             .replace("{{HEAD_SIZE}}", str(head_size(head)))
+            .replace("{{CONCEPT_CSS}}", concept_css)
+            .replace("{{CONCEPT_CLASS}}", f"c-{concept_key}" if concept_key else "")
             .replace("{{BRANCHES}}", str(branches))
             .replace("{{TAGS}}", esc(tags)))
 
@@ -251,6 +285,7 @@ def main():
     ap.add_argument("--out", help="ที่เก็บไฟล์ตอน dry-run")
     ap.add_argument("--sku", help="บังคับ SKU ที่จะเอารูปมาใช้ (สำหรับลองดีไซน์)")
     ap.add_argument("--template", help="ไฟล์เทมเพลตอื่น (สำหรับลองดีไซน์หลายแบบ)")
+    ap.add_argument("--concept", help="แนวคิดโปสเตอร์ (ดู deploy/tasks/poster_concepts.json)")
     args = ap.parse_args()
 
     if args.template:
@@ -285,11 +320,12 @@ def main():
     if "/marketing/" in mu:
         bg_img = fetch_image(mu)
 
-    html = build_html(content, sku_img, bg_img, branches)
+    ckey, ccss = load_concept(args.concept)
+    html = build_html(content, sku_img, bg_img, branches, ckey, ccss)
     out = args.out or str(HERE / f"poster-{args.id}.png")
     render(html, out)
     size = pathlib.Path(out).stat().st_size
-    print(f"[poster] เรนเดอร์เสร็จ {out} ({size/1024:.0f} KB) · สาขา={branches} · "
+    print(f"[poster] เรนเดอร์เสร็จ {out} ({size/1024:.0f} KB) · แนวคิด={ckey or "-"} · สาขา={branches} · "
           f"รูปสินค้า={'มี' if sku_img else 'ไม่มี'} · พื้นหลัง AI={'มี' if bg_img else 'ไม่มี'}")
 
     if args.dry_run:
