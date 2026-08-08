@@ -27,13 +27,17 @@
     position: relative;
   }
 
-  /* พื้นหลัง AI (ถ้ามี) — หรี่ลงเพื่อให้ตัวหนังสืออ่านออกเสมอ ไม่ปล่อยให้ภาพกลืนข้อความ */
+  /* พื้นหลัง — รูปบรรยากาศตู้จริง (หรือภาพจาก AI ถ้ามี)
+     หรี่ลงเพื่อให้ตัวหนังสืออ่านออกเสมอ ไม่ปล่อยให้ภาพกลืนข้อความ */
   .bg { position: absolute; inset: 0; background-size: cover; background-position: center;
-        opacity: .38; filter: saturate(1.1) }
+        opacity: .62; filter: saturate(1.05) }
+  /* ⚠️ ต้องเป็น rgba — เดิมเขียนเป็นสีทึบ (#0B1B3A) แล้ววางทับ .bg
+     ผลคือรูปพื้นหลังถูกบังจนมองไม่เห็นเลย ทั้งที่โหลดเข้ามาแล้ว
+     (ใส่รูปตู้จริงเข้าไปแล้วยังเห็นเป็นพื้นสีเปล่า ๆ เหมือนเดิม) */
   .grad { position: absolute; inset: 0;
     background:
-      radial-gradient(900px 620px at 50% 42%, rgba(0,194,255,.20), transparent 70%),
-      linear-gradient(160deg, #0B1B3A 0%, #12264F 55%, #0A1730 100%) }
+      radial-gradient(900px 620px at 50% 42%, rgba(0,194,255,.18), transparent 70%),
+      linear-gradient(160deg, rgba(11,27,58,.82) 0%, rgba(18,38,79,.74) 52%, rgba(8,18,40,.93) 100%) }
   /* ขอบมืดรอบภาพ — ดันสายตาเข้ากลาง ทำให้ภาพดูมีมิติแทนที่จะแบนเป็นพื้นสีเดียว */
   .vig { position: absolute; inset: 0;
     background: radial-gradient(120% 92% at 50% 46%, transparent 52%, rgba(0,0,0,.55) 100%) }
