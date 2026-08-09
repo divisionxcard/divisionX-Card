@@ -131,6 +131,29 @@ async function askGemini(voice, prompt) {
   return text
 }
 
+// ทางสำรองตอนโควตาหมด — ใช้ได้เฉพาะเปิดเว็บจากเครื่องที่มี Ollama (Vercel ต่อไม่ถึง)
+// format:"json" บังคับให้คายเป็น JSON ตั้งแต่ต้นทาง ลดโอกาส parse ไม่ออก
+async function askOllama(voice, prompt) {
+  const host = process.env.OLLAMA_HOST || voice.ollama_host || "http://localhost:11434"
+  const model = process.env.OLLAMA_MODEL || voice.ollama_model || "qwen2.5:14b"
+  const res = await fetch(`${host}/api/chat`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model, stream: false, format: "json",
+      messages: [
+        { role: "system", content: prompt.system },
+        { role: "user", content: prompt.user },
+      ],
+      options: { temperature: 0.85 },
+    }),
+    signal: AbortSignal.timeout(240000),
+  })
+  if (!res.ok) throw new Error(`Ollama ${res.status}: ${(await res.text()).slice(0, 160)}`)
+  const json = await res.json()
+  return (json.message?.content || "").trim()
+}
+
 export async function POST(req) {
   const gate = await requireAdmin(req)
   if (gate.error) return gate.error
@@ -155,26 +178,40 @@ export async function POST(req) {
     const [voice, craft] = await Promise.all([loadJson("content_voice.json"), loadJson("content_craft.json")])
     if (!voice) return NextResponse.json({ error: "อ่าน tasks/content_voice.json ไม่ได้" }, { status: 500 })
 
+    // ลำดับเดียวกับตัวเขียนแคปชั่น — claude (เสียเงิน) → gemini (ฟรีมีลิมิต) → ollama (บนเครื่อง)
     const forced = (process.env.AI_PROVIDER || "").toLowerCase()
     const provider = forced || (process.env.ANTHROPIC_API_KEY ? "claude"
-                     : process.env.GEMINI_API_KEY ? "gemini" : "")
-    if (!provider) {
-      return NextResponse.json({ error: "ไม่มี key ของผู้ให้บริการ AI (ANTHROPIC_API_KEY หรือ GEMINI_API_KEY)" }, { status: 503 })
-    }
+                     : process.env.GEMINI_API_KEY ? "gemini" : "ollama")
 
     const prompt = buildPrompt(voice, craft, content)
-    let raw
+    const call = (p) => p === "claude" ? askClaude(voice, prompt)
+                      : p === "gemini" ? askGemini(voice, prompt)
+                      : askOllama(voice, prompt)
+    let raw, used = provider
     try {
-      raw = provider === "claude" ? await askClaude(voice, prompt) : await askGemini(voice, prompt)
+      raw = await call(provider)
     } catch (e) {
       const msg = String(e.message || e)
-      if (e.status === 429) {
+      // โควตา Gemini หมดแล้วยังมี Ollama บนเครื่องอยู่ → ลองต่อให้ ไม่ต้องให้คนมากดเอง
+      // (เจอจริง: โควตารายวันหมดกลางงาน แล้วทุกปุ่มตายหมดทั้งที่มีทางออก)
+      if (e.status === 429 && provider === "gemini" && !forced) {
+        try {
+          raw = await askOllama(voice, prompt)
+          used = "ollama"
+        } catch {
+          return NextResponse.json({
+            error: "โควตา Gemini หมด และต่อ Ollama บนเครื่องไม่ได้",
+            hint: "รอโควตารีเซ็ต หรือเปิดแอป Ollama บนเครื่องที่รันเว็บนี้",
+          }, { status: 429 })
+        }
+      } else if (e.status === 429) {
         return NextResponse.json({
           error: "ชนลิมิตของ Gemini — รอสักครู่แล้วกดใหม่",
           hint: "free tier จำกัดจำนวนคำขอต่อนาที ไม่ใช่แค่ต่อวัน",
         }, { status: 429 })
+      } else {
+        return NextResponse.json({ error: `${provider}: ${msg.slice(0, 250)}` }, { status: 502 })
       }
-      return NextResponse.json({ error: `${provider}: ${msg.slice(0, 250)}` }, { status: 502 })
     }
 
     const variants = parseVariants(raw)
@@ -208,7 +245,7 @@ export async function POST(req) {
       throw e1
     }
 
-    return NextResponse.json({ ...updated, generated: Object.keys(variants), provider })
+    return NextResponse.json({ ...updated, generated: Object.keys(variants), provider: used })
   } catch (err) {
     return NextResponse.json({ error: err.message }, { status: 500 })
   }
