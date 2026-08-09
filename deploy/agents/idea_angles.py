@@ -17,9 +17,9 @@
     python deploy/agents/idea_angles.py --dry-run      # ดูผลอย่างเดียว ไม่เขียน DB
     python deploy/agents/idea_angles.py --id 51        # เจาะไอเดียเดียว
 
-ใช้ Gemini free tier · ⚠️ ตัวที่บีบคือ 'ลิมิตต่อนาที' ไม่ใช่โควตารายวัน
-ยิงรวดเดียวได้ราว 12 ครั้งก็ชน 429 — สคริปต์เว้นจังหวะ 5 วิ/คำขอ และถอยรอให้เอง
-ถ้าชนซ้ำหลังถอยครบ 3 ชั้น แปลว่าโควตาวันนั้นหมดจริง ค่อยรันต่อวันถัดไป
+โมเดล: Gemini free tier → ไล่โมเดลถัดไปเมื่อโควตารายวันหมด → ถอยไป Ollama บนเครื่อง
+⚠️ gemini-flash-latest ให้ฟรีแค่ **วันละ 20 ครั้ง** (อ่านจาก quotaId ในตัว error เอง)
+แต่โควตานับแยกตามโมเดล เปลี่ยนโมเดลจึงได้ก้อนใหม่จริง — ดูคอมเมนต์เหนือ MODEL_CHAIN
 """
 import argparse
 import json
@@ -126,12 +126,33 @@ def build_prompt(voice, idea, formats):
     return "\n".join(parts)
 
 
-# ⚠️ ตัวที่บีบคือ "ลิมิตต่อนาที" ไม่ใช่โควตารายวัน
-# ตอนแรกเขียนไว้ว่า "ไอเดียวันละไม่กี่สิบชิ้น ไม่มีทางเกิน 1,500/วัน" — ประเมินผิด
-# ยิงรวดเดียวได้แค่ ~12 ครั้งก็โดน 429 แล้ว เพราะ free tier จำกัด RPM ด้วย
-# เว้นจังหวะระหว่างคำขอ + ถอยรอเมื่อโดน แทนที่จะหยุดทั้งงาน
+# ⚠️ 429 ของ Gemini มี 2 ชนิด และแก้คนละทาง — เคยวินิจฉัยผิดมาแล้ว 2 รอบ
+#   ครั้งที่ 1 เขียนว่า "ไอเดียวันละไม่กี่สิบชิ้น ไม่มีทางเกิน 1,500/วัน"
+#   ครั้งที่ 2 สรุปว่า "ตัวที่บีบคือลิมิตต่อนาที" — ก็ยังไม่ครบ
+#
+# ของจริงอ่านได้จาก quotaId ในตัว error (2026-08-10 ยิงเช็กเอง):
+#   GenerateRequestsPerDayPerProjectPerModel-FreeTier · quotaValue: 20 · gemini-3.6-flash
+#   → gemini-flash-latest ให้ฟรี **วันละ 20 ครั้ง** เท่านั้น ไอเดีย 86 ชิ้นไม่มีทางพอ
+#
+# แต่โควตานับ "แยกตามโมเดล" (ดูชื่อ quota: ...PerProjectPerModel) — ไล่โมเดลถัดไป
+# จึงได้โควตาก้อนใหม่จริง ไม่ใช่แค่รอเฉย ๆ · หมดทุกโมเดลค่อยถอยไป Ollama บนเครื่อง
 PACE_SEC = 5
 BACKOFF = [20, 45, 90]
+
+# ไล่จากคุณภาพดีสุดลงไป · flash-lite ยังเหลือโควตาตอน flash หมดแล้ว (เช็กแล้ว)
+MODEL_CHAIN = ["gemini-flash-latest", "gemini-flash-lite-latest", "gemini-2.0-flash-lite"]
+
+
+class QuotaOut(Exception):
+    def __init__(self, model, daily):
+        super().__init__(f"โควตา {model} หมด" + (" (รายวัน)" if daily else " (ต่อนาที)"))
+        self.model = model
+        self.daily = daily
+
+
+def is_daily_quota(detail):
+    """แยก 429 รายวัน (รอไปก็ไม่หาย ต้องเปลี่ยนโมเดล) ออกจาก 429 ต่อนาที (รอแล้วหาย)"""
+    return "PerDay" in detail
 
 
 def ask_gemini(prompt, model):
@@ -152,12 +173,63 @@ def ask_gemini(prompt, model):
             parts = (j.get("candidates") or [{}])[0].get("content", {}).get("parts", [])
             return "".join(p.get("text", "") for p in parts).strip()
         except urllib.error.HTTPError as e:
-            if e.code != 429 or attempt >= len(BACKOFF):
+            if e.code != 429:
                 raise
+            detail = e.read().decode("utf-8", "ignore")
+            # โควตารายวันหมด → ถอยรอกี่ทีก็ไม่คืน ส่งต่อให้ ask_ai เปลี่ยนโมเดลทันที
+            if is_daily_quota(detail) or attempt >= len(BACKOFF):
+                raise QuotaOut(model, daily=is_daily_quota(detail))
             wait = BACKOFF[attempt]
             print(f"      (ชนลิมิตต่อนาที รอ {wait} วิ แล้วลองใหม่)")
             time.sleep(wait)
     return ""
+
+
+def ask_ollama(prompt, voice):
+    """ทางสำรองบนเครื่องตัวเอง — ช้ากว่าแต่ไม่มีโควตา · ใช้ได้เฉพาะรันจากเครื่องที่ลง Ollama"""
+    host = os.environ.get("OLLAMA_HOST") or voice.get("ollama_host") or "http://localhost:11434"
+    model = os.environ.get("OLLAMA_MODEL") or voice.get("ollama_model") or "qwen2.5:14b"
+    body = {
+        "model": model, "stream": False, "format": "json",
+        "messages": [{"role": "user", "content": prompt}],
+        "options": {"temperature": 0.9},
+    }
+    req = urllib.request.Request(
+        f"{host}/api/chat", method="POST",
+        headers={"Content-Type": "application/json"},
+        data=json.dumps(body).encode(),
+    )
+    with urllib.request.urlopen(req, timeout=300) as r:
+        j = json.load(r)
+    return (j.get("message", {}).get("content") or "").strip()
+
+
+class Router:
+    """จำไว้ว่าโมเดลไหนหมดแล้ว จะได้ไม่ยิงซ้ำให้เสียเวลาทั้ง 78 รอบ"""
+
+    def __init__(self, chain, voice):
+        self.chain = list(chain)
+        self.voice = voice
+        self.i = 0
+        self.on_ollama = False
+
+    @property
+    def label(self):
+        return f"ollama:{os.environ.get('OLLAMA_MODEL') or self.voice.get('ollama_model') or 'qwen2.5:14b'}" \
+            if self.on_ollama else self.chain[self.i]
+
+    def ask(self, prompt):
+        while not self.on_ollama:
+            try:
+                return ask_gemini(prompt, self.chain[self.i])
+            except QuotaOut as e:
+                self.i += 1
+                if self.i < len(self.chain):
+                    print(f"      ({e} → เปลี่ยนไป {self.chain[self.i]})")
+                    continue
+                print(f"      ({e} → Gemini หมดทุกโมเดล ถอยไปใช้ Ollama บนเครื่อง)")
+                self.on_ollama = True
+        return ask_ollama(prompt, self.voice)
 
 
 def parse_angles(text):
@@ -223,33 +295,33 @@ def main():
         print("[angles] ไม่มีไอเดียที่ต้องเติมมุม — จบ")
         return
 
-    print(f"[angles] จะเติมมุมให้ {len(rows)} ไอเดีย · โมเดล {model}")
+    router = Router([model] + [m for m in MODEL_CHAIN if m != model], voice)
+    print(f"[angles] จะเติมมุมให้ {len(rows)} ไอเดีย · เริ่มที่ {router.label}")
     ok = fail = 0
     for n, it in enumerate(rows):
-        if n:
-            time.sleep(PACE_SEC)      # เว้นจังหวะให้อยู่ใต้ลิมิตต่อนาที
+        if n and not router.on_ollama:
+            time.sleep(PACE_SEC)      # เว้นจังหวะให้อยู่ใต้ลิมิตต่อนาที (Ollama ไม่ต้อง)
         title = (it.get("title") or "")[:58]
         try:
             # ลองซ้ำ 1 รอบเมื่อ parse ไม่ออก — บางครั้งโมเดลตอบเป็นร้อยแก้วแทน JSON
             # (เจอจริง 1 ใน 3 ชิ้นตอนทดสอบ) · ยิงใหม่ทีเดียวมักได้ เพราะ temperature สูง
-            angles = parse_angles(ask_gemini(build_prompt(voice, it, formats), model))
+            angles = parse_angles(router.ask(build_prompt(voice, it, formats)))
             if len(angles) < 2:
-                angles = parse_angles(ask_gemini(
+                angles = parse_angles(router.ask(
                     build_prompt(voice, it, formats)
-                    + "\n\nย้ำ: ตอบเป็น JSON array ล้วน ๆ เท่านั้น ห้ามมีข้อความอื่นนำหน้าหรือต่อท้าย",
-                    model))
+                    + "\n\nย้ำ: ตอบเป็น JSON array ล้วน ๆ เท่านั้น ห้ามมีข้อความอื่นนำหน้าหรือต่อท้าย"))
         except urllib.error.HTTPError as e:
             msg = e.read().decode("utf-8", "ignore")[:120]
             print(f"  ✗ #{it['id']} {title} — HTTP {e.code} {msg}")
             fail += 1
-            # ask_gemini ถอยรอให้แล้ว 3 ชั้น · มาถึงตรงนี้แปลว่าโควตาหมดจริง
-            if e.code == 429:
-                print("[angles] ชนลิมิตซ้ำหลังถอยรอครบแล้ว — หยุด ค่อยรันต่อทีหลัง")
-                break
             continue
         except Exception as e:
-            print(f"  ✗ #{it['id']} {title} — {str(e)[:90]}")
+            print(f"  ✗ #{it['id']} {title} — {str(e)[:110]}")
             fail += 1
+            # Ollama ต่อไม่ติดด้วย = ไม่เหลือทางไหนแล้ว หยุดดีกว่าปล่อยพังรัวทั้ง 78 ชิ้น
+            if router.on_ollama:
+                print("[angles] Gemini หมดโควตา และต่อ Ollama บนเครื่องไม่ได้ — หยุด")
+                break
             continue
 
         if len(angles) < 2:
@@ -257,7 +329,7 @@ def main():
             fail += 1
             continue
 
-        print(f"  ✓ #{it['id']} {title}")
+        print(f"  ✓ #{it['id']} {title}  [{router.label}]")
         for a in angles:
             print(f"      · {a['label']} — {a['brief'][:66]}")
         if not args.dry_run:
