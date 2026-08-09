@@ -92,6 +92,8 @@ export default function MarketingOS() {
   const [perSource, setPerSource] = useState(3)   // เด็ดสุดกี่ชิ้นต่อช่องทาง
   const [generating, setGenerating] = useState(new Set())   // id ที่ AI กำลังเขียนแคปชั่นให้
   const [imaging, setImaging] = useState(new Set())         // id ที่กำลังสร้างภาพ/โปสเตอร์
+  const [varying, setVarying] = useState(new Set())         // id ที่กำลังแปลงไปช่องอื่น
+  const [tab, setTab] = useState({})                        // ช่องที่กำลังดูอยู่ต่อการ์ด
   // เวลาที่เริ่มสร้างของแต่ละ id — เอาไปโชว์ว่ารอมากี่วินาทีแล้ว
   // งานใช้เวลา 1-2 นาที ถ้าไม่มีตัวเลขเดินคนจะคิดว่าค้าง
   const [imagingSince, setImagingSince] = useState({})
@@ -230,6 +232,28 @@ export default function MarketingOS() {
       setErr(e.message)
     } finally {
       setImaging(s => { const n = new Set(s); n.delete(contentId); return n })
+    }
+  }, [api])
+
+  // ── แปลงเรื่องเดียวไปหลายช่องทาง ──
+  // ยิงครั้งเดียวให้โมเดลเขียน IG/TikTok/สคริปต์พร้อมกัน (ไม่ยิงแยกช่อง)
+  // เพราะโมเดลเห็นทุกช่องพร้อมกันถึงจะบังคับ "ห้ามเปิดประโยคเหมือนกัน" ได้จริง
+  // และประหยัดโควตา — Gemini free tier ติดลิมิตต่อนาที ยิง 3 ครั้งชนง่ายมาก
+  const makeVariants = useCallback(async (contentId) => {
+    setVarying(s => new Set(s).add(contentId))
+    try {
+      const updated = await api("content/variants", {
+        method: "POST", body: JSON.stringify({ id: contentId }),
+      })
+      setContent(c => ({
+        ...c,
+        items: (c.items || []).map(i => (i.id === contentId ? { ...updated, sku: i.sku } : i)),
+      }))
+      setTab(t => ({ ...t, [contentId]: "ig" }))   // เด้งไปช่องแรกที่เพิ่งได้ ให้เห็นผลทันที
+    } catch (e) {
+      setErr(e.message)
+    } finally {
+      setVarying(s => { const n = new Set(s); n.delete(contentId); return n })
     }
   }, [api])
 
@@ -792,7 +816,39 @@ export default function MarketingOS() {
                       className="w-full text-sm border border-blue-300 rounded-lg p-3 mb-2 focus:outline-none focus:ring-2 focus:ring-blue-200"
                     />
                   ) : (
-                    <p className="text-sm text-gray-800 whitespace-pre-wrap mb-2">{item.caption}</p>
+                    <>
+                      {/* ── แท็บช่องทาง ──
+                          เรื่องเดียวกันเขียนคนละแบบตามธรรมเนียมแต่ละช่อง
+                          ขึ้นเฉพาะเมื่อสร้างช่องอื่นแล้ว ไม่งั้นรกเปล่า ๆ */}
+                      {item.variants && Object.keys(item.variants).length > 0 && (
+                        <div className="flex gap-1 mb-2">
+                          {[["fb", "Facebook"], ["ig", "Instagram"], ["tiktok", "TikTok"], ["script", "สคริปต์"]]
+                            .filter(([k]) => k === "fb" || item.variants[k])
+                            .map(([k, label]) => {
+                              const on = (tab[item.id] || "fb") === k
+                              return (
+                                <button key={k} onClick={() => setTab(t => ({ ...t, [item.id]: k }))}
+                                  className={`px-2.5 py-1 rounded-lg text-[11px] font-medium transition
+                                    ${on ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}>
+                                  {label}
+                                </button>
+                              )
+                            })}
+                        </div>
+                      )}
+
+                      <p className="text-sm text-gray-800 whitespace-pre-wrap mb-2">
+                        {(tab[item.id] && tab[item.id] !== "fb" && item.variants?.[tab[item.id]]) || item.caption}
+                      </p>
+
+                      {tab[item.id] && tab[item.id] !== "fb" && (
+                        <button
+                          onClick={() => navigator.clipboard?.writeText(item.variants?.[tab[item.id]] || "")}
+                          className="mb-2 flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-gray-100 text-gray-600 text-[11px]">
+                          <Copy size={12} /> ก๊อปช่องนี้
+                        </button>
+                      )}
+                    </>
                   )}
 
                   {/* บรรทัดนี้คือหัวใจ — บอกว่าทำไม AI ถึงเสนอชิ้นนี้ ตัดสินใจได้ใน 2 วินาที */}
@@ -861,6 +917,18 @@ export default function MarketingOS() {
                             {generating.has(item.id)
                               ? "กำลังเขียน…"
                               : item.status === "draft" ? "ให้ AI เขียน" : "เขียนใหม่"}
+                          </button>
+                          {/* แปลงไปช่องอื่น — ขึ้นเมื่อมีแคปชั่นจริงแล้วเท่านั้น
+                              ยังเป็น draft (ยังไม่มีแคปชั่น) แปลงไปก็ไม่มีอะไรให้แปลง */}
+                          <button
+                            disabled={varying.has(item.id) || item.status === "draft"}
+                            onClick={() => makeVariants(item.id)}
+                            title="เขียนใหม่สำหรับ Instagram · TikTok · สคริปต์วิดีโอ จากเรื่องเดียวกัน"
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-100 text-gray-600 text-sm disabled:opacity-50">
+                            <Send size={14} />
+                            {varying.has(item.id)
+                              ? "กำลังแปลง…"
+                              : item.variants ? "แปลงใหม่" : "สร้างช่องอื่น"}
                           </button>
                         </>
                       )}
