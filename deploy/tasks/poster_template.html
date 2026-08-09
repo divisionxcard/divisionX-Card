@@ -9,6 +9,8 @@
     · ขนาดสินค้า + กรวยสปอตไลต์ ← stage  (แก้จุดตายของ hype ที่ซองกินภาพแค่ 9%)
     · แถบเฉียงมุมขวาบน          ← foil   (ทิ้งพัดการ์ดเปล่า — มันดูเหมือนช่องว่างรอใส่ของ)
   ของใหม่: รูปตู้จริง 2 ใบ — {{BG}} บรรยากาศห้าง · {{MACHINE}} ตัวตู้ถ่ายตรง
+  {{BG}} = machine-scene.jpg (รูปห้างจริง) เสมอ ยกเว้นมีไฟล์ใน /marketing/aibg/
+  ห้ามให้โปสเตอร์รอบก่อน (media_url) ไหลเข้ามาเป็นพื้นหลัง — ดู resolve_bg() ใน poster_render.py
 
   ── โครงหน้า ────────────────────────────────────────────────────────────────
   แบ่งซ้าย-ขวา ไม่ใช่กองกลางเหมือน hype
@@ -196,8 +198,9 @@
     background: radial-gradient(ellipse at 52% 62%, rgba(0,175,255,.42), transparent 70%);
     filter: blur(14px) }
   /* [hook] .mfr — แอ่งแสงพื้นห้างที่ฐานตู้
-     ต้องอยู่สูงกว่าขอบบนของแถบท้าย (y≈995) ไม่งั้นถูกบังจนไม่มีผล — bottom:46px คือค่าที่พลาด */
-  .machine .mfr { position: absolute; left: 0; right: -12%; bottom: 92px; height: 58px;
+     ต้องอยู่สูงกว่าขอบบนของแถบท้าย (ตอนนี้ y≈985 · เดิม 992) ไม่งั้นถูกบังจนไม่มีผล
+     bottom:46px คือค่าที่พลาด · 92px เฉียดเกินไปหลังแถบท้ายสูงขึ้น จึงขยับเป็น 100px */
+  .machine .mfr { position: absolute; left: 0; right: -12%; bottom: 100px; height: 58px;
     border-radius: 50%; z-index: -1;
     background: radial-gradient(ellipse, rgba(170,232,255,.40), rgba(0,150,230,.16) 46%, transparent 74%);
     filter: blur(13px) }
@@ -223,20 +226,31 @@
 
   .hero .stage { position: absolute; inset: 0 }
   /* ── ตัวเลขชุดนี้ผูกกันหมด แก้ตัวเดียวไม่ได้ ──
-     รูป SKU เป็น PNG โปร่ง 1024×1024 แต่ตัวซองกินแค่ 44.9% ของความกว้าง
-     และเริ่มที่ 5.9% จากขอบบน (วัดจาก alpha bbox ของ OP16/OP15 จริง)
-       width 990px  → ซองกว้าง 990 × .449 = 444px = 41% ของภาพ  ← เป้าหมาย 40-55%
-       top 145px    → หัวซองอยู่ที่ y = 145 + 990×.059 = 203px  (ใต้หัวกระดาษพอดี)
-                      ก้นซองอยู่ที่ y = 145 + 990×.953 = 1088px (ทะลุขอบล่างไป 8px)
-     ที่ถูกบังคือ 10% ล่างสุดของซอง = แถบตัวหนังสือเล็ก/BANDAI เท่านั้น
-     โลโก้ ONE PIECE CARD GAME (72-81% ของซอง) ยังเห็นครบ — ห้ามดันซองลงกว่านี้ */
-  .hero .stage img { position: absolute; left: 50%; top: 145px; width: 990px; height: auto;
+     รูป SKU เป็น PNG/WebP โปร่ง 1024×1024 แต่ตัวซองกินแค่ 44.1% ของความกว้าง
+     และอยู่ระหว่าง 6.25%–94.9% ของความสูง (วัด alpha ที่ threshold 128 จาก OP16/OP15 จริง)
+
+     v1 ใช้ width 990 / top 145 → ก้นซองอยู่ที่ 1085px แต่แถบท้ายเริ่มที่ ~992
+     = ก้นซองหายไปหลังแถบ 93px หรือ 10.8% ของตัวซอง (วัดจากภาพเรนเดอร์จริง ไม่ใช่ประมาณ)
+     กินลึกถึงแถบ "全126種 / ブースターパック / BANDAI" ทั้งแถว
+
+     v2 ยกซองขึ้น + ย่อลงนิดเดียว แลกกันแล้วคุ้ม:
+       width 950px → ซองกว้าง 950 × .441 = 419px = 38.8% ของภาพ (เดิม 41.0% · เพดานล่าง 35%)
+       top 117px   → หัวซอง y = 117 + 950×.0625 = 176px
+                     ก้นซอง y = 117 + 950×.949  = 1018px
+     แถบท้าย (สูงขึ้น 7px จากการเพิ่ม padding ล่างกันแฮชแท็กโดนกรอบตัด) เริ่มที่ ~985
+     → ถูกบังเหลือ 33px = 4.0% ของตัวซอง (เดิม 10.8%) เห็นถึงแถบ BANDAI ครบ
+
+     [เพดานบน] หัวซองต่ำกว่า 176px ไม่ได้ — สมอ (y 18–162) กับนกนางนวล (y 42–108)
+     อยู่ในแถบ "ท้องฟ้า" เหนือซอง ถ้าดันซองขึ้นอีกจะทับของสองชิ้นนี้จนหายไปทั้งคู่
+     [เพดานล่าง] ซองต้องกว้างไม่ต่ำกว่า 35% ของภาพ (= width 857px) ไม่งั้นเลิกเป็นพระเอก */
+  .hero .stage img { position: absolute; left: 50%; top: 117px; width: 950px; height: auto;
     transform: translateX(-50%);
     filter: drop-shadow(0 26px 44px rgba(0,0,0,.78))
             drop-shadow(0 0 34px rgba(0,194,255,.5))
             drop-shadow(0 0 78px rgba(255,190,60,.32)) }
-  /* แสงพื้นตรงฐานซอง — ตัวที่ทำให้ของ "ตั้งอยู่" ไม่ใช่ลอย · โผล่เหนือแถบท้ายเล็กน้อย */
-  .hero .floor { position: absolute; left: 50%; top: 934px; transform: translateX(-50%);
+  /* แสงพื้นตรงฐานซอง — ตัวที่ทำให้ของ "ตั้งอยู่" ไม่ใช่ลอย · โผล่เหนือแถบท้ายเล็กน้อย
+     ขยับขึ้นตามซอง (v1 934 → 930) ให้ยังกองอยู่ที่ก้นซอง ไม่ใช่กลางตัวซอง */
+  .hero .floor { position: absolute; left: 50%; top: 930px; transform: translateX(-50%);
     width: 700px; height: 62px; border-radius: 50%;
     background: radial-gradient(ellipse, rgba(210,246,255,.85), rgba(0,170,255,.34) 42%, transparent 74%);
     filter: blur(13px) }
@@ -409,16 +423,28 @@
   .body:has(p:nth-child(4)) { font-size: 20px; line-height: 1.34 }
 
   /* ── แถบท้าย ── */
-  /* [hook] .foot .chip .tags — แคปซูลมีไอคอน SVG (hype) · full-bleed จึงต้อง margin ติดลบเท่า padding */
-  .foot { flex: 0 0 auto; margin: auto -50px 0; padding: 18px 34px 16px;
+  /* [hook] .foot .chip .tags — แคปซูลมีไอคอน SVG (hype) · full-bleed จึงต้อง margin ติดลบเท่า padding
+     ── padding ล่าง 32px ไม่ใช่ 16px: กันแถวล่างสุดโดน .frame ตัด ──
+     .wrap ไม่มี padding ล่าง แถบท้ายจึงชนขอบภาพที่ y=1080 พอดี แต่ .frame (z-index 7)
+     วาดทับอยู่ข้างบน ขอบในล่างสุดของกรอบแต่ละแนวคิดอยู่ที่:
+       base 1059 · battle 1060 · treasure/hidden_card 1055 · viral 1058
+       unbox 1048 · luxury 1049 · real_machine 1048 · machine_luck 1042
+     v1 ใช้ padding ล่าง 16 → เนื้อหาแถบท้ายจบที่ y=1064 = ต่ำกว่าขอบในของกรอบทุกแนวคิด
+     ผลคือแฮชแท็กบรรทัดที่ 2 (#DivisionXCard) ถูกแถบกรอบทองตัดครึ่ง และก้นแคปซูลก็โดนเฉือน
+     32px → เนื้อหาจบที่ 1048 พอดีกับแนวที่กรอบหนาสุดที่ยังใช้ค่าฐาน (unbox)
+     แนวที่กรอบหนากว่านั้นตั้ง padding ของตัวเองไว้แล้ว (machine_luck 44 · luxury 34)
+     [ระวัง] ลด padding ล่างเมื่อไหร่ แฮชแท็กกลับมาโดนตัดทันที */
+  .foot { flex: 0 0 auto; margin: auto -50px 0; padding: 12px 34px 32px;
     background:
       linear-gradient(90deg, rgba(255,180,40,.18), rgba(0,150,255,.16) 55%, rgba(255,180,40,.12)),
       linear-gradient(180deg, rgba(3,10,26,.72), rgba(3,10,26,.94));
     border-top: 3px solid transparent;
     border-image: linear-gradient(90deg, #B4720C, #FFD86A 32%, #00C2FF 68%, #B4720C) 1;
     display: flex; align-items: center; gap: 12px }
-  /* nowrap สำคัญ — แคปซูลตัดสองบรรทัดเมื่อไหร่ แถบเบี้ยวทั้งแถว */
-  .chip { display: flex; align-items: center; gap: 8px; white-space: nowrap;
+  /* nowrap สำคัญ — แคปซูลตัดสองบรรทัดเมื่อไหร่ แถบเบี้ยวทั้งแถว
+     flex:0 0 auto ด้วย — ไม่งั้นตอนแฮชแท็กยาว แคปซูลจะถูกบีบจนตัวหนังสือ (nowrap) ล้นออกนอกเม็ด
+     ลำดับความสำคัญคือ แคปซูลคงที่ · แฮชแท็กหดแล้วขึ้นบรรทัดใหม่แทน */
+  .chip { display: flex; align-items: center; gap: 8px; white-space: nowrap; flex: 0 0 auto;
     padding: 8px 16px; border-radius: 999px;
     font-weight: 700; font-size: 23px; color: #FFF6E2;
     background: linear-gradient(180deg, rgba(18,42,84,.95), rgba(6,16,38,.95));
@@ -426,8 +452,11 @@
                 inset 0 0 16px rgba(0,194,255,.18) }
   .chip svg { width: 25px; height: 25px; flex: 0 0 auto; fill: #FFC53D;
               filter: drop-shadow(0 0 6px rgba(255,190,60,.75)) }
-  .tags { margin-left: auto; text-align: right; max-width: 250px;
-          font-size: 19px; line-height: 1.28; font-weight: 400; color: #8ECDEE }
+  /* max-width 250px (v1) บีบให้แฮชแท็ก 3 ตัวตกไป 2 บรรทัด ทั้งที่ข้างแคปซูลยังว่างอีก ~440px
+     ปล่อยกว้าง 430px + ย่อฟอนต์ลง 1px → ชุดมาตรฐาน "#OnePieceTCG #ตู้กดการ์ด #DivisionXCard"
+     จบใน 1 บรรทัด · ชุดที่ยาวกว่านั้นยังตก 2 บรรทัดได้ (สูง 45px < แคปซูล 46px แถบไม่สูงขึ้น) */
+  .tags { margin-left: auto; text-align: right; max-width: 430px;
+          font-size: 18px; line-height: 1.26; font-weight: 400; color: #8ECDEE }
 
   /* ═════════ ไม่มีรูปสินค้า ═════════ */
   /* ตัวหนังสือกินเต็มความกว้างแทน · ต้องขยาย .body ให้เป็นตัวยืด ไม่งั้นเหลือช่องดำท้ายภาพ */

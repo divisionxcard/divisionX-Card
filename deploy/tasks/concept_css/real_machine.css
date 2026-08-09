@@ -261,7 +261,9 @@ body.c-real_machine .body p::before{
 
 /* ── แถบท้าย: เส้นบาง แคปซูลโปร่ง ไม่มีทอง ────────────────────────────── */
 body.c-real_machine .foot{
-  padding: 16px 44px 16px;
+  /* ล่าง 32px ไม่ใช่ 16 — .frame แนวนี้เป็นขีดมุม 2px ที่ inset 30 ขอบในล่างจึงอยู่ที่ y=1048
+     padding 16 เดิมดันแฮชแท็ก/แคปซูลลงไปถึง 1064 = โดนขีดมุมขวาล่างเฉือน (ดูคอมเมนต์ .foot ในเทมเพลตฐาน) */
+  padding: 12px 44px 32px;
   background: linear-gradient(180deg, rgba(6,12,22,.62), rgba(6,12,22,.90));
   border-top: 1px solid rgba(0,194,255,.55);
   border-image: none;

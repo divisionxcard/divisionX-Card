@@ -38,6 +38,9 @@ SB_KEY = (os.environ.get("SUPABASE_SERVICE_KEY") or os.environ.get("SUPABASE_SER
 BUCKET = "marketing"
 SIZE = 1080
 
+# โฟลเดอร์เดียวที่ยอมให้เอามาเป็น "พื้นหลังฉาก" ได้ — ดู resolve_bg()
+AI_BG_DIR = "/marketing/aibg/"
+
 
 def load_env_file():
     """อ่าน deploy/.env.local ตอนรันบนเครื่อง — บน GitHub Actions ใช้ env จริง"""
@@ -183,6 +186,26 @@ def highlight(text):
     return out
 
 
+def resolve_bg(content):
+    """หาภาพพื้นหลังฉาก — ปกติคืน None แล้วให้ build_html ใช้รูปห้างจริงแทน
+
+    ⚠️ media_url **ไม่ใช่** ช่องพื้นหลัง — มันคือ "ผลลัพธ์" ที่ตอนท้ายไฟล์นี้เขียนทับ
+    ด้วยโปสเตอร์ที่เพิ่งอัปโหลด · โค้ดเดิมเช็กแค่ `"/marketing/" in media_url`
+    ผลคือคอนเทนต์ที่เคยสร้างโปสเตอร์ไปแล้ว รอบถัดไปจะเอา "โปสเตอร์รอบก่อน" มาเบลอ
+    เป็นพื้นหลังของตัวเอง (ซ้อนทับกันไปเรื่อย ๆ ทุกรอบ) — ไม่ใช่รูปห้างอย่างที่ตั้งใจ
+
+    จึงแยก slot ให้ชัด: พื้นหลังฉากมาได้จาก 2 ทางเท่านั้น
+      1. deploy/public/machine/machine-scene.jpg — รูปบรรยากาศห้างจริง (ค่าตั้งต้น)
+      2. ไฟล์ใน /marketing/aibg/ — ที่สงวนไว้ให้ภาพพื้นหลังที่ AI สร้าง (ยังไม่มีใครเขียน
+         ลงโฟลเดอร์นี้ · ทำ hook รอไว้ก่อน)
+    /marketing/poster/ (โปสเตอร์เก่า) และ /marketing/upload/ (รูปที่คนอัปเอง) ต้องไม่หลุดเข้ามา
+    """
+    mu = content.get("media_url") or ""
+    if AI_BG_DIR not in mu:
+        return None
+    return fetch_image(mu)
+
+
 def load_concept(key):
     """แนวคิดโปสเตอร์ — คุมสี ของประดับ และการจัดวาง
 
@@ -314,11 +337,7 @@ def main():
         if s:
             sku_img = fetch_image(s[0].get("image_url") or s[0].get("image_url_box"))
 
-    # พื้นหลังจาก AI — ใช้ media_url เดิมถ้ามันเป็นภาพที่ AI สร้างไว้ (ไม่ใช่รูปสินค้า)
-    bg_img = None
-    mu = content.get("media_url") or ""
-    if "/marketing/" in mu:
-        bg_img = fetch_image(mu)
+    bg_img = resolve_bg(content)
 
     ckey, ccss = load_concept(args.concept)
     html = build_html(content, sku_img, bg_img, branches, ckey, ccss)
@@ -326,7 +345,7 @@ def main():
     render(html, out)
     size = pathlib.Path(out).stat().st_size
     print(f"[poster] เรนเดอร์เสร็จ {out} ({size/1024:.0f} KB) · แนวคิด={ckey or "-"} · สาขา={branches} · "
-          f"รูปสินค้า={'มี' if sku_img else 'ไม่มี'} · พื้นหลัง AI={'มี' if bg_img else 'ไม่มี'}")
+          f"รูปสินค้า={'มี' if sku_img else 'ไม่มี'} · พื้นหลัง={'AI (aibg)' if bg_img else 'รูปห้างจริง'}")
 
     if args.dry_run:
         print("[poster] dry-run — ไม่อัปโหลด ไม่แก้ DB")
