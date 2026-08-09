@@ -279,6 +279,40 @@ export default function MarketingOS() {
     }
   }, [api])
 
+  // ── อัปโหลดรูปจากเครื่อง ──
+  // ทางที่ถูกที่สุดในการได้ภาพคุณภาพสูง: สร้างใน ChatGPT ที่จ่ายรายเดือนอยู่แล้ว
+  // แล้วลากไฟล์เข้ามาที่นี่ · ของเดิมรับได้แค่ "วางลิงก์" ซึ่งใช้กับไฟล์ในเครื่องไม่ได้
+  const uploadImage = useCallback(async (contentId, file) => {
+    if (!file) return
+    setImaging(s => new Set(s).add(contentId))
+    setImagingSince(m => ({ ...m, [contentId]: Date.now() }))
+    try {
+      const { data: s } = await supabase.auth.getSession()
+      const tok = s?.session?.access_token
+      if (!tok) { setAuthState("anon"); throw new Error("เซสชันหมดอายุ — เข้าสู่ระบบใหม่") }
+
+      const fd = new FormData()
+      fd.append("id", String(contentId))
+      fd.append("file", file)
+      // ไม่ผ่าน api() เพราะตัวนั้นตั้ง Content-Type: application/json ตายตัว
+      // multipart ต้องให้เบราว์เซอร์ใส่ boundary เอง ห้ามกำหนดเอง
+      const res = await fetch("/api/marketing/content/upload", {
+        method: "POST", headers: { Authorization: `Bearer ${tok}` }, body: fd,
+      })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(json.error || `HTTP ${res.status}`)
+
+      setContent(c => ({
+        ...c,
+        items: (c.items || []).map(i => (i.id === contentId ? { ...json, sku: i.sku } : i)),
+      }))
+    } catch (e) {
+      setErr(e.message)
+    } finally {
+      setImaging(s => { const n = new Set(s); n.delete(contentId); return n })
+    }
+  }, [])
+
   // ── ไอเดีย: กดเลือก → สร้างร่าง แล้วให้ AI เขียนแคปชั่นต่อทันที ──
   async function ideaAction(id, action, reason) {
     setBusyId(`idea-${id}`)
@@ -625,6 +659,16 @@ export default function MarketingOS() {
                                 ใช้รูป {item.sku.sku_id}
                               </button>
                             )}
+                            {/* อัปโหลดจากเครื่อง — ทางหลักสำหรับภาพที่สร้างจาก ChatGPT เอง */}
+                            <label className="text-[11px] text-blue-600 underline cursor-pointer">
+                              อัปโหลดรูป
+                              <input type="file" accept="image/*" className="hidden"
+                                onChange={(e) => {
+                                  const f = e.target.files?.[0]
+                                  e.target.value = ""   // เลือกไฟล์เดิมซ้ำได้
+                                  uploadImage(item.id, f)
+                                }} />
+                            </label>
                             <button
                               onClick={() => {
                                 const u = window.prompt("วางลิงก์รูป (https://...)")
