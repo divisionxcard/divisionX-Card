@@ -17,7 +17,9 @@
     python deploy/agents/idea_angles.py --dry-run      # ดูผลอย่างเดียว ไม่เขียน DB
     python deploy/agents/idea_angles.py --id 51        # เจาะไอเดียเดียว
 
-ใช้ Gemini free tier (1,500 ครั้ง/วัน) — ไอเดียวันละไม่กี่สิบชิ้น ไม่มีทางเกิน
+ใช้ Gemini free tier · ⚠️ ตัวที่บีบคือ 'ลิมิตต่อนาที' ไม่ใช่โควตารายวัน
+ยิงรวดเดียวได้ราว 12 ครั้งก็ชน 429 — สคริปต์เว้นจังหวะ 5 วิ/คำขอ และถอยรอให้เอง
+ถ้าชนซ้ำหลังถอยครบ 3 ชั้น แปลว่าโควตาวันนั้นหมดจริง ค่อยรันต่อวันถัดไป
 """
 import argparse
 import json
@@ -25,6 +27,7 @@ import os
 import pathlib
 import re
 import sys
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -123,21 +126,38 @@ def build_prompt(voice, idea, formats):
     return "\n".join(parts)
 
 
+# ⚠️ ตัวที่บีบคือ "ลิมิตต่อนาที" ไม่ใช่โควตารายวัน
+# ตอนแรกเขียนไว้ว่า "ไอเดียวันละไม่กี่สิบชิ้น ไม่มีทางเกิน 1,500/วัน" — ประเมินผิด
+# ยิงรวดเดียวได้แค่ ~12 ครั้งก็โดน 429 แล้ว เพราะ free tier จำกัด RPM ด้วย
+# เว้นจังหวะระหว่างคำขอ + ถอยรอเมื่อโดน แทนที่จะหยุดทั้งงาน
+PACE_SEC = 5
+BACKOFF = [20, 45, 90]
+
+
 def ask_gemini(prompt, model):
     body = {
         "contents": [{"role": "user", "parts": [{"text": prompt}]}],
         "generationConfig": {"temperature": 0.95, "maxOutputTokens": 2048},
     }
-    req = urllib.request.Request(
-        f"{GEMINI_BASE}/models/{model}:generateContent",
-        method="POST",
-        headers={"Content-Type": "application/json", "x-goog-api-key": GEMINI_KEY},
-        data=json.dumps(body).encode(),
-    )
-    with urllib.request.urlopen(req, timeout=90) as r:
-        j = json.load(r)
-    parts = (j.get("candidates") or [{}])[0].get("content", {}).get("parts", [])
-    return "".join(p.get("text", "") for p in parts).strip()
+    for attempt in range(len(BACKOFF) + 1):
+        req = urllib.request.Request(
+            f"{GEMINI_BASE}/models/{model}:generateContent",
+            method="POST",
+            headers={"Content-Type": "application/json", "x-goog-api-key": GEMINI_KEY},
+            data=json.dumps(body).encode(),
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=90) as r:
+                j = json.load(r)
+            parts = (j.get("candidates") or [{}])[0].get("content", {}).get("parts", [])
+            return "".join(p.get("text", "") for p in parts).strip()
+        except urllib.error.HTTPError as e:
+            if e.code != 429 or attempt >= len(BACKOFF):
+                raise
+            wait = BACKOFF[attempt]
+            print(f"      (ชนลิมิตต่อนาที รอ {wait} วิ แล้วลองใหม่)")
+            time.sleep(wait)
+    return ""
 
 
 def parse_angles(text):
@@ -205,17 +225,26 @@ def main():
 
     print(f"[angles] จะเติมมุมให้ {len(rows)} ไอเดีย · โมเดล {model}")
     ok = fail = 0
-    for it in rows:
+    for n, it in enumerate(rows):
+        if n:
+            time.sleep(PACE_SEC)      # เว้นจังหวะให้อยู่ใต้ลิมิตต่อนาที
         title = (it.get("title") or "")[:58]
         try:
+            # ลองซ้ำ 1 รอบเมื่อ parse ไม่ออก — บางครั้งโมเดลตอบเป็นร้อยแก้วแทน JSON
+            # (เจอจริง 1 ใน 3 ชิ้นตอนทดสอบ) · ยิงใหม่ทีเดียวมักได้ เพราะ temperature สูง
             angles = parse_angles(ask_gemini(build_prompt(voice, it, formats), model))
+            if len(angles) < 2:
+                angles = parse_angles(ask_gemini(
+                    build_prompt(voice, it, formats)
+                    + "\n\nย้ำ: ตอบเป็น JSON array ล้วน ๆ เท่านั้น ห้ามมีข้อความอื่นนำหน้าหรือต่อท้าย",
+                    model))
         except urllib.error.HTTPError as e:
             msg = e.read().decode("utf-8", "ignore")[:120]
             print(f"  ✗ #{it['id']} {title} — HTTP {e.code} {msg}")
             fail += 1
-            # 429 = โควตาหมด ทำต่อก็เสียเวลาเปล่า
+            # ask_gemini ถอยรอให้แล้ว 3 ชั้น · มาถึงตรงนี้แปลว่าโควตาหมดจริง
             if e.code == 429:
-                print("[angles] โควตา Gemini หมดวันนี้ — หยุด")
+                print("[angles] ชนลิมิตซ้ำหลังถอยรอครบแล้ว — หยุด ค่อยรันต่อทีหลัง")
                 break
             continue
         except Exception as e:
