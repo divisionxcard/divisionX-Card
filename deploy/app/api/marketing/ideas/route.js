@@ -211,12 +211,19 @@ export async function PATCH(req) {
       return NextResponse.json({ error: "ไอเดียนี้เริ่มทำไปแล้ว" }, { status: 409 })
     }
 
-    // caption ของร่างคือ "โจทย์" ให้คนหรือ Ollama เขียนต่อ — ไม่ใช่แคปชั่นจริง
+    // ── มุมที่จะเล่า ──
+    // ไอเดียใหม่มี angles หลายมุมให้เลือก (migration 063) · ของเก่ามีแค่ angle เดียว
+    // body.angle = label ของมุมที่คนกดเลือกจากการ์ด
     //
-    // เก็บให้สั้นที่สุด: ใส่แค่ "มุมที่จะเล่า" อย่างเดียว
-    // ชื่อไอเดีย/เหตุผลไปอยู่ใน source_reason (บรรทัด 💡 จาก:) และลิงก์ต้นทาง
-    // ดึงจาก idea ผ่าน idea_id — ไม่ต้องแปะ URL ยาว ๆ ลงในแคปชั่นให้รก
-    const brief = idea.angle || `เขียนแคปชั่นเรื่อง: ${idea.title}`
+    // ทำไมต้องมีหลายมุม: angle เดิมมาจาก template ตายตัว 7 แบบ วัดแล้วไอเดีย 86 ชิ้น
+    // ได้มุมต่างกันจริงแค่ 24 แบบ (22 ชิ้นใช้ประโยคเดียวกันเป๊ะ) = รากของคอนเทนต์ซ้ำ
+    const angles = Array.isArray(idea.angles) ? idea.angles : []
+    const picked = body.angle
+      ? angles.find(a => a.label === body.angle)
+      : angles[0]
+    const brief = picked
+      ? `${picked.label} — ${picked.brief}`
+      : (idea.angle || `เขียนแคปชั่นเรื่อง: ${idea.title}`)
 
     // แนบรูปจริงของสินค้าให้เลยถ้าไอเดียโยงถึง SKU
     // ใช้รูปจริงจาก Supabase Storage แทนการให้ AI สร้างภาพ — คนซื้อการ์ดอยากเห็นของจริง
@@ -243,9 +250,17 @@ export async function PATCH(req) {
     }).select().single()
     if (e1) throw e1
 
-    const { data: updated, error: e2 } = await db.from("marketing_ideas")
-      .update({ status: "picked", content_id: content.id })
+    // บันทึกว่ามุมไหนถูกหยิบไปใช้ — ภายหลังดูได้ว่ามุมแบบไหนคนเลือกบ่อย
+    // แล้วเอาไปปรับให้ AI เสนอแนวนั้นมากขึ้น
+    // เขียนแยกกันเผื่อยังไม่ได้รัน migration 063 (คอลัมน์ chosen_angle ยังไม่มี)
+    const patch = { status: "picked", content_id: content.id }
+    let { data: updated, error: e2 } = await db.from("marketing_ideas")
+      .update(picked ? { ...patch, chosen_angle: picked.label } : patch)
       .eq("id", id).select().maybeSingle()
+    if (e2) {
+      ;({ data: updated, error: e2 } = await db.from("marketing_ideas")
+        .update(patch).eq("id", id).select().maybeSingle())
+    }
     if (e2) throw e2
 
     return NextResponse.json({ idea: updated, content })

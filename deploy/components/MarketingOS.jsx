@@ -83,6 +83,8 @@ export default function MarketingOS() {
   const [pipeline, setPipeline] = useState(null)
   const [metrics, setMetrics] = useState(null)
   const [days, setDays] = useState(7)
+  // มุมที่เลือกไว้ต่อไอเดีย — ไม่ได้เลือก = ใช้มุมแรก
+  const [pickedAngle, setPickedAngle] = useState({})
   const [dismissingId, setDismissingId] = useState(null)
   const [dismissText, setDismissText] = useState("")
   const [pasteUrl, setPasteUrl] = useState("")
@@ -314,12 +316,12 @@ export default function MarketingOS() {
   }, [])
 
   // ── ไอเดีย: กดเลือก → สร้างร่าง แล้วให้ AI เขียนแคปชั่นต่อทันที ──
-  async function ideaAction(id, action, reason) {
+  async function ideaAction(id, action, reason, angle) {
     setBusyId(`idea-${id}`)
     try {
       const res = await api("ideas", {
         method: "PATCH",
-        body: JSON.stringify({ id, action, reason }),
+        body: JSON.stringify({ id, action, reason, angle }),
       })
       setIdeas(s => ({ ...s, items: s.items.filter(x => x.id !== id) }))
       if (action === "pick" && res.content) {
@@ -532,11 +534,39 @@ export default function MarketingOS() {
                           )}
                         </div>
                         <p className="text-sm font-medium text-gray-800 leading-snug">{idea.title}</p>
-                        {idea.angle && (
+
+                        {/* ── มุมที่จะเล่า ──
+                            ไอเดียใหม่มี 3 มุมให้เลือก (AI คิดจากข่าวชิ้นนั้น) · ของเก่ามีมุมเดียว
+                            เลือกมุมต่างกัน = ได้คอนเทนต์คนละแนวจากข่าวเดียวกัน
+                            ซึ่งเป็นตัวแก้รากของปัญหาคอนเทนต์ซ้ำ (angle เดิมเป็น template ตายตัว) */}
+                        {Array.isArray(idea.angles) && idea.angles.length > 0 ? (
+                          <div className="mt-2">
+                            <p className="text-[11px] text-gray-400 mb-1">เลือกมุมที่จะเล่า</p>
+                            <div className="flex flex-col gap-1">
+                              {idea.angles.map((a) => {
+                                const on = (pickedAngle[idea.id] || idea.angles[0].label) === a.label
+                                return (
+                                  <button key={a.label}
+                                    onClick={() => setPickedAngle(m => ({ ...m, [idea.id]: a.label }))}
+                                    title={a.brief}
+                                    className={`text-left rounded-lg px-2.5 py-1.5 border transition
+                                      ${on ? "border-blue-400 bg-blue-50" : "border-gray-200 hover:border-gray-300"}`}>
+                                    <span className={`text-xs font-medium ${on ? "text-blue-700" : "text-gray-700"}`}>
+                                      {a.label}
+                                    </span>
+                                    <span className="block text-[11px] text-gray-500 leading-snug mt-0.5">
+                                      {a.brief}
+                                    </span>
+                                  </button>
+                                )
+                              })}
+                            </div>
+                          </div>
+                        ) : idea.angle ? (
                           <p className="text-xs text-gray-600 mt-1">
                             <span className="text-gray-400">มุมที่จะเล่า:</span> {idea.angle}
                           </p>
-                        )}
+                        ) : null}
                         {idea.relevance && (
                           <p className="text-[11px] text-gray-400 mt-0.5">{idea.relevance}</p>
                         )}
@@ -561,7 +591,8 @@ export default function MarketingOS() {
                           <div className="flex gap-2 mt-2">
                             <button
                               disabled={busyId === `idea-${idea.id}`}
-                              onClick={() => ideaAction(idea.id, "pick")}
+                              onClick={() => ideaAction(idea.id, "pick", null,
+                                pickedAngle[idea.id] || idea.angles?.[0]?.label || null)}
                               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500 text-white text-xs font-medium disabled:opacity-50">
                               <Sparkles size={13} /> เริ่มทำคอนเทนต์
                             </button>
