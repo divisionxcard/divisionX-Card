@@ -1,0 +1,467 @@
+/* ══════════════════════════════════════════════════════════════════════════
+   battle — Card Battle  ·  ดุดัน / พลังระเบิด
+   bg #12061A · accent #FF3D3D · accent2 #00C2FF
+
+   ภาษาภาพของแนวนี้ = "เหลี่ยม เอียง แตก"
+     · แบ่งภาพด้วยแนวทแยงเส้นเดียวที่ชัด (diagonal_clash) แดงปะทะฟ้า
+     · รอยแตกพาดทับทั้งใบ วาดบน .frame::before/::after จึงอยู่เหนือทุกชั้น
+     · พาดหัวเอียง -2.6deg พร้อมบรรทัดรอง (เอียงคู่กันถึงจะอ่านเป็นตั้งใจ ไม่ใช่วางเบี้ยว)
+     · มุมตัดเฉียงแทนมุมมน: .body/.chip/.plate ใช้ clip-path บากมุม
+     · ปิดของประดับเดินเรือ (คลื่น/สมอ/นกนางนวล) — คนละอารมณ์ ทดแทนด้วยสะเก็ดไฟ
+
+   ห้าม: อีโมจิ · -webkit-text-stroke (กินวรรณยุกต์ไทย) · text-shadow บน background-clip:text
+   ══════════════════════════════════════════════════════════════════════════ */
+
+body.c-battle {
+  --ink:    #240418;                 /* ขอบตัวอักษร: ม่วงเลือดหมู ไม่ใช่กรมท่า */
+  --cyan:   #00C2FF;
+  --cyan-2: #8FE6FF;
+  --red-1:  #FFE3E3;
+  --red-2:  #FF3D3D;
+  --red-3:  #B00C22;
+  --red-4:  #6A0316;
+  /* พาดหัวตัวเลข/รหัสชุด = โลหะร้อน ไม่ใช่ทอง */
+  --gold-grad: linear-gradient(178deg,#FFFFFF 0%,#FFD9D9 18%,#FF5A4A 46%,#FF2E2E 68%,#8E0A18 100%);
+  background: #12061A;
+}
+
+/* ═════════ บรรยากาศ: มืด อมม่วง ตัดคอนทราสต์แรง ═════════ */
+
+/* ภาพห้างยังต้องเห็นว่าเป็นสถานที่จริง แค่ถูกดึงลงในโทนมืด (brightness ต่ำกว่า .5 แล้วจะจมหาย) */
+body.c-battle .bg {
+  filter: blur(10px) saturate(.46) brightness(.66) contrast(1.38) hue-rotate(-14deg);
+}
+
+/* ทุก stop ต้องเป็น rgba ไม่งั้นบังรูปตู้ทิ้งทั้งใบ (กับดักข้อ 5 ของเทมเพลตฐาน) */
+body.c-battle .grad {
+  background:
+    radial-gradient(880px 720px at 86% 60%, rgba(255,61,61,.36), rgba(255,61,61,0) 70%),
+    radial-gradient(700px 620px at 4% 6%,   rgba(0,194,255,.30), rgba(0,194,255,0) 68%),
+    radial-gradient(560px 460px at 22% 96%, rgba(160,20,90,.30), rgba(160,20,90,0) 70%),
+    linear-gradient(150deg, rgba(24,6,36,.66) 0%, rgba(38,8,44,.30) 34%,
+                            rgba(70,8,34,.28) 52%, rgba(14,4,22,.62) 100%);
+}
+
+
+/* รัศมี: จากวงกลมรอบซอง → ลิ่มพลังทแยงถี่ ๆ ที่หมุนตามแนวปะทะ */
+body.c-battle .rays {
+  background: repeating-conic-gradient(from 118deg at 63% 46%,
+    rgba(255,61,61,.30) 0deg 3.4deg, rgba(255,61,61,0) 3.4deg 15deg);
+  -webkit-mask-image: radial-gradient(circle at 63% 46%,
+    transparent 12%, rgba(0,0,0,.9) 30%, rgba(0,0,0,.35) 54%, transparent 74%);
+}
+body.c-battle .rays2 {
+  background: repeating-conic-gradient(from 26deg at 63% 46%,
+    rgba(0,194,255,.44) 0deg 1.1deg, rgba(0,194,255,0) 1.1deg 17deg);
+  -webkit-mask-image: radial-gradient(circle at 63% 46%,
+    transparent 16%, rgba(0,0,0,.9) 40%, transparent 80%);
+}
+
+/* สปอตไลต์จากบน → ลิ่มพลังพุ่งเฉียงจากมุมล่างซ้ายขึ้นขวาบน */
+body.c-battle .beam {
+  left: 52%; top: 50%; width: 1600px; height: 620px;
+  transform: translate(-50%,-50%) rotate(-27deg);
+  clip-path: polygon(0 50%, 62% 12%, 100% 40%, 100% 60%, 62% 88%, 0 50%);
+  background: linear-gradient(90deg, rgba(0,194,255,.30) 0%, rgba(120,220,255,.16) 34%,
+                              rgba(255,61,61,.22) 72%, rgba(255,61,61,0) 100%);
+  filter: blur(34px);
+}
+
+/* ตารางจาง → สเกลใหญ่ขึ้นและเอียง ให้พื้นมีลาย "สนามประลอง" */
+body.c-battle .grid {
+  opacity: .16; background-size: 104px 104px;
+  background-image:
+    linear-gradient(rgba(255,90,90,.34) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,90,90,.34) 1px, transparent 1px);
+  transform: rotate(-27deg) scale(1.5);
+  -webkit-mask-image: radial-gradient(circle at 52% 50%, #000 8%, transparent 58%);
+}
+
+/* เส้นความเร็ว: น้อยเส้นแต่หนา ตัดกันสองทิศ = "ปะทะ" ไม่ใช่ "วิ่ง" */
+body.c-battle .streaks {
+  opacity: .85;
+  background:
+    linear-gradient(117deg, transparent 1.4%, rgba(255,61,61,.80) 2.0%, transparent 2.6%),
+    linear-gradient(117deg, transparent 4.6%, rgba(255,61,61,.34) 5.0%, transparent 5.4%),
+    linear-gradient(117deg, transparent 93.0%, rgba(0,194,255,.55) 93.6%, transparent 94.2%),
+    linear-gradient(297deg, transparent 2.2%, rgba(0,194,255,.62) 2.8%, transparent 3.4%),
+    linear-gradient(297deg, transparent 6.2%, rgba(255,61,61,.36) 6.6%, transparent 7.0%),
+    linear-gradient(297deg, transparent 95.4%, rgba(255,61,61,.40) 96.0%, transparent 96.6%);
+}
+/* สะเก็ดไฟกระเด็น — จุดเล็กหลายขนาด แทน "ประกายไฟ" โดยไม่ใช้อีโมจิ
+   กองอยู่ครึ่งขวา/แนวปะทะ เขตพาดหัวปล่อยว่าง */
+body.c-battle .streaks::after {
+  content: ''; position: absolute; inset: 0;
+  background-image:
+    radial-gradient(circle, rgba(255,236,200,1) 0 3px,   transparent 5px),
+    radial-gradient(circle, rgba(255,110,70,.95) 0 5px,  transparent 8px),
+    radial-gradient(circle, rgba(160,236,255,.95) 0 2.6px, transparent 4.4px),
+    radial-gradient(circle, rgba(255,150,60,.95) 0 4px,  transparent 6.4px),
+    radial-gradient(circle, rgba(255,236,200,1) 0 2.4px, transparent 4px),
+    radial-gradient(circle, rgba(255,90,60,.9) 0 3.4px,  transparent 5.6px),
+    radial-gradient(circle, rgba(160,236,255,.9) 0 2px,  transparent 3.4px),
+    radial-gradient(circle, rgba(255,170,80,.9) 0 3px,   transparent 5px),
+    radial-gradient(circle, rgba(255,236,200,.95) 0 2px, transparent 3.4px),
+    radial-gradient(circle, rgba(255,110,70,.9) 0 4.4px, transparent 7px);
+  background-repeat: no-repeat;
+  background-position:
+    602px 336px, 664px 268px, 712px 402px, 776px 196px, 546px 452px,
+    848px 300px, 930px 172px, 626px 560px, 986px 246px, 700px 640px;
+  filter: drop-shadow(0 0 8px rgba(255,90,40,.9));
+}
+
+/* ขอบมืดหนักขึ้น */
+body.c-battle .vig {
+  background:
+    radial-gradient(120% 96% at 60% 48%, transparent 42%, rgba(10,2,16,.70) 100%),
+    linear-gradient(180deg, rgba(10,2,16,.42) 0%, transparent 16%,
+                            transparent 66%, rgba(10,2,16,.60) 100%);
+}
+/* เส้นปะทะทแยง — แกนของ layout diagonal_clash
+   [ระวัง] ต้องแขวนไว้ที่ .vig ไม่ใช่ .grad — .grad ถูก .rays/.beam/.grid/.streaks/.vig
+   ทับอยู่ 5 ชั้น เส้นจะจมหายจนมองไม่เห็น (ลองที่ .grad มาแล้ว 2 รอบ ไม่โผล่เลย)
+   .vig เป็นชั้นบรรยากาศสุดท้าย → ลูกของมันอยู่เหนือพื้นทั้งหมด แต่ยังใต้ตู้/ซอง/ตัวหนังสือ
+   วางแนวให้ผ่านช่องว่างระหว่างพาดหัวกับแผ่นเนื้อความ ไม่พาดทับตัวอักษร */
+/* z-index:4 = อยู่เหนือซอง (3) แต่ใต้ตัวหนังสือ (5)
+   ทำได้เพราะ .vig เองไม่มี z-index/filter/transform จึงไม่สร้าง stacking context
+   ลูกที่ position+z-index จึงไปเข้าคิวใน stacking context ของ body ตรง ๆ
+   ถ้าไม่ยกขึ้นมา เส้นจะจมอยู่หลังแผ่นเนื้อความ (x ถึง 628) และหลังซอง (x 598-1042)
+   = ถูกบังทั้งเส้น มองไม่เห็นเลยแม้แต่จุดเดียว (เจอมา 2 รอบ) */
+body.c-battle .vig::before {
+  content: ''; position: absolute; z-index: 4; left: 50%; top: 55%;
+  width: 1720px; height: 6px; transform: translate(-50%,-50%) rotate(-27deg);
+  background: linear-gradient(90deg, rgba(0,194,255,0) 0%, rgba(0,194,255,.9) 20%,
+                              rgba(236,252,255,1) 44%, rgba(255,61,61,1) 62%,
+                              rgba(255,61,61,0) 100%);
+  filter: drop-shadow(0 0 12px rgba(255,61,61,.9)) drop-shadow(0 0 30px rgba(0,194,255,.6));
+}
+body.c-battle .vig::after {
+  content: ''; position: absolute; left: 50%; top: 55%;
+  width: 1720px; height: 340px; transform: translate(-50%,-50%) rotate(-27deg);
+  background: linear-gradient(90deg, rgba(0,150,255,.26), rgba(255,61,61,.30) 62%, transparent);
+  clip-path: polygon(0 44%, 100% 4%, 100% 96%, 0 56%);
+  filter: blur(34px);
+}
+
+/* ปิดชุดเดินเรือ — คนละอารมณ์กับสนามรบ */
+body.c-battle .waves,
+body.c-battle .anchor,
+body.c-battle .gulls { display: none }
+
+/* ประกาย 4 แฉก → สะเก็ดไฟยาว (แฉกบน-ล่างยาวกว่าแฉกข้าง) เอียงตามแนวปะทะ */
+body.c-battle .sp {
+  background: radial-gradient(circle, #FFFFFF 0%, #FFB199 38%, rgba(255,61,61,0) 74%);
+  clip-path: polygon(50% 0%, 56% 44%, 100% 50%, 56% 56%, 50% 100%, 44% 56%, 0% 50%, 44% 44%);
+  transform: rotate(-27deg);
+  filter: drop-shadow(0 0 12px rgba(255,61,61,.95));
+}
+body.c-battle .sp.c {
+  background: radial-gradient(circle, #FFFFFF 0%, #A8ECFF 40%, rgba(0,194,255,0) 74%);
+  filter: drop-shadow(0 0 14px rgba(0,214,255,.95));
+}
+/* ย้ายให้ไล่เป็นสายพุ่งตามแนวทแยง ไม่ใช่โปรยรอบซองแบบเดิม */
+body.c-battle .s1 { width: 64px; height: 64px; left: 540px; top: 470px }
+body.c-battle .s2 { width: 34px; height: 34px; left: 636px; top: 372px }
+body.c-battle .s3 { width: 52px; height: 52px; right: 26px;  top: 300px }
+body.c-battle .s4 { width: 30px; height: 30px; right: 168px; top: 214px }
+body.c-battle .s5 { width: 44px; height: 44px; left: 596px;  top: 690px }
+body.c-battle .s6 { width: 26px; height: 26px; right: 44px;  top: 640px }
+body.c-battle .s7 { width: 36px; height: 36px; right: 300px; top: 156px }
+
+/* ═════════ รอยแตก — วาดบน .frame (z-index 7) จึงอยู่เหนือทุกอย่าง ═════════ */
+/* .frame มี inset:18px → pseudo ต้อง inset:-18px ถึงจะเต็มผืน 1080
+
+   v1/v2 ลากเป็นเส้นซิกแซกยาวเส้นเดียว → อ่านเป็น "ริบบิ้นหยัก" ไม่ใช่รอยแตก
+   เพราะรอยแตกจริงมีสองสัญญาณที่เส้นเดี่ยวให้ไม่ได้: (1) จุดกระแทกที่แฉกวิ่งออกรอบทิศ
+   (2) ความหนาที่เรียวลงจากจุดกระแทกไปหาปลาย
+   จึงเปลี่ยนเป็นดาวแฉกจากจุดกระแทก + วงร้าวรอบจุด = กระจกแตกที่อ่านออกทันที
+
+   จุดกระแทกอยู่ที่ (76%,34%) = กลางซองค่อนไปบน — ไกลจากคอลัมน์ตัวหนังสือ (จบที่ x 570)
+   ปลายแฉกทุกเส้นจงใจให้พ้นเขตพาดหัว/เนื้อความ: แฉกซ้ายสุดจบที่ x=626, แฉกล่างซ้ายจบที่ x=670
+   (แผ่นเนื้อความกว้างถึง x=628 — เลยต้องเผื่อ)
+
+   แต่ละแฉกคือสามเหลี่ยม ฐานอยู่ที่จุดกระแทก (กว้าง ~18px) เรียวเป็นศูนย์ที่ปลาย
+   ลำดับจุดต้องไล่ตามมุมรอบจุดกระแทก ไม่งั้น polygon ตัดกันเองแล้วรูปพัง */
+/* พิกัดชุดนี้คำนวณมา (จุดหักมุม + ระยะตั้งฉากที่เรียวลง) ไม่ได้ไล่เดาทีละจุด —
+   แฉกตรงเป๊ะจะอ่านเป็น "แสงพุ่ง" ไม่ใช่รอยร้าว ต้องมีจุดหักมุม 2 จุดต่อแฉก
+   drop-shadow ดำเยื้อง 2px คือตัวที่เปลี่ยนจาก "เส้นเรืองแสง" เป็น "ร่องบนกระจก" */
+body.c-battle .frame::before {
+  content: ''; position: absolute; inset: -18px; pointer-events: none;
+  background:
+    radial-gradient(circle at 76% 34%, rgba(255,255,255,1) 0%, rgba(226,250,255,.98) 18%,
+                    rgba(150,228,255,.95) 44%, rgba(255,120,110,.90) 100%);
+  clip-path: polygon(
+    75.43% 34.24%, 66.62% 30.22%, 61.05% 27.51%, 56.40% 25.00%,
+    60.95% 27.69%, 66.38% 30.78%, 75.59% 33.53%, 73.76% 21.92%,
+    71.76% 13.95%, 68.40% 4.00%, 71.44% 14.05%, 73.04% 22.08%,
+    76.24% 33.43%, 84.21% 29.37%, 91.11% 25.67%, 100.00% 19.00%,
+    90.89% 25.33%, 83.79% 28.63%, 76.62% 34.05%, 84.73% 42.30%,
+    91.35% 48.14%, 100.00% 58.50%, 91.65% 47.86%, 85.27% 41.70%,
+    76.31% 34.54%, 79.04% 50.10%, 82.76% 66.04%, 86.50% 92.00%,
+    83.24% 65.96%, 79.96% 49.90%, 75.93% 34.62%, 70.14% 45.83%,
+    65.83% 54.93%, 61.50% 67.50%, 66.17% 55.07%, 70.86% 46.17%);
+  filter: drop-shadow(2px 2px 0 rgba(6,1,10,.9)) drop-shadow(-1px -1px 0 rgba(6,1,10,.55))
+          drop-shadow(0 0 14px rgba(255,61,61,.7));
+}
+/* เสี้ยวโค้งร้าวระหว่างแฉก — กระจกจริงร้าวเป็นเสี้ยวโค้ง ไม่ใช่วงกลมเต็มวง
+   polygon เจาะรูไม่ได้ จึงลากขอบนอกแล้ววนกลับตามขอบใน ส่วนเส้นเชื่อมระหว่างเสี้ยว
+   เดินไปกลับทับกัน → พื้นที่สุทธิศูนย์ มองไม่เห็น */
+body.c-battle .frame::after {
+  content: ''; position: absolute; inset: -18px; pointer-events: none;
+  background: linear-gradient(150deg, rgba(255,255,255,.95), rgba(160,234,255,.92) 45%, rgba(255,110,100,.95));
+  clip-path: polygon(
+    67.41% 29.04%, 67.24% 27.21%, 69.05% 26.92%, 69.38% 25.11%,
+    71.21% 25.31%, 72.01% 23.67%, 73.71% 24.34%, 74.93% 22.97%,
+    76.38% 24.08%, 77.92% 23.09%, 77.86% 23.43%, 76.37% 24.42%,
+    74.96% 23.31%, 73.79% 24.68%, 72.13% 23.98%, 71.37% 25.61%,
+    69.59% 25.39%, 69.29% 27.16%, 67.51% 27.42%, 67.70% 29.21%,
+    67.41% 29.04%, 67.41% 29.04%, 82.76% 23.18%, 85.32% 23.23%,
+    85.74% 25.76%, 88.17% 26.59%, 87.79% 29.13%, 89.85% 30.66%,
+    88.72% 32.96%, 90.20% 35.05%, 88.42% 36.89%, 89.21% 39.34%,
+    88.93% 39.22%, 88.13% 36.83%, 89.90% 35.03%, 88.42% 32.99%,
+    89.55% 30.73%, 87.51% 29.24%, 87.91% 26.75%, 85.51% 25.96%,
+    85.13% 23.46%, 82.60% 23.44%, 82.76% 23.18%, 67.41% 29.04%,
+    82.12% 39.91%, 82.02% 41.34%, 80.59% 41.16%, 80.16% 42.53%,
+    78.82% 42.03%, 78.08% 43.26%, 76.89% 42.46%, 75.89% 43.49%,
+    74.91% 42.44%, 73.70% 43.21%, 73.78% 42.92%, 74.95% 42.14%,
+    75.89% 43.19%, 76.86% 42.16%, 78.02% 42.97%, 78.72% 41.74%,
+    80.03% 42.26%, 80.43% 40.91%, 81.83% 41.11%, 81.90% 39.70%,
+    82.12% 39.91%, 67.41% 29.04%, 68.91% 46.28%, 66.80% 46.87%,
+    66.68% 44.68%, 64.49% 44.86%, 64.80% 42.68%, 62.61% 42.44%,
+    63.33% 40.36%, 61.24% 39.70%, 62.34% 37.80%, 60.42% 36.75%,
+    60.67% 36.70%, 62.59% 37.73%, 61.48% 39.61%, 63.57% 40.25%,
+    62.83% 42.30%, 65.00% 42.52%, 64.68% 44.68%, 66.85% 44.48%,
+    66.95% 46.66%, 69.04% 46.05%, 68.91% 46.28%, 67.41% 29.04%);
+  filter: drop-shadow(1.6px 1.6px 0 rgba(6,1,10,.85)) drop-shadow(0 0 8px rgba(255,61,61,.75));
+  opacity: .95;
+}
+
+/* ═════════ กรอบ / ป้ายมุม / เหรียญ ═════════ */
+/* กรอบเหล็กแดง หนากว่าเดิม + เส้นในสีฟ้า = คู่สีคู่ตรงข้ามของแนวนี้ */
+body.c-battle .frame {
+  inset: 16px; border-width: 4px;
+  border-image: linear-gradient(135deg, #FFD9D9 0%, #8E0A18 20%, #FF3D3D 42%,
+                                #4A0410 60%, #FF6A6A 78%, #6A0316 100%) 1;
+  box-shadow: inset 0 0 0 2px rgba(0,194,255,.30), inset 0 0 60px rgba(255,61,61,.20),
+              0 0 46px rgba(0,0,0,.6);
+}
+
+/* ป้ายมุม: แดงเลือดหมู ตัวหนังสือขาว (ทองอ่านเป็นแนวหรู ไม่ใช่แนวรบ) */
+body.c-battle .corner i {
+  color: #FFF2F2; font-size: 26px; letter-spacing: 1px;
+  background: linear-gradient(180deg, #E23146 0%, #A50C24 46%, #52020F 100%);
+  box-shadow: 0 10px 26px rgba(0,0,0,.6), inset 0 0 0 2px rgba(255,255,255,.35),
+              0 0 22px rgba(255,61,61,.5);
+  text-shadow: 0 2px 4px rgba(60,0,10,.9);
+}
+
+/* เหรียญกลม → โล่หกเหลี่ยม ขอบแดง
+   ริ้วในวงต้องกว้างขึ้น (6deg→15deg) ไม่งั้นย่อแล้วละลายเป็นวงกลมเรียบ อ่านไม่ออกว่าเป็นหกเหลี่ยม */
+body.c-battle .medal { clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%) }
+body.c-battle .medal::before {
+  border-radius: 0;
+  background: repeating-conic-gradient(from 0deg, #FF5A5A 0deg 15deg, #3A020E 15deg 30deg);
+  filter: drop-shadow(0 8px 20px rgba(0,0,0,.7));
+}
+body.c-battle .medal::after {
+  inset: 10px; border-radius: 0;
+  clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%);
+  background: radial-gradient(circle at 40% 26%, #2A0A22 0%, #0B0210 78%);
+  box-shadow: inset 0 0 0 2px rgba(255,90,90,.95), inset 0 0 24px rgba(0,194,255,.30);
+}
+/* [ระวัง] ต้องใช้ background-image ไม่ใช่ background shorthand —
+   shorthand จะรีเซ็ต background-clip:text ที่ตั้งไว้ในเทมเพลตฐาน
+   ผลคือไล่สีไปทาเต็มกล่องแล้วตัวเลขหายทั้งตัว (เจอจริงรอบแรก) */
+body.c-battle .medal s em {
+  background-image: linear-gradient(180deg, #FFFFFF, #FFB6B6 52%, #FF4A4A);
+}
+body.c-battle .medal s span { color: #FFC9C9 }
+
+/* ═════════ รูปตู้จริง ═════════ */
+body.c-battle .machine img {
+  filter: brightness(.98) contrast(1.30) saturate(.90) hue-rotate(-8deg);
+}
+body.c-battle .machine .mglow {
+  background: radial-gradient(ellipse at 52% 62%, rgba(255,61,61,.40), transparent 70%);
+}
+body.c-battle .machine .mfr {
+  background: radial-gradient(ellipse, rgba(255,140,140,.42), rgba(200,20,50,.18) 46%, transparent 74%);
+}
+
+/* ═════════ ซอง ═════════ */
+body.c-battle .hero .burst {
+  background: repeating-conic-gradient(from 14deg,
+    rgba(255,61,61,.36) 0deg 2.2deg, rgba(255,61,61,0) 2.2deg 9deg);
+}
+body.c-battle .hero .halo {
+  background: radial-gradient(ellipse, rgba(255,90,90,.34) 0%, rgba(140,10,60,.22) 46%, transparent 72%);
+}
+body.c-battle .hero .stage img {
+  filter: drop-shadow(0 26px 44px rgba(0,0,0,.85))
+          drop-shadow(0 0 30px rgba(255,61,61,.60))
+          drop-shadow(0 0 74px rgba(0,194,255,.34));
+}
+body.c-battle .hero .floor {
+  background: radial-gradient(ellipse, rgba(255,190,190,.75), rgba(220,30,60,.36) 42%, transparent 74%);
+}
+
+/* ═════════ หัวกระดาษ ═════════ */
+body.c-battle .wrap::before {
+  background: radial-gradient(520px 210px at 30% 46%, rgba(255,40,60,.26), transparent 72%);
+}
+/* แผ่นโลโก้: บากมุมบนซ้าย/ล่างขวา = เหลี่ยม ไม่ใช่มน */
+body.c-battle .plate {
+  border-radius: 0; clip-path: polygon(20px 0, 100% 0, 100% calc(100% - 20px), calc(100% - 20px) 100%, 0 100%, 0 20px);
+  background: linear-gradient(150deg, #4A0C2C 0%, #2A0620 46%, #12061A 100%);
+  box-shadow: inset 0 0 0 3px rgba(255,90,90,.9), inset 0 0 22px rgba(255,61,61,.28),
+              0 8px 22px rgba(0,0,0,.6), 0 0 30px rgba(255,61,61,.32);
+}
+body.c-battle .plate::after {
+  background: linear-gradient(144deg, rgba(255,255,255,.22) 0 16%, transparent 34%,
+                              rgba(0,205,255,.16) 54%, transparent 72%,
+                              rgba(255,80,80,.24) 100%);
+}
+/* background-image เท่านั้น (เหตุผลเดียวกับ .medal em) */
+body.c-battle .idn b {
+  background-image: linear-gradient(180deg, #FFFFFF 0%, #FFC9C9 50%, #C2102A 100%);
+}
+body.c-battle .idn i { color: #F0A6C6 }
+body.c-battle .idn u {
+  background: linear-gradient(90deg, #FF3D3D, rgba(0,194,255,.9) 55%, transparent);
+}
+
+/* ริบบิ้น: เอียงแรงขึ้น สีแดง ตัวหนังสือขาว */
+body.c-battle .ribbon {
+  transform: skewX(-14deg) rotate(-2.6deg); margin: 18px 0 0 6px;
+  background: linear-gradient(180deg, #FF6B6B 0%, #D51330 48%, #6A0316 100%);
+  box-shadow: 0 9px 26px rgba(0,0,0,.55), inset 0 0 0 2px rgba(255,255,255,.30),
+              inset 0 -6px 12px rgba(70,0,10,.45), 0 0 26px rgba(255,61,61,.35);
+}
+body.c-battle .ribbon i.l,
+body.c-battle .ribbon i.r { background: linear-gradient(180deg, #7A0518, #2E0209) }
+body.c-battle .ribbon > span {
+  transform: skewX(14deg); color: #FFF2F2; letter-spacing: 1.4px;
+  text-shadow: 0 2px 4px rgba(60,0,10,.9);
+}
+body.c-battle .ribbon svg { fill: #FFE3A0 }
+
+/* ═════════ พาดหัวเอียง ═════════ */
+/* เอียงทั้งพาดหัวและบรรทัดรองด้วยองศาเดียวกัน — เอียงตัวเดียวจะอ่านเป็น "วางเบี้ยว"
+   transform-origin ชิดซ้ายเพื่อไม่ให้ปลายบรรทัดแรกวิ่งออกนอกกรอบ 16px */
+body.c-battle h1 {
+  transform: rotate(-2.6deg); transform-origin: 0 50%;
+  margin-top: 22px; letter-spacing: -.8px; color: #FFFFFF;
+  text-shadow:
+    -3px 0 0 var(--ink),  3px 0 0 var(--ink),  0 -3px 0 var(--ink),  0 3px 0 var(--ink),
+    -2px -2px 0 var(--ink), 2px -2px 0 var(--ink), -2px 2px 0 var(--ink), 2px 2px 0 var(--ink),
+    0 5px 0 rgba(178,12,34,.98),
+    0 9px 0 rgba(52,2,12,.7),
+    0 16px 30px rgba(0,0,0,.85),
+    0 0 46px rgba(255,40,60,.55);
+}
+body.c-battle h1 em {
+  filter:
+    drop-shadow(2.4px 0 0 #1C0208) drop-shadow(-2.4px 0 0 #1C0208)
+    drop-shadow(0 2.4px 0 #1C0208) drop-shadow(0 -2.4px 0 #1C0208)
+    drop-shadow(0 6px 0 rgba(120,4,20,.95))
+    drop-shadow(0 12px 24px rgba(0,0,0,.7))
+    drop-shadow(0 0 26px rgba(255,60,60,.85));
+}
+
+/* บรรทัดรอง: เอียงคู่ + แถบซ้ายไล่แดง-ฟ้า + มุมบากขวา */
+body.c-battle .sub {
+  transform: rotate(-2.6deg); transform-origin: 0 50%;
+  margin-top: 17px; color: #FFEFEF;
+  border-image: linear-gradient(180deg, #FFD9D9, #FF3D3D 40%, #00C2FF 100%) 1;
+  background: linear-gradient(90deg, rgba(24,4,18,.82), rgba(60,6,24,.34) 84%, transparent);
+}
+
+/* ═════════ เนื้อความ ═════════ */
+body.c-battle .body {
+  border-radius: 0;
+  clip-path: polygon(0 0, calc(100% - 22px) 0, 100% 22px, 100% 100%, 22px 100%, 0 calc(100% - 22px));
+  background: linear-gradient(90deg, rgba(22,4,16,.88), rgba(34,4,20,.74) 70%, rgba(22,4,16,.46));
+  box-shadow: inset 0 0 0 1px rgba(255,110,110,.22);
+  color: #FBECF0;
+}
+/* หัวข้อ: เพชร → หัวลูกศรแหลม */
+body.c-battle .body p::before {
+  width: 15px; height: 16px; transform: translateY(-50%) rotate(0deg);
+  clip-path: polygon(0 0, 100% 50%, 0 100%, 34% 50%);
+  background: linear-gradient(135deg, #FFD9D9, #FF3D3D 45%, #8E0A18);
+  box-shadow: none;
+  filter: drop-shadow(0 0 8px rgba(255,61,61,.9));
+}
+
+/* ═════════ แถบท้าย ═════════ */
+body.c-battle .foot {
+  background:
+    linear-gradient(90deg, rgba(255,40,60,.24), rgba(0,150,255,.16) 55%, rgba(255,40,60,.18)),
+    linear-gradient(180deg, rgba(14,3,20,.76), rgba(10,2,14,.96));
+  border-image: linear-gradient(90deg, #6A0316, #FF3D3D 32%, #00C2FF 68%, #6A0316) 1;
+}
+/* แคปซูล → แท็กเหลี่ยมบากมุม */
+body.c-battle .chip {
+  border-radius: 0;
+  clip-path: polygon(14px 0, 100% 0, 100% calc(100% - 14px), calc(100% - 14px) 100%, 0 100%, 0 14px);
+  color: #FFEDED;
+  background: linear-gradient(180deg, rgba(74,8,30,.95), rgba(18,4,22,.95));
+  box-shadow: inset 0 0 0 2px rgba(255,80,80,.7), 0 4px 14px rgba(0,0,0,.55),
+              inset 0 0 16px rgba(255,61,61,.20);
+}
+body.c-battle .chip svg { fill: #FF6B6B; filter: drop-shadow(0 0 6px rgba(255,61,61,.85)) }
+body.c-battle .tags { color: #E79BB4 }
+
+/* ═════════ ไม่มีรูปสินค้า ═════════ */
+/* รอยแตกที่พาดผ่านกลางภาพยังใช้ได้ แต่รัศมีต้องย้ายมาที่กลางภาพแทนตำแหน่งซอง */
+body.c-battle.no-hero .rays,
+body.c-battle.no-hero .rays2 {
+  -webkit-mask-image: radial-gradient(circle at 48% 46%, transparent 10%, rgba(0,0,0,.9) 30%, transparent 78%);
+}
+body.c-battle.no-hero .sp { display: none }
+
+/* รอยแตกในโหมดไม่มีรูปสินค้า — ต้องย้ายทั้งชุด ไม่ใช่แค่ย่อ
+   โหมดนี้ตัวหนังสือกินเต็มความกว้าง (h1 880 · sub 860 · body 940) แล้วรอยแตกอยู่ z-index 7
+   = พาดทับตัวอักษรตรง ๆ อ่านไม่ออก (เห็นชัดตอนลอง --sku ที่ไม่มีรูป)
+   ที่ว่างจริงเหลือแค่มุมล่างขวา x 500-1080 y 690-990 (ซึ่งโหมดนี้ก็โล่งอยู่พอดี
+   เพราะฐานย้ายสมอไปเติมตรงนั้น แต่แนวนี้ปิดสมอทิ้ง) จึงย้ายจุดกระแทกไปที่ (800,830)
+   พิกัดชุดนี้คำนวณใหม่ทั้งชุดจากสคริปต์เดียวกับด้านบน ไม่ได้ scale ของเดิม —
+   scale จะทำให้เส้นบางลงจนหายและปลายแฉกยังเลยเข้าไปในแผ่นเนื้อความอยู่ดี */
+body.c-battle.no-hero .frame::before {
+  background:
+    radial-gradient(circle at 74% 77%, rgba(255,255,255,1) 0%, rgba(226,250,255,.98) 20%,
+                    rgba(150,228,255,.95) 46%, rgba(255,120,110,.90) 100%);
+  clip-path: polygon(
+    73.51% 77.11%, 68.11% 74.68%, 62.04% 72.86%, 55.00% 71.50%,
+    61.96% 73.14%, 67.89% 75.32%, 73.64% 76.66%, 72.27% 71.88%,
+    70.10% 67.95%, 68.00% 64.50%, 69.90% 68.05%, 71.73% 72.12%,
+    74.15% 76.52%, 80.19% 73.30%, 87.07% 69.13%, 95.00% 65.00%,
+    86.93% 68.87%, 79.81% 72.70%, 74.49% 76.91%, 81.92% 79.32%,
+    89.97% 81.13%, 98.00% 83.00%, 90.03% 80.87%, 82.08% 78.68%,
+    74.38% 77.33%, 75.69% 82.13%, 77.87% 87.05%, 80.00% 92.50%,
+    78.13% 86.95%, 76.31% 81.87%, 73.90% 77.49%, 69.76% 80.73%,
+    64.90% 84.87%, 59.00% 90.00%, 65.10% 85.13%, 70.24% 81.27%);
+}
+body.c-battle.no-hero .frame::after {
+  clip-path: polygon(
+    67.08% 73.00%, 66.88% 71.48%, 68.41% 71.30%, 68.62% 69.77%,
+    70.14% 70.00%, 70.75% 68.59%, 72.16% 69.23%, 73.13% 68.03%,
+    74.31% 69.02%, 75.56% 68.13%, 75.51% 68.42%, 74.30% 69.32%,
+    73.16% 68.33%, 72.23% 69.52%, 70.86% 68.87%, 70.28% 70.27%,
+    68.80% 70.01%, 68.62% 71.51%, 67.12% 71.66%, 67.34% 73.16%,
+    67.08% 73.00%, 67.08% 73.00%, 79.52% 68.82%, 81.61% 68.87%,
+    81.80% 70.95%, 83.77% 71.66%, 83.30% 73.70%, 84.95% 74.98%,
+    83.87% 76.77%, 85.03% 78.51%, 83.44% 79.87%, 84.00% 81.88%,
+    83.77% 81.77%, 83.20% 79.79%, 84.77% 78.47%, 83.61% 76.78%,
+    84.69% 75.03%, 83.06% 73.78%, 83.54% 71.79%, 81.60% 71.11%,
+    81.43% 69.06%, 79.37% 69.03%, 79.52% 68.82%, 67.08% 73.00%,
+    78.34% 82.56%, 78.13% 83.79%, 76.94% 83.41%, 76.46% 84.56%,
+    75.39% 83.91%, 74.65% 84.92%, 73.75% 84.05%, 72.80% 84.86%,
+    72.14% 83.80%, 71.02% 84.37%, 71.12% 84.13%, 72.20% 83.55%,
+    72.84% 84.60%, 73.76% 83.79%, 74.63% 84.66%, 75.33% 83.66%,
+    76.38% 84.31%, 76.83% 83.17%, 78.00% 83.57%, 78.18% 82.35%,
+    78.34% 82.56%, 67.08% 73.00%);
+}
+/* รัศมี/แนวปะทะก็ต้องเลื่อนตามจุดกระแทกใหม่ ไม่งั้นแสงกับรอยแตกชี้คนละทาง */
+body.c-battle.no-hero .vig::before { top: 74%; width: 1300px }
+body.c-battle.no-hero .vig::after  { top: 74%; width: 1300px; height: 260px }

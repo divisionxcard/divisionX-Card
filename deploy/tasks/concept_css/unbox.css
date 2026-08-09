@@ -1,0 +1,415 @@
+/* ══════════════════════════════════════════════════════════════════════════
+   unbox — เปิดซองลุ้นแรร์  ·  เซอร์ไพรส์ / Mystery
+   bg #0B1B3A · accent #FFD86B · accent2 #B98BFF
+
+   ภาษาภาพของแนวนี้ = "กลม นุ่ม เรืองแสง" — ตรงข้ามกับ battle ทุกข้อ
+     · ทุกอย่างพุ่งออกจาก "ปากซอง" จุดเดียว (burst_center) ไม่ใช่แนวทแยงปะทะ
+     · ไม่มีอะไรเอียง ไม่มีมุมบาก ไม่มีรอยแตก — มุมมนหมดทั้งใบ
+     · เส้นความเร็ว/ตารางถูกปิด แล้วแทนที่ด้วยประกายกระจายกับริ้วแสง
+     · คงคลื่นแบรนด์ไว้ (ย้อมม่วง-ทอง) ต่างจาก battle ที่ปิดทิ้ง
+
+   พิกัดปากซอง = (820px, 203px) = 76% 18.8% ของผืน 1080
+     มาจากเทมเพลตฐาน: .hero กว้าง 520 ชิดขวา → จุดกึ่งกลาง x = 1080 - 260 = 820
+     รูป SKU top:145px และตัวซองเริ่มที่ 5.9% ของความกว้าง 990 → y = 145 + 58 = 203
+   ทุกรัศมี/แสง/ประกายในไฟล์นี้อ้างอิงจุดนี้จุดเดียว
+
+   ห้าม: อีโมจิ · -webkit-text-stroke (กินวรรณยุกต์ไทย) · background shorthand
+         กับ element ที่ใช้ background-clip:text (จะรีเซ็ต clip แล้วตัวอักษรหาย)
+   ══════════════════════════════════════════════════════════════════════════ */
+
+body.c-unbox {
+  --ink:      #10143A;               /* ขอบตัวอักษร: กรมท่าอมม่วง */
+  --gold-1:   #FFF6DC;
+  --gold-2:   #FFD86B;
+  --gold-3:   #E9A426;
+  --violet:   #B98BFF;
+  --violet-2: #7B54D6;
+  --gold-grad: linear-gradient(178deg,#FFFFFF 0%,#FFF0BC 20%,#FFD86B 52%,#FFC24A 74%,#C98511 100%);
+  background: #0B1B3A;
+}
+
+/* ═════════ บรรยากาศ: สว่างกว่า ฟุ้งกว่า อมม่วง ═════════ */
+
+/* เบลอมากกว่าฐาน (9→17px) และสว่างขึ้น — ห้างกลายเป็น "แสงฟุ้ง" ไม่ใช่ฉากที่ต้องอ่านรายละเอียด
+   เพราะแนวนี้พระเอกคือแสงที่พุ่งออกจากซอง ฉากหลังต้องไม่แย่งสายตา */
+body.c-unbox .bg {
+  filter: blur(17px) saturate(1.15) brightness(1.06) contrast(.94) hue-rotate(6deg);
+}
+
+/* ทุก stop เป็น rgba ล้วน (กับดักข้อ 5 ของเทมเพลตฐาน)
+   ทองกองที่ปากซอง · ม่วงกินสองมุมล่าง · กรมท่าอ่อนที่เหลือ */
+body.c-unbox .grad {
+  background:
+    radial-gradient(620px 560px at 76% 19%, rgba(255,216,107,.40), rgba(255,216,107,0) 68%),
+    radial-gradient(760px 700px at 92% 76%, rgba(185,139,255,.30), rgba(185,139,255,0) 70%),
+    radial-gradient(700px 620px at 2% 88%,  rgba(123,84,214,.32), rgba(123,84,214,0) 68%),
+    radial-gradient(520px 420px at 10% 8%,  rgba(90,170,255,.22), rgba(90,170,255,0) 70%),
+    linear-gradient(168deg, rgba(11,27,58,.42) 0%, rgba(20,38,80,.20) 42%,
+                            rgba(14,20,54,.34) 74%, rgba(8,12,34,.56) 100%);
+}
+
+/* ═════════ แสงพุ่งจากปากซอง ═════════ */
+
+/* รัศมีทองซี่กว้าง — ศูนย์กลางย้ายจาก 63% 46% (กลางซอง) มาที่ 76% 19% (ปากซอง)
+   mask ต้องเว้นใจกลางให้โปร่ง ไม่งั้นซี่ไปกองทับปากซองจนแสงตรงกลางตัน */
+/* [ระวัง] .rays มี inset:-30% → กล่องจริงคือ 1728x1728 เริ่มที่ (-324,-324)
+   ปากซองที่ (820,203) บนผืน 1080 จึงเท่ากับ (66.2%, 30.5%) ของกล่องนี้ ไม่ใช่ (76%,18.8%)
+   ถ้าใส่ % ของผืนตรง ๆ ศูนย์กลางจะเพี้ยนไปเกือบ 200px
+
+   mask ต้องคุมด้วยหน่วย px ไม่ใช่ % — % ของ radial-gradient วัดจาก farthest-corner
+   ของกล่อง 1728px ทำให้ 58% กลายเป็นเกือบเต็มภาพ แสงเลยฟุ้งทั่วใบจนกลบพาดหัว (รอบแรกเป็นแบบนั้น)
+   คุมเป็น px แล้วรัศมีจบที่ ~540px = แสงกองอยู่แถวปากซองจริง ๆ */
+body.c-unbox .rays {
+  inset: -30%;
+  background: repeating-conic-gradient(from 8deg at 66.2% 30.5%,
+    rgba(255,224,140,.52) 0deg 4.6deg, rgba(255,224,140,0) 4.6deg 15deg);
+  -webkit-mask-image: radial-gradient(560px 560px at 66.2% 30.5%,
+    transparent 26px, rgba(0,0,0,.98) 110px, rgba(0,0,0,.5) 320px, transparent 100%);
+}
+/* ซี่ม่วงบางกว่า ถี่กว่า เหลื่อมมุมกับซี่ทอง = แสงมีสองชั้น ไม่แบน · ไปได้ไกลกว่าซี่ทองเล็กน้อย */
+body.c-unbox .rays2 {
+  inset: -30%;
+  background: repeating-conic-gradient(from 3deg at 66.2% 30.5%,
+    rgba(185,139,255,.50) 0deg 1.5deg, rgba(185,139,255,0) 1.5deg 9deg);
+  -webkit-mask-image: radial-gradient(760px 760px at 66.2% 30.5%,
+    transparent 40px, rgba(0,0,0,.9) 150px, rgba(0,0,0,.34) 420px, transparent 100%);
+}
+
+/* กรวยสปอตไลต์ "จากบนลงล่าง" ของฐาน → กลับหัวเป็นลำแสง "พุ่งขึ้นจากปากซอง"
+   ปลายแคบอยู่ที่ปากซอง (y=203) แล้วบานออกทะลุขอบบน */
+body.c-unbox .beam {
+  left: 76%; top: -300px; width: 980px; height: 510px;
+  transform: translateX(-50%);
+  clip-path: polygon(0 0, 100% 0, 62% 100%, 38% 100%);
+  background: linear-gradient(0deg, rgba(255,246,220,.62) 0%, rgba(255,216,107,.34) 34%,
+                                    rgba(185,139,255,.18) 66%, transparent 92%);
+  filter: blur(24px);
+}
+
+/* ตาราง → ประกายกระจาย (ห้ามใช้อีโมจิ จึงเป็นจุดวาดด้วย radial-gradient)
+   กระจายทั่วผืนแบบสุ่ม ๆ แต่เว้นเขตพาดหัว x<560 y 200-470 ไว้ให้โล่ง */
+body.c-unbox .grid {
+  opacity: 1; transform: none;
+  background-size: auto; background-repeat: no-repeat;
+  background-image:
+    radial-gradient(circle, rgba(255,246,220,1)   0 3.4px, transparent 5px),
+    radial-gradient(circle, rgba(255,216,107,.95) 0 5px,   transparent 7.6px),
+    radial-gradient(circle, rgba(213,186,255,.95) 0 3px,   transparent 4.8px),
+    radial-gradient(circle, rgba(255,246,220,.95) 0 2.4px, transparent 4px),
+    radial-gradient(circle, rgba(185,139,255,.95) 0 4.2px, transparent 6.6px),
+    radial-gradient(circle, rgba(255,216,107,.9)  0 2.6px, transparent 4.2px),
+    radial-gradient(circle, rgba(255,246,220,.9)  0 3.8px, transparent 6px),
+    radial-gradient(circle, rgba(213,186,255,.9)  0 2.2px, transparent 3.6px),
+    radial-gradient(circle, rgba(255,216,107,.9)  0 3.2px, transparent 5.2px),
+    radial-gradient(circle, rgba(255,246,220,.85) 0 2px,   transparent 3.4px),
+    radial-gradient(circle, rgba(185,139,255,.85) 0 3.6px, transparent 5.8px),
+    radial-gradient(circle, rgba(255,216,107,.85) 0 2.4px, transparent 4px);
+  background-position:
+    606px 132px, 690px 84px,  766px 40px,  916px 96px,  1004px 158px,
+    598px 246px, 552px 122px, 664px 322px, 986px 300px, 470px 66px,
+    1032px 424px, 526px 560px;
+  -webkit-mask-image: none;
+  filter: drop-shadow(0 0 8px rgba(255,216,107,.85));
+}
+/* ชั้นประกายที่สอง เม็ดเล็กกว่า กระจายกว้างกว่า = มีระยะลึก ไม่ใช่จุดชุดเดียวเรียงกัน */
+body.c-unbox .grid::after {
+  content: ''; position: absolute; inset: 0;
+  background-repeat: no-repeat;
+  background-image:
+    radial-gradient(circle, rgba(255,246,220,.9) 0 1.8px, transparent 3px),
+    radial-gradient(circle, rgba(213,186,255,.9) 0 1.6px, transparent 2.8px),
+    radial-gradient(circle, rgba(255,216,107,.9) 0 2px,   transparent 3.2px),
+    radial-gradient(circle, rgba(255,246,220,.8) 0 1.5px, transparent 2.6px),
+    radial-gradient(circle, rgba(185,139,255,.8) 0 1.8px, transparent 3px),
+    radial-gradient(circle, rgba(255,216,107,.8) 0 1.6px, transparent 2.8px),
+    radial-gradient(circle, rgba(255,246,220,.8) 0 2.2px, transparent 3.6px),
+    radial-gradient(circle, rgba(213,186,255,.75) 0 1.5px, transparent 2.6px);
+  background-position:
+    640px 176px, 856px 60px, 942px 220px, 574px 190px,
+    1046px 92px, 726px 148px, 894px 372px, 620px 460px;
+  filter: drop-shadow(0 0 6px rgba(255,240,190,.8));
+}
+
+/* เส้นความเร็วไม่เข้ากับอารมณ์เซอร์ไพรส์ — ปิด แล้วให้ประกาย/รัศมีเล่าเรื่องแทน */
+body.c-unbox .streaks { display: none }
+
+/* ขอบมืดบางลง เปิดกลางภาพให้สว่าง */
+body.c-unbox .vig {
+  background:
+    radial-gradient(132% 108% at 70% 30%, transparent 52%, rgba(4,8,26,.52) 100%),
+    linear-gradient(180deg, rgba(4,8,26,.22) 0%, transparent 20%,
+                            transparent 72%, rgba(4,8,26,.44) 100%);
+}
+/* ริ้วแสงกว้างชั้นที่สาม — จางมาก แต่ยาวถึงมุมภาพ
+   .rays/.rays2 ถูก mask ให้จบที่ ~560/760px เพื่อไม่กลบพาดหัว ผลข้างเคียงคือครึ่งล่างของภาพ
+   ไม่รู้เลยว่าแสงมาจากไหน ชั้นนี้เลยทำหน้าที่ลากความสว่างจากปากซองไปจนสุดมุม
+   alpha .16 คือเพดาน — เกินกว่านี้เริ่มกวนตัวหนังสือฝั่งซ้าย
+
+   ชั้นนี้ใช้ inset:0 (กล่องเท่าผืน 1080) ต่างจาก .rays/.rays2 ที่เป็น inset:-30%
+   จงใจให้ต่าง เพราะ % ของศูนย์กลางจะได้อ่านตรง ๆ ว่าเป็นสัดส่วนของภาพ: (820,203) = 75.9% 18.8%
+   ไม่ต้องแปลงกลับไปกลับมาเหมือนชุด .rays (ที่ต้องเป็น 66.2% 30.5% ของกล่อง 1728)
+   ริ้วแสงล้นออกนอกกรอบไม่ได้ก็ไม่เป็นไร เพราะมันจางหายก่อนถึงขอบภาพอยู่แล้ว */
+body.c-unbox .vig::before {
+  content: ''; position: absolute; inset: 0;
+  background: repeating-conic-gradient(from 15deg at 75.9% 18.8%,
+    rgba(255,238,186,.16) 0deg 9deg, rgba(255,238,186,0) 9deg 26deg);
+  -webkit-mask-image: radial-gradient(1500px 1500px at 75.9% 18.8%,
+    transparent 320px, rgba(0,0,0,.75) 760px, transparent 100%);
+}
+/* แสงม่วงอุ่นย้อนขึ้นจากมุมล่างขวา — ถ่วงให้ครึ่งล่างไม่ตายเป็นสีเดียว */
+body.c-unbox .vig::after {
+  content: ''; position: absolute; inset: 0;
+  background:
+    radial-gradient(620px 420px at 96% 88%, rgba(150,104,246,.34), transparent 72%),
+    radial-gradient(520px 360px at 24% 100%, rgba(123,84,214,.26), transparent 74%);
+}
+
+/* ═════════ ของประดับแบรนด์ ═════════ */
+/* คลื่นยังอยู่ (ต่างจาก battle) แต่ย้อมม่วง-ทองให้เข้าชุด */
+body.c-unbox .waves { opacity: .9 }
+body.c-unbox .waves path:nth-of-type(1) { fill: rgba(185,139,255,.32) }
+body.c-unbox .waves path:nth-of-type(2) { fill: rgba(255,246,220,.26) }
+body.c-unbox .waves path:nth-of-type(3) { fill: rgba(255,216,107,.26) }
+/* สมอกับนกนางนวลอยู่ในเขตที่แสงพุ่งออกพอดี — ปล่อยไว้จะกลายเป็นขยะในลำแสง */
+body.c-unbox .anchor,
+body.c-unbox .gulls { display: none }
+
+/* ประกาย 4 แฉก: แฉกเรียวยาวแบบประกายวิบวับ (ของฐานอ้วนกว่า)
+   ย้ายทั้งชุดมาเรียงเป็นวงรอบปากซอง = "อะไรบางอย่างเพิ่งระเบิดออกมาจากตรงนี้" */
+body.c-unbox .sp {
+  background: radial-gradient(circle, #FFFFFF 0%, #FFEFC2 40%, rgba(255,216,107,0) 74%);
+  clip-path: polygon(50% 0%, 54.5% 45.5%, 100% 50%, 54.5% 54.5%, 50% 100%, 45.5% 54.5%, 0% 50%, 45.5% 45.5%);
+  filter: drop-shadow(0 0 14px rgba(255,216,107,.95));
+}
+body.c-unbox .sp.c {
+  background: radial-gradient(circle, #FFFFFF 0%, #DCC6FF 40%, rgba(185,139,255,0) 74%);
+  filter: drop-shadow(0 0 16px rgba(185,139,255,.95));
+}
+body.c-unbox .s1 { width: 74px; height: 74px; left: 604px; top: 128px }
+body.c-unbox .s2 { width: 40px; height: 40px; left: 690px; top: 48px }
+body.c-unbox .s3 { width: 62px; height: 62px; right: 74px;  top: 108px }
+body.c-unbox .s4 { width: 34px; height: 34px; right: 176px; top: 34px }
+body.c-unbox .s5 { width: 46px; height: 46px; left: 566px;  top: 268px }
+body.c-unbox .s6 { width: 30px; height: 30px; right: 26px;  top: 268px }
+body.c-unbox .s7 { width: 52px; height: 52px; right: 300px; top: 12px }
+
+/* ═════════ รูปตู้จริง ═════════ */
+/* สว่างและอุ่นขึ้น = ตู้ที่เปิดไฟรออยู่ ไม่ใช่ตู้ในเงามืดแบบ battle */
+body.c-unbox .machine img {
+  filter: brightness(1.14) contrast(1.10) saturate(1.20) hue-rotate(4deg);
+}
+body.c-unbox .machine .mglow {
+  background: radial-gradient(ellipse at 52% 62%, rgba(185,139,255,.44), transparent 70%);
+}
+body.c-unbox .machine .mfr {
+  background: radial-gradient(ellipse, rgba(255,236,190,.46), rgba(185,139,255,.20) 46%, transparent 74%);
+}
+
+/* ═════════ ซอง + แสงที่ปากซอง ═════════ */
+/* วงรัศมีของฐานอยู่กลางซอง — ย้ายขึ้นไปที่ปากซอง (top 203px จาก .hero สูง 1080) */
+body.c-unbox .hero .burst {
+  top: 203px; width: 1180px; height: 1180px;
+  background: repeating-conic-gradient(from 3deg,
+    rgba(255,230,160,.34) 0deg 2.6deg, rgba(255,230,160,0) 2.6deg 11deg);
+  -webkit-mask-image: radial-gradient(circle, transparent 8%, rgba(0,0,0,.85) 22%,
+                                      rgba(0,0,0,.45) 42%, transparent 62%);
+}
+body.c-unbox .hero .halo {
+  top: 203px; width: 760px; height: 620px;
+  background: radial-gradient(ellipse, rgba(255,244,206,.52) 0%, rgba(255,216,107,.26) 34%,
+                              rgba(185,139,255,.18) 58%, transparent 76%);
+}
+/* แกนแสงขาว-ทองตรงปากซอง วาด "หลัง" ตัวซอง (::before = ลูกคนแรก) */
+body.c-unbox .hero::before {
+  content: ''; position: absolute; left: 50%; top: 200px;
+  width: 700px; height: 380px; transform: translate(-50%,-50%); border-radius: 50%;
+  background: radial-gradient(ellipse, rgba(255,255,255,.98) 0%, rgba(255,236,170,.80) 22%,
+                              rgba(255,206,90,.42) 46%, rgba(185,139,255,.20) 66%, transparent 80%);
+  filter: blur(14px);
+}
+/* แสงล้นออกมา "หน้า" ตัวซอง (::after = ลูกคนสุดท้าย) — ตัวชี้ขาดว่าอ่านเป็น
+   "แสงพุ่งออกจากปากซอง" หรือแค่ "มีดวงไฟวางอยู่ข้างหลัง"
+   สองชั้น: แกนขาวจ้าเม็ดเล็ก + ริ้วแสงแนวนอนยาว (แฟลร์) ซึ่งเป็นสัญญาณ
+   ที่สายตาอ่านว่า "จุดนี้สว่างจนล้น" ได้ทันทีโดยไม่ต้องกินพื้นที่ซองมาก
+   จุดศูนย์กลางอยู่ที่ y=196 = คร่อมขอบบนของซอง (203) พอดี ไม่ลงไปทับป้าย OP-16 */
+/* mix-blend-mode:screen คือหัวใจ — ถ้าทับแบบปกติ แสงจะ "คลุม" หัวซองให้เป็นฝ้าขาว
+   แต่ screen จะ "บวกแสง" เข้าไปในตัวซอง = ขอบบนซองสว่างขึ้นจริง อ่านเป็นแสงที่ออกมาจากปากซอง
+   ใช้ได้เพราะ .hero มี z-index:3 จึงเป็น stacking context ของตัวเอง — แสงผสมกับซอง/รัศมี
+   ที่อยู่ในกรอบเดียวกันเท่านั้น ไม่ไปดูดพื้นหลังทั้งใบมาผสม */
+body.c-unbox .hero::after {
+  content: ''; position: absolute; left: 50%; top: 202px;
+  width: 720px; height: 250px; transform: translate(-50%,-50%);
+  mix-blend-mode: screen;
+  background:
+    radial-gradient(ellipse 92px 54px at 50% 50%, rgba(255,255,255,1) 0%,
+                    rgba(255,246,214,.72) 42%, transparent 78%),
+    radial-gradient(ellipse 340px 9px at 50% 50%, rgba(255,252,238,.95) 0%,
+                    rgba(255,216,107,.40) 38%, transparent 78%),
+    radial-gradient(ellipse 200px 150px at 50% 56%, rgba(255,232,164,.42) 0%, transparent 74%);
+  filter: blur(6px);
+}
+body.c-unbox .hero .stage img {
+  filter: drop-shadow(0 26px 44px rgba(0,0,0,.62))
+          drop-shadow(0 -14px 40px rgba(255,222,140,.75))
+          drop-shadow(0 0 70px rgba(185,139,255,.45));
+}
+body.c-unbox .hero .floor {
+  background: radial-gradient(ellipse, rgba(236,222,255,.72), rgba(150,110,230,.30) 44%, transparent 76%);
+}
+
+/* ═════════ กรอบ / ป้ายมุม / เหรียญ — มนทั้งหมด ═════════ */
+/* border-image ใช้ร่วมกับ border-radius ไม่ได้ (มุมจะยังเหลี่ยม) → ล้างทิ้งแล้วใช้ border สีเดียว
+   เส้นคู่ด้านในทำด้วย inset box-shadow ซึ่งวิ่งตามมุมมนให้เอง */
+body.c-unbox .frame {
+  inset: 20px; border: 2px solid rgba(255,216,107,.72); border-image: none;
+  border-radius: 34px;
+  box-shadow: inset 0 0 0 9px rgba(0,0,0,0), inset 0 0 0 10px rgba(185,139,255,.42),
+              inset 0 0 70px rgba(185,139,255,.14), 0 0 44px rgba(0,0,0,.45);
+}
+body.c-unbox .corner i {
+  color: #2A1A48; font-size: 26px;
+  background: linear-gradient(180deg, #FFF6DC 0%, #FFD86B 44%, #B98BFF 100%);
+  box-shadow: 0 10px 26px rgba(0,0,0,.45), inset 0 0 0 2px rgba(255,255,255,.55),
+              0 0 26px rgba(185,139,255,.55);
+  text-shadow: 0 1px 0 rgba(255,255,255,.5);
+}
+/* เหรียญ: ริ้วทองสลับม่วง + ไส้กลางม่วงเข้ม */
+body.c-unbox .medal::before {
+  background: repeating-conic-gradient(from 0deg, #FFE9A8 0deg 9deg, #7B54D6 9deg 18deg);
+  filter: drop-shadow(0 8px 22px rgba(60,30,110,.6));
+}
+body.c-unbox .medal::after {
+  background: radial-gradient(circle at 38% 28%, #33215E 0%, #150A2E 78%);
+  box-shadow: inset 0 0 0 2px rgba(255,216,107,.95), inset 0 0 24px rgba(185,139,255,.45);
+}
+body.c-unbox .medal s em {
+  /* background-image เท่านั้น — shorthand จะรีเซ็ต background-clip:text แล้วตัวเลขหาย */
+  background-image: linear-gradient(180deg, #FFFFFF, #FFD86B 55%, #E9A426);
+}
+body.c-unbox .medal s span { color: #DCC6FF }
+
+/* ═════════ หัวกระดาษ ═════════ */
+body.c-unbox .wrap::before {
+  background: radial-gradient(520px 210px at 32% 46%, rgba(185,139,255,.26), transparent 72%);
+}
+body.c-unbox .plate {
+  border-radius: 26px;
+  background: linear-gradient(150deg, #2E2A6E 0%, #1B2154 46%, #0B1B3A 100%);
+  box-shadow: inset 0 0 0 3px rgba(255,216,107,.9), inset 0 0 22px rgba(185,139,255,.34),
+              0 8px 22px rgba(0,0,0,.45), 0 0 32px rgba(185,139,255,.45);
+}
+body.c-unbox .plate::after {
+  background: linear-gradient(144deg, rgba(255,255,255,.22) 0 16%, transparent 34%,
+                              rgba(185,139,255,.20) 54%, transparent 72%,
+                              rgba(255,216,107,.24) 100%);
+}
+body.c-unbox .idn b {
+  background-image: linear-gradient(180deg, #FFFFFF 0%, #FFD86B 52%, #B98BFF 100%);
+}
+body.c-unbox .idn i { color: #CDBBFF }
+body.c-unbox .idn u {
+  background: linear-gradient(90deg, #FFD86B, rgba(185,139,255,.95) 55%, transparent);
+}
+
+/* ริบบิ้นเฉียง → แคปซูลมน ไม่เอียงเลย (battle เอียง -2.6deg ตัวนี้ต้องตรงเป๊ะ) */
+body.c-unbox .ribbon {
+  transform: none; border-radius: 999px; margin: 18px 0 0 4px;
+  background: linear-gradient(180deg, #FFF6DC 0%, #FFD86B 46%, #E9A426 100%);
+  box-shadow: 0 9px 26px rgba(20,10,50,.45), inset 0 0 0 2px rgba(255,255,255,.6),
+              0 0 30px rgba(255,216,107,.45);
+}
+body.c-unbox .ribbon i.l,
+body.c-unbox .ribbon i.r { display: none }     /* ปลายริบบิ้นพับ = ของแนวเหลี่ยม ไม่เอา */
+body.c-unbox .ribbon > span { transform: none; color: #2A1A48; padding: 9px 30px }
+body.c-unbox .ribbon svg { fill: #7B54D6 }
+
+/* ═════════ พาดหัว ═════════ */
+/* ตรง ไม่เอียง · เงานูนเป็นทองอ่อน · เรืองม่วงรอบตัวอักษรแทนเรืองฟ้า */
+body.c-unbox h1 {
+  color: #FFFDF6;
+  text-shadow:
+    -3px 0 0 var(--ink),  3px 0 0 var(--ink),  0 -3px 0 var(--ink),  0 3px 0 var(--ink),
+    -2px -2px 0 var(--ink), 2px -2px 0 var(--ink), -2px 2px 0 var(--ink), 2px 2px 0 var(--ink),
+    0 5px 0 rgba(123,84,214,.95),
+    0 9px 0 rgba(30,14,70,.6),
+    0 16px 30px rgba(6,10,34,.7),
+    0 0 50px rgba(255,216,107,.5);
+}
+body.c-unbox h1 em {
+  filter:
+    drop-shadow(2.4px 0 0 #1A1040) drop-shadow(-2.4px 0 0 #1A1040)
+    drop-shadow(0 2.4px 0 #1A1040) drop-shadow(0 -2.4px 0 #1A1040)
+    drop-shadow(0 6px 0 rgba(100,64,190,.95))
+    drop-shadow(0 12px 24px rgba(6,10,34,.6))
+    drop-shadow(0 0 30px rgba(255,216,107,.9));
+}
+
+body.c-unbox .sub {
+  border-radius: 0 16px 16px 0; color: #F6F2FF;
+  border-image: linear-gradient(180deg, #FFF6DC, #FFD86B 40%, #B98BFF 100%) 1;
+  background: linear-gradient(90deg, rgba(14,18,54,.74), rgba(30,22,72,.34) 84%, transparent);
+}
+
+/* ═════════ เนื้อความ ═════════ */
+body.c-unbox .body {
+  border-radius: 22px;
+  background: linear-gradient(90deg, rgba(12,20,52,.82), rgba(24,20,68,.66) 70%, rgba(16,16,52,.40));
+  box-shadow: inset 0 0 0 1px rgba(200,178,255,.24);
+  color: #F1EEFF;
+}
+/* หัวข้อเพชร → ประกาย 4 แฉก (ล้อกับประกายที่กระจายทั่วภาพ) */
+body.c-unbox .body p::before {
+  width: 17px; height: 17px; transform: translateY(-50%);
+  clip-path: polygon(50% 0%, 56% 44%, 100% 50%, 56% 56%, 50% 100%, 44% 56%, 0% 50%, 44% 44%);
+  background: radial-gradient(circle, #FFFFFF 0%, #FFD86B 48%, #E9A426 100%);
+  box-shadow: none;
+  filter: drop-shadow(0 0 8px rgba(255,216,107,.95));
+}
+
+/* ═════════ แถบท้าย ═════════ */
+body.c-unbox .foot {
+  background:
+    linear-gradient(90deg, rgba(255,216,107,.20), rgba(185,139,255,.22) 55%, rgba(255,216,107,.14)),
+    linear-gradient(180deg, rgba(10,16,44,.68), rgba(8,12,34,.92));
+  border-image: linear-gradient(90deg, #7B54D6, #FFD86B 32%, #B98BFF 68%, #7B54D6) 1;
+}
+body.c-unbox .chip {
+  color: #FFF7E4;
+  background: linear-gradient(180deg, rgba(42,36,96,.95), rgba(12,18,48,.95));
+  box-shadow: inset 0 0 0 2px rgba(255,216,107,.7), 0 4px 14px rgba(0,0,0,.4),
+              inset 0 0 18px rgba(185,139,255,.28);
+}
+body.c-unbox .chip svg { fill: #FFD86B; filter: drop-shadow(0 0 6px rgba(255,216,107,.85)) }
+body.c-unbox .tags { color: #C0A8F5 }
+
+/* ═════════ ไม่มีรูปสินค้า ═════════ */
+/* ไม่มีซอง = ไม่มีปากซอง → ย้ายศูนย์กลางแสงมากลางภาพ ไม่งั้นแสงพุ่งออกจากที่ว่างเปล่า */
+body.c-unbox.no-hero .rays {
+  background: repeating-conic-gradient(from 8deg at 50% 43.6%,
+    rgba(255,224,140,.30) 0deg 4.6deg, rgba(255,224,140,0) 4.6deg 15deg);
+  -webkit-mask-image: radial-gradient(circle at 50% 43.6%,
+    transparent 6%, rgba(0,0,0,.95) 20%, rgba(0,0,0,.5) 42%, transparent 66%);
+}
+body.c-unbox.no-hero .rays2 {
+  background: repeating-conic-gradient(from 3deg at 50% 43.6%,
+    rgba(185,139,255,.30) 0deg 1.5deg, rgba(185,139,255,0) 1.5deg 9deg);
+  -webkit-mask-image: radial-gradient(circle at 50% 43.6%,
+    transparent 10%, rgba(0,0,0,.9) 28%, transparent 68%);
+}
+body.c-unbox.no-hero .beam { display: none }
+body.c-unbox.no-hero .sp { display: none }
+
+/* ริ้วแสงกว้างในโหมดไม่มีรูปสินค้า — ต้องย้ายศูนย์กลางตาม .rays/.rays2
+   ไม่งั้นแสงพุ่งออกจากมุมขวาบนที่ไม่มีอะไรอยู่เลย (ปากซองหายไปพร้อมกับซอง) */
+body.c-unbox.no-hero .vig::before {
+  background: repeating-conic-gradient(from 15deg at 50% 40%,
+    rgba(255,238,186,.14) 0deg 9deg, rgba(255,238,186,0) 9deg 26deg);
+  -webkit-mask-image: radial-gradient(1400px 1400px at 50% 40%,
+    transparent 260px, rgba(0,0,0,.7) 620px, transparent 100%);
+}
+/* โหมดนี้มุมล่างขวาโล่ง (ไม่มีซอง) — เปิดสมอกลับมาเติม ตำแหน่งฐานจัดไว้ให้แล้ว
+   ปกติแนวนี้ปิดสมอเพราะมันไปยืนอยู่กลางลำแสงที่พุ่งออกจากปากซอง แต่โหมดนี้ไม่มีลำแสงตรงนั้น */
+body.c-unbox.no-hero .anchor { display: block; opacity: .3 }
+body.c-unbox.no-hero .anchor stop:nth-child(1) { stop-color: #FFF6DC }
+body.c-unbox.no-hero .anchor stop:nth-child(2) { stop-color: #FFD86B }
+body.c-unbox.no-hero .anchor stop:nth-child(3) { stop-color: #7B54D6 }

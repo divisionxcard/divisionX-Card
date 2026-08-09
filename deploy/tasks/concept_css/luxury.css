@@ -1,0 +1,260 @@
+/* ══════════════════════════════════════════════════════════════════════════
+   luxury — "Luxury TCG"  ·  bg #000000 · accent #D4AF37 · accent2 #8A7238
+   ──────────────────────────────────────────────────────────────────────────
+   อารมณ์: ดำสนิท เส้นทองเส้นเดียว ระยะหายใจเยอะ — แคตตาล็อกประมูล ไม่ใช่ป้ายลดราคา
+   หลักที่ยึด: "ตัดของประดับส่วนเกินออกให้หมด" แปลว่าลบจริง ไม่ใช่หรี่ opacity
+     ปิดทิ้ง : รัศมีพุ่ง 2 ชั้น · เส้นความเร็ว · ตารางพื้น · คลื่น · สมอ · นกนางนวล ·
+               ดาวประกาย 7 ดวง · วงรัศมีทองรอบซอง · แสงรองหลังพาดหัว
+     แปลงร่าง: กรอบโครเมียม → เส้นทอง 1px + ขีดมุม 4 มุม
+               แถบเฉียง "ของแท้ 100%" → ป้ายสี่เหลี่ยมเส้นทางบาง มุมขวาบน
+               ริบบิ้นเอียงพื้นทอง → ป้ายตัวอักษรเว้นห่าง ไม่มีพื้น ไม่มีสายฟ้า
+               เหรียญฟันเฟือง → วงกลมเส้นคู่ ตัวเลขทองแบน
+               แคปซูลแถบท้าย → ตัวหนังสือเรียงกัน คั่นด้วยเส้นทอง 1px
+               หัวข้อเพชรทอง → ขีดทอง 14px
+     คุมคอนทราสต์: ตัวหนังสือขาวนวลบนดำ ใช้เงาอ่อนชั้นเดียว ไม่ต้องขอบหนา
+   ทุก selector ขึ้นต้นด้วย body.c-luxury — ห้ามรั่วไปแนวอื่น
+   ══════════════════════════════════════════════════════════════════════════ */
+
+body.c-luxury {
+  --gold-1: #F3E3B4;
+  --gold-2: #D4AF37;
+  --gold-3: #A98A2A;
+  --gold-4: #8A7238;
+  --cyan:   #8A7238;                 /* แนวนี้ไม่มีฟ้า — map ทับด้วยทองหม่น */
+  --cyan-2: #A08E5A;
+  --ink:    #000000;
+  --navy:   #000000;
+  --gold-grad: linear-gradient(180deg,#F7ECC6 0%,#D4AF37 46%,#8A7238 100%);
+  background: #000;
+}
+
+/* ── บรรยากาศ: ดำสนิท เหลือรูปห้างไว้แค่เป็นเนื้อฟิล์มจาง ๆ ───────────── */
+body.c-luxury .bg {
+  filter: blur(22px) grayscale(.86) brightness(.4) contrast(1.24) sepia(.3);
+}
+/* กองแสงทองอุ่นก้อนเดียวหลังซอง ที่เหลือดำสนิท (rgba ล้วนตามกฎฐาน) */
+body.c-luxury .grad {
+  background:
+    radial-gradient(620px 700px at 79% 46%, rgba(212,175,55,.20), rgba(212,175,55,0) 68%),
+    radial-gradient(900px 760px at 79% 46%, rgba(0,0,0,0) 34%, rgba(0,0,0,.62) 88%),
+    linear-gradient(180deg, rgba(0,0,0,.86) 0%, rgba(0,0,0,.50) 26%,
+                            rgba(0,0,0,.52) 66%, rgba(0,0,0,.92) 100%);
+}
+
+/* ── ของประดับที่ต้องหายไปให้หมด ─────────────────────────────────────── */
+body.c-luxury .rays,
+body.c-luxury .rays2,
+body.c-luxury .streaks,
+body.c-luxury .grid,
+body.c-luxury .waves,
+body.c-luxury .anchor,
+body.c-luxury .gulls,
+body.c-luxury .sp,
+body.c-luxury .hero .burst { display: none }
+
+/* สปอตไลต์เหลือไว้ดวงเดียว แคบ อุ่น — แสงพิพิธภัณฑ์ส่องวัตถุจัดแสดง */
+body.c-luxury .beam {
+  left: 79%; top: -200px; width: 620px; height: 1240px;
+  background: linear-gradient(180deg, rgba(255,244,214,.30) 0%, rgba(212,175,55,.13) 34%,
+                                      rgba(212,175,55,.05) 62%, transparent 84%);
+  clip-path: polygon(46% 0, 54% 0, 86% 100%, 14% 100%);
+  filter: blur(34px);
+}
+
+body.c-luxury .vig {
+  background:
+    radial-gradient(120% 96% at 66% 46%, transparent 40%, rgba(0,0,0,.80) 100%),
+    linear-gradient(180deg, rgba(0,0,0,.46) 0%, transparent 20%,
+                            transparent 62%, rgba(0,0,0,.72) 100%);
+}
+
+/* ── กรอบ: เส้นทอง 1px + ขีดมุมครบ 4 มุม ─────────────────────────────── */
+/* ::before/::after ให้มุมได้แค่ 2 มุม (มีสองตัว) → วาดขีดมุมเป็น background 8 ชั้นแทน
+   จะได้ครบทั้งสี่มุมโดยไม่ต้องพึ่ง pseudo และเหลือ pseudo ไว้ใช้อย่างอื่น */
+body.c-luxury .frame {
+  inset: 30px; border: 1px solid rgba(212,175,55,.38);
+  border-image: none; box-shadow: none;
+  background:
+    linear-gradient(#D4AF37,#D4AF37) left    top    / 38px 2px no-repeat,
+    linear-gradient(#D4AF37,#D4AF37) left    top    / 2px 38px no-repeat,
+    linear-gradient(#D4AF37,#D4AF37) right   top    / 38px 2px no-repeat,
+    linear-gradient(#D4AF37,#D4AF37) right   top    / 2px 38px no-repeat,
+    linear-gradient(#D4AF37,#D4AF37) left    bottom / 38px 2px no-repeat,
+    linear-gradient(#D4AF37,#D4AF37) left    bottom / 2px 38px no-repeat,
+    linear-gradient(#D4AF37,#D4AF37) right   bottom / 38px 2px no-repeat,
+    linear-gradient(#D4AF37,#D4AF37) right   bottom / 2px 38px no-repeat;
+}
+
+/* ── แถบเฉียง → ป้ายรับรองสี่เหลี่ยมเส้นบาง ─────────────────────────── */
+body.c-luxury .corner {
+  top: 62px; right: 62px; width: auto; height: auto; overflow: visible;
+}
+body.c-luxury .corner i {
+  position: static; transform: none; width: auto; text-align: center;
+  padding: 9px 18px 10px; font-size: 17px; font-weight: 400; letter-spacing: 4px;
+  color: #D4AF37; background: none; text-shadow: none;
+  border: 1px solid rgba(212,175,55,.5); box-shadow: none;
+}
+
+/* ── เหรียญ → วงกลมเส้นคู่ ───────────────────────────────────────────── */
+/* ตำแหน่งฐาน (left 318 bottom 214) ตกกลางย่อหน้าเนื้อความพอดีเมื่อเอาแผ่นรองออก
+   ย้ายลงมาอยู่ "ช่องว่างระหว่างตู้กับซอง" ซึ่งเป็นที่โล่งจริงที่เหลืออยู่ที่เดียว */
+body.c-luxury .medal {
+  left: 384px; bottom: 128px; width: 130px; height: 130px;
+}
+body.c-luxury .medal::before {
+  background: none; border-radius: 50%;
+  border: 1px solid rgba(212,175,55,.55); filter: none;
+}
+body.c-luxury .medal::after {
+  inset: 7px; border-radius: 50%;
+  background: rgba(0,0,0,.6);
+  box-shadow: inset 0 0 0 1px rgba(212,175,55,.28);
+}
+body.c-luxury .medal s em {
+  font-size: 42px; font-weight: 400; letter-spacing: 1px;
+  background-image: none; -webkit-text-fill-color: #E6CE84; color: #E6CE84;
+}
+body.c-luxury .medal s span {
+  color: #8A7238; font-size: 15px; letter-spacing: 4px; margin-top: 5px;
+}
+
+/* ── รูปตู้: เงาโลหะในความมืด ไม่ใช่ตู้เรืองแสง ─────────────────────── */
+/* ย่อเหลือ 300px → ยอดตู้ตกที่ y≈680 พ้นย่อหน้าสุดท้ายของเนื้อความ
+   ที่ 366px ยอดตู้อยู่ y≈586 แล้วช่องใส่ซองไปโผล่หลังตัวหนังสือจนอ่านไม่ออก */
+body.c-luxury .machine { width: 300px; left: -30px }
+body.c-luxury .machine img {
+  filter: grayscale(.58) brightness(.74) contrast(1.22) sepia(.26);
+}
+body.c-luxury .machine .mglow {
+  background: radial-gradient(ellipse at 52% 62%, rgba(212,175,55,.16), transparent 68%);
+}
+body.c-luxury .machine .mfr {
+  background: radial-gradient(ellipse, rgba(212,175,55,.24), transparent 72%);
+}
+
+/* ── ซอง: เงาดำลึก + ขอบทองบาง ๆ ไม่มีนีออน ─────────────────────────── */
+body.c-luxury .hero .halo {
+  width: 620px; height: 820px;
+  background: radial-gradient(ellipse, rgba(212,175,55,.20) 0%, rgba(120,96,30,.09) 46%, transparent 72%);
+}
+body.c-luxury .hero .stage img {
+  filter: drop-shadow(0 30px 56px rgba(0,0,0,.92))
+          drop-shadow(0 0 42px rgba(212,175,55,.24));
+}
+body.c-luxury .hero .floor {
+  width: 560px; height: 40px;
+  background: radial-gradient(ellipse, rgba(243,227,180,.42), rgba(212,175,55,.14) 46%, transparent 76%);
+  filter: blur(16px);
+}
+
+/* ── หัวกระดาษ: ป้ายดำเส้นทอง ────────────────────────────────────────── */
+body.c-luxury .top { gap: 22px }
+body.c-luxury .plate {
+  width: 112px; height: 92px; border-radius: 2px;
+  background: #000;
+  box-shadow: inset 0 0 0 1px rgba(212,175,55,.55);
+}
+body.c-luxury .plate::after { background: none }
+body.c-luxury .idn b {
+  font-size: 28px; letter-spacing: 8px;
+  background-image: none; -webkit-text-fill-color: #E8D294; color: #E8D294;
+}
+body.c-luxury .idn i {
+  color: #857A5E; font-size: 17px; letter-spacing: 1.4px; margin-top: 8px;
+}
+body.c-luxury .idn u {
+  height: 1px; width: 420px; margin-top: 14px;
+  background: linear-gradient(90deg, rgba(212,175,55,.75), rgba(212,175,55,0));
+}
+
+/* ── ริบบิ้น → ป้ายตัวอักษรเปล่า ────────────────────────────────────── */
+body.c-luxury .ribbon {
+  transform: none; margin: 34px 0 0 2px;
+  background: none; box-shadow: none;
+}
+body.c-luxury .ribbon i { display: none }
+body.c-luxury .ribbon svg { display: none }
+body.c-luxury .ribbon > span {
+  transform: none; padding: 0; gap: 16px;
+  font-weight: 400; font-size: 20px; letter-spacing: 7px;
+  color: #A08E5A; text-shadow: none;
+}
+/* ขีดทองนำหน้า แทนสายฟ้า */
+body.c-luxury .ribbon > span::before {
+  content: ''; flex: 0 0 auto; width: 52px; height: 1px; background: #8A7238;
+}
+
+/* ── พาดหัว: ขาวงาช้างบนดำ เงาชั้นเดียว ระยะหายใจเยอะ ───────────────── */
+body.c-luxury h1 {
+  margin-top: 30px; line-height: 1.28; letter-spacing: 0;
+  color: #F6F1E4;
+  text-shadow: 0 2px 18px rgba(0,0,0,.9), 0 0 60px rgba(0,0,0,.8);
+}
+/* ตัวเลข/รหัสชุด: ทองแบน ไม่มีขอบนูน ไม่มีเงาพุ่ง */
+body.c-luxury h1 em {
+  background-image: var(--gold-grad);
+  filter: drop-shadow(0 2px 16px rgba(0,0,0,.9));
+}
+
+/* ── บรรทัดรอง: ไม่มีแผ่นรอง เหลือเส้นทองเส้นเดียว ──────────────────── */
+body.c-luxury .sub {
+  margin-top: 24px; padding: 2px 0 2px 22px;
+  font-size: 25px; line-height: 1.5; letter-spacing: .4px;
+  color: #DCD3BE;
+  border-left: 1px solid #8A7238; border-image: none;
+  background: none;
+  text-shadow: 0 2px 12px rgba(0,0,0,.95);
+}
+
+/* ── เนื้อความ: ไม่มีแผ่นกระจก หัวข้อเป็นขีดทอง ─────────────────────── */
+/* ม่านดำไล่จางแทนแผ่นกระจก — บนพื้นดำมองไม่เห็นว่ามีแผ่น แต่ตรงที่ทับตัวตู้
+   มันคืนคอนทราสต์ให้อ่านออก (เอาแผ่นออกเฉย ๆ แล้วย่อหน้าสองจมหายไปกับช่องใส่ซอง) */
+body.c-luxury .body {
+  margin: 30px 0 0 -22px; padding: 6px 22px 8px 22px; border-radius: 0;
+  max-width: 582px;
+  background: linear-gradient(90deg, rgba(0,0,0,.86) 0%, rgba(0,0,0,.66) 62%, rgba(0,0,0,0) 100%);
+  box-shadow: none;
+  color: #D3CAB4; line-height: 1.62; letter-spacing: .2px;
+  text-shadow: 0 2px 14px rgba(0,0,0,.98), 0 0 26px rgba(0,0,0,.9);
+}
+body.c-luxury .body p { padding-left: 34px; margin-bottom: 16px }
+body.c-luxury .body p:last-child { margin-bottom: 0 }
+body.c-luxury .body p::before {
+  width: 16px; height: 1px; left: 0; top: .78em;
+  transform: none; border-radius: 0;
+  background: #8A7238; box-shadow: none;
+}
+body.c-luxury .body:has(p:nth-child(3)) { line-height: 1.56 }
+body.c-luxury .body:has(p:nth-child(4)) { line-height: 1.48 }
+
+/* ── แถบท้าย: เส้นทอง 1px + ตัวหนังสือคั่นด้วยเส้น ───────────────────── */
+/* padding ล่าง 34px ดันบรรทัดที่สองของแฮชแท็กขึ้นมาให้พ้นเส้นกรอบที่ y=1049 */
+body.c-luxury .foot {
+  margin: auto -56px 0; padding: 24px 56px 34px; gap: 0;
+  background: linear-gradient(180deg, rgba(0,0,0,.72), rgba(0,0,0,.94));
+  border-top: 1px solid rgba(212,175,55,.42); border-image: none;
+}
+body.c-luxury .chip {
+  padding: 2px 26px; border-radius: 0;
+  font-weight: 400; font-size: 20px; letter-spacing: 2.6px;
+  color: #BFB397; background: none; box-shadow: none;
+}
+body.c-luxury .chip:first-of-type { padding-left: 0 }
+body.c-luxury .chip + .chip { border-left: 1px solid rgba(212,175,55,.3) }
+body.c-luxury .chip svg { display: none }
+body.c-luxury .tags {
+  color: #766D55; font-size: 16px; line-height: 1.3; letter-spacing: .6px; max-width: 236px;
+}
+
+/* ── ระยะหายใจ: แสงรองหลังพาดหัวไม่ต้องมี ───────────────────────────── */
+/* padding ซ้าย 66 > ขีดมุมกรอบที่จบ x=68 พอดี ไม่ให้ป้ายโลโก้ทับขีดมุม */
+body.c-luxury .wrap {
+  padding: 72px 56px 0 66px;
+}
+body.c-luxury .wrap::before { display: none }
+
+/* ── เคสไม่มีรูปสินค้า ───────────────────────────────────────────────── */
+body.c-luxury.no-hero .beam { left: 58% }
+body.c-luxury.no-hero .medal { left: 386px; bottom: 200px }
+body.c-luxury.no-hero .body { max-width: 900px }

@@ -1,0 +1,387 @@
+/* ══════════════════════════════════════════════════════════════════════════
+   viral — "Viral Social Post"  ·  เร็ว / แรง / สะดุดตา
+   ──────────────────────────────────────────────────────────────────────────
+   อารมณ์: ป้ายบนฟีดที่ต้องอ่านออกภายใน 0.4 วินาทีตอนเลื่อนผ่าน
+   โจทย์บังคับ: พาดหัวกินพื้นที่ 70% · รูปเป็นตัวประกอบเล็ก
+
+   ── ทำไมต้องใช้ zoom ไม่ใช่ font-size ──────────────────────────────────────
+   {{HEAD_SIZE}} ถูกแทนค่าก่อน {{CONCEPT_CSS}} จะถูกฉีดเข้าไป (ดูลำดับ .replace
+   ใน build_html) → สกินอ่านค่านั้นไม่ได้ ถ้าฮาร์ดโค้ด font-size ทับ พาดหัวยาว
+   (56px / 60 ตัวอักษร) จะล้นกรอบทันที เพราะฐานย่อฟอนต์ตามความยาวไว้แล้วแต่เราไปทับทิ้ง
+
+   ทางออก: zoom: 1.34 บน h1
+     · zoom คูณทุกความยาวของ element และลูก → font-size 74→99, 56→75 (ยังคงสัดส่วนเดิม)
+     · ต่างจาก transform: scale ตรงที่ zoom มีผลกับ layout จริง ตัวถัดไปถูกดันลงตาม
+       (scale จะทำให้ .sub/.body ซ้อนทับพาดหัวเพราะกล่อง layout ไม่โต)
+     · max-width 640px × 1.34 = 858px = 79% ของภาพ → ได้ "70%" ตามโจทย์โดยไม่พังเคสยาว
+
+   ── โครงที่เปลี่ยนจากฐาน ───────────────────────────────────────────────────
+   ฐาน   : ตัวหนังสือคอลัมน์ซ้าย 520px + ซองยักษ์ 41% ฝั่งขวา + ตู้จริงมุมล่างซ้าย
+   viral : พาดหัวพาดเกือบเต็มความกว้าง + ซองย่อเหลือ ~26% ไปยืนมุมล่างขวา
+           + ซ่อนรูปตู้ (รูปเป็นตัวประกอบ ไม่ใช่พระเอก) + เหรียญกลายเป็นตราดาวมุมล่างซ้าย
+   ── ของประดับ ─────────────────────────────────────────────────────────────
+   แถบสีทแยงตัดขวาง (.rays/.rays2) · จุดฮาล์ฟโทน (.grid) · ริ้วทแยงถี่ (.streaks)
+   ลูกศรชี้ (.s7 ชี้ซอง, .s5 ชี้ตราสาขา) · คอนเฟตตี (.sp ที่เหลือ) · กรอบเหลืองหนา 13px
+
+   [ระวัง] ห้ามอีโมจิ · ห้าม -webkit-text-stroke (กินวรรณยุกต์ไทย)
+           ขอบพาดหัวหนา ๆ ของแนวนี้ทำด้วย text-shadow 8 ทิศ ซึ่งวาด "หลัง" ตัวอักษร
+           สระบน/วรรณยุกต์จึงไม่ถูกกิน
+   ══════════════════════════════════════════════════════════════════════════ */
+
+body.c-viral {
+  --y:  #FFE14D;   /* accent   */
+  --r:  #FF4D6D;   /* accent2  */
+  --nv: #0B1B3A;   /* bg       */
+  --nvd:#050E22;
+  background: #0B1B3A;
+}
+
+/* ── พื้นหลัง: เบลอแรง ไม่ให้แย่งความสนใจกับตัวหนังสือ ────────────────────── */
+/* ฐานเบลอ 9px เพื่อ "ให้เห็นว่าเป็นห้างจริง" — แนวนี้กลับกัน ต้องการแค่เนื้อสีอุ่น ๆ
+   ให้พาดหัวลอย เบลอ 26px + กดสว่างลงครึ่ง = พื้นที่อ่านง่ายที่สุดสำหรับตัวหนังสือใหญ่ */
+body.c-viral .bg {
+  filter: blur(26px) saturate(1.6) brightness(.64) contrast(1.06);
+}
+body.c-viral .grad {
+  background:
+    radial-gradient(720px 560px at 84% 78%, rgba(255,77,109,.30), rgba(255,77,109,0) 70%),
+    radial-gradient(760px 600px at 6% 12%,  rgba(255,225,77,.22), rgba(255,225,77,0) 68%),
+    radial-gradient(620px 520px at 96% 6%,  rgba(255,77,109,.26), rgba(255,77,109,0) 66%),
+    linear-gradient(160deg, rgba(11,27,58,.82) 0%, rgba(9,22,50,.66) 42%,
+                            rgba(6,16,38,.78) 74%, rgba(4,10,26,.90) 100%);
+}
+
+/* ── แถบสีทแยงตัดขวาง ──────────────────────────────────────────────────── */
+/* .rays/.rays2 เดิมคือรัศมีพุ่ง — ถอดทิ้งแล้วใช้เป็นแถบทึบพาดมุมขวาบน→ล่างซ้าย
+   [ระวัง] แถบต้องหยุดก่อนถึงเขตพาดหัว ไม่งั้นตัวอักษรนอนบนแถบชมพูแล้วอ่านยาก
+   → คุมด้วย mask ให้แถบเข้มเฉพาะครึ่งขวา แล้วจางหายก่อนถึง x≈560 */
+body.c-viral .rays,
+body.c-viral .rays2 {
+  inset: 0;
+  -webkit-mask-image: linear-gradient(96deg, transparent 34%, #000 62%, #000 100%);
+}
+body.c-viral .rays {
+  background: linear-gradient(118deg,
+    transparent 0 60%, rgba(255,77,109,.78) 60% 68.5%, transparent 68.5%);
+}
+body.c-viral .rays2 {
+  background: linear-gradient(118deg,
+    transparent 0 70.5%, rgba(255,225,77,.80) 70.5% 74%, transparent 74%,
+    transparent 76%, rgba(255,255,255,.24) 76% 77.4%, transparent 77.4%);
+}
+
+/* ริ้วทแยงถี่ — เนื้อพื้นแบบโปสเตอร์งานวิ่ง/งานลดราคา
+   opacity ต้องต่ำ (.3) — รอบแรกใช้ .5 แล้วริ้วแย่งสายตากับพาดหัวจนภาพดูรก */
+body.c-viral .streaks {
+  opacity: .3;
+  background: repeating-linear-gradient(118deg,
+    rgba(255,225,77,.13) 0 14px, transparent 14px 66px);
+}
+
+/* จุดฮาล์ฟโทน — ภาษาป๊อปอาร์ต ใช้แทนตารางของฐาน
+   กองไว้มุมล่างซ้าย ซึ่งเป็นช่องที่โล่งที่สุดหลังซ่อนรูปตู้ (ไม่ใช่กระจายทั้งภาพ) */
+body.c-viral .grid {
+  opacity: .95;
+  background-image: radial-gradient(rgba(255,225,77,.62) 3px, transparent 3.4px);
+  background-size: 21px 21px;
+  -webkit-mask-image: radial-gradient(720px 660px at 0% 100%, #000 4%, transparent 62%);
+}
+
+/* สปอตไลต์ของฐานไม่มีบทบาทเมื่อสินค้าเล็กลง — ตัดทิ้ง */
+body.c-viral .beam { display: none }
+
+/* ธีมเดินเรือทั้งชุดไม่เข้ากับโพสต์ไวรัล — ตัดทิ้งทั้งหมด */
+body.c-viral .waves,
+body.c-viral .anchor,
+body.c-viral .gulls { display: none }
+
+/* ขอบมืดบางลง — โพสต์ไวรัลต้องแบน สว่าง อ่านชัด ไม่ใช่มีมิติลึก */
+body.c-viral .vig {
+  background:
+    radial-gradient(130% 106% at 50% 46%, transparent 56%, rgba(2,7,18,.44) 100%),
+    linear-gradient(180deg, rgba(2,7,18,.26) 0%, transparent 15%,
+                            transparent 74%, rgba(2,7,18,.36) 100%);
+}
+
+/* ── ซ่อนรูปตู้ ─────────────────────────────────────────────────────────── */
+/* text_first แปลว่ารูปเป็นตัวประกอบ — มีรูปสองใบ (ตู้ + ซอง) แย่งพื้นที่กับพาดหัว 79%
+   ไม่ไหว · เลือกเก็บ "ซอง" เพราะเป็นตัวสินค้าที่โพสต์กำลังพูดถึง */
+body.c-viral .machine { display: none }
+
+/* ── ซองสินค้า: ย่อลงเหลือตัวประกอบ มุมล่างขวา ───────────────────────────── */
+/* width 620 → ตัวซองกว้าง 620×.449 = 278px = 26% ของภาพ (ฐาน 41%)
+   top 500 → หัวซอง y = 500+620×.059 = 537 · ก้นซอง y = 500+620×.953 = 1091
+   ตั้งใจให้ก้นจมหลังแถบท้าย ซองจะได้ "ยืนอยู่บนแถบ" ไม่ใช่ลอย */
+body.c-viral .hero { width: 430px; right: -6px }
+body.c-viral .hero .stage img {
+  width: 620px; top: 500px;
+  /* ซองเล็กลงมากบนพื้นเข้ม ต้องดันความสว่าง/คอนทราสต์ ไม่งั้นจมหายเป็นก้อนมืด
+     ต้องวางไว้หน้า drop-shadow ในสายฟิลเตอร์ (ฟิลเตอร์ทำงานเรียงซ้ายไปขวา) */
+  filter: brightness(1.12) contrast(1.08) saturate(1.06)
+          drop-shadow(0 18px 30px rgba(0,0,0,.75))
+          drop-shadow(0 0 26px rgba(255,225,77,.45))
+          drop-shadow(0 0 60px rgba(255,77,109,.35));
+}
+body.c-viral .hero .floor {
+  top: 946px; width: 420px; height: 46px;
+  background: radial-gradient(ellipse, rgba(255,240,170,.75),
+                              rgba(255,77,109,.34) 44%, transparent 74%);
+}
+/* วงรัศมีทองของฐานใหญ่เกินซองใหม่ — ย่อลงให้พอดีหลังซอง */
+body.c-viral .hero .burst {
+  left: 50%; top: 72%; width: 620px; height: 620px;
+  background: repeating-conic-gradient(from 8deg,
+    rgba(255,225,77,.30) 0deg 2.2deg, rgba(255,225,77,0) 2.2deg 9deg);
+  -webkit-mask-image: radial-gradient(circle, transparent 26%, rgba(0,0,0,.85) 42%, transparent 70%);
+}
+body.c-viral .hero .halo {
+  left: 50%; top: 72%; width: 520px; height: 520px;
+  background: radial-gradient(ellipse, rgba(255,225,77,.30) 0%,
+                              rgba(255,77,109,.20) 46%, transparent 72%);
+}
+
+/* ── ลูกศรชี้ + คอนเฟตตี (เดิมคือประกายดาว) ─────────────────────────────── */
+/* ยืม .sp มาทำสองหน้าที่ เพราะมันเป็น element เดียวในเทมเพลตที่ z-index 4
+   (สูงกว่าซอง) — ลูกศรจึงลอยอยู่หน้าสินค้าได้โดยไม่ต้องแก้เทมเพลต */
+body.c-viral .sp {
+  background: var(--y);
+  clip-path: none;
+  border-radius: 3px;
+  filter: drop-shadow(0 4px 0 rgba(3,10,24,.55));
+}
+body.c-viral .sp.c { background: var(--r) }
+
+/* ลูกศรใหญ่ ชี้เข้าซอง — ปลายหยุดที่ x=676 ซองเริ่ม x≈730 (ชี้ ไม่ใช่ทิ่ม)
+   วางต่ำ (y 700-820) เพื่อถมช่องโล่งกลาง-ล่างที่เกิดขึ้นหลังซ่อนรูปตู้ */
+/* [ระวัง] .sp อยู่ z-index 4 แต่ .wrap อยู่ 5 → แผ่นเนื้อความทับลูกศรได้
+   ลูกศรจึงต้องอยู่ "ใต้ขอบล่างของ .body" (y≈782 เคส 2 ย่อหน้า / ≈820 เคส 3 ย่อหน้า)
+   ตั้ง top:826 คือค่าที่ปลอดภัยทั้งสองเคส */
+body.c-viral .s7 {
+  left: 470px; right: auto; top: 826px; width: 206px; height: 122px;
+  border-radius: 0;
+  background: var(--y);
+  clip-path: polygon(0 27%, 57% 27%, 57% 0, 100% 50%, 57% 100%, 57% 73%, 0 73%);
+  filter: drop-shadow(6px 7px 0 rgba(3,10,24,.62));
+}
+/* ลูกศรเล็ก ชี้ลงบนหัวซอง — วางในแถบว่างเหนือซอง (พาดหัวจบที่ x≈630 ตรงนี้จึงโล่ง) */
+body.c-viral .s5 {
+  left: 792px; top: 400px; width: 80px; height: 112px;
+  border-radius: 0;
+  background: var(--r);
+  clip-path: polygon(27% 0, 73% 0, 73% 58%, 100% 58%, 50% 100%, 0 58%, 27% 58%);
+  filter: drop-shadow(5px 6px 0 rgba(3,10,24,.58));
+}
+/* ที่เหลือเป็นคอนเฟตตี — แท่งสี่เหลี่ยมเอียง ไม่ใช่ดาว (ดาว=ภาษาของฐาน) */
+body.c-viral .s1 { width: 44px; height: 17px; left: 512px; top: 214px; transform: rotate(-22deg) }
+body.c-viral .s2 { width: 34px; height: 14px; left: 986px; top: 402px; transform: rotate(34deg) }
+body.c-viral .s3 { width: 50px; height: 18px; right: 62px; top: 300px; transform: rotate(12deg) }
+body.c-viral .s4 { width: 30px; height: 13px; right: 226px; top: 238px; transform: rotate(-40deg) }
+body.c-viral .s6 { width: 38px; height: 15px; right: 30px; top: 690px; transform: rotate(-16deg) }
+
+/* ── กรอบเหลืองหนา ─────────────────────────────────────────────────────── */
+/* "ขอบหนา" ตามโจทย์ · inset 0 เพื่อให้ชนขอบภาพจริง — โพสต์ไวรัลใช้กรอบเป็นตัวจับสายตา
+   ไม่ใช่เส้นตกแต่งบาง ๆ แบบกรอบทองของฐาน */
+body.c-viral .frame {
+  inset: 0;
+  border: 13px solid var(--y);
+  border-image: none;
+  box-shadow: inset 0 0 0 5px var(--nv), inset 0 0 0 9px var(--r);
+}
+
+/* ── แถบมุม: ป้ายชมพูตัวหนา ─────────────────────────────────────────────── */
+body.c-viral .corner i {
+  color: #FFFFFF;
+  font-size: 28px; letter-spacing: .6px;
+  padding: 13px 0 14px;
+  background: var(--r);
+  box-shadow: 0 8px 20px rgba(0,0,0,.5), inset 0 0 0 3px rgba(255,255,255,.9);
+  text-shadow: 0 3px 0 rgba(120,10,34,.85);
+}
+
+/* ── ตราจำนวนสาขา: ดาวกระจาย มุมล่างซ้าย ─────────────────────────────────── */
+/* ฐานวางเหรียญไว้ปั๊มบนรูปตู้ — พอซ่อนตู้แล้วมันจะลอยกลางที่ว่าง ต้องย้ายมามุม
+   และเปลี่ยนจาก "เหรียญทองขอบหยัก" เป็น "ดาวกระจายแบบป้ายลดราคา" ให้เข้าภาษาไวรัล */
+body.c-viral .medal {
+  left: 62px; bottom: 86px; width: 192px; height: 192px;
+}
+body.c-viral .medal::before {
+  background: var(--y);
+  border-radius: 0;
+  clip-path: polygon(
+    50% 0%, 58% 12%, 69% 4%, 72% 18%, 85% 14%, 83% 28%, 96% 30%, 88% 41%,
+    100% 50%, 88% 59%, 96% 70%, 83% 72%, 85% 86%, 72% 82%, 69% 96%, 58% 88%,
+    50% 100%, 42% 88%, 31% 96%, 28% 82%, 15% 86%, 17% 72%, 4% 70%, 12% 59%,
+    0% 50%, 12% 41%, 4% 30%, 17% 28%, 15% 14%, 28% 18%, 31% 4%, 42% 12%);
+  filter: drop-shadow(5px 7px 0 rgba(3,10,24,.6));
+}
+body.c-viral .medal::after {
+  inset: 30px; border-radius: 50%;
+  background: var(--nv);
+  box-shadow: inset 0 0 0 4px var(--r);
+}
+/* [ระวัง] ต้องใช้ background-image ไม่ใช่ background — ตัวย่อ background รีเซ็ต
+   background-clip กลับเป็น border-box แล้วตัวเลขที่ text-fill-color:transparent
+   จะกลายเป็นสี่เหลี่ยมทึบ */
+body.c-viral .medal s em {
+  background-image: linear-gradient(180deg, #FFF7C8, #FFE14D 55%, #F2B60C);
+  font-size: 54px;
+}
+body.c-viral .medal s span { color: #FFFFFF; font-weight: 700; font-size: 21px }
+
+/* ── คอลัมน์ตัวหนังสือ ──────────────────────────────────────────────────── */
+body.c-viral .wrap { padding: 24px 50px 0 }
+body.c-viral .wrap::before {
+  left: -60px; top: 150px; width: 1000px; height: 460px;
+  background: radial-gradient(640px 240px at 40% 46%, rgba(255,77,109,.22), transparent 74%);
+}
+
+/* หัวกระดาษย่อลง — พาดหัวต้องเป็นของที่ใหญ่ที่สุดในภาพแบบไม่มีคู่แข่ง */
+body.c-viral .top { gap: 13px }
+body.c-viral .plate {
+  width: 96px; height: 76px; border-radius: 12px;
+  background: linear-gradient(150deg, #16336A 0%, #0B1B3A 100%);
+  box-shadow: inset 0 0 0 3px var(--y), 0 6px 0 rgba(3,10,24,.5);
+}
+body.c-viral .plate .crop { width: 74px; height: 52px }
+body.c-viral .plate .crop img { width: 131.5px; left: -25.9px; top: -24.4px }
+body.c-viral .idn b {
+  font-size: 25px; letter-spacing: 2.4px;
+  background-image: linear-gradient(180deg, #FFFFFF, #FFFFFF);
+}
+body.c-viral .idn i { font-size: 16px; color: #A9C6E8; margin-top: 2px }
+body.c-viral .idn u {
+  height: 5px; width: 240px; margin-top: 6px;
+  background: linear-gradient(90deg, var(--y) 0 46%, var(--r) 46% 100%);
+}
+
+/* ── ป้ายเหนือพาดหัว: แผ่นเหลืองทึบ เงาแข็ง ───────────────────────────────── */
+body.c-viral .ribbon {
+  margin: 12px 0 0 2px;
+  background: var(--y);
+  box-shadow: 0 7px 0 rgba(3,10,24,.55), inset 0 0 0 3px rgba(255,255,255,.55);
+}
+body.c-viral .ribbon i { background: #C99A00 }
+body.c-viral .ribbon > span {
+  padding: 6px 22px 7px; font-size: 22px; letter-spacing: .4px;
+  color: #10224A; text-shadow: none;
+}
+body.c-viral .ribbon svg { fill: #10224A; width: 17px; height: 22px }
+
+/* ── พาดหัว: พระเอกของแนวนี้ ────────────────────────────────────────────── */
+/* เหลืองทึบ + ขอบดำหนา 4px รอบตัว + เงาแข็งชมพูใต้ตัวอักษร = ป้ายบนฟีด
+   [ระวัง] ขอบ 4px ทำด้วย text-shadow 8 ทิศเท่านั้น ห้ามเปลี่ยนไป -webkit-text-stroke
+   เพราะเส้นขอบแบบ stroke จะกินช่องว่างระหว่างสระบนกับวรรณยุกต์ ("ที่" เหลือ "ที") */
+body.c-viral h1 {
+  zoom: 1.45;
+  max-width: 590px;
+  margin-top: 12px;
+  /* 1.09 แน่นเกิน — "ั" ของบรรทัดล่างเกือบชนเงาชมพูของบรรทัดบน
+     1.13 คือค่าต่ำสุดที่ยังแน่นแบบโปสเตอร์แต่วรรณยุกต์ไม่ไปเบียดกัน */
+  line-height: 1.13;
+  letter-spacing: -1px;
+  color: var(--y);
+  text-shadow:
+    -3px 0 0 #05101F,  3px 0 0 #05101F,  0 -3px 0 #05101F,  0 3px 0 #05101F,
+    -2.2px -2.2px 0 #05101F, 2.2px -2.2px 0 #05101F,
+    -2.2px 2.2px 0 #05101F,  2.2px 2.2px 0 #05101F,
+    0 6px 0 #FF4D6D,
+    0 8px 0 #05101F,
+    0 14px 22px rgba(0,0,0,.7);
+}
+/* ตัวเลข/รหัสชุด → ขาว ขอบชมพู เงาดำ · ตัดกับเหลืองแรงที่สุดในสามสี */
+body.c-viral h1 em {
+  background-image: linear-gradient(180deg, #FFFFFF 0%, #FFFFFF 62%, #FFD9E1 100%);
+  filter:
+    drop-shadow(2.6px 0 0 #FF4D6D) drop-shadow(-2.6px 0 0 #FF4D6D)
+    drop-shadow(0 2.6px 0 #FF4D6D) drop-shadow(0 -2.6px 0 #FF4D6D)
+    drop-shadow(2px 0 0 #05101F) drop-shadow(-2px 0 0 #05101F)
+    drop-shadow(0 2px 0 #05101F) drop-shadow(0 -2px 0 #05101F)
+    drop-shadow(0 7px 0 rgba(5,16,31,.95))
+    drop-shadow(0 14px 20px rgba(0,0,0,.6));
+}
+
+/* ── บรรทัดรอง: แถบชมพูทึบ ──────────────────────────────────────────────── */
+body.c-viral .sub {
+  max-width: 620px;
+  margin-top: 15px;
+  padding: 9px 22px 11px;
+  font-size: 25px; font-weight: 700; line-height: 1.3;
+  color: #FFFFFF;
+  border-left: none;
+  border-image: none;
+  background: var(--r);
+  box-shadow: 0 7px 0 rgba(3,10,24,.55);
+  text-shadow: 0 2px 0 rgba(122,12,38,.8);
+}
+
+/* ── เนื้อความ: กล่องขอบเหลือง หัวข้อเป็นลูกศรสามเหลี่ยม ───────────────────── */
+body.c-viral .body {
+  max-width: 592px;
+  margin: 22px 0 0 -6px;
+  border-radius: 8px;
+  padding: 13px 16px 13px 13px;
+  background: rgba(5,14,34,.90);
+  box-shadow: inset 0 0 0 3px var(--y), 0 6px 0 rgba(3,10,24,.45);
+  color: #F2F7FF;
+}
+body.c-viral .body p::before {
+  left: 4px; width: 14px; height: 16px;
+  transform: translateY(-50%);
+  border-radius: 0;
+  background: var(--r);
+  clip-path: polygon(0 0, 100% 50%, 0 100%);
+  box-shadow: none;
+}
+
+/* ── แถบท้าย: ทึบ ขอบบนเหลืองหนา แคปซูลเหลืองตัวหนา ─────────────────────── */
+body.c-viral .foot {
+  padding: 15px 34px 14px;
+  background: linear-gradient(180deg, rgba(5,14,34,.94), rgba(3,9,24,.98));
+  border-top: 7px solid var(--y);
+  border-image: none;
+}
+body.c-viral .chip {
+  padding: 7px 15px;
+  font-size: 22px;
+  color: #10224A;
+  background: var(--y);
+  box-shadow: 0 4px 0 rgba(3,10,24,.55);
+}
+body.c-viral .chip:nth-of-type(2) { background: #FFFFFF }
+body.c-viral .chip:nth-of-type(3) { background: var(--r); color: #FFFFFF }
+body.c-viral .chip svg { fill: #10224A; filter: none; width: 22px; height: 22px }
+body.c-viral .chip:nth-of-type(3) svg { fill: #FFFFFF }
+body.c-viral .tags { color: var(--y); font-weight: 700; font-size: 18px }
+
+/* ── เคสไม่มีรูปสินค้า ──────────────────────────────────────────────────── */
+/* [ระวัง] ฐานตั้ง .no-hero h1{max-width:880px} — คูณ zoom 1.34 แล้วได้ 1179px
+   กว้างกว่าพื้นที่ในกรอบ (980px) พาดหัวจะล้นออกนอกภาพ ต้องทับเป็น 700px (=938px) */
+body.c-viral.no-hero h1 { max-width: 700px }
+body.c-viral.no-hero .sub { max-width: 900px; font-size: 29px }
+body.c-viral.no-hero .body { max-width: 940px }
+/* ไม่มีซองแล้ว ลูกศรใหญ่ก็ไม่มีอะไรให้ชี้ — กลับด้านให้ชี้เข้าตราสาขาแทน
+   (scaleX(-1) ถูกกว่าการเขียน clip-path กลับด้านอีกชุด) แล้วปิดลูกศรเล็ก */
+body.c-viral.no-hero .s7 {
+  left: 306px; top: 848px; width: 128px; height: 82px;
+  transform: scaleX(-1);
+}
+body.c-viral.no-hero .s5 { display: none }
+body.c-viral.no-hero .medal { left: 78px; bottom: 66px; width: 224px; height: 224px }
+body.c-viral.no-hero .medal s em { font-size: 62px }
+body.c-viral.no-hero .medal s span { font-size: 23px }
+body.c-viral.no-hero .grid {
+  -webkit-mask-image: radial-gradient(1060px 720px at 58% 104%, #000 8%, transparent 68%);
+}
+/* ครึ่งล่างขวาโล่งไป 300px เมื่อไม่มีซอง — เปิด .hero (ฐานสั่ง display:none ตอนไม่มีรูป)
+   กลับมาใช้เป็น "ดวงอาทิตย์รัศมี" ล้วน ๆ ไม่มีรูปข้างใน แค่ถมพื้นที่ให้สมดุล */
+body.c-viral.no-hero .hero.empty { display: block; width: 560px; right: -40px }
+body.c-viral.no-hero .hero .burst {
+  left: 50%; top: 78%; width: 720px; height: 720px;
+  background: repeating-conic-gradient(from 8deg,
+    rgba(255,225,77,.34) 0deg 2.4deg, rgba(255,225,77,0) 2.4deg 9deg);
+  -webkit-mask-image: radial-gradient(circle, rgba(0,0,0,.9) 0 34%, rgba(0,0,0,.5) 56%, transparent 74%);
+}
+body.c-viral.no-hero .hero .halo {
+  left: 50%; top: 78%; width: 420px; height: 420px;
+  background: radial-gradient(circle, rgba(255,77,109,.34) 0%, rgba(255,225,77,.16) 48%, transparent 72%);
+}

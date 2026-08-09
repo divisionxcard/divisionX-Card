@@ -1,16 +1,54 @@
 <!doctype html>
 <!--
-  เทมเพลตโปสเตอร์คอนเทนต์ · แก้หน้าตาได้ที่ไฟล์นี้ ไม่ต้องแตะ Python
+  ╔══════════════════════════════════════════════════════════════════════════╗
+  ║  poster_template.html — เทมเพลตฐาน (base) ของโปสเตอร์ DivisionX Card      ║
+  ╚══════════════════════════════════════════════════════════════════════════╝
 
-  ตัวแปรที่ใส่ให้: {{FONT_REGULAR}} {{FONT_BOLD}} (data URI) · {{HEADLINE}} {{SUB}}
-                  {{BODY}} (หลาย <p>) · {{HERO}} (data URI รูปสินค้า หรือว่าง)
-                  {{BRANCHES}} {{TAGS}} {{BG}} (data URI พื้นหลัง AI หรือว่าง)
+  รวมของดีจาก 3 เทมเพลตทดลอง:
+    · โครง/ของประดับไทยจัดเต็ม  ← hype   (กรอบทอง ริบบิ้น เหรียญ รัศมี หัวข้อเพชร แถบท้ายแคปซูล)
+    · ขนาดสินค้า + กรวยสปอตไลต์ ← stage  (แก้จุดตายของ hype ที่ซองกินภาพแค่ 9%)
+    · แถบเฉียงมุมขวาบน          ← foil   (ทิ้งพัดการ์ดเปล่า — มันดูเหมือนช่องว่างรอใส่ของ)
+  ของใหม่: รูปตู้จริง 2 ใบ — {{BG}} บรรยากาศห้าง · {{MACHINE}} ตัวตู้ถ่ายตรง
 
-  ทำไมฝังฟอนต์/รูปเป็น data URI: ตัวเรนเดอร์ใช้ set_content() ไม่ได้เสิร์ฟผ่าน
-  เว็บเซิร์ฟเวอร์ ถ้าอ้างไฟล์ภายนอกจะโหลดไม่ทัน/ไม่ขึ้น และกัน CORS ตอนดึงรูปข้ามโดเมน
+  ── โครงหน้า ────────────────────────────────────────────────────────────────
+  แบ่งซ้าย-ขวา ไม่ใช่กองกลางเหมือน hype
+    ซ้าย  (x 50–570)  = คอลัมน์ตัวหนังสือทั้งหมด + รูปตู้จริงที่มุมล่าง
+    ขวา   (x 598–1042)= ซองยักษ์ กว้าง ~41% ของภาพ ทะลุลงไปหลังแถบท้าย
+  เหตุผล: ซองสูง:กว้าง ≈ 2:1 · ถ้าวางกลางภาพแบบ hype/stage แล้วให้ครบทั้งซอง
+  ความสูงที่เหลือหลังหักพาดหัว/เนื้อความ/แถบท้ายมีแค่ ~450px → ซองกว้างได้แค่ ~220px (20%)
+  ย้ายมาชิดขวาแล้วปล่อยให้กินตั้งแต่ใต้หัวกระดาษยาวลงไปถึงขอบล่าง = สูง ~885px → กว้าง ~444px (41%)
 
-  ห้ามใส่อีโมจิลงในข้อความ — Chromium บน ubuntu ของ GitHub Actions ไม่มีฟอนต์
-  อีโมจิสี จะออกมาเป็นสี่เหลี่ยม (บนเครื่อง Windows ไม่เห็นปัญหา เลยพลาดง่าย)
+  ── ระบบชั้น (z-index) ───────────────────────────────────────────────────────
+    0  .bg .grad .rays .rays2 .beam .grid .streaks .waves .anchor .gulls .vig
+    2  .machine        รูปตู้จริง (อยู่หลังตัวหนังสือ)
+    3  .hero           ซองสินค้า + รัศมี + แสงพื้น
+    4  .sp             ประกายดาว (อยู่หน้าซอง)
+    5  .wrap           ตัวหนังสือทั้งหมด — ทับซองที่บริเวณเนื้อความ/แถบท้ายโดยตั้งใจ
+    6  .medal          เหรียญสาขา
+    7  .frame .corner  กรอบทอง + แถบเฉียงมุม (บนสุดเสมอ)
+
+  ── กับดักที่กันไว้แล้ว (อย่าแก้กลับ) ────────────────────────────────────────
+  1. ห้ามใส่อีโมจิ — ubuntu บน CI ไม่มีฟอนต์อีโมจิสี จะได้สี่เหลี่ยม
+     ไอคอนทุกตัวในไฟล์นี้เป็น inline SVG / รูปทรง CSS ล้วน
+  2. ห้ามใช้ -webkit-text-stroke กับไทย — เส้นขอบกินช่องว่างระหว่างสระบนกับวรรณยุกต์
+     "ที่" จะเหลือ "ที" · ใช้ text-shadow ซ้อนหลายทิศแทน (วาดหลังตัวอักษร ตัวอักษรจึงยังครบ)
+  3. text-shadow ใช้กับ background-clip:text ไม่ได้ (พื้นหลังวาดก่อน เงาจะกลบตัวอักษร)
+     → ตรงไหนอยากได้ทั้งไล่สีและขอบ ใช้ filter: drop-shadow ซ้อนแทน
+  4. % ความสูงของลูก resolve ได้ต่อเมื่อพ่อมี height ชัดเจน → .hero จึงตรึง height:1080px
+     ไม่ใช่ flex:1 (พาดหัวยาว/สั้นไม่ควรทำให้ขนาดซองกระโดด)
+  5. **ทุกเลเยอร์ที่ทับ .bg ต้องเป็น rgba** — hype ปิดท้าย .grad ด้วย linear-gradient สีทึบ
+     ผลคือรูปตู้จริงถูกบังหมด เหลือแค่พื้นน้ำเงิน (เสียรูปฟรี ๆ)
+  6. โลโก้ DC เป็น PNG พื้นดำทึบ → ครอบหน้าต่างเฉพาะตรา DC + mix-blend-mode:screen
+     บนแผ่นที่ isolation:isolate (ไม่งั้นเห็นเป็นกล่องดำกลางหัวกระดาษ)
+
+  ── hook สำหรับสกินแนวคิด ({{CONCEPT_CSS}} ต่อท้าย <style>) ──────────────────
+  ชื่อ class ที่ "ตั้งใจให้สกินเขียนทับ" (มีคอมเมนต์ [hook] กำกับทุกตัวในไฟล์)
+    พื้นหลัง/บรรยากาศ : .bg .grad .rays .rays2 .beam .grid .streaks .vig
+    ของประดับแบรนด์   : .waves .anchor .gulls .sp
+    กรอบ/ป้าย         : .frame .corner .ribbon .medal
+    เนื้อหา           : .top .plate .idn h1 .sub .hero .body .foot .chip .tags
+    รูปตู้จริง        : .machine
+  สกินเลือกโหมดได้ผ่าน class ที่ body: .c-<key> (แนวคิด) และ .has-machine/.no-machine
 -->
 <html lang="th">
 <head>
@@ -20,140 +58,512 @@
   @font-face { font-family: 'DX'; src: url({{FONT_BOLD}}) format('truetype'); font-weight: 700 }
 
   * { margin: 0; padding: 0; box-sizing: border-box }
-  body {
-    width: 1080px; height: 1080px; overflow: hidden;
-    font-family: 'DX', sans-serif; color: #fff;
-    background: #0B1B3A;
-    position: relative;
+
+  :root {
+    /* [hook] สกินเปลี่ยนคู่สีทั้งใบได้ที่นี่โดยไม่ต้องแตะ selector อื่น */
+    --gold-1: #FFF8DC;
+    --gold-2: #FFD24A;
+    --gold-3: #E08A0C;
+    --gold-4: #B4720C;
+    --cyan:   #00C2FF;
+    --cyan-2: #9FE4FF;
+    --ink:    #06122A;      /* สีขอบตัวอักษร — ต้องเข้มพอจะรองรับพาดหัวบนพื้นสว่าง */
+    --navy:   #071129;
+    --gold-grad: linear-gradient(178deg,#FFFEF6 0%,#FFE688 24%,#FFB416 56%,#FFDE7A 78%,#E07C08 100%);
   }
 
-  /* พื้นหลัง — รูปบรรยากาศตู้จริง (หรือภาพจาก AI ถ้ามี)
-     หรี่ลงเพื่อให้ตัวหนังสืออ่านออกเสมอ ไม่ปล่อยให้ภาพกลืนข้อความ */
-  .bg { position: absolute; inset: 0; background-size: cover; background-position: center;
-        opacity: .62; filter: saturate(1.05) }
-  /* ⚠️ ต้องเป็น rgba — เดิมเขียนเป็นสีทึบ (#0B1B3A) แล้ววางทับ .bg
-     ผลคือรูปพื้นหลังถูกบังจนมองไม่เห็นเลย ทั้งที่โหลดเข้ามาแล้ว
-     (ใส่รูปตู้จริงเข้าไปแล้วยังเห็นเป็นพื้นสีเปล่า ๆ เหมือนเดิม) */
+  body {
+    width: 1080px; height: 1080px; overflow: hidden; position: relative;
+    font-family: 'DX', sans-serif; color: #fff;
+    background: var(--navy);
+  }
+
+  /* ═════════ ชั้นบรรยากาศ ═════════ */
+
+  /* [hook] .bg — รูปตู้จริงในห้าง (หรือภาพที่ส่งเข้ามา)
+     เบลอแค่ 12px ไม่ใช่ 30px แบบเทมเพลตเก่า — พอให้ตัวหนังสือในภาพเดิมอ่านไม่ออก
+     แต่ยังเห็นว่าเป็น "สถานที่จริง" (ไฟห้าง โครงไม้ พื้นกระเบื้อง) ไม่ใช่คราบสี */
+  .bg { position: absolute; inset: -40px; background-size: cover; background-position: 50% 44%;
+        filter: blur(9px) saturate(1.3) brightness(1.02) contrast(1.06) }
+
+  /* [hook] .grad — [ระวัง] ทุก stop ต้องเป็น rgba ไม่งั้นบังรูปตู้ทิ้งทั้งใบ
+     ฟ้ากองฝั่งซองขวา (จุดสนใจ) · ทองอมส้มกินสองมุมตรงข้าม = คู่สีตรงข้ามตัดกันแรงสุด
+     ค่า alpha ชุดนี้จูนมาแล้ว: v1 ใช้ .80/.60/.78/.90 → รูปห้างจมหายเหลือแต่พื้นน้ำเงิน
+     ต้องไม่เกิน ~.62 ตรงกลางภาพถึงจะยังเห็นไฟห้าง/โครงไม้/พื้นกระเบื้อง */
   .grad { position: absolute; inset: 0;
     background:
-      radial-gradient(900px 620px at 50% 42%, rgba(0,194,255,.18), transparent 70%),
-      linear-gradient(160deg, rgba(11,27,58,.82) 0%, rgba(18,38,79,.74) 52%, rgba(8,18,40,.93) 100%) }
-  /* ขอบมืดรอบภาพ — ดันสายตาเข้ากลาง ทำให้ภาพดูมีมิติแทนที่จะแบนเป็นพื้นสีเดียว */
-  .vig { position: absolute; inset: 0;
-    background: radial-gradient(120% 92% at 50% 46%, transparent 52%, rgba(0,0,0,.55) 100%) }
-  /* เส้นสายฟ้าจาง ๆ — อัตลักษณ์แบรนด์ ไม่ให้แย่งสายตา
-     เดิมเป็นเส้นทแยงตัดกันกลางภาพพอดี กลายเป็นกากบาทใหญ่ดึงสายตาแทนตัวหนังสือ
-     ย้ายลงมุมขวาล่างและหรี่ลง ให้เป็นพื้นผิว ไม่ใช่ลวดลาย */
-  .bolt { position: absolute; inset: 0; opacity: .10;
+      radial-gradient(760px 620px at 78% 44%, rgba(0,150,255,.26), rgba(0,150,255,0) 72%),
+      radial-gradient(700px 520px at 96% 2%,  rgba(255,150,20,.24), rgba(255,150,20,0) 68%),
+      radial-gradient(680px 520px at 0% 96%,  rgba(255,140,10,.22), rgba(255,140,10,0) 66%),
+      radial-gradient(520px 400px at 34% 90%, rgba(255,176,44,.18), rgba(255,176,44,0) 70%),
+      linear-gradient(166deg, rgba(9,24,58,.44) 0%, rgba(15,40,84,.26) 40%,
+                              rgba(6,16,38,.40) 72%, rgba(3,9,22,.62) 100%) }
+
+  /* [hook] .rays / .rays2 — รัศมีพุ่งจากหลังซอง (hype) · ศูนย์กลางย้ายมาที่ 76% 46% = ตำแหน่งซอง
+     mask ให้จางทั้งตรงกลางและขอบ ไม่งั้นเส้นวิ่งไปกวนพาดหัวฝั่งซ้าย */
+  .rays { position: absolute; inset: -30%;
+    background: repeating-conic-gradient(from 92deg at 63% 46%,
+      rgba(255,214,120,.42) 0deg 2.4deg, rgba(255,214,120,0) 2.4deg 9deg);
+    -webkit-mask-image: radial-gradient(circle at 63% 46%,
+      transparent 5%, rgba(0,0,0,.95) 20%, rgba(0,0,0,.6) 46%, transparent 74%) }
+  .rays2 { position: absolute; inset: -30%;
+    background: repeating-conic-gradient(from 4deg at 63% 46%,
+      rgba(120,220,255,.34) 0deg 1.2deg, rgba(120,220,255,0) 1.2deg 12deg);
+    -webkit-mask-image: radial-gradient(circle at 63% 46%,
+      transparent 12%, rgba(0,0,0,.8) 36%, transparent 78%) }
+
+  /* [hook] .beam — กรวยสปอตไลต์จากบน (stage) · เล็งลงตรงหัวซองพอดี
+     ตัวที่ทำให้ของ "ถูกส่องอยู่" ไม่ใช่แค่แปะบนพื้นสี */
+  .beam { position: absolute; left: 76%; top: -140px; width: 900px; height: 1180px;
+    transform: translateX(-50%);
+    background: linear-gradient(180deg, rgba(222,244,255,.46) 0%, rgba(0,194,255,.20) 32%,
+                                        rgba(0,194,255,.07) 60%, transparent 84%);
+    clip-path: polygon(45% 0, 55% 0, 92% 100%, 8% 100%);
+    filter: blur(22px) }
+
+  /* [hook] .grid — ตารางจาง ๆ ให้พื้นมีเนื้อ ไม่แบนเป็นสีเดียว */
+  .grid { position: absolute; inset: 0; opacity: .13;
+    background-image:
+      linear-gradient(rgba(120,200,255,.30) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(120,200,255,.30) 1px, transparent 1px);
+    background-size: 60px 60px;
+    -webkit-mask-image: radial-gradient(circle at 60% 44%, #000 14%, transparent 64%) }
+
+  /* [hook] .streaks — เส้นความเร็วเฉียง เติมพลังมุมภาพ */
+  .streaks { position: absolute; inset: 0; opacity: .5;
     background:
-      linear-gradient(118deg, transparent 72%, #00C2FF 73%, transparent 74%),
-      linear-gradient(104deg, transparent 84%, #00C2FF 85%, transparent 86%) }
+      linear-gradient(108deg, transparent 2.6%, rgba(0,214,255,.50) 2.95%, transparent 3.3%),
+      linear-gradient(108deg, transparent 5.6%, rgba(0,214,255,.26) 5.85%, transparent 6.1%),
+      linear-gradient(108deg, transparent 8.4%, rgba(255,200,90,.28) 8.65%, transparent 8.9%),
+      linear-gradient(288deg, transparent 3.4%, rgba(0,214,255,.38) 3.75%, transparent 4.1%),
+      linear-gradient(288deg, transparent 6.8%, rgba(255,200,90,.24) 7.05%, transparent 7.3%) }
 
-  .wrap { position: relative; height: 100%; display: flex; flex-direction: column;
-          padding: 62px 68px 0 }
+  /* [hook] .waves .anchor .gulls — อัตลักษณ์จากลายตู้จริง
+     (กรมท่า + คลื่นขาว + สมอทอง + ดาว + นกนางนวล · ธีมเดินเรือ One Piece)
+     สกินแนวอื่นปิดได้ด้วย display:none */
+  .waves { position: absolute; left: -20px; bottom: -6px; width: 1120px; height: 350px; opacity: 1 }
+  /* สมอ+นกนางนวลไปอยู่ "ท้องฟ้า" เหนือซอง (y 30-195) ซึ่งเป็นแถบเดียวที่โล่งจริง
+     v1 วางไว้ที่ 470/700 กับ 96/232 → ตัวหนึ่งอยู่หลังซอง อีกตัวอยู่หลังพาดหัว มองไม่เห็นทั้งคู่ */
+  .anchor { position: absolute; left: 556px; top: 18px; width: 128px; height: 144px;
+            opacity: .5; transform: rotate(-8deg);
+            filter: drop-shadow(0 3px 10px rgba(0,0,0,.6)) }
+  .gulls  { position: absolute; left: 700px; top: 42px; width: 172px; height: 66px; opacity: .6;
+            filter: drop-shadow(0 2px 6px rgba(0,0,0,.5)) }
 
-  /* ── หัว ── */
-  .brand { display: flex; align-items: center; gap: 12px; margin-bottom: 34px }
-  .mark { width: 42px; height: 42px; border-radius: 11px;
-          background: linear-gradient(145deg, #00C2FF, #0075B8);
-          display: flex; align-items: center; justify-content: center;
-          font-weight: 700; font-size: 25px; color: #06132B;
-          box-shadow: 0 0 26px rgba(0,194,255,.55) }
-  .brand span { font-weight: 700; font-size: 21px; letter-spacing: 4px; color: #BFE9FF }
+  /* [hook] .vig — ขอบมืด ดันสายตาเข้ากลาง (rgba ล้วน ไม่บังรูป) */
+  .vig { position: absolute; inset: 0;
+    background:
+      radial-gradient(128% 102% at 62% 46%, transparent 50%, rgba(2,7,18,.56) 100%),
+      linear-gradient(180deg, rgba(2,7,18,.34) 0%, transparent 17%,
+                              transparent 70%, rgba(2,7,18,.48) 100%) }
+
+  /* [hook] .sp — ประกายดาว 4 แฉก วาดด้วย clip-path (ห้ามใช้อีโมจิ)
+     วางเฉพาะ "รอบซอง" กับ "ริมภาพ" — เขตพาดหัวต้องปลอดของประดับ */
+  .sp { position: absolute; z-index: 4; display: block;
+    background: radial-gradient(circle, #FFFFFF 0%, #FFE9A8 45%, rgba(255,200,90,0) 72%);
+    clip-path: polygon(50% 0%, 59% 41%, 100% 50%, 59% 59%, 50% 100%, 41% 59%, 0% 50%, 41% 41%);
+    filter: drop-shadow(0 0 10px rgba(255,214,120,.95)) }
+  .sp.c { background: radial-gradient(circle, #FFFFFF 0%, #A8ECFF 45%, rgba(0,194,255,0) 72%);
+          filter: drop-shadow(0 0 12px rgba(0,214,255,.95)) }
+  .s1 { width: 52px; height: 52px; left: 556px; top: 300px }
+  .s2 { width: 28px; height: 28px; left: 620px; top: 396px }
+  .s3 { width: 44px; height: 44px; right: 34px; top: 372px }
+  .s4 { width: 26px; height: 26px; right: 120px; top: 286px }
+  .s5 { width: 34px; height: 34px; left: 566px; top: 646px }
+  .s6 { width: 22px; height: 22px; right: 58px; top: 690px }
+  .s7 { width: 30px; height: 30px; right: 250px; top: 214px }
+
+  /* ═════════ รูปตู้จริง ═════════ */
+  /* [hook] .machine — ถ่ายตรงเห็นสินค้าเต็มตู้ · มุมล่างซ้าย ก้นตู้ทะลุลงไปหลังแถบท้าย
+     กว้าง 400px (37% ของภาพ) — ต้องขนาดนี้ขึ้นไปถึงจะ "อ่านออกว่าเป็นตู้กด" ไม่ใช่ก้อนมืด ๆ
+     v1 ทำเป็นแผ่นภาพในกรอบทอง 306px แล้วดูเหมือนสติกเกอร์ตัดแปะ + ตัวตู้เล็กจนไม่รู้ว่าอะไร
+
+     ไม่ใช้กรอบแล้ว ใช้ mask ไล่จางที่ขอบบน/ซ้ายแทน — ตู้ "โผล่ออกมาจากความมืด"
+     ซึ่งกลืนกับฉากดีกว่า และไม่มีเส้นตัดคมเวลาแผ่นเนื้อความสั้นจนไม่ทับขอบบนของรูป
+     แต่งภาพให้เข้าโทน: หนุนคอนทราสต์+ฟ้าเล็กน้อย ให้ตู้ในรูป (ซึ่งถ่ายด้วยไฟห้างเหลือง)
+     เข้ากับบรรยากาศนีออนของโปสเตอร์ */
+  /* mask 2 ทิศต้องซ้อนเป็น 2 ชั้น element — mask-composite ข้าม engine ไม่ชัวร์
+     ชั้นนอก .mimg = จางที่ขอบขวา (ตัดผนัง/พื้นห้างในรูปให้กลืน) · ชั้นใน img = จางที่ขอบบน */
+  .machine { position: absolute; z-index: 2; left: -26px; bottom: 0; width: 400px }
+  .machine .mimg { display: block;
+    -webkit-mask-image: linear-gradient(to right, transparent 0, #000 7%, #000 76%, transparent 100%) }
+  .machine img { display: block; width: 100%; height: auto;
+    filter: brightness(1.08) contrast(1.16) saturate(1.14);
+    -webkit-mask-image: linear-gradient(to bottom, transparent 0, rgba(0,0,0,.5) 7%, #000 18%) }
+  /* แสงฟ้าเรืองรอบตู้ — เชื่อมตู้เข้ากับบรรยากาศนีออน และตัดตู้ออกจากพื้นหลังโดยไม่ต้องมีกรอบ */
+  .machine .mglow { position: absolute; left: -60px; right: -70px; top: 8%; bottom: -30px;
+    z-index: -1;
+    background: radial-gradient(ellipse at 52% 62%, rgba(0,175,255,.42), transparent 70%);
+    filter: blur(14px) }
+  /* [hook] .mfr — แอ่งแสงพื้นห้างที่ฐานตู้
+     ต้องอยู่สูงกว่าขอบบนของแถบท้าย (y≈995) ไม่งั้นถูกบังจนไม่มีผล — bottom:46px คือค่าที่พลาด */
+  .machine .mfr { position: absolute; left: 0; right: -12%; bottom: 92px; height: 58px;
+    border-radius: 50%; z-index: -1;
+    background: radial-gradient(ellipse, rgba(170,232,255,.40), rgba(0,150,230,.16) 46%, transparent 74%);
+    filter: blur(13px) }
+  .no-machine .machine { display: none }
+
+  /* ═════════ ซองสินค้า (พระเอก) ═════════ */
+  /* [hook] .hero — กรอบตรึงเต็มความสูงภาพ ชิดขวา
+     ตรึง height ไว้ (ไม่ใช่ flex) เพราะขนาดซองต้องคงที่ ไม่ควรกระโดดตามความยาวพาดหัว */
+  .hero { position: absolute; z-index: 3; top: 0; right: 0; width: 520px; height: 1080px }
+  .hero.empty { display: none }
+
+  /* วงรัศมีทองกอดตัวซอง — hype เคยทำวงกว้าง 900px ล้อมซองกว้าง 170px แล้วซองดู "หลงอยู่กลางที่โล่ง"
+     คราวนี้ซองกว้าง ~444px วงจึงต้องใหญ่ตาม ไม่งั้นกลายเป็นวงแหวนรัดกลางซอง */
+  .hero .burst { position: absolute; left: 50%; top: 46%; width: 1080px; height: 1080px;
+    transform: translate(-50%,-50%); border-radius: 50%;
+    background: repeating-conic-gradient(from 6deg,
+      rgba(255,198,80,.30) 0deg 1.8deg, rgba(255,198,80,0) 1.8deg 8deg);
+    -webkit-mask-image: radial-gradient(circle, transparent 22%, rgba(0,0,0,.8) 38%,
+                                        rgba(0,0,0,.5) 52%, transparent 68%) }
+  .hero .halo { position: absolute; left: 50%; top: 46%; width: 700px; height: 780px;
+    transform: translate(-50%,-50%); border-radius: 50%;
+    background: radial-gradient(ellipse, rgba(120,225,255,.34) 0%, rgba(0,140,255,.16) 44%, transparent 70%) }
+
+  .hero .stage { position: absolute; inset: 0 }
+  /* ── ตัวเลขชุดนี้ผูกกันหมด แก้ตัวเดียวไม่ได้ ──
+     รูป SKU เป็น PNG โปร่ง 1024×1024 แต่ตัวซองกินแค่ 44.9% ของความกว้าง
+     และเริ่มที่ 5.9% จากขอบบน (วัดจาก alpha bbox ของ OP16/OP15 จริง)
+       width 990px  → ซองกว้าง 990 × .449 = 444px = 41% ของภาพ  ← เป้าหมาย 40-55%
+       top 145px    → หัวซองอยู่ที่ y = 145 + 990×.059 = 203px  (ใต้หัวกระดาษพอดี)
+                      ก้นซองอยู่ที่ y = 145 + 990×.953 = 1088px (ทะลุขอบล่างไป 8px)
+     ที่ถูกบังคือ 10% ล่างสุดของซอง = แถบตัวหนังสือเล็ก/BANDAI เท่านั้น
+     โลโก้ ONE PIECE CARD GAME (72-81% ของซอง) ยังเห็นครบ — ห้ามดันซองลงกว่านี้ */
+  .hero .stage img { position: absolute; left: 50%; top: 145px; width: 990px; height: auto;
+    transform: translateX(-50%);
+    filter: drop-shadow(0 26px 44px rgba(0,0,0,.78))
+            drop-shadow(0 0 34px rgba(0,194,255,.5))
+            drop-shadow(0 0 78px rgba(255,190,60,.32)) }
+  /* แสงพื้นตรงฐานซอง — ตัวที่ทำให้ของ "ตั้งอยู่" ไม่ใช่ลอย · โผล่เหนือแถบท้ายเล็กน้อย */
+  .hero .floor { position: absolute; left: 50%; top: 934px; transform: translateX(-50%);
+    width: 700px; height: 62px; border-radius: 50%;
+    background: radial-gradient(ellipse, rgba(210,246,255,.85), rgba(0,170,255,.34) 42%, transparent 74%);
+    filter: blur(13px) }
+  /* [hook] เงาสะท้อนปิดไว้ในฐาน — ซองทะลุขอบล่างแล้วจึงไม่มีที่ให้สะท้อน
+     สกินที่ยกซองขึ้นมาตั้งบนเวที (เช่นแนวหรู) เปิดกลับได้ด้วย .refl{display:block} */
+  .hero .refl { display: none }
+
+  /* ไม่มีรูปตู้ → ซองขยับเข้ากลางนิดเดียว (เกิน ~34px แล้วซองจะเริ่มชนพาดหัวที่กว้าง 520px)
+     ที่ว่างมุมล่างซ้ายไปเติมด้วยสมอ + เหรียญที่ขยับเข้ามาแทน */
+  .no-machine .hero { right: 34px }
+  .no-machine .medal { left: 312px; bottom: 208px }
+  .no-machine .anchor { left: 58px; top: 690px; width: 206px; height: 232px;
+                        opacity: .3; transform: rotate(-10deg) }
+  .no-machine .waves { opacity: 1 }
+
+  /* ═════════ กรอบ + แถบเฉียงมุม ═════════ */
+  /* [hook] .frame — กรอบทองโครเมียม (hype) ภาษาโปสเตอร์ไทยคลาสสิก */
+  .frame { position: absolute; inset: 18px; z-index: 7; pointer-events: none;
+    border: 3px solid transparent;
+    border-image: linear-gradient(135deg, #FFE9A8 0%, #B4720C 22%, #FFF3CF 40%,
+                                  #8A5A12 58%, #FFD86A 76%, #B4720C 100%) 1;
+    box-shadow: inset 0 0 0 2px rgba(0,194,255,.16), 0 0 44px rgba(0,0,0,.55) }
+
+  /* [hook] .corner — แถบเฉียงมุมขวาบน (foil) · แทนเหรียญ "ของแท้" ของ hype
+     ที่เลือกแถบแทนเหรียญตรงหัวกระดาษ เพราะหัวกระดาษต้องเหลือที่ให้ชื่อแบรนด์เต็ม ๆ */
+  .corner { position: absolute; z-index: 7; top: 0; right: 0; width: 300px; height: 300px;
+            overflow: hidden; pointer-events: none }
+  .corner i { position: absolute; right: -98px; top: 72px; width: 420px; transform: rotate(45deg);
+    text-align: center; font-style: normal; font-weight: 700; font-size: 27px; letter-spacing: .4px;
+    color: #3A2402; padding: 11px 0 12px;
+    background: linear-gradient(180deg, #FFF8DC 0%, #FFD24A 48%, #E08A0C 100%);
+    box-shadow: 0 10px 26px rgba(0,0,0,.55), inset 0 0 0 2px rgba(255,255,255,.45);
+    text-shadow: 0 1px 0 rgba(255,255,255,.4) }
+
+  /* [hook] .medal — เหรียญทอง (hype) ย้ายมาปั๊มบนมุมบนขวาของรูปตู้
+     ทำให้ "จำนวนสาขา" กับ "ตู้จริง" อ่านเป็นเรื่องเดียวกัน ไม่ใช่ตัวเลขลอย ๆ ที่หัวกระดาษ */
+  .medal { position: absolute; z-index: 6; left: 318px; bottom: 214px; width: 146px; height: 146px;
+           display: flex; align-items: center; justify-content: center; text-align: center }
+  .medal::before { content: ''; position: absolute; inset: 0; border-radius: 50%;
+    background: repeating-conic-gradient(from 0deg, #FFE9A8 0deg 7deg, #A5670B 7deg 14deg);
+    filter: drop-shadow(0 8px 20px rgba(0,0,0,.65)) }
+  .medal::after { content: ''; position: absolute; inset: 13px; border-radius: 50%;
+    background: radial-gradient(circle at 38% 28%, #16315F 0%, #05101F 78%);
+    box-shadow: inset 0 0 0 2px rgba(255,214,106,.9), inset 0 0 24px rgba(0,194,255,.35) }
+  .medal s { position: relative; z-index: 1; text-decoration: none; line-height: 1.02 }
+  .medal s em { display: block; font-style: normal; font-weight: 700; font-size: 46px;
+    background: linear-gradient(180deg, #FFF6DC, #FFD24A 55%, #EF8B12);
+    -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent }
+  .medal s span { display: block; font-weight: 400; font-size: 21px; color: #CFEBFF; margin-top: 2px }
+
+  /* ═════════ คอลัมน์ตัวหนังสือ ═════════ */
+  /* z-index สูงกว่าซองโดยตั้งใจ — เนื้อความกับแถบท้ายต้องทับก้นซองได้
+     (.plate ใช้ isolation:isolate เอง การมี z-index ที่ .wrap จึงไม่ทำให้โลโก้เพี้ยน) */
+  .wrap { position: relative; z-index: 5; height: 100%;
+          display: flex; flex-direction: column; padding: 34px 50px 0 }
+  /* แสงทองอุ่นรองหลังบล็อกพาดหัว — ดันตัวอักษรให้ลอยออกจากพื้นฟ้า */
+  .wrap::before { content: ''; position: absolute; z-index: -1; left: -40px; width: 780px;
+    top: 130px; height: 420px;
+    background: radial-gradient(520px 210px at 32% 46%, rgba(255,168,36,.22), transparent 72%) }
+
+  /* ── หัวกระดาษ ── */
+  /* [hook] .top .plate .idn */
+  .top { display: flex; align-items: center; gap: 17px; flex: 0 0 auto }
+  /* โลโก้จริงเป็น PNG พื้นดำทึบ · isolation + mix-blend-mode:screen ทำให้พื้นดำหายไป
+     โดยผสมกับ "แผ่นรอง" ใบนี้เท่านั้น ไม่ไปดูดสีพื้นหลังสว่าง ๆ มาให้ซีด */
+  /* พื้นแผ่นต้องสว่างพอจะอ่านว่า "ป้ายกรมท่าขอบทอง" ไม่ใช่ "กล่องดำ"
+     v3 ใช้ #10254C→#04091A แล้วมันมืดจนกลืนเป็นสี่เหลี่ยมดำกลางหัวกระดาษ
+     ขอบทองต้องหนา 3px + มีประกายฟอยล์พาดทับ ถึงจะอ่านเป็นป้ายที่ตั้งใจออกแบบ */
+  .plate { isolation: isolate; position: relative; flex: 0 0 auto;
+    width: 120px; height: 94px; border-radius: 16px;
+    background: linear-gradient(150deg, #1E3F79 0%, #12294F 46%, #0A1834 100%);
+    box-shadow: inset 0 0 0 3px rgba(255,206,90,.9), inset 0 0 22px rgba(0,194,255,.28),
+                0 8px 22px rgba(0,0,0,.55), 0 0 30px rgba(0,194,255,.3);
+    display: flex; align-items: center; justify-content: center; overflow: hidden }
+  /* ประกายฟอยล์พาดมุม — ทำให้แผ่นดูเป็นวัสดุโลหะ ไม่ใช่ช่องสี่เหลี่ยมทึบ */
+  .plate::after { content: ''; position: absolute; inset: 0; pointer-events: none;
+    background: linear-gradient(144deg, rgba(255,255,255,.20) 0 16%, transparent 34%,
+                                rgba(0,205,255,.14) 54%, transparent 72%,
+                                rgba(255,214,110,.20) 100%) }
+  /* หน้าต่างครอบเฉพาะตรา DC — ตัวเลขมาจากขนาดจริงของ logo.png (457×414 · DC อยู่ 90,85 → 347,264)
+     ถ้าไม่ครอบ คำว่า DIVISION X CARD เล็ก ๆ ใต้ DC จะโผล่มาเป็นเศษขยะ */
+  .plate .crop { position: relative; width: 92px; height: 64px; overflow: hidden }
+  .plate .crop img { position: absolute; width: 163.6px; left: -32.2px; top: -30.4px;
+    mix-blend-mode: screen; filter: contrast(1.12) brightness(1.1) }
+
+  .idn { flex: 1 1 auto; min-width: 0 }
+  .idn b { display: block; font-weight: 700; font-size: 30px; letter-spacing: 3.6px;
+    background: linear-gradient(180deg, #FFF6DC 0%, #FFD86A 52%, #C8871A 100%);
+    -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent }
+  .idn i { display: block; font-style: normal; font-weight: 400; font-size: 19px;
+           color: #9FD4F2; letter-spacing: .2px; margin-top: 4px }
+  .idn u { display: block; text-decoration: none; height: 3px; width: 300px; margin-top: 8px;
+           background: linear-gradient(90deg, #FFC53D, rgba(0,194,255,.85) 55%, transparent) }
+
+  /* ── ริบบิ้นเหนือพาดหัว ── */
+  /* [hook] .ribbon */
+  .ribbon { align-self: flex-start; position: relative; margin: 16px 0 0 4px;
+    transform: skewX(-9deg);
+    background: linear-gradient(180deg, #FFF3CF 0%, #FFC53D 46%, #E88A0E 100%);
+    box-shadow: 0 9px 26px rgba(0,0,0,.5), inset 0 0 0 2px rgba(255,255,255,.42),
+                inset 0 -6px 12px rgba(150,80,0,.35) }
+  .ribbon i { position: absolute; top: 6px; bottom: -8px; width: 20px; z-index: -1;
+              background: linear-gradient(180deg, #B4720C, #6E4408) }
+  .ribbon i.l { left: -20px; clip-path: polygon(0 0, 100% 0, 100% 100%, 34% 100%) }
+  .ribbon i.r { right: -20px; clip-path: polygon(0 0, 100% 0, 66% 100%, 0 100%) }
+  .ribbon > span { display: flex; align-items: center; gap: 10px; transform: skewX(9deg);
+    padding: 8px 26px; font-weight: 700; font-size: 24px; letter-spacing: 1px;
+    color: #35190A; text-shadow: 0 1px 0 rgba(255,255,255,.45) }
+  .ribbon svg { width: 20px; height: 25px; fill: #35190A; flex: 0 0 auto }
 
   /* ── พาดหัว ── */
-  /* ขนาดมาจาก Python ตามความยาวพาดหัว — พาดหัวที่ตัดไม่ได้ต้องยังอยู่ในกรอบ */
-  h1 { font-weight: 700; font-size: {{HEAD_SIZE}}px; line-height: 1.16; letter-spacing: -.5px;
-       text-shadow: 0 5px 26px rgba(0,0,0,.6) }
-  /* ตัวเลข/รหัสชุด — ไล่สีแบบโครเมียมตัดฟ้านีออน ตามอัตลักษณ์แบรนด์
-     (โครเมียมคือสีตัดของแบรนด์ ไม่ใช่ทอง — ห้ามเผลอใส่ทองเพราะมันคนละแบรนด์) */
-  h1 em { font-style: normal;
-          background: linear-gradient(180deg, #FFFFFF 0%, #BFE9FF 38%, #00C2FF 62%, #7FD9FF 100%);
-          -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-          filter: drop-shadow(0 0 30px rgba(0,194,255,.85)) }
-  .sub { margin-top: 18px; font-size: 33px; line-height: 1.42; color: #CFE4FF; font-weight: 400 }
+  /* [hook] h1 · h1 em
+     สีทึบ + ขอบด้วย text-shadow หลายชั้น (ห้าม -webkit-text-stroke — กินวรรณยุกต์ไทย)
+     ชั้นล่างเป็นเงาทองนูน ทำให้ตัวอักษรดูหนาหนักแบบป้ายลดราคา
+     max-width 520px = ความกว้างคอลัมน์ซ้าย · ซองเริ่มที่ x=598 จึงไม่ชนกัน */
+  h1 { flex: 0 0 auto; max-width: 520px; margin-top: 16px;
+       font-weight: 700; font-size: {{HEAD_SIZE}}px; line-height: 1.17; letter-spacing: -.4px;
+       color: #FFFBF0; text-wrap: balance;
+       text-shadow:
+         -3px 0 0 var(--ink),  3px 0 0 var(--ink),  0 -3px 0 var(--ink),  0 3px 0 var(--ink),
+         -2px -2px 0 var(--ink), 2px -2px 0 var(--ink), -2px 2px 0 var(--ink), 2px 2px 0 var(--ink),
+         0 5px 0 rgba(180,114,12,.95),
+         0 9px 0 rgba(60,32,2,.55),
+         0 16px 30px rgba(0,0,0,.75),
+         0 0 52px rgba(0,180,255,.42) }
+  /* ตัวเลข/รหัสชุด — ทองไล่สี · ขอบทำด้วย drop-shadow เพราะ text-shadow วาดทับ
+     background-clip:text ไม่ได้ · background-size 1.17em + repeat = ทุกบรรทัดไล่สีชุดเดียวกัน */
+  h1 em { font-style: normal; display: inline-block; text-shadow: none;
+    background-image: var(--gold-grad);
+    background-size: 100% 1.17em; background-repeat: repeat;
+    -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+    filter:
+      drop-shadow(2.4px 0 0 #22100A) drop-shadow(-2.4px 0 0 #22100A)
+      drop-shadow(0 2.4px 0 #22100A) drop-shadow(0 -2.4px 0 #22100A)
+      drop-shadow(0 6px 0 rgba(120,66,4,.9))
+      drop-shadow(0 12px 24px rgba(0,0,0,.6))
+      drop-shadow(0 0 28px rgba(255,176,40,.75)) }
 
-  /* ── กลาง: รูปสินค้า ── */
-  /* overflow:hidden + min-height:0 สำคัญมาก — พอเพิ่มเงาสะท้อน กล่องนี้สูงเกินพื้นที่
-     ที่ flex แบ่งให้ แล้วมันล้นขึ้นไปทับบรรทัดรองจนอ่านไม่ออก (เกิดจริงตอนลอง v2) */
-  .hero { flex: 1 1 auto; display: flex; align-items: center; justify-content: center;
-          margin: 22px 0 8px; position: relative; min-height: 0; overflow: hidden }
-  .hero .halo { position: absolute; width: 500px; height: 500px; border-radius: 50%;
-                background: radial-gradient(circle, rgba(0,194,255,.38), transparent 66%) }
-  /* ลำแสงสปอตไลต์จากบน + พื้นสะท้อน — ทำให้ซองดู "ตั้งอยู่บนพื้น" ไม่ใช่ลอยกลางอากาศ
-     ซึ่งเป็นข้อที่ทำให้ภาพเดิมดูโล่งและแบน */
-  .hero .beam { position: absolute; top: -30px; width: 620px; height: 100%;
-                background: linear-gradient(180deg, rgba(0,194,255,.13), transparent 58%);
-                clip-path: polygon(40% 0, 60% 0, 100% 100%, 0 100%) }
-  .hero .floor { position: absolute; bottom: 6px; width: 460px; height: 22px; border-radius: 50%;
-                 background: radial-gradient(ellipse, rgba(0,194,255,.55), transparent 70%);
-                 filter: blur(6px) }
-  /* ต้องเป็น height:100% ไม่ใช่ max-height — % ความสูงของลูกจะ resolve ก็ต่อเมื่อ
-     พ่อมีความสูงชัดเจน ถ้าพ่อเป็น auto ลูกจะกลับไปใช้ขนาดจริงของรูปแล้วล้นออกนอกกรอบ
-     จนโดน overflow:hidden ตัดขอบล่างซองทิ้ง (เกิดจริงตอนลอง v3) */
-  .hero .stage { position: relative; display: flex; flex-direction: column; align-items: center;
-                 justify-content: center; height: 100%; min-height: 0 }
-  /* คิดเป็น % ของพื้นที่ที่ flex แบ่งให้ ไม่ใช่ px ตายตัว — พาดหัวสั้น/ยาวทำให้พื้นที่นี้
-     เปลี่ยนขนาด ถ้าใช้ px ซองจะล้นเมื่อพาดหัวยาว */
-  .hero img { max-height: 84%; max-width: 560px; object-fit: contain; position: relative;
-              filter: drop-shadow(0 26px 46px rgba(0,0,0,.62)) }
-  /* เงาสะท้อนใต้ซอง — ใช้รูปเดิมพลิกกลับแล้วจางลง */
-  .hero .refl { max-height: 22%; margin-top: 2px; transform: scaleY(-1); opacity: .28;
-                -webkit-mask-image: linear-gradient(to bottom, rgba(0,0,0,.9), transparent 74%);
-                filter: blur(1px) }
-  /* ไม่มีรูปสินค้า = อย่าปล่อยให้กลางภาพโหว่ · หุบพื้นที่แล้วดัน halo เป็นแสงประกอบแทน */
-  .hero.empty { flex: 0 0 auto; height: 210px; margin: 8px 0 0 }
-  .hero.empty .halo { width: 620px; height: 300px; opacity: .8 }
+  /* ── บรรทัดรอง ── */
+  /* [hook] .sub — แผ่นกระจกเข้มรองหลัง เพราะรัศมีทองวิ่งผ่านตรงนี้ ถ้าไม่รองจะอ่านยาก */
+  .sub { flex: 0 0 auto; max-width: 540px; margin-top: 13px; padding: 8px 20px 9px 18px;
+         font-size: 27px; line-height: 1.34; font-weight: 400; color: #F2F8FF;
+         border-left: 6px solid transparent;
+         border-image: linear-gradient(180deg, #FFE9A8, #FFC53D 40%, #00C2FF 100%) 1;
+         background: linear-gradient(90deg, rgba(4,12,30,.74), rgba(4,12,30,.28) 84%, transparent);
+         text-shadow: 0 3px 12px rgba(0,0,0,.85) }
+  .sub:empty { display: none }
+
+  /* ที่ว่างทั้งหมดถูกดันไปกองไว้ "ใต้เนื้อความ" (ไม่ใช่เหนือ) โดย margin-top:auto ที่ .foot
+     เพราะนั่นคือช่องที่รูปตู้จริงยืนอยู่ — เนื้อความจึงเกาะขึ้นไปติดบรรทัดรอง
+     ถ้าเผลอใส่ตัวคั่น flex:1 ไว้เหนือ .body ช่องว่างจะย้ายไปอยู่กลางภาพแล้วตู้โดนแผ่นเนื้อความทับ */
 
   /* ── เนื้อความ ── */
-  .body { font-size: 31px; line-height: 1.55; color: #E4EEFF; font-weight: 400 }
-  .body p { margin-bottom: 14px }
-  /* ไม่มีรูป → เนื้อความคือพระเอกแทน ขยายให้เต็มพื้นที่ที่ว่าง */
-  .no-hero .body { font-size: 36px; line-height: 1.6 }
+  /* [hook] .body — หัวข้อเพชรทอง (hype) · แผ่นกระจกคืนคอนทราสต์ให้ตัวหนังสือบนลายพื้น
+     ปล่อยกว้างกว่าคอลัมน์ตัวหนังสือนิดหน่อยได้ เพราะทับหน้าซองอยู่แล้ว */
+  .body { flex: 0 0 auto; max-width: 592px; margin: 16px 0 0 -14px;
+          padding: 14px 18px 14px 14px; border-radius: 14px;
+          font-size: 24px; line-height: 1.42; font-weight: 400; color: #ECF4FF;
+          background: linear-gradient(90deg, rgba(4,12,30,.82), rgba(4,12,30,.70) 70%, rgba(4,12,30,.42));
+          box-shadow: inset 0 0 0 1px rgba(150,210,255,.14);
+          text-shadow: 0 2px 10px rgba(0,0,0,.9) }
+  .body p { position: relative; padding-left: 30px; margin-bottom: 9px }
+  .body p:last-child { margin-bottom: 0 }
+  .body p::before { content: ''; position: absolute; left: 3px; top: .64em; width: 13px; height: 13px;
+    transform: translateY(-50%) rotate(45deg);
+    background: linear-gradient(135deg, #FFF0BE, #FFC53D 45%, #E88A0E);
+    box-shadow: 0 0 12px rgba(255,190,60,.8) }
+  /* เนื้อความยาว → หดเอง ไม่งั้นแผ่นจะสูงจนไปกินพื้นที่รูปตู้ (:has ใช้ได้บน Chromium) */
+  .body:has(p:nth-child(3)) { font-size: 22px; line-height: 1.38 }
+  .body:has(p:nth-child(4)) { font-size: 20px; line-height: 1.34 }
 
   /* ── แถบท้าย ── */
-  .foot { margin: auto -68px 0; padding: 28px 68px 32px;
-          background: linear-gradient(90deg, rgba(0,194,255,.16), rgba(0,194,255,.05));
-          border-top: 2px solid rgba(0,194,255,.42);
-          display: flex; align-items: center; gap: 40px }
-  /* nowrap สำคัญ — ไม่งั้น "ของแท้ 100%" ตัดเป็น 2 บรรทัดแล้วแถบเบี้ยวทั้งแถว */
-  .chip { display: flex; align-items: center; gap: 10px; font-size: 26px; font-weight: 700;
-          color: #EAF6FF; white-space: nowrap }
-  .dot { width: 11px; height: 11px; border-radius: 50%; background: #00C2FF;
-         box-shadow: 0 0 14px #00C2FF; flex: 0 0 auto }
-  .tags { margin-left: auto; font-size: 22px; color: #7FC9EE; font-weight: 400;
-          text-align: right; max-width: 330px; line-height: 1.35 }
+  /* [hook] .foot .chip .tags — แคปซูลมีไอคอน SVG (hype) · full-bleed จึงต้อง margin ติดลบเท่า padding */
+  .foot { flex: 0 0 auto; margin: auto -50px 0; padding: 18px 34px 16px;
+    background:
+      linear-gradient(90deg, rgba(255,180,40,.18), rgba(0,150,255,.16) 55%, rgba(255,180,40,.12)),
+      linear-gradient(180deg, rgba(3,10,26,.72), rgba(3,10,26,.94));
+    border-top: 3px solid transparent;
+    border-image: linear-gradient(90deg, #B4720C, #FFD86A 32%, #00C2FF 68%, #B4720C) 1;
+    display: flex; align-items: center; gap: 12px }
+  /* nowrap สำคัญ — แคปซูลตัดสองบรรทัดเมื่อไหร่ แถบเบี้ยวทั้งแถว */
+  .chip { display: flex; align-items: center; gap: 8px; white-space: nowrap;
+    padding: 8px 16px; border-radius: 999px;
+    font-weight: 700; font-size: 23px; color: #FFF6E2;
+    background: linear-gradient(180deg, rgba(18,42,84,.95), rgba(6,16,38,.95));
+    box-shadow: inset 0 0 0 2px rgba(255,201,74,.6), 0 4px 14px rgba(0,0,0,.5),
+                inset 0 0 16px rgba(0,194,255,.18) }
+  .chip svg { width: 25px; height: 25px; flex: 0 0 auto; fill: #FFC53D;
+              filter: drop-shadow(0 0 6px rgba(255,190,60,.75)) }
+  .tags { margin-left: auto; text-align: right; max-width: 250px;
+          font-size: 19px; line-height: 1.28; font-weight: 400; color: #8ECDEE }
+
+  /* ═════════ ไม่มีรูปสินค้า ═════════ */
+  /* ตัวหนังสือกินเต็มความกว้างแทน · ต้องขยาย .body ให้เป็นตัวยืด ไม่งั้นเหลือช่องดำท้ายภาพ */
+  .no-hero h1 { max-width: 880px }
+  .no-hero .sub { max-width: 860px; font-size: 31px }
+  .no-hero .body { max-width: 940px; font-size: 31px; line-height: 1.52 }
+  .no-hero .body:has(p:nth-child(3)) { font-size: 27px }
+  .no-hero .body:has(p:nth-child(4)) { font-size: 24px }
+  /* ตู้ใหญ่ขึ้น + สมอย้ายมาถ่วงฝั่งขวาที่ว่างลงเพราะไม่มีซอง */
+  .no-hero .machine { width: 448px }
+  .no-hero .medal { left: 404px; bottom: 178px }
+  .no-hero .anchor { left: auto; right: 132px; top: 604px; width: 232px; height: 262px;
+                     opacity: .26; transform: rotate(-6deg) }
+  .no-hero .gulls { left: 636px; top: 470px; width: 210px; height: 82px; opacity: .4 }
+
+  /* ═════════ สกินแนวคิด — ต้องอยู่ท้ายสุดเสมอเพื่อให้เขียนทับได้ ═════════ */
+  {{CONCEPT_CSS}}
 </style>
 </head>
-<body>
+<!-- {{WRAP_CLASS}} ("no-hero" เมื่อไม่มีรูปสินค้า) ต้องอยู่ที่ body ด้วย ไม่ใช่แค่ที่ .wrap
+     เพราะ .machine / .medal / .anchor อยู่นอก .wrap — ถ้าใส่แค่ที่ .wrap กฎ .no-hero ของสามตัวนี้
+     จะไม่เคยทำงานเลย (เจอจริงตอนลอง --sku ที่ไม่มีรูป) · สกินก็ hook ที่ body ได้ง่ายกว่า -->
+<body class="{{CONCEPT_CLASS}} {{MACHINE_CLASS}} {{WRAP_CLASS}}">
+
+  <!-- ── ชั้นบรรยากาศ ── -->
   <div class="bg" style="background-image:url({{BG}})"></div>
   <div class="grad"></div>
-  <div class="bolt"></div>
+  <div class="rays"></div>
+  <div class="rays2"></div>
+  <div class="beam"></div>
+  <div class="grid"></div>
+  <div class="streaks"></div>
+
+  <!-- คลื่นขาวก้นภาพ — ลายเดียวกับตัวตู้จริง -->
+  <svg class="waves" viewBox="0 0 1120 300" preserveAspectRatio="none" aria-hidden="true">
+    <path d="M0,150 C130,96 250,196 380,150 C510,104 630,196 760,150 C880,108 1000,190 1120,146 L1120,300 L0,300 Z"
+          fill="rgba(190,232,255,.17)"/>
+    <path d="M0,196 C140,152 270,236 410,196 C550,156 680,240 820,198 C930,164 1030,214 1120,192 L1120,300 L0,300 Z"
+          fill="rgba(255,255,255,.15)"/>
+    <path d="M0,236 C150,204 280,268 430,238 C580,208 700,266 850,240 C960,220 1040,246 1120,232 L1120,300 L0,300 Z"
+          fill="rgba(120,200,255,.20)"/>
+  </svg>
+
+  <!-- สมอทอง — ลายเดียวกับตัวตู้จริง
+       วาดเป็นรูปทึบ (fill) ไม่ใช่เส้น (stroke) — รอบแรกลองแบบเส้นแล้วย่อลงมาเหลือ 142px
+       มันอ่านเป็น "วงกลมกับขีด" ไม่ใช่สมอ · รูปทึบยังคงเค้าโครงตอนย่อ -->
+  <svg class="anchor" viewBox="0 0 100 112" aria-hidden="true">
+    <defs><linearGradient id="agl" x1="0" y1="0" x2=".4" y2="1">
+      <stop offset="0" stop-color="#FFF3D2"/><stop offset=".5" stop-color="#F0B23C"/>
+      <stop offset="1" stop-color="#9A6614"/></linearGradient></defs>
+    <g fill="url(#agl)">
+      <path d="M50 1a13 13 0 1 0 0 26 13 13 0 0 0 0-26zm0 7.5a5.5 5.5 0 1 1 0 11 5.5 5.5 0 0 1 0-11z"/>
+      <rect x="44.5" y="23" width="11" height="84" rx="5.5"/>
+      <rect x="21" y="35" width="58" height="9.5" rx="4.75"/>
+      <path d="M4 62l24 9-10 11z"/><path d="M96 62l-24 9 10 11z"/>
+    </g>
+    <path d="M13 68c0 21 16.6 35 37 35s37-14 37-35"
+          fill="none" stroke="url(#agl)" stroke-width="9.5" stroke-linecap="round"/>
+  </svg>
+
+  <!-- นกนางนวล — ลายเดียวกับตัวตู้จริง (เส้นโค้งคู่ทรง "M" คือรูปนกที่อ่านออกตอนเล็กสุด) -->
+  <svg class="gulls" viewBox="0 0 120 46" aria-hidden="true">
+    <g fill="none" stroke="#E4F3FF" stroke-linecap="round">
+      <path d="M4 22 Q16 7 28 19 Q40 7 52 22" stroke-width="3.2"/>
+      <path d="M63 39 Q71 29 79 37 Q87 29 95 39" stroke-width="2.6"/>
+      <path d="M88 11 Q94 4 100 10 Q106 4 112 11" stroke-width="2.2"/>
+    </g>
+  </svg>
+
   <div class="vig"></div>
 
+  <!-- ── รูปตู้จริง (ถ่ายตรง) ── -->
+  <div class="machine">
+    <span class="mglow"></span>
+    <span class="mfr"></span>
+    <span class="mimg"><img src="{{MACHINE}}" alt=""></span>
+  </div>
+
+  <!-- ── ซองสินค้า ── -->
+  <div class="hero {{HERO_CLASS}}">
+    <div class="burst"></div>
+    <div class="halo"></div>
+    {{HERO}}
+  </div>
+
+  <i class="sp s1"></i><i class="sp c s2"></i><i class="sp s3"></i><i class="sp c s4"></i>
+  <i class="sp c s5"></i><i class="sp s6"></i><i class="sp s7"></i>
+
+  <div class="medal"><s><em>{{BRANCHES}}</em><span>สาขา</span></s></div>
+
+  <div class="frame"></div>
+  <div class="corner"><i>ของแท้ 100%</i></div>
+
+  <!-- ── คอลัมน์ตัวหนังสือ ── -->
   <div class="wrap {{WRAP_CLASS}}">
-    <div class="brand">
-      <div class="mark">X</div>
-      <span>DIVISION X CARD</span>
+
+    <div class="top">
+      <div class="plate"><span class="crop"><img src="{{LOGO}}" alt=""></span></div>
+      <div class="idn">
+        <b>DIVISION X CARD</b>
+        <i>ตู้กดการ์ดสะสมอัตโนมัติ ในห้างใกล้บ้านคุณ</i>
+        <u></u>
+      </div>
+    </div>
+
+    <div class="ribbon">
+      <i class="l"></i><i class="r"></i>
+      <span>
+        <svg viewBox="0 0 24 30" aria-hidden="true"><path d="M14 0 2 17h7l-3 13 15-19h-8l4-11z"/></svg>
+        กดเองหน้าตู้ ลุ้นเองสด ๆ
+      </span>
     </div>
 
     <h1>{{HEADLINE}}</h1>
     <div class="sub">{{SUB}}</div>
 
-    <div class="hero {{HERO_CLASS}}">
-      <div class="beam"></div>
-      <div class="halo"></div>
-      {{HERO}}
-    </div>
-
     <div class="body">{{BODY}}</div>
 
     <div class="foot">
-      <div class="chip"><i class="dot"></i>ของแท้ 100%</div>
-      <div class="chip"><i class="dot"></i>เปิด 24 ชม.</div>
-      <div class="chip"><i class="dot"></i>{{BRANCHES}} สาขา</div>
+      <div class="chip">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1.6l3.1 6.4 7 1-5 4.9 1.2 7-6.3-3.3-6.3 3.3 1.2-7-5-4.9 7-1z"/></svg>
+        ลุ้นทุกซอง
+      </div>
+      <div class="chip">
+        <!-- ต้องใช้ fill-rule=evenodd เจาะรูตรงกลาง ไม่งั้นได้จานกลมทึบ ไม่ใช่หน้าปัดนาฬิกา -->
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path fill-rule="evenodd" d="M12 1.6a10.4 10.4 0 1 0 0 20.8 10.4 10.4 0 0 0 0-20.8zm0 2.6a7.8 7.8 0 1 1 0 15.6 7.8 7.8 0 0 1 0-15.6z"/><path d="M10.9 5.9h2.2v6.3l4.4 2.6-1.1 1.9-5.5-3.2V5.9z"/></svg>
+        เปิด 24 ชม.
+      </div>
+      <!-- จำนวนสาขาไปอยู่ที่เหรียญบนรูปตู้แล้ว แคปซูลนี้จึงไม่พูดซ้ำ -->
+      <div class="chip">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a7 7 0 0 0-7 7c0 5.3 7 13 7 13s7-7.7 7-13a7 7 0 0 0-7-7zm0 9.6A2.6 2.6 0 1 1 12 6.4a2.6 2.6 0 0 1 0 5.2z"/></svg>
+        ตู้จริงในห้าง
+      </div>
       <div class="tags">{{TAGS}}</div>
     </div>
+
   </div>
 </body>
 </html>

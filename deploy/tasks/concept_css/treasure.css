@@ -1,0 +1,352 @@
+/* ══════════════════════════════════════════════════════════════════════════
+   treasure — "ล่าสมบัติ One Piece"  ·  bg #0A1730 · accent #E0B457 · accent2 #7FD9FF
+   ──────────────────────────────────────────────────────────────────────────
+   อารมณ์: แผนที่เดินเรือตอนพระอาทิตย์ตก — ทองเก่า กระดาษสา ทะเลลึก
+   สิ่งที่เปลี่ยนจากฐาน (ไม่ใช่แค่สี):
+     · กรอบ           → เชือกเกลียว (border-image เฉียงสลับทอง/น้ำตาล) แทนกรอบโครเมียม
+     · รัศมีพุ่ง       → เข็มทิศ (4 แฉกใหญ่ + 4 แฉกเล็ก + ขีดองศาถี่) ใต้ซอง
+     · รัศมีชั้นสอง    → วงกลมประ = วงเข็มทิศ/เส้นทางเดินเรือ
+     · ตารางพื้น       → เส้นละติจูด/ลองจิจูดห่าง ๆ แบบแผนที่เดินเรือ
+     · เส้นความเร็ว    → ปิด (คนละอารมณ์)
+     · สปอตไลต์        → ลำแสงอาทิตย์อุ่นเฉียงจากขวาบน
+     · คลื่น           → ใหญ่ขึ้นเท่าตัว ดันขึ้นมาให้เห็นจริง
+     · สมอ/นกนางนวล    → ขยาย ย้ายมาเรียงบนแถบฟ้าโล่ง
+     · เหรียญ          → พวงมาลัยเรือ (ซี่ + วงเชือก + ขีดทิศ)
+     · ริบบิ้น         → ป้ายกระดาษสา ปลายบาก + ดาวเข็มทิศแทนสายฟ้า
+   ทุก selector ขึ้นต้นด้วย body.c-treasure — ห้ามรั่วไปแนวอื่น
+   ══════════════════════════════════════════════════════════════════════════ */
+
+body.c-treasure {
+  --gold-1: #FFF3D2;
+  --gold-2: #E0B457;
+  --gold-3: #B58432;
+  --gold-4: #7A5218;
+  --cyan:   #7FD9FF;
+  --cyan-2: #BEEBFF;
+  --ink:    #2B1607;                 /* ขอบพาดหัวเป็นน้ำตาลหมึกแผนที่ ไม่ใช่กรมท่า */
+  --navy:   #0A1730;
+  --gold-grad: linear-gradient(178deg,#FFF8E2 0%,#F6DCA0 24%,#E0B457 54%,#C79A44 76%,#7E5518 100%);
+  background: #0A1730;
+}
+
+/* ── บรรยากาศ: ทะเลตอนเย็น + กระดาษเก่า ─────────────────────────────── */
+
+body.c-treasure .bg {
+  filter: blur(10px) sepia(.34) saturate(1.15) brightness(.94) contrast(1.1) hue-rotate(-6deg);
+}
+
+/* ดวงอาทิตย์อุ่นกองมุมขวาบน · ทะเลลึกกินมุมล่างซ้าย (rgba ล้วน ห้ามทึบ) */
+body.c-treasure .grad {
+  background:
+    radial-gradient(760px 600px at 88% 10%, rgba(255,178,60,.42), rgba(255,178,60,0) 72%),
+    radial-gradient(760px 640px at 74% 50%, rgba(255,204,120,.20), rgba(255,204,120,0) 72%),
+    radial-gradient(820px 640px at 6% 96%,  rgba(8,58,104,.52),   rgba(8,58,104,0) 70%),
+    radial-gradient(560px 420px at 22% 20%, rgba(20,74,128,.34),  rgba(20,74,128,0) 74%),
+    linear-gradient(168deg, rgba(10,23,48,.46) 0%, rgba(16,48,84,.20) 38%,
+                            rgba(10,26,52,.36) 70%, rgba(4,12,28,.66) 100%);
+}
+
+/* ── แสงทองหลังซอง (เดิมเป็นรัศมีพุ่งฟันปลา) ────────────────────────── */
+/* เหลือไว้บาง ๆ พอให้ซองมีฉากหลัง — ตัวเดินเรื่องคือเข็มทิศกับวงเส้นทาง */
+body.c-treasure .rays {
+  inset: 0;
+  background:
+    repeating-conic-gradient(from 0deg at 80% 47%,
+      rgba(255,220,150,.20) 0deg 1.4deg, rgba(255,220,150,0) 1.4deg 15deg);
+  -webkit-mask-image: radial-gradient(circle at 80% 47%,
+    transparent 8%, rgba(0,0,0,.85) 20%, rgba(0,0,0,.35) 36%, transparent 50%);
+}
+
+/* วงเส้นทางเดินเรือ — วงกลมประขนาดยักษ์คร่อมทั้งภาพ (เดิมเป็นรัศมีฟ้า)
+   ศูนย์กลางตรงกับซอง แต่รัศมีใหญ่พอให้เส้นวิ่งผ่านช่องว่างระหว่างคอลัมน์ */
+body.c-treasure .rays2 {
+  inset: auto; background: none; -webkit-mask-image: none;
+  left: 826px; top: 528px; width: 760px; height: 760px; margin: -380px 0 0 -380px;
+  border-radius: 50%;
+  border: 5px dashed rgba(240,205,130,.58);
+}
+body.c-treasure .rays2::before {
+  content: ''; position: absolute; inset: 52px; border-radius: 50%;
+  border: 2px solid rgba(255,238,180,.26);
+}
+body.c-treasure .rays2::after {
+  content: ''; position: absolute; inset: -96px; border-radius: 50%;
+  border: 2px solid rgba(127,217,255,.22);
+}
+
+/* ── ดอกเข็มทิศ (ยืมร่าง .streaks ที่ไม่ใช้แล้วมาใช้) ───────────────── */
+/* [ระวัง] รอบแรกทำด้วย repeating-conic + mask วงแหวน → ออกมาเป็น "กากบาท"
+   เพราะแฉกกว้างเท่ากันตลอดความยาว ไม่เรียวปลาย และ mask กินวงขอบที่เป็น ::before ไปด้วย
+   (mask ครอบลูกทั้งหมด ไม่ใช่เฉพาะพื้นหลังของตัวเอง)
+   ทำใหม่: ตัวมันเอง = หน้าปัด+วงขอบ · ::before = วงใน · ::after = ดาว 8 แฉกด้วย clip-path
+   16 จุด รัศมีนอก 50% รัศมีใน 17% → แฉกเรียวแหลมแบบเข็มทิศจริง
+   แล้วใส่ conic สลับสว่าง/เข้มทุก 45° ให้แต่ละแฉกมีด้านรับแสง-ด้านเงา = ดูเป็นทรงนูน */
+body.c-treasure .streaks {
+  display: block; inset: auto; left: 652px; top: 14px;
+  width: 166px; height: 166px; opacity: 1; border-radius: 50%;
+  background: radial-gradient(circle, rgba(7,22,46,.62) 0 58%, rgba(7,22,46,.34) 100%);
+  box-shadow: inset 0 0 0 3px rgba(255,240,190,.85),
+              inset 0 0 26px rgba(127,217,255,.22),
+              0 6px 20px rgba(0,0,0,.55);
+}
+body.c-treasure .streaks::before {
+  content: ''; position: absolute; inset: 13px; border-radius: 50%;
+  border: 1px solid rgba(255,240,190,.42);
+}
+body.c-treasure .streaks::after {
+  content: ''; position: absolute; inset: 15px;
+  background: repeating-conic-gradient(from -90deg,
+    #FFF8E4 0deg 45deg, #A87B2C 45deg 90deg);
+  clip-path: polygon(50% 0%, 56.5% 34.3%, 85.4% 14.6%, 65.7% 43.5%,
+                     100% 50%, 65.7% 56.5%, 85.4% 85.4%, 56.5% 65.7%,
+                     50% 100%, 43.5% 65.7%, 14.6% 85.4%, 34.3% 56.5%,
+                     0% 50%, 34.3% 43.5%, 14.6% 14.6%, 43.5% 34.3%);
+  filter: drop-shadow(0 2px 5px rgba(0,0,0,.6));
+}
+
+/* ── เส้นตารางแผนที่เดินเรือ (ห่าง ทองเก่า) ─────────────────────────── */
+body.c-treasure .grid {
+  opacity: .3;
+  background-image:
+    linear-gradient(rgba(224,180,87,.42) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(224,180,87,.42) 1px, transparent 1px);
+  background-size: 132px 132px;
+  -webkit-mask-image: radial-gradient(circle at 58% 44%, #000 10%, rgba(0,0,0,.6) 42%, transparent 76%);
+}
+
+
+/* ── ลำแสงอาทิตย์เฉียง (แทนสปอตไลต์เวที) ────────────────────────────── */
+body.c-treasure .beam {
+  left: 96%; top: -260px; width: 1080px; height: 1500px;
+  transform: translateX(-50%) rotate(19deg); transform-origin: 50% 0;
+  background: linear-gradient(180deg, rgba(255,226,158,.44) 0%, rgba(255,186,74,.20) 34%,
+                                      rgba(255,160,40,.07) 62%, transparent 86%);
+  clip-path: polygon(41% 0, 59% 0, 88% 100%, 12% 100%);
+  filter: blur(26px);
+}
+
+/* ── ทะเล: ยกคลื่นมา "หน้า" ตู้และซอง ───────────────────────────────── */
+/* ในฐาน .waves อยู่ z0 → ถูกตู้ (z2) กับซอง (z3) บังจนไม่เหลืออะไรให้ดู
+   ดันเป็น z4 แล้วซัดผ่านหน้าฐานตู้/ก้นซอง = โปสเตอร์ "อยู่กลางทะเล" จริง
+   ยอดคลื่นสูงสุดอยู่ที่ 32% ของความสูง element (path เริ่ม y=150/300 แล้วโค้งขึ้นถึง 96)
+   → height 200 + bottom 0 ทำให้ยอดคลื่นอยู่ y≈944 ต่ำกว่าคำว่า CARD GAME (y≈896)
+   รอบก่อนตั้ง bottom:56 height:216 แล้วคลื่นขึ้นไปคาดทับ CARD GAME พอดี */
+body.c-treasure .waves {
+  z-index: 4; left: -80px; bottom: 22px; width: 1240px; height: 210px;
+  filter: drop-shadow(0 -6px 18px rgba(0,0,0,.5));
+}
+body.c-treasure .waves path:nth-child(1) { fill: rgba(150,224,255,.40) }
+body.c-treasure .waves path:nth-child(2) { fill: rgba(246,252,255,.54) }
+body.c-treasure .waves path:nth-child(3) { fill: rgba(12,64,120,.70) }
+
+/* ── สมอ + นกนางนวล: ขยาย เรียงบนแถบฟ้าโล่งด้านบน ───────────────────── */
+/* สมอต้องไม่ล้ำเข้ามาชนบรรทัด "ตู้กดการ์ดสะสมอัตโนมัติ..." ที่จบราว x=492 */
+body.c-treasure .anchor {
+  left: 512px; top: 14px; width: 128px; height: 146px;
+  opacity: .8; transform: rotate(-11deg);
+  filter: drop-shadow(0 4px 14px rgba(0,0,0,.7)) saturate(1.1);
+}
+/* แถบเฉียงมุมขวาบนกินตั้งแต่ x≈880 ขึ้นไป นกจึงต้องจบก่อนนั้น */
+body.c-treasure .gulls {
+  left: 838px; top: 132px; width: 176px; height: 68px; opacity: .8;
+}
+body.c-treasure .gulls path { stroke: #FFF0CE }
+
+/* ── ขอบมืดโทนน้ำเงินหมึก ───────────────────────────────────────────── */
+body.c-treasure .vig {
+  background:
+    radial-gradient(126% 100% at 66% 46%, transparent 46%, rgba(3,12,30,.62) 100%),
+    linear-gradient(180deg, rgba(3,12,30,.30) 0%, transparent 18%,
+                            transparent 68%, rgba(2,9,22,.52) 100%);
+}
+
+/* ── ดาว: ทองเก่า/ฟ้าทะเล + เพิ่มดวงเด่นข้างซอง ─────────────────────── */
+body.c-treasure .sp {
+  background: radial-gradient(circle, #FFFDF2 0%, #E0B457 42%, rgba(224,180,87,0) 72%);
+  filter: drop-shadow(0 0 12px rgba(224,180,87,.95));
+}
+body.c-treasure .sp.c {
+  background: radial-gradient(circle, #FFFFFF 0%, #7FD9FF 42%, rgba(127,217,255,0) 72%);
+  filter: drop-shadow(0 0 13px rgba(127,217,255,.9));
+}
+body.c-treasure .s1 { width: 60px; height: 60px; left: 552px; top: 286px }
+body.c-treasure .s7 { width: 34px; height: 34px; right: 268px; top: 196px }
+
+/* ── กรอบเชือกเกลียว (แทนกรอบทองโครเมียม) ───────────────────────────── */
+body.c-treasure .frame {
+  inset: 15px; border: 10px solid transparent;
+  border-image: repeating-linear-gradient(46deg,
+      #6B4712 0 5px, #C79A44 5px 9px, #FFF0C8 9px 12px,
+      #E0B457 12px 16px, #59380C 16px 22px) 10 round;
+  box-shadow: inset 0 0 0 2px rgba(10,23,48,.7), 0 0 46px rgba(0,0,0,.6);
+}
+
+/* ── แถบมุม: ป้ายกระดาษสาปั๊มหมึก ───────────────────────────────────── */
+body.c-treasure .corner i {
+  color: #3A2408; font-weight: 700; letter-spacing: 1px;
+  background: linear-gradient(180deg, #FBEFD2 0%, #EBD5A2 46%, #C7A45F 100%);
+  box-shadow: 0 10px 26px rgba(0,0,0,.55), inset 0 0 0 2px rgba(58,36,8,.34);
+  text-shadow: 0 1px 0 rgba(255,255,255,.5);
+}
+
+/* ── เหรียญ → พวงมาลัยเรือ ───────────────────────────────────────────── */
+body.c-treasure .medal { width: 156px; height: 156px }
+/* ซี่พวงมาลัย 8 ซี่ (แฉกกว้าง) แทนฟันเฟือง 26 ซี่ */
+body.c-treasure .medal::before {
+  background:
+    repeating-conic-gradient(from 22.5deg,
+      #FFEEC0 0deg 7deg, rgba(0,0,0,0) 7deg 45deg),
+    radial-gradient(circle, rgba(0,0,0,0) 63%, #C79A44 64%, #7A5218 100%);
+  filter: drop-shadow(0 8px 20px rgba(0,0,0,.7));
+}
+body.c-treasure .medal::after {
+  inset: 22px;
+  background: radial-gradient(circle at 36% 26%, #123761 0%, #05101F 80%);
+  box-shadow: inset 0 0 0 2px rgba(224,180,87,.95), inset 0 0 22px rgba(127,217,255,.28);
+}
+/* [ระวัง] ต้องใช้ background-image ไม่ใช่ background — shorthand จะรีเซ็ต
+   background-clip:text ของฐานทิ้ง แล้วเลขกลายเป็นสี่เหลี่ยมทองทึบ (เจอจริงรอบแรก) */
+body.c-treasure .medal s em {
+  font-size: 44px;
+  background-image: linear-gradient(180deg, #FFF6DC, #E0B457 55%, #A97C28);
+}
+body.c-treasure .medal s span { color: #CFE9FF; font-size: 20px }
+
+/* ── รูปตู้: กลืนเข้าโทนพระอาทิตย์ตก ────────────────────────────────── */
+body.c-treasure .machine img {
+  filter: brightness(1.04) contrast(1.14) saturate(1.02) sepia(.14);
+}
+body.c-treasure .machine .mglow {
+  background: radial-gradient(ellipse at 52% 60%, rgba(255,186,74,.34), rgba(20,90,150,.18) 52%, transparent 72%);
+}
+body.c-treasure .machine .mfr {
+  background: radial-gradient(ellipse, rgba(255,226,158,.42), rgba(60,150,210,.16) 48%, transparent 76%);
+}
+
+/* ── ซอง: แสงทองเก่า ไม่ใช่นีออนฟ้า ─────────────────────────────────── */
+body.c-treasure .hero .burst {
+  background: repeating-conic-gradient(from 6deg,
+    rgba(224,180,87,.20) 0deg 1.6deg, rgba(224,180,87,0) 1.6deg 9deg);
+}
+body.c-treasure .hero .halo {
+  background: radial-gradient(ellipse, rgba(255,214,140,.30) 0%, rgba(40,130,190,.18) 46%, transparent 72%);
+}
+body.c-treasure .hero .stage img {
+  filter: drop-shadow(0 26px 44px rgba(0,0,0,.78))
+          drop-shadow(0 0 30px rgba(255,206,120,.52))
+          drop-shadow(0 0 82px rgba(90,180,235,.30));
+}
+body.c-treasure .hero .floor {
+  background: radial-gradient(ellipse, rgba(255,236,190,.85), rgba(120,190,240,.30) 44%, transparent 76%);
+}
+
+/* ── หัวกระดาษ: ป้ายทองเหลืองเก่า ───────────────────────────────────── */
+body.c-treasure .plate {
+  background: linear-gradient(150deg, #1B3C6B 0%, #0F2A4C 48%, #081729 100%);
+  box-shadow: inset 0 0 0 3px rgba(224,180,87,.95), inset 0 0 22px rgba(127,217,255,.22),
+              0 8px 22px rgba(0,0,0,.6), 0 0 26px rgba(255,186,74,.22);
+}
+body.c-treasure .idn b {
+  background-image: linear-gradient(180deg, #FFF6DC 0%, #E0B457 54%, #A2762A 100%);
+}
+body.c-treasure .idn i { color: #B7DCF2 }
+body.c-treasure .idn u {
+  background: linear-gradient(90deg, #E0B457, rgba(127,217,255,.8) 58%, transparent);
+}
+
+/* ── ริบบิ้น → ป้ายกระดาษสา + ดาวเข็มทิศแทนสายฟ้า ───────────────────── */
+body.c-treasure .ribbon {
+  transform: skewX(-6deg);
+  background: linear-gradient(180deg, #FBF0D4 0%, #E8D19C 48%, #BE9750 100%);
+  box-shadow: 0 9px 26px rgba(0,0,0,.55), inset 0 0 0 2px rgba(58,36,8,.3),
+              inset 0 -6px 12px rgba(110,71,18,.28);
+}
+body.c-treasure .ribbon i { background: linear-gradient(180deg, #8A5F1E, #4A2E08) }
+body.c-treasure .ribbon > span {
+  transform: skewX(6deg); color: #33200A; letter-spacing: 1.4px;
+  text-shadow: 0 1px 0 rgba(255,255,255,.55);
+}
+body.c-treasure .ribbon svg { display: none }
+body.c-treasure .ribbon > span::before {
+  content: ''; flex: 0 0 auto; width: 22px; height: 22px;
+  background: linear-gradient(160deg, #7A5218, #33200A);
+  clip-path: polygon(50% 0%, 59% 41%, 100% 50%, 59% 59%, 50% 100%, 41% 59%, 0% 50%, 41% 41%);
+}
+
+/* ── พาดหัว: หมึกน้ำตาลบนกระดาษ ─────────────────────────────────────── */
+body.c-treasure h1 {
+  color: #FFF6E0;
+  text-shadow:
+    -3px 0 0 var(--ink),  3px 0 0 var(--ink),  0 -3px 0 var(--ink),  0 3px 0 var(--ink),
+    -2px -2px 0 var(--ink), 2px -2px 0 var(--ink), -2px 2px 0 var(--ink), 2px 2px 0 var(--ink),
+    0 5px 0 rgba(122,82,24,.95),
+    0 9px 0 rgba(40,22,4,.6),
+    0 16px 30px rgba(0,0,0,.75),
+    0 0 54px rgba(255,186,74,.42);
+}
+body.c-treasure h1 em {
+  filter:
+    drop-shadow(2.4px 0 0 #2B1607) drop-shadow(-2.4px 0 0 #2B1607)
+    drop-shadow(0 2.4px 0 #2B1607) drop-shadow(0 -2.4px 0 #2B1607)
+    drop-shadow(0 6px 0 rgba(90,58,10,.92))
+    drop-shadow(0 12px 24px rgba(0,0,0,.6))
+    drop-shadow(0 0 26px rgba(255,196,80,.7));
+}
+
+/* ── บรรทัดรอง: หมุดกระดาษเก่า ──────────────────────────────────────── */
+body.c-treasure .sub {
+  color: #FBF3E4;
+  border-image: linear-gradient(180deg, #FFF0C8, #E0B457 42%, #7FD9FF 100%) 1;
+  background: linear-gradient(90deg, rgba(7,20,42,.78), rgba(7,20,42,.30) 84%, transparent);
+}
+
+/* ── เนื้อความ: หัวข้อเป็นดาวเข็มทิศ ────────────────────────────────── */
+body.c-treasure .body {
+  background: linear-gradient(90deg, rgba(6,18,40,.84), rgba(6,18,40,.70) 70%, rgba(6,18,40,.44));
+  box-shadow: inset 0 0 0 1px rgba(224,180,87,.24);
+  color: #F1F6FF;
+}
+body.c-treasure .body p::before {
+  width: 16px; height: 16px; left: 1px; transform: translateY(-50%) rotate(0deg);
+  background: linear-gradient(150deg, #FFF3D2, #E0B457 50%, #A97C28);
+  clip-path: polygon(50% 0%, 59% 41%, 100% 50%, 59% 59%, 50% 100%, 41% 59%, 0% 50%, 41% 41%);
+  box-shadow: none;
+  filter: drop-shadow(0 0 8px rgba(224,180,87,.85));
+}
+
+/* ── แถบท้าย: ขอบบนเป็นเชือก ────────────────────────────────────────── */
+body.c-treasure .foot {
+  background:
+    linear-gradient(90deg, rgba(255,186,74,.20), rgba(20,90,150,.18) 55%, rgba(255,186,74,.14)),
+    linear-gradient(180deg, rgba(5,16,36,.74), rgba(4,12,28,.95));
+  border-top: 5px solid transparent;
+  border-image: repeating-linear-gradient(46deg,
+      #6B4712 0 4px, #C79A44 4px 7px, #FFF0C8 7px 9px, #7A5218 9px 14px) 5 round;
+}
+body.c-treasure .chip {
+  color: #FFF3DC;
+  background: linear-gradient(180deg, rgba(16,48,88,.95), rgba(6,18,40,.95));
+  box-shadow: inset 0 0 0 2px rgba(224,180,87,.7), 0 4px 14px rgba(0,0,0,.55),
+              inset 0 0 16px rgba(127,217,255,.14);
+}
+body.c-treasure .chip svg {
+  fill: #E0B457; filter: drop-shadow(0 0 6px rgba(224,180,87,.8));
+}
+body.c-treasure .tags { color: #9CD3EE }
+
+/* ── แสงรองหลังพาดหัว: แดดอุ่น ──────────────────────────────────────── */
+body.c-treasure .wrap::before {
+  background: radial-gradient(520px 220px at 30% 46%, rgba(255,176,60,.26), transparent 72%);
+}
+
+/* ── เคสไม่มีรูปสินค้า: เข็มทิศ/วงประย้ายมากลางภาพ ──────────────────── */
+body.c-treasure.no-hero .rays {
+  background:
+    repeating-conic-gradient(from -2.2deg at 62% 50%,
+      rgba(255,238,190,.40) 0deg 4.4deg, rgba(255,238,190,0) 4.4deg 90deg),
+    repeating-conic-gradient(from 42.4deg at 62% 50%,
+      rgba(224,180,87,.28) 0deg 5.2deg, rgba(224,180,87,0) 5.2deg 90deg);
+  -webkit-mask-image: radial-gradient(circle at 62% 50%,
+    transparent 6%, rgba(0,0,0,.9) 16%, rgba(0,0,0,.5) 30%, transparent 44%);
+}
+body.c-treasure.no-hero .rays2 { left: 700px; top: 560px }

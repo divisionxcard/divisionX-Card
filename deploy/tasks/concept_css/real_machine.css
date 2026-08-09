@@ -1,0 +1,327 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   real_machine — "Real Machine Experience"  ·  สมจริง / Lifestyle
+   ───────────────────────────────────────────────────────────────────────────
+   สี  bg #0E1726 · accent #00C2FF · accent2 #FFFFFF   (ไม่มีทองเลยทั้งใบ)
+   ภาษาภาพ: ภาพถ่ายผลิตภัณฑ์ในนิตยสาร — ตู้จริงเต็มตัวเป็นพระเอก,
+            ไฟห้างเบลอเป็นโบเก้ด้านหลัง, ป้ายชี้พร้อมเส้นโยงบอกว่าส่วนไหนคืออะไร,
+            มุมภาพเป็นขีดมุมแบบช่องมองกล้อง ไม่ใช่กรอบลายทอง
+
+   ── สลับข้างกับแนวอื่นทั้งหมด (นี่คือจุดที่ทำให้ "คนละอารมณ์" จริง) ──────────
+   ฐาน/แนวลุ้นหน้าตู้ : ตัวหนังสือซ้าย · ซองยักษ์ขวา · ตู้เป็นของประกอบมุมล่างซ้าย
+   แนวนี้             : ตัวหนังสือซ้าย · **ตู้เต็มตัวขวา** · ซองย่อเหลือ 120px มุมล่างซ้าย
+   ตู้กว้าง 600px (ไฟล์ 960x1280 -> สูง 800px) ชิดขวา -40px ก้นแตะขอบล่าง
+     ตัวตู้จริงในภาพกิน 6.7%-94% ของกว้าง · 5%-93% ของสูง -> บนโปสเตอร์คือ x 520-1044, y 320-1024
+   จุดอ้างอิงบนตัวตู้ (วัดจากไฟล์ machine-hero.jpg)
+     ตู้กระจกโชว์ซอง  x 13.5%-62.5% · y 13.3%-67%   -> x 561-855, y 386-816
+     จอสั่งซื้อ        x 69.8%-94.8% · y 17.2%-42.2% -> x 899-1049, y 418-618
+     ช่อง PUSH & PICK  ศูนย์กลาง (38.5%, 77.5%)      -> (711, 900)
+   ป้ายชี้ทุกอันเล็งจากตัวเลขชุดนี้
+
+   [ระวัง] ห้ามใส่อีโมจิ · ห้ามใช้ -webkit-text-stroke กับตัวไทย
+           ทุก selector ต้องขึ้นต้น body.c-real_machine ไม่งั้นรั่วไปทับแนวอื่น
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+body.c-real_machine{
+  /* ทองถูกถอดออกทั้งชุด — แนวนี้เป็นขาว/ฟ้า/กรมท่าล้วน จะได้ไม่ปนกลิ่น "ป้ายลดราคา" */
+  --gold-1:#FFFFFF; --gold-2:#DCEBF7; --gold-3:#9FBDD4; --gold-4:#6E8DA6;
+  --cyan:#00C2FF;   --cyan-2:#BEE9FF;
+  --ink:#060D18;    --navy:#0E1726;
+  --gold-grad: linear-gradient(178deg,#FFFFFF 0%,#EAF7FF 30%,#9FE0FF 62%,#43BFF0 88%,#0E86BE 100%);
+  background:#0E1726;
+}
+
+/* ── บรรยากาศ: ห้างเบลอเป็นโบเก้ ไม่ใช่ฉากนีออน ─────────────────────────── */
+/* เบลอหนักกว่าฐาน (9px -> 20px) โดยตั้งใจ = ระยะชัดตื้นแบบภาพถ่ายเลนส์กว้าง
+   ทำให้ตู้ที่คมอยู่ชั้นหน้าเด้งออกมาเอง โดยไม่ต้องพึ่งรัศมี/ประกาย */
+body.c-real_machine .bg{
+  filter: blur(20px) saturate(.82) brightness(.66) contrast(1.02);
+  background-position: 40% 46%;
+}
+body.c-real_machine .grad{
+  background:
+    radial-gradient(820px 760px at 72% 42%, rgba(74,146,205,.22), rgba(74,146,205,0) 72%),
+    radial-gradient(620px 520px at 4% 10%,  rgba(16,52,96,.34),   rgba(16,52,96,0) 74%),
+    linear-gradient(178deg, rgba(14,23,38,.66) 0%, rgba(14,23,38,.28) 30%,
+                            rgba(11,18,32,.44) 68%, rgba(5,10,18,.82) 100%);
+}
+
+/* ของประดับสายฮึกเหิมถูกถอดออกหมด — แนวนี้ขายความ "เห็นแล้วเชื่อ" ไม่ใช่ความ "ตื่นเต้น" */
+body.c-real_machine .rays,
+body.c-real_machine .rays2,
+body.c-real_machine .streaks,
+body.c-real_machine .waves,
+body.c-real_machine .anchor,
+body.c-real_machine .gulls,
+body.c-real_machine .sp,
+body.c-real_machine .hero .burst{ display: none }
+
+/* ตารางพื้นถูกแปลงเป็น "ดวงไฟห้างเบลอ" — โบเก้จริง ๆ ต้องเป็นวงกลมนุ่ม ไม่ใช่เส้นตาราง */
+body.c-real_machine .grid{
+  opacity: 1; background-size: auto; -webkit-mask-image: none;
+  background-image:
+    radial-gradient(circle 38px at 11% 15%, rgba(255,228,182,.17), transparent 64%),
+    radial-gradient(circle 24px at 25% 7%,  rgba(196,228,255,.15), transparent 64%),
+    radial-gradient(circle 50px at 45% 21%, rgba(255,216,164,.12), transparent 64%),
+    radial-gradient(circle 19px at 60% 9%,  rgba(255,242,214,.16), transparent 64%),
+    radial-gradient(circle 30px at 7% 41%,  rgba(166,214,255,.13), transparent 64%),
+    radial-gradient(circle 22px at 33% 33%, rgba(255,234,200,.10), transparent 64%),
+    radial-gradient(circle 16px at 18% 60%, rgba(206,232,255,.11), transparent 64%);
+}
+
+/* ไฟหลักแบบสตูดิโอ: ลำกว้าง เบลอหนัก ตกลงบนตู้ฝั่งขวา — เป็น "แสง" ไม่ใช่ "ลำแสง" */
+body.c-real_machine .beam{
+  left: 72%; top: -280px; width: 1040px; height: 1260px;
+  transform: translateX(-50%);
+  background: linear-gradient(180deg, rgba(226,242,255,.30) 0%, rgba(180,216,246,.13) 38%,
+                                      rgba(150,200,240,.05) 62%, transparent 80%);
+  clip-path: polygon(41% 0, 59% 0, 97% 100%, 3% 100%);
+  filter: blur(42px);
+}
+
+body.c-real_machine .vig{
+  background:
+    radial-gradient(130% 108% at 62% 48%, transparent 52%, rgba(3,7,14,.60) 100%),
+    linear-gradient(180deg, rgba(3,7,14,.40) 0%, transparent 15%,
+                            transparent 72%, rgba(3,7,14,.52) 100%);
+}
+
+/* ═══ ตู้จริง = พระเอก ย้ายไปฝั่งขวา ═══════════════════════════════════════ */
+body.c-real_machine .machine{
+  left: auto; right: -40px; bottom: 0; width: 600px;
+}
+/* mask ของฐานไล่จางขอบขวาที่ 76%-100% — พอย้ายตู้มาชิดขวา ขอบนั้นคือ "จอสั่งซื้อ + โลโก้ DC"
+   ถ้าไม่แก้จะลบครึ่งขวาของตู้ทิ้ง · แนวนี้ไล่จางเฉพาะขอบซ้าย (ด้านที่หันเข้าหาตัวหนังสือ) */
+body.c-real_machine .machine .mimg{
+  -webkit-mask-image: linear-gradient(to right, transparent 0, rgba(0,0,0,.6) 5%, #000 10%, #000 100%);
+}
+/* ไล่จางขอบบนสั้นลงมาก (18% -> 7%) เพราะตู้เป็นพระเอก หัวตู้ต้องคม ไม่ใช่ละลายหาย */
+body.c-real_machine .machine img{
+  filter: brightness(1.18) contrast(1.10) saturate(1.02);
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, rgba(0,0,0,.55) 3.5%, #000 7%);
+}
+body.c-real_machine .machine .mglow{
+  left: -90px; right: -40px; top: 2%; bottom: -20px;
+  background: radial-gradient(ellipse at 50% 52%, rgba(120,186,232,.30), transparent 68%);
+  filter: blur(30px);
+}
+/* เงาตู้บนพื้นห้าง — ต่ำ กว้าง จาง แบบเงาจริง ไม่ใช่แอ่งไฟนีออน */
+body.c-real_machine .machine .mfr{
+  left: 2%; right: 2%; bottom: 26px; height: 54px;
+  background: radial-gradient(ellipse, rgba(150,196,232,.26), rgba(70,120,170,.10) 48%, transparent 76%);
+  filter: blur(16px);
+}
+
+/* ── ป้ายชี้พร้อมเส้นโยง ──────────────────────────────────────────────────
+   ทำจาก pseudo-element ของ .machine 2 อัน (::before/::after)
+   หนึ่ง element = ข้อความ + เส้นโยง + จุดวงแหวนปลายเส้น โดยใช้ background 3 ชั้น
+   ไม่ต้องเพิ่ม element ในเทมเพลต (ห้ามแก้เทมเพลต) และหายเองเมื่อไม่มีรูปตู้
+   [ระวัง] .mglow/.mfr เป็น z-index:-1 (อยู่หลังรูป) จึงใช้เป็นที่แขวนป้ายไม่ได้
+           ต้องใช้ ::before/::after ของ .machine ซึ่ง position:absolute -> วาดทับรูปเสมอ
+   จัดตำแหน่งด้วย right: ให้ "ขอบขวาของกล่อง = จุดที่ชี้" แล้วดันข้อความออกซ้ายด้วย padding */
+body.c-real_machine .machine::before,
+body.c-real_machine .machine::after{
+  position: absolute; z-index: 2;
+  padding-right: 96px; white-space: nowrap;
+  font-size: 21px; font-weight: 400; letter-spacing: .2px; color: #E4F2FC;
+  text-shadow: 0 2px 10px rgba(0,0,0,.95), 0 0 20px rgba(0,0,0,.8);
+  background-repeat: no-repeat;
+  background-image:
+    radial-gradient(circle 6.5px at calc(100% - 6.5px) 50%,
+                    rgba(0,194,255,0) 0 52%, #00C2FF 58% 100%, rgba(0,194,255,0) 100%),
+    radial-gradient(circle 2.5px at calc(100% - 6.5px) 50%, #FFFFFF 0 100%, rgba(255,255,255,0) 100%),
+    linear-gradient(#00C2FF, #00C2FF);
+  background-size: 100% 100%, 100% 100%, 72px 1.6px;
+  background-position: 0 0, 0 0, right 15px center;
+}
+/* [ระวัง] top/right ของป้ายนับจากกล่อง .machine ไม่ใช่จากขอบภาพ
+   .machine อยู่ที่ x 520-1120 · y 280-1080 (right:-40px + width:600px -> ล้นขวาไป 40px)
+   v1 ใส่ top เป็นพิกัดภาพ (770) แล้วป้ายไปโผล่ที่ y 1050 = ก้นภาพ ถูกแถบท้ายทับ
+   สูตร:  top = ตำแหน่งจริง - 280 - 16(ครึ่งความสูงบรรทัด)   ·   right = 600 - (ตำแหน่งจริง - 520) */
+/* ชี้ที่ชั้นล่างสุดของตู้กระจกโชว์ซอง -> ปลายเส้นที่ (676, 820)
+   ที่ต้องลงมาถึง y 820 เพราะแผ่นเนื้อความฝั่งซ้ายยืดตามจำนวนย่อหน้า
+   เคสพาดหัวยาว 3 ย่อหน้า แผ่นลงมาถึง y≈770 — ป้ายอยู่สูงกว่านี้แล้วชนบรรทัดสุดท้าย */
+body.c-real_machine .machine::before{
+  content: 'ของจริงเรียงเต็มตู้';
+  right: 444px; top: 524px;
+}
+/* ชี้ที่ช่อง PUSH & PICK -> ปลายเส้นที่ (700, 902) ซึ่งเป็นริมซ้ายของช่อง ไม่ทับตัวอักษรบนตู้ */
+body.c-real_machine .machine::after{
+  content: 'ช่องรับสินค้าที่นี่';
+  right: 456px; top: 606px;
+}
+
+/* ═══ ซองสินค้า: ย่อเป็น "ของที่ได้" วางมุมล่างซ้าย ═══════════════════════
+   ── ตัวเลขชุดนี้ผูกกันหมด ──
+   กรอบ .hero กว้าง 520px · รูปในกรอบกว้าง 990px จัดกลางกรอบ · ตัวซองจริงกินแค่ 44.9%
+   -> ในพิกัดของ .stage ตัวซองอยู่ที่ x 34.8-479.5 (กลาง 257.2) y 203-1088 (กลาง 645.5)
+   ตั้ง transform-origin ที่ "กลางตัวซอง" (49.46% 59.77%) แล้วย่อ .27 -> ซองกว้าง 120px สูง 239px
+   แล้วเลื่อน (-131, +233) ให้ไปนั่งที่ x 66-186 · y 759-997  (เหนือแถบท้ายพอดี)
+   [ระวัง] translate ต้องเขียนไว้ "หน้า" scale — CSS ทำจากขวาไปซ้าย ค่าเลื่อนจึงไม่ถูกย่อตาม */
+body.c-real_machine .hero{ left: 0; right: auto; top: 0; width: 520px; height: 1080px }
+body.c-real_machine .hero .stage{
+  transform: translate(-131px, 227px) scale(.28);
+  transform-origin: 49.46% 59.77%;
+}
+body.c-real_machine .hero .stage img{
+  filter: drop-shadow(0 30px 40px rgba(0,0,0,.85))
+          drop-shadow(0 0 60px rgba(140,205,245,.35));
+}
+body.c-real_machine .hero .floor{
+  background: radial-gradient(ellipse, rgba(200,232,255,.55), rgba(90,150,200,.20) 44%, transparent 74%);
+}
+/* แสงนุ่มรองหลังซองเล็ก — ทำให้ของไม่จมหายไปในมุมมืด */
+body.c-real_machine .hero .halo{
+  left: 126px; top: 872px; width: 330px; height: 300px;
+  background: radial-gradient(ellipse, rgba(120,190,240,.26) 0%, rgba(40,110,170,.12) 46%, transparent 72%);
+}
+
+/* ═══ กรอบ: ขีดมุมแบบช่องมองกล้อง แทนกรอบลายทอง ═══════════════════════════
+   8 ชั้น background = ขีดสั้น 2 ขีดต่อมุม · ไม่มีเส้นรอบรูป = ภาพหายใจได้ ดูเป็นภาพถ่าย */
+body.c-real_machine .frame{
+  inset: 30px; border: 0; border-image: none; box-shadow: none;
+  background-repeat: no-repeat;
+  background-image:
+    linear-gradient(#fff,#fff), linear-gradient(#fff,#fff),
+    linear-gradient(#fff,#fff), linear-gradient(#fff,#fff),
+    linear-gradient(#fff,#fff), linear-gradient(#fff,#fff),
+    linear-gradient(#fff,#fff), linear-gradient(#fff,#fff);
+  background-size:
+    52px 2px, 2px 52px, 52px 2px, 2px 52px,
+    52px 2px, 2px 52px, 52px 2px, 2px 52px;
+  background-position:
+    left top, left top, right top, right top,
+    left bottom, left bottom, right bottom, right bottom;
+  opacity: .62;
+  filter: drop-shadow(0 1px 5px rgba(0,0,0,.85));
+}
+
+/* ── แถบเฉียงมุม: แผ่นขาวเรียบ ตัวอักษรกรมท่า ─────────────────────────── */
+body.c-real_machine .corner{ width: 250px; height: 250px }
+body.c-real_machine .corner i{
+  right: -104px; top: 58px; width: 380px;
+  font-size: 22px; font-weight: 700; letter-spacing: 1.4px; color: #0E1726;
+  padding: 8px 0 9px;
+  background: rgba(255,255,255,.93);
+  box-shadow: 0 8px 22px rgba(0,0,0,.5);
+  text-shadow: none;
+}
+
+/* ── ริบบิ้น: แคปซูลเส้นขอบบาง ไม่ใช่ป้ายผ้าเอียง ─────────────────────── */
+body.c-real_machine .ribbon{
+  transform: none; margin: 18px 0 0 2px; border-radius: 999px;
+  background: rgba(9,18,32,.52);
+  box-shadow: inset 0 0 0 1.6px rgba(255,255,255,.42);
+}
+body.c-real_machine .ribbon i{ display: none }
+body.c-real_machine .ribbon > span{
+  transform: none; padding: 7px 22px;
+  font-weight: 400; font-size: 21px; letter-spacing: 1.4px;
+  color: #EAF6FF; text-shadow: 0 2px 8px rgba(0,0,0,.7);
+}
+body.c-real_machine .ribbon svg{ width: 15px; height: 19px; fill: #00C2FF }
+
+/* ── พาดหัว: ขาวล้วน เงาบาง ๆ พอให้ลอย ไม่มีขอบนูนแบบป้ายลดราคา ────────
+   (คงเทคนิคเงาซ้อนของฐานไว้ แต่ลดเหลือชั้นเดียวบาง ๆ — ยังห้ามใช้ text-stroke) */
+body.c-real_machine h1{
+  max-width: 460px; letter-spacing: -.2px; color: #FFFFFF;
+  text-shadow:
+    -1.6px 0 0 var(--ink), 1.6px 0 0 var(--ink), 0 -1.6px 0 var(--ink), 0 1.6px 0 var(--ink),
+    0 4px 18px rgba(0,0,0,.8),
+    0 14px 34px rgba(0,0,0,.6);
+}
+body.c-real_machine h1 em{
+  background-image: var(--gold-grad);
+  filter:
+    drop-shadow(1.6px 0 0 #06202E) drop-shadow(-1.6px 0 0 #06202E)
+    drop-shadow(0 1.6px 0 #06202E) drop-shadow(0 -1.6px 0 #06202E)
+    drop-shadow(0 8px 20px rgba(0,0,0,.6))
+    drop-shadow(0 0 22px rgba(0,180,255,.5));
+}
+body.c-real_machine .wrap::before{
+  background: radial-gradient(500px 220px at 28% 46%, rgba(30,80,130,.34), transparent 74%);
+}
+
+/* ── บรรทัดรอง / เนื้อความ: แผ่นบางลง เส้นคั่นบาง หัวข้อเป็นขีด ไม่ใช่เพชร ── */
+body.c-real_machine .sub{
+  max-width: 470px; border-left-width: 3px;
+  border-image: linear-gradient(180deg, #00C2FF, rgba(0,194,255,.25)) 1;
+  background: linear-gradient(90deg, rgba(6,14,26,.62), rgba(6,14,26,.18) 86%, transparent);
+}
+body.c-real_machine .body{
+  max-width: 500px; border-radius: 4px;
+  background: linear-gradient(90deg, rgba(6,14,26,.72), rgba(6,14,26,.54) 74%, rgba(6,14,26,.30));
+  box-shadow: inset 0 0 0 1px rgba(190,225,255,.12);
+}
+body.c-real_machine .body p{ padding-left: 26px }
+body.c-real_machine .body p::before{
+  left: 0; top: .70em; width: 15px; height: 2px;
+  transform: none; border-radius: 0;
+  background: #00C2FF; box-shadow: none;
+}
+
+/* ── แถบท้าย: เส้นบาง แคปซูลโปร่ง ไม่มีทอง ────────────────────────────── */
+body.c-real_machine .foot{
+  padding: 16px 44px 16px;
+  background: linear-gradient(180deg, rgba(6,12,22,.62), rgba(6,12,22,.90));
+  border-top: 1px solid rgba(0,194,255,.55);
+  border-image: none;
+}
+body.c-real_machine .chip{
+  padding: 7px 15px; font-weight: 400; font-size: 22px; color: #EAF4FC;
+  background: rgba(255,255,255,.05);
+  box-shadow: inset 0 0 0 1.4px rgba(210,235,255,.34);
+}
+body.c-real_machine .chip svg{ width: 21px; height: 21px; fill: #00C2FF; filter: none }
+body.c-real_machine .tags{ color: #B7D2E4; text-shadow: 0 2px 8px rgba(0,0,0,.9) }
+
+/* ── เหรียญสาขา: วงแหวนบาง ไม่ใช่เหรียญรางวัลลายทอง ────────────────────
+   ย้ายมาอยู่ข้างซองเล็กมุมล่างซ้าย ให้อ่านเป็นชุดเดียวกับ "ของที่ได้" */
+body.c-real_machine .medal{ left: 214px; bottom: 84px; width: 118px; height: 118px }
+body.c-real_machine .medal::before{
+  background: rgba(10,20,35,.62); filter: none;
+  box-shadow: inset 0 0 0 1.6px rgba(0,194,255,.75), 0 8px 22px rgba(0,0,0,.55);
+}
+body.c-real_machine .medal::after{ background: none; box-shadow: none }
+body.c-real_machine .medal s em{
+  font-size: 40px;
+  background: none; -webkit-text-fill-color: #FFFFFF;
+}
+body.c-real_machine .medal s span{ font-size: 18px; color: #97C4DC }
+
+/* ── หัวกระดาษ ─────────────────────────────────────────────────────────── */
+body.c-real_machine .plate{
+  background: linear-gradient(150deg, #16273E 0%, #0E1B2E 50%, #08111F 100%);
+  box-shadow: inset 0 0 0 1.6px rgba(210,236,255,.5), 0 8px 20px rgba(0,0,0,.5);
+}
+body.c-real_machine .plate::after{
+  background: linear-gradient(144deg, rgba(255,255,255,.14) 0 18%, transparent 40%,
+                              rgba(0,205,255,.10) 62%, transparent 84%);
+}
+body.c-real_machine .idn i{ color: #A9C8DC }
+body.c-real_machine .idn u{
+  height: 2px; background: linear-gradient(90deg, #00C2FF, rgba(255,255,255,.5) 40%, transparent);
+}
+
+/* ═══ เคสไม่มีรูปสินค้า: ตู้ยิ่งเป็นพระเอก แต่ตัวหนังสือห้ามล้นไปทับตู้ ═══
+   ฐานขยาย h1 เป็น 880px เมื่อ no-hero — ที่นี่ตู้กินฝั่งขวาอยู่ ต้องรั้งกลับ */
+body.c-real_machine.no-hero h1{ max-width: 470px }
+body.c-real_machine.no-hero .sub{ max-width: 480px; font-size: 27px }
+body.c-real_machine.no-hero .body{ max-width: 510px; font-size: 24px; line-height: 1.44 }
+body.c-real_machine.no-hero .body:has(p:nth-child(3)){ font-size: 22px }
+body.c-real_machine.no-hero .body:has(p:nth-child(4)){ font-size: 20px }
+body.c-real_machine.no-hero .machine{ width: 640px; right: -46px }
+body.c-real_machine.no-hero .medal{ left: 96px; bottom: 128px }
+/* ป้ายชี้ตรึงเป็น px ในกล่อง .machine — ตู้โตขึ้นแล้วต้องเลื่อนตาม ไม่งั้นชี้เหนือเป้าไป ~35px
+   (สัดส่วนเป้าเดิม: จุดที่ 1 = 26%/67.5% · จุดที่ 2 = 30%/77.75% ของกล่องรูปตู้) */
+body.c-real_machine.no-hero .machine::before{ right: 474px; top: 560px }
+body.c-real_machine.no-hero .machine::after{ right: 448px; top: 647px }
+
+/* ═══ เคสไม่มีรูปตู้: แนวคิดพังทั้งแนว — คืนซองกลับมาเป็นพระเอกฝั่งขวา ═══
+   (ป้ายชี้หายเองเพราะเกาะอยู่กับ .machine ซึ่ง display:none) */
+body.c-real_machine.no-machine .hero{ left: auto; right: 24px }
+body.c-real_machine.no-machine .hero .stage{ transform: none }
+body.c-real_machine.no-machine .hero .halo{
+  left: 50%; top: 46%; width: 700px; height: 780px;
+  background: radial-gradient(ellipse, rgba(120,190,240,.30) 0%, rgba(40,110,170,.14) 46%, transparent 72%);
+}
+body.c-real_machine.no-machine .medal{ left: 300px; bottom: 210px }

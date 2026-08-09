@@ -1,0 +1,359 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   machine_luck — "ลุ้นหน้าตู้"  ·  ตื่นเต้น / เสี่ยงดวง
+   ───────────────────────────────────────────────────────────────────────────
+   สี  bg #0B1B3A · accent #00C2FF · accent2 #F5C542
+   ภาษาภาพ: ตู้เกม/ตู้คีบในห้าง — ป้ายไฟหลอดวิ่งรอบขอบ, หลอดไฟกะพริบรอบช่องรับของ,
+            เส้นความเร็ววิ่งทแยงจากตู้ไปหาซอง, ซองเอียงกำลังพุ่งออกจากตู้
+
+   หลักคิดการจัดวาง (ทำไมของไปอยู่ตรงนั้น)
+     ช่องรับสินค้าในรูปตู้จริงอยู่ที่ 39% ของความกว้าง · 78.5% ของความสูงของไฟล์รูป
+     ตู้กว้าง 470px ชิดซ้าย -34px -> ช่องรับของตกที่ (x≈151, y≈945) ของภาพโปสเตอร์
+     ซองอยู่ที่ (x≈803, y≈645) -> เส้นทางพุ่งเอียงขึ้นขวา ~23 องศา
+     ของทุกชิ้นในสกินนี้เล็งที่แกนเส้นนี้: รัศมี .rays ออกจากช่องรับของ ·
+     .streaks เป็นแถบเส้นความเร็วเอียง 23 องศาคาดกลางภาพ · .halo เป็นหางแสงหลังซอง
+
+   [ระวัง] ห้ามใส่อีโมจิ · ห้ามใช้ -webkit-text-stroke กับตัวไทย
+           ทุก selector ต้องขึ้นต้น body.c-machine_luck ไม่งั้นรั่วไปทับแนวอื่น
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+body.c-machine_luck{
+  --gold-1:#FFFDF0; --gold-2:#F5C542; --gold-3:#D2960E; --gold-4:#8E6406;
+  --cyan:#00C2FF;   --cyan-2:#A6E7FF;
+  --ink:#03102B;    --navy:#0B1B3A;
+  --gold-grad: linear-gradient(178deg,#FFFEF6 0%,#FFEE9C 24%,#F5C542 56%,#FFE28A 78%,#C4890B 100%);
+  background:#0B1B3A;
+}
+
+/* ── บรรยากาศ: ห้างจมลงไปในน้ำเงินเข้ม ไฟนีออนฟ้าเป็นตัวนำ ───────────────── */
+body.c-machine_luck .bg{
+  filter: blur(11px) saturate(1.1) brightness(.60) contrast(1.18) hue-rotate(-6deg);
+}
+body.c-machine_luck .grad{
+  background:
+    /* แสงฟ้าแรงสุดกองที่ "ช่องรับของ" — จุดที่ของพุ่งออกมา */
+    radial-gradient(620px 480px at 14% 88%, rgba(0,200,255,.40), rgba(0,200,255,0) 70%),
+    /* แสงฟ้ารองที่ตัวซอง */
+    radial-gradient(700px 620px at 76% 56%, rgba(0,160,255,.30), rgba(0,160,255,0) 72%),
+    /* ทองแค่แต้มมุมบนขวา ให้มีสีตรงข้ามตัดกัน ไม่ให้ภาพเป็นฟ้าล้วนจนแบน */
+    radial-gradient(560px 420px at 98% 4%, rgba(255,190,60,.26), rgba(255,190,60,0) 68%),
+    linear-gradient(168deg, rgba(11,27,58,.52) 0%, rgba(10,32,72,.30) 42%,
+                            rgba(6,16,40,.44) 74%, rgba(2,7,20,.72) 100%);
+}
+
+/* รัศมีทองพุ่งออกจากช่องรับของ (ศูนย์กลางแปลงพิกัดแล้ว: inset -30% -> กล่องกว้าง 1728px
+   จุด (151,945) ของภาพ = (475,1269) ในกล่อง = 27.5% / 73.4%) */
+body.c-machine_luck .rays{
+  background: repeating-conic-gradient(from 12deg at 27.5% 70.8%,
+    rgba(255,222,140,.46) 0deg 1.7deg, rgba(255,222,140,0) 1.7deg 8.6deg);
+  /* วงแคบ — v1 ปล่อยยาว 62% แล้วเส้นทองวิ่งไปทั่วภาพจนหัวกระดาษรก และกลบโทนฟ้า */
+  -webkit-mask-image: radial-gradient(circle at 27.5% 70.8%,
+    transparent 2%, rgba(0,0,0,.95) 9%, rgba(0,0,0,.42) 21%, transparent 34%);
+}
+/* รัศมีฟ้ารัดรอบตัวซอง (จุด (803,645) = (1127,969) ในกล่อง = 65.2% / 56.1%) */
+body.c-machine_luck .rays2{
+  background: repeating-conic-gradient(from 3deg at 65.2% 56.1%,
+    rgba(150,235,255,.42) 0deg 1.1deg, rgba(150,235,255,0) 1.1deg 10deg);
+  -webkit-mask-image: radial-gradient(circle at 65.2% 56.1%,
+    transparent 9%, rgba(0,0,0,.9) 25%, transparent 58%);
+}
+
+/* สปอตไลต์เอียงตามแนวพุ่ง ไม่ใช่ตกตรง ๆ จากเพดาน */
+body.c-machine_luck .beam{
+  left: 82%; top: -220px; width: 820px; height: 1240px;
+  transform: translateX(-50%) rotate(15deg);
+  background: linear-gradient(180deg, rgba(226,248,255,.50) 0%, rgba(0,194,255,.22) 34%,
+                                      rgba(0,194,255,.06) 62%, transparent 84%);
+  filter: blur(26px);
+}
+
+/* ตารางพื้นถูกตัดทิ้ง — สกินนี้มีทั้งรัศมี เส้นความเร็ว และหลอดไฟรอบกรอบแล้ว
+   ใส่ตารางเข้าไปอีกชั้นได้แต่เนื้อภาพจะกลายเป็นลายพร่า ไม่มีที่ให้สายตาพัก */
+body.c-machine_luck .grid{ display: none }
+
+/* ── เส้นความเร็ว: แถบเดียวคาดตามแนวพุ่ง (ไม่ใช่เส้นกระจายทั่วภาพแบบฐาน) ──
+   หมุนทั้ง element -23 องศา แล้ววาดเส้นแนวนอน -> ได้เส้นเอียงขึ้นขวา
+   mask เป็นวงรีแบน ๆ ทำให้เส้นมีหัวมีท้าย เหมือนรอยพุ่ง ไม่ใช่ลายพื้น
+   ตำแหน่ง mask คำนวณกลับจากการหมุน: อยากให้ใจกลางแถบตกที่ (490,790) ของภาพ */
+body.c-machine_luck .streaks{
+  inset: -32%; opacity: .92;
+  transform: rotate(-23deg);
+  background: repeating-linear-gradient(0deg,
+    rgba(255,255,255,0)   0px   40px,
+    rgba(214,248,255,.78) 40px  44px,
+    rgba(255,255,255,0)   44px  92px,
+    rgba(0,214,255,.46)   92px  94px,
+    rgba(255,255,255,0)   94px  152px,
+    rgba(255,222,130,.38) 152px 154.5px,
+    rgba(255,255,255,0)   154.5px 220px);
+  -webkit-mask-image: radial-gradient(ellipse 54% 15% at 42% 62%,
+    #000 4%, rgba(0,0,0,.62) 42%, transparent 84%);
+}
+
+/* คลื่นแบรนด์ยังอยู่ แต่ดันให้เป็นฟ้านีออนและจมลงไป ไม่แย่งซีนเส้นความเร็ว */
+body.c-machine_luck .waves{ opacity: .55; filter: hue-rotate(-16deg) saturate(1.5) brightness(1.1) }
+/* สมอกับนกนางนวลเป็นภาษาของแนว "ล่าสมบัติ" ไม่ใช่แนวนี้ */
+body.c-machine_luck .anchor,
+body.c-machine_luck .gulls{ display: none }
+
+body.c-machine_luck .vig{
+  background:
+    radial-gradient(120% 96% at 58% 52%, transparent 42%, rgba(1,5,16,.68) 100%),
+    linear-gradient(180deg, rgba(1,5,16,.42) 0%, transparent 16%,
+                            transparent 68%, rgba(1,5,16,.54) 100%);
+}
+
+/* ── ประกาย: เปลี่ยนดาวป้อม ๆ ของฐานเป็น "แสงวาบ" แฉกเรียวยาว ────────────
+   v1 ลองทำเป็นหลอดไฟกลมวางรอบช่องรับของ — ผลคือดูเหมือนลูกบอลสีขาววางบนชั้นวางในตู้
+   (หลอดไฟไปอยู่รอบกรอบภาพหมดแล้ว จุดกลมเพิ่มอีกชุดจึงอ่านไม่ออกว่าคืออะไร)
+   แฉกเรียว = แสงแตกจากของที่เพิ่งพุ่งออกมา ซึ่งเป็นเรื่องที่สกินนี้จะเล่า */
+body.c-machine_luck .sp{
+  right: auto;
+  clip-path: polygon(50% 0%, 54.5% 45.5%, 100% 50%, 54.5% 54.5%, 50% 100%, 45.5% 54.5%, 0% 50%, 45.5% 45.5%);
+  background: radial-gradient(circle, #FFFFFF 0 16%, #FFEEB6 38%, rgba(255,200,90,0) 74%);
+  filter: drop-shadow(0 0 12px rgba(255,214,120,.95)) drop-shadow(0 0 30px rgba(255,180,50,.5));
+}
+body.c-machine_luck .sp.c{
+  background: radial-gradient(circle, #FFFFFF 0 16%, #B8EEFF 38%, rgba(0,194,255,0) 74%);
+  filter: drop-shadow(0 0 13px rgba(0,214,255,.95)) drop-shadow(0 0 34px rgba(0,160,255,.55));
+}
+/* กระจุกที่ "ปากช่องรับของ" — ตู้ยกขึ้น 46px แล้ว ช่อง PUSH & PICK จึงอยู่ที่ y 877–921 */
+body.c-machine_luck .s1{ width: 62px; height: 62px; left: 206px; top: 842px }
+body.c-machine_luck .s2{ width: 30px; height: 30px; left: 176px; top: 906px }
+body.c-machine_luck .s3{ width: 38px; height: 38px; left: 258px; top: 892px }
+/* สองดวงกลางทาง — ลากสายตาจากตู้ไปหาซองผ่านช่องว่างข้างเหรียญ */
+body.c-machine_luck .s4{ width: 26px; height: 26px; left: 476px; top: 812px }
+body.c-machine_luck .s5{ width: 34px; height: 34px; left: 556px; top: 748px }
+/* ปลายทาง — แตกอยู่กับตัวซอง */
+body.c-machine_luck .s6{ width: 30px; height: 30px; left: auto; right: 58px;  top: 292px }
+body.c-machine_luck .s7{ width: 40px; height: 40px; left: auto; right: 300px; top: 206px }
+
+/* ── ตู้จริง: ใหญ่ขึ้น + ไฟฟ้าแลบที่ช่องรับของ ───────────────────────────── */
+/* ยกตู้ขึ้น 46px ให้ช่อง PUSH & PICK พ้นแถบท้าย — ก้นตู้ที่ตัดตรงถูกแถบท้ายบังไว้พอดี
+   (ปล่อย bottom:0 แบบฐานแล้วช่องรับของตกที่ y≈945 ซึ่งจมอยู่ใต้แถบท้าย = เสียจุดเล่าเรื่อง) */
+body.c-machine_luck .machine{ width: 470px; left: -34px; bottom: 46px }
+/* ตู้ต้องสว่างกว่าฉากรอบข้างชัด ๆ — อารมณ์ "ตู้เกมที่เปิดไฟอยู่ในห้องมืด"
+   ไม่ใช่ตู้ที่ยืนอยู่เฉย ๆ · ดันทั้ง brightness/contrast และเพิ่มขอบเรืองฟ้า */
+body.c-machine_luck .machine img{
+  filter: brightness(1.30) contrast(1.30) saturate(1.28) hue-rotate(-4deg);
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, rgba(0,0,0,.45) 6%, #000 16%);
+}
+body.c-machine_luck .machine .mglow{
+  left: -80px; right: -90px; top: 4%; bottom: -40px;
+  background:
+    radial-gradient(ellipse at 34% 82%, rgba(0,200,255,.60), transparent 62%),
+    radial-gradient(ellipse at 60% 30%, rgba(0,150,255,.34), transparent 68%);
+  filter: blur(18px);
+}
+/* [ของใหม่] .mfr เดิมเป็นแอ่งแสงที่ "พื้น" — สกินนี้ย้ายมาเป็น "แสงวาบที่ช่องรับของ"
+   [ระวัง] ฐานตั้ง z-index:-1 ไว้ (แสงพื้นต้องอยู่หลังตัวตู้) พอย้ายมาเป็นแสงวาบ
+   ต้องกลับเป็น z-index:1 ไม่งั้นแสงไปกองอยู่หลังรูปตู้แล้วมองไม่เห็นอะไรเลย */
+body.c-machine_luck .machine .mfr{
+  z-index: 1;
+  left: 22%; right: 42%; bottom: 96px; height: 84px;
+  background: radial-gradient(ellipse, rgba(255,255,255,.58) 0 12%,
+                              rgba(170,242,255,.42) 34%, rgba(0,175,255,.16) 60%, transparent 78%);
+  filter: blur(10px);
+}
+/* ลำแสงที่ "พ่นออกจากช่องรับของ" ไปหาซอง — ต้นทางอยู่ที่ (39.4%, 78.5%) ของตัวตู้
+   = ช่อง PUSH & PICK พอดี · หมุน -23 องศาให้ปลายลำไปจบที่ตัวซองที่ (851,602) */
+body.c-machine_luck .machine::after{
+  content: ''; position: absolute; z-index: 1;
+  left: 39.4%; top: 78.5%; width: 800px; height: 230px; margin-top: -115px;
+  transform-origin: 0 50%; transform: rotate(-23deg);
+  clip-path: polygon(0 46%, 100% 4%, 100% 96%, 0 54%);
+  /* [ระวัง] v3 เริ่มลำแสงที่ alpha .62 ตั้งแต่ 0% — ผลคือปาก PUSH & PICK ถูกฟอกขาว
+     อ่านไม่ออก · ต้องให้ลำแสงเริ่มจาง ๆ แล้วค่อยสว่างที่ 12-30% (พ้นตัวตู้ไปแล้ว) */
+  background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(232,251,255,.46) 13%,
+                              rgba(120,225,255,.30) 34%, rgba(0,180,255,.11) 64%, rgba(0,160,255,0) 90%);
+  filter: blur(15px);
+}
+
+/* ── ซองกำลังพุ่งออกมา ──────────────────────────────────────────────────
+   เอียง 7 องศา (หัวเอนไปทางทิศที่พุ่ง) + ย่อ 7% เพื่อไม่ให้มุมซองล้นขอบขวาหลังหมุน
+   transform-origin ตั้งไว้ที่ "ใจกลางตัวซองจริง" (49.4% 59.8% ของกรอบ stage)
+   ไม่ใช่กลางกรอบ — ไม่งั้นซองจะเหวี่ยงหลุดกรอบตอนหมุน */
+body.c-machine_luck .hero{ right: 12px }
+body.c-machine_luck .hero .stage{
+  transform: rotate(7deg) scale(.93);
+  transform-origin: 49.4% 59.8%;
+}
+body.c-machine_luck .hero .stage img{
+  filter: drop-shadow(0 24px 40px rgba(0,0,0,.80))
+          drop-shadow(-18px 14px 26px rgba(0,190,255,.55))
+          drop-shadow(0 0 74px rgba(0,180,255,.45))
+          drop-shadow(0 0 90px rgba(255,190,60,.22));
+}
+/* ซองลอยอยู่กลางอากาศ — ไม่ต้องมีแสงพื้นรองก้น */
+body.c-machine_luck .hero .floor{ display: none }
+/* [ของใหม่] เงาสะท้อนที่ฐานปิดไว้ ถูกดึงกลับมาใช้เป็น "ภาพซ้อนตอนเคลื่อนที่"
+   รูปเดียวกันเลื่อนลงซ้ายตามแนวพุ่ง เบลอ+จาง = ร่องรอยว่าของกำลังวิ่ง
+   z-index:-1 เพื่อให้อยู่หลังซองจริง (ไม่งั้นภาพเบลอไปทับหน้าซอง สินค้าจะดูไม่ชัด) */
+/* [ระวัง] ต้องเขียนเป็น "img.refl" ไม่ใช่ ".refl" เฉย ๆ
+   เพราะกฎ body.c-machine_luck .hero .stage img (0,3,2) ที่ตั้ง drop-shadow ไว้
+   มี specificity สูงกว่า body.c-machine_luck .hero .refl (0,3,1) -> filter ของภาพซ้อนถูกทับ
+   อาการที่เจอ: ภาพซ้อนไม่เบลอเลย ตัวหนังสือ "OP-15" บนซองยังอ่านออก
+   กลายเป็นเหมือนมีซองสองใบวางซ้อนกัน ไม่ใช่ร่องรอยการเคลื่อนที่ */
+body.c-machine_luck .hero .stage img.refl{
+  display: block; z-index: -1;
+  transform: translateX(-50%) translate(-104px, 56px);
+  opacity: .30;
+  /* brightness(0) invert(1) = แปลงซองทั้งใบเป็นเงาขาวทึบก่อน แล้วค่อยเบลอ
+     ได้ "รอยแสง" ที่ไม่เหลือลวดลายให้อ่าน — ดีกว่าเบลอรูปสีซึ่งยังเห็นเค้าตัวอักษร */
+  filter: brightness(0) invert(1) blur(19px);
+}
+/* หางแสงลากจากมุมล่างซ้ายของซอง ชี้กลับไปทางตู้ */
+body.c-machine_luck .hero .halo{
+  left: 26%; top: 70%; width: 620px; height: 190px;
+  transform: translate(-50%,-50%) rotate(-23deg);
+  border-radius: 50%;
+  background: linear-gradient(90deg, rgba(0,190,255,0) 0%, rgba(90,215,255,.52) 46%,
+                              rgba(226,250,255,.82) 88%, rgba(255,255,255,0) 100%);
+  filter: blur(20px);
+}
+/* พัดรัศมีเปลี่ยนเป็น "แรงระเบิดจากจุดปล่อย" ที่มุมล่างซ้ายของซอง */
+body.c-machine_luck .hero .burst{
+  left: -4%; top: 80%; width: 1460px; height: 1460px;
+  background: repeating-conic-gradient(from 40deg,
+    rgba(196,244,255,.30) 0deg 1.5deg, rgba(196,244,255,0) 1.5deg 7.2deg);
+  -webkit-mask-image: radial-gradient(circle, transparent 7%, rgba(0,0,0,.85) 22%,
+                                      rgba(0,0,0,.45) 40%, transparent 62%);
+}
+
+/* ── กรอบ: ป้ายไฟหลอดวิ่งแบบตู้เกม ────────────────────────────────────────
+   [ระวัง] inset box-shadow วาดทับ background — รางสีเข้มจึงต้องเป็น background layer
+   ไม่ใช่ box-shadow ไม่งั้นหลอดไฟหายหมด
+   ชั้นบน 4 = แถวหลอด (radial ซ้ำเป็นแนว) · ชั้นล่าง 4 = รางสีเข้มรองหลอด */
+body.c-machine_luck .frame{
+  inset: 12px; border: 0; border-image: none;
+  box-shadow: inset 0 0 0 2px rgba(255,205,80,.75),
+              inset 0 0 30px rgba(0,194,255,.22),
+              0 0 46px rgba(0,0,0,.6);
+  background:
+    radial-gradient(circle 5.5px at 17px 13px, #FFFDF0 0 38%, #FFD24A 60%, rgba(255,170,30,0) 100%),
+    radial-gradient(circle 5.5px at 17px 13px, #FFFDF0 0 38%, #FFD24A 60%, rgba(255,170,30,0) 100%),
+    radial-gradient(circle 5.5px at 13px 17px, #E9FBFF 0 38%, #37CBFF 60%, rgba(0,150,220,0) 100%),
+    radial-gradient(circle 5.5px at 13px 17px, #E9FBFF 0 38%, #37CBFF 60%, rgba(0,150,220,0) 100%),
+    linear-gradient(rgba(5,14,36,.72), rgba(5,14,36,.72)),
+    linear-gradient(rgba(5,14,36,.72), rgba(5,14,36,.72)),
+    linear-gradient(rgba(5,14,36,.72), rgba(5,14,36,.72)),
+    linear-gradient(rgba(5,14,36,.72), rgba(5,14,36,.72));
+  background-size:
+    34px 26px, 34px 26px, 26px 34px, 26px 34px,
+    100% 26px, 100% 26px, 26px 100%, 26px 100%;
+  background-repeat:
+    repeat-x, repeat-x, repeat-y, repeat-y,
+    no-repeat, no-repeat, no-repeat, no-repeat;
+  background-position:
+    left top, left bottom, left top, right top,
+    left top, left bottom, left top, right top;
+  filter: drop-shadow(0 0 7px rgba(255,200,70,.55));
+}
+
+/* ── แถบเฉียงมุม: เปลี่ยนจากทองเป็นฟ้าไฟฟ้า ให้ตัดกับหลอดไฟทองรอบกรอบ ──── */
+body.c-machine_luck .corner i{
+  color: #03203A; font-size: 26px;
+  background: linear-gradient(180deg, #E8FBFF 0%, #4FD5FF 46%, #0089C4 100%);
+  box-shadow: 0 10px 26px rgba(0,0,0,.6), inset 0 0 0 2px rgba(255,255,255,.55);
+  text-shadow: 0 1px 0 rgba(255,255,255,.45);
+}
+
+/* ── ริบบิ้น: แผ่นไฟฟ้า ────────────────────────────────────────────────── */
+body.c-machine_luck .ribbon{
+  transform: skewX(-11deg);
+  background: linear-gradient(180deg, #DFF9FF 0%, #33CFFF 48%, #0079B8 100%);
+  box-shadow: 0 10px 28px rgba(0,120,190,.55), inset 0 0 0 2px rgba(255,255,255,.5),
+              inset 0 -6px 12px rgba(0,70,110,.4), 0 0 26px rgba(0,194,255,.5);
+}
+body.c-machine_luck .ribbon i{ background: linear-gradient(180deg,#0085C8,#00405F) }
+body.c-machine_luck .ribbon > span{ transform: skewX(11deg); color: #032338 }
+body.c-machine_luck .ribbon svg{ fill: #032338 }
+
+/* ── พาดหัว: ขอบฟ้าไฟฟ้าซ้อนขอบเข้ม (ห้าม text-stroke — กินวรรณยุกต์) ──── */
+body.c-machine_luck h1{
+  text-shadow:
+    -3px 0 0 var(--ink),  3px 0 0 var(--ink),  0 -3px 0 var(--ink),  0 3px 0 var(--ink),
+    -2px -2px 0 var(--ink), 2px -2px 0 var(--ink), -2px 2px 0 var(--ink), 2px 2px 0 var(--ink),
+    0 5px 0 rgba(0,110,170,.95),
+    0 9px 0 rgba(2,32,58,.6),
+    0 16px 30px rgba(0,0,0,.78),
+    0 0 26px rgba(0,214,255,.85),
+    0 0 62px rgba(0,170,255,.55);
+}
+body.c-machine_luck .wrap::before{
+  background: radial-gradient(520px 220px at 30% 46%, rgba(0,170,255,.30), transparent 72%);
+}
+
+/* ── บรรทัดรอง / เนื้อความ: โทนฟ้า ──────────────────────────────────────── */
+body.c-machine_luck .sub{
+  border-image: linear-gradient(180deg, #E8FBFF, #33CFFF 45%, #F5C542 100%) 1;
+  background: linear-gradient(90deg, rgba(4,16,40,.80), rgba(4,16,40,.30) 84%, transparent);
+}
+body.c-machine_luck .body{
+  background: linear-gradient(90deg, rgba(4,16,40,.86), rgba(4,16,40,.72) 70%, rgba(4,16,40,.44));
+  box-shadow: inset 0 0 0 1px rgba(0,194,255,.26);
+}
+/* หัวข้อเปลี่ยนจากเพชรทองเป็นสายฟ้าฟ้า (วาดด้วย clip-path ไม่ใช่อีโมจิ) */
+body.c-machine_luck .body p::before{
+  left: 4px; width: 14px; height: 19px; top: .70em;
+  transform: translateY(-50%) rotate(0deg);
+  clip-path: polygon(58% 0%, 12% 56%, 44% 56%, 34% 100%, 90% 40%, 56% 40%);
+  background: linear-gradient(180deg, #EAFBFF, #35CFFF 50%, #0085C8);
+  box-shadow: none;
+  filter: drop-shadow(0 0 8px rgba(0,214,255,.9));
+}
+
+/* ── แถบท้าย: ขอบฟ้าไฟฟ้า แคปซูลเรืองแสง ───────────────────────────────── */
+/* [ระวัง] หลอดไฟแถวล่างของกรอบอยู่ที่ y≈1042–1068 — ค่า padding เดิม (ล่าง 16px)
+   ทำให้แคปซูลนั่งที่ 1010–1058 แล้วโดนหลอดไฟทับตัวหนังสือ · ดันขึ้นด้วย padding ล่าง 44px
+   และเว้นซ้าย/ขวา 54px ให้พ้นแถวหลอดไฟด้านข้าง (แถบหลอดกว้าง 26px จากขอบ 12px) */
+body.c-machine_luck .foot{
+  padding: 16px 54px 44px;
+  background:
+    linear-gradient(90deg, rgba(0,170,255,.24), rgba(255,190,60,.14) 55%, rgba(0,170,255,.20)),
+    linear-gradient(180deg, rgba(3,12,32,.76), rgba(3,12,32,.96));
+  border-image: linear-gradient(90deg, #0079B8, #33CFFF 30%, #F5C542 70%, #0079B8) 1;
+}
+body.c-machine_luck .chip{
+  box-shadow: inset 0 0 0 2px rgba(51,207,255,.7), 0 4px 14px rgba(0,0,0,.5),
+              inset 0 0 18px rgba(0,194,255,.3), 0 0 16px rgba(0,150,220,.35);
+}
+body.c-machine_luck .chip svg{ fill: #4FD8FF; filter: drop-shadow(0 0 7px rgba(0,214,255,.85)) }
+body.c-machine_luck .tags{ color: #7FD4F5 }
+
+/* ── เหรียญสาขา: ขอบทองสลับฟ้า เหมือนปุ่มบนหน้าตู้ ─────────────────────── */
+body.c-machine_luck .medal{ left: 296px; bottom: 236px; width: 152px; height: 152px }
+body.c-machine_luck .medal::before{
+  background: repeating-conic-gradient(from 0deg,
+    #FFE9A8 0deg 7deg, #A5670B 7deg 14deg, #9FE9FF 14deg 21deg, #0086C6 21deg 28deg);
+  filter: drop-shadow(0 8px 22px rgba(0,0,0,.7)) drop-shadow(0 0 16px rgba(0,194,255,.5));
+}
+body.c-machine_luck .medal::after{
+  background: radial-gradient(circle at 38% 28%, #10365F 0%, #03101F 78%);
+  box-shadow: inset 0 0 0 2px rgba(255,214,106,.9), inset 0 0 26px rgba(0,194,255,.55);
+}
+
+/* ── หัวกระดาษ ─────────────────────────────────────────────────────────── */
+body.c-machine_luck .plate{
+  box-shadow: inset 0 0 0 3px rgba(51,207,255,.85), inset 0 0 22px rgba(0,194,255,.32),
+              0 8px 22px rgba(0,0,0,.55), 0 0 34px rgba(0,194,255,.45);
+}
+body.c-machine_luck .idn u{
+  background: linear-gradient(90deg, #33CFFF, rgba(245,197,66,.9) 55%, transparent);
+}
+
+/* ── เคสไม่มีรูปตู้: ย้ายไฟกะพริบไปกองรอบเหรียญแทน ไม่ให้หลอดลอยกลางที่ว่าง ─ */
+body.c-machine_luck.no-machine .s1{ left: 132px; top: 800px }
+body.c-machine_luck.no-machine .s2{ left: 108px; top: 742px }
+body.c-machine_luck.no-machine .s3{ left: 150px; top: 700px }
+body.c-machine_luck.no-machine .s4{ left: 216px; top: 684px }
+body.c-machine_luck.no-machine .s5{ left: 274px; top: 706px }
+
+/* ── เคสไม่มีรูปสินค้า: ไม่มีของให้พุ่ง -> ตัดหางแสงกับเส้นความเร็วให้เบาลง ── */
+body.c-machine_luck.no-hero .streaks{ opacity: .5;
+  -webkit-mask-image: radial-gradient(ellipse 52% 13% at 40% 72%, #000 6%, transparent 82%) }
+body.c-machine_luck.no-hero .machine{ width: 470px }
+/* ไม่มีซองให้พุ่ง -> ลำแสงจากช่องรับของเหลือแค่แสงรำไร ไม่งั้นเป็นหมอกขาวพาดกลางที่ว่าง */
+body.c-machine_luck.no-hero .machine::after{ opacity: .42; width: 520px }
+body.c-machine_luck.no-hero .medal{ left: 372px; bottom: 214px }
+body.c-machine_luck.no-hero .s6{ right: 180px; top: 520px }
+body.c-machine_luck.no-hero .s7{ right: 300px; top: 452px }
