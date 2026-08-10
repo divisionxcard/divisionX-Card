@@ -109,6 +109,10 @@ export default function MarketingOS() {
   const [rejectingId, setRejectingId] = useState(null)
   const [rejectText, setRejectText] = useState("")
   const [busyId, setBusyId] = useState(null)
+  // สถานะการเชื่อมต่อเพจ Facebook — null = ยังไม่ได้เช็ก
+  // ต้องรู้ "ก่อน" กดโพสต์ ไม่ใช่ไปรู้ตอนกดแล้วพัง (token หมดอายุคือเรื่องปกติของ Meta)
+  const [fb, setFb] = useState(null)
+  const [posted, setPosted] = useState(null)   // ลิงก์โพสต์ที่เพิ่งขึ้นเพจ
 
   // ── auth ──
   useEffect(() => {
@@ -155,12 +159,13 @@ export default function MarketingOS() {
   const loadAll = useCallback(async () => {
     if (!token) return
     setLoading(true); setErr("")
-    const [i, c, p, m, a] = await Promise.allSettled([
+    const [i, c, p, m, a, f] = await Promise.allSettled([
       api(`ideas?status=new&per_source=${perSource}`),
       api("content?status=draft,pending"),
       api("pipeline"),
       api(`metrics?days=${days}`),
       api("content?status=approved"),
+      api("content/publish"),
     ])
     if (i.status === "fulfilled") setIdeas(i.value)
     if (c.status === "fulfilled") setContent(c.value)
@@ -168,6 +173,9 @@ export default function MarketingOS() {
     if (m.status === "fulfilled") setMetrics(m.value)
     // กันของที่โพสต์ไปแล้วหลุดเข้ามา (status ค้างเป็น approved แต่มี posted_at)
     if (a.status === "fulfilled") setReady({ items: (a.value.items || []).filter(x => !x.posted_at) })
+    // ยังไม่ได้ตั้งค่า FB จะคืน 200 พร้อม connected:false · ต่อไม่ติดจริงถึงจะ reject
+    setFb(f.status === "fulfilled" ? f.value : { connected: false, error: f.reason?.message })
+    // ตัวเช็ก FB ไม่นับเป็น error ของทั้งหน้า — ไม่ได้ตั้งค่าไว้ก็ใช้หน้าอื่นได้ตามปกติ
     const failed = [i, c, p, m, a].filter(r => r.status === "rejected")
     if (failed.length) setErr(failed.map(f => f.reason.message).join(" · "))
     setLoading(false)
@@ -394,6 +402,24 @@ export default function MarketingOS() {
       setReady(s => ({ items: (s.items || []).filter(i => i.id !== id) }))
     } catch (e) { setErr(e.message) } finally { setBusyId(null) }
   }
+  // ── โพสต์ขึ้นเพจจริง ──
+  // ต่างจาก markPosted ตรงที่ตัวนี้ยิงขึ้น Facebook เอง ไม่ต้องก๊อปไปวาง
+  // ⚠️ กดแล้วขึ้นเพจสาธารณะทันที ลบเองไม่ได้จากตรงนี้ — ต้องถามยืนยันก่อนเสมอ
+  async function publishNow(item) {
+    const preview = (item.caption || "").slice(0, 90).replace(/\s+/g, " ")
+    if (!confirm(`โพสต์ขึ้นเพจ Facebook จริงเลยไหม?\n\n"${preview}…"\n` +
+                 `${item.media_url ? "พร้อมรูปประกอบ" : "ข้อความล้วน (ไม่มีรูป)"}\n\n` +
+                 `โพสต์แล้วคนเห็นทันที และลบจากหน้านี้ไม่ได้`)) return
+    setBusyId(item.id)
+    try {
+      const r = await api("content/publish", { method: "POST", body: JSON.stringify({ id: item.id }) })
+      setReady(s => ({ items: (s.items || []).filter(i => i.id !== item.id) }))
+      setPosted(r.post_url || null)
+    } catch (e) {
+      setErr(e.message)
+    } finally { setBusyId(null) }
+  }
+
   // เอากลับมาแก้ — เผลออนุมัติ หรือแคปชั่นยังมีช่องว่างค้าง
   async function unapprove(id) {
     setBusyId(id)
@@ -955,9 +981,37 @@ export default function MarketingOS() {
                 {ready.items.length}
               </span>
             </h2>
-            <p className="text-xs text-gray-400 mb-2">
-              ก๊อปไปโพสต์แล้วกด “โพสต์แล้ว” · ตัวที่ยังไม่กดจะถูกส่งซ้ำเข้า Telegram ทุกเช้า
-            </p>
+            {/* สถานะการต่อเพจ — ต้องเห็นก่อนกดโพสต์ ไม่ใช่ไปรู้ตอนกดแล้วพัง */}
+            {fb?.connected ? (
+              <p className="text-xs text-gray-400 mb-2">
+                กด “โพสต์ขึ้นเพจ” เพื่อยิงขึ้น{" "}
+                <a href={fb.page?.link} target="_blank" rel="noreferrer"
+                  className="text-emerald-600 font-medium hover:underline">{fb.page?.name}</a>
+                {" "}ได้เลย · หรือก๊อปไปโพสต์เองแล้วกด “โพสต์แล้ว”
+              </p>
+            ) : (
+              <div className="mb-2 flex items-start gap-1.5 bg-gray-50 border border-gray-200
+                              text-gray-500 rounded-lg px-2.5 py-1.5 text-xs">
+                <AlertTriangle size={13} className="mt-0.5 shrink-0" />
+                <span>
+                  ยังโพสต์อัตโนมัติไม่ได้ — {fb?.error || "ยังไม่ได้ตั้งค่า Facebook"} ·
+                  ระหว่างนี้ก๊อปไปโพสต์เองแล้วกด “โพสต์แล้ว” ได้ตามเดิม
+                  {" "}(วิธีตั้งค่าอยู่ที่ <code>wiki/marketing/auto-posting-level3-setup.md</code>)
+                </span>
+              </div>
+            )}
+
+            {posted && (
+              <div className="mb-2 flex items-center gap-2 bg-emerald-50 border border-emerald-200
+                              text-emerald-800 rounded-lg px-2.5 py-1.5 text-xs">
+                <Check size={13} className="shrink-0" />
+                <span>โพสต์ขึ้นเพจแล้ว</span>
+                <a href={posted} target="_blank" rel="noreferrer" className="font-medium hover:underline">
+                  เปิดดูโพสต์ →
+                </a>
+                <button onClick={() => setPosted(null)} className="ml-auto text-emerald-600">ปิด</button>
+              </div>
+            )}
 
             <div className="space-y-3">
               {ready.items.map(item => {
@@ -998,11 +1052,27 @@ export default function MarketingOS() {
                           className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-100 text-gray-600 text-sm">
                           <Copy size={14} /> ก๊อปแคปชั่น
                         </button>
+                        {/* ปุ่มหลักตอนต่อเพจได้ — ปิดไว้ถ้าแคปชั่นยังมีช่องว่างค้าง
+                            route กันซ้ำอีกชั้นอยู่แล้ว แต่ปุ่มที่กดไม่ได้ตั้งแต่แรกชัดเจนกว่า */}
+                        {fb?.connected && (
+                          <button
+                            disabled={busyId === item.id || holes.length > 0}
+                            onClick={() => publishNow(item)}
+                            title={holes.length ? "เติมช่องว่างให้ครบก่อน" : "ยิงขึ้นเพจทันที"}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600
+                                       text-white text-sm font-medium disabled:opacity-40">
+                            <Send size={14} />
+                            {busyId === item.id ? "กำลังโพสต์…" : "โพสต์ขึ้นเพจ"}
+                          </button>
+                        )}
                         <button
                           disabled={busyId === item.id}
                           onClick={() => markPosted(item.id)}
-                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600
-                                     text-white text-sm font-medium disabled:opacity-50">
+                          title="โพสต์เองแล้ว — แค่บันทึกว่าโพสต์ไปแล้ว"
+                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium
+                                      disabled:opacity-50 ${fb?.connected
+                                        ? "bg-gray-100 text-gray-600"
+                                        : "bg-emerald-600 text-white"}`}>
                           <Check size={14} /> โพสต์แล้ว
                         </button>
                         <button
