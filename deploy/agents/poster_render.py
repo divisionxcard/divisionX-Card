@@ -198,16 +198,39 @@ def resolve_bg(content):
     ผลคือคอนเทนต์ที่เคยสร้างโปสเตอร์ไปแล้ว รอบถัดไปจะเอา "โปสเตอร์รอบก่อน" มาเบลอ
     เป็นพื้นหลังของตัวเอง (ซ้อนทับกันไปเรื่อย ๆ ทุกรอบ) — ไม่ใช่รูปห้างอย่างที่ตั้งใจ
 
-    จึงแยก slot ให้ชัด: พื้นหลังฉากมาได้จาก 2 ทางเท่านั้น
-      1. deploy/public/machine/machine-scene.jpg — รูปบรรยากาศห้างจริง (ค่าตั้งต้น)
-      2. ไฟล์ใน /marketing/aibg/ — ที่สงวนไว้ให้ภาพพื้นหลังที่ AI สร้าง (ยังไม่มีใครเขียน
-         ลงโฟลเดอร์นี้ · ทำ hook รอไว้ก่อน)
+    จึงแยก slot ให้ชัด: พื้นหลังฉากมาได้จาก 3 ทางเท่านั้น เรียงตามลำดับที่ใช้
+      1. ไฟล์ใน marketing/aibg/ — คลังฉากที่ FLUX สร้างไว้ล่วงหน้า (ใช้ก่อนถ้ามี)
+      2. media_url ที่ชี้เข้า /marketing/aibg/ — กรณีเจาะจงฉากให้คอนเทนต์นั้น
+      3. deploy/public/machine/machine-scene.jpg — รูปบรรยากาศห้างจริง (ตกมาที่นี่)
     /marketing/poster/ (โปสเตอร์เก่า) และ /marketing/upload/ (รูปที่คนอัปเอง) ต้องไม่หลุดเข้ามา
+
+    ⚠️ ทำไมสุ่มจากคลังแทนสร้างสด — วัดจริงบน RTX 3050 6GB ได้ 9.8 นาที/ภาพ
+    รอขนาดนั้นตอนกดปุ่มไม่ไหว · สร้างไว้ก่อนแล้วหยิบใช้ ได้ผลเหมือนกันแต่รอ 2 วินาที
     """
     mu = content.get("media_url") or ""
-    if AI_BG_DIR not in mu:
+    if AI_BG_DIR in mu:
+        return fetch_image(mu)
+
+    # หยิบจากคลัง — คลังว่างก็คืน None แล้วตกไปใช้รูปห้างจริง ไม่พัง
+    #
+    # ⚠️ เลือกฉากที่ "คิดมาเพื่อคอนเทนต์นี้" ก่อนเสมอ (ชื่อขึ้นต้น {id}-)
+    # เจ้าของขอว่าอย่าให้ฉากตายตัว ต้องเข้ากับหัวข้อแต่ละชิ้น
+    # ถ้าสุ่มจากทั้งคลัง ฉากที่ scene_for_content คิดมาให้เรื่องนี้จะถูกกลบด้วยของชิ้นอื่น
+    # = เสียประโยชน์ทั้งหมดของการคิดฉากตามเนื้อหา
+    try:
+        raw = sb("POST", f"list/{BUCKET}", {"prefix": "aibg/", "limit": 200},
+                 base="storage/v1/object")
+        pool = [x["name"] for x in (raw or []) if str(x.get("name", "")).endswith((".png", ".jpg"))]
+        if not pool:
+            return None
+        mine = [n for n in pool if n.startswith(f"{content.get('id')}-")]
+        pick = max(mine) if mine else random.choice(pool)   # ของตัวเอง เอาใบล่าสุด
+        why = "คิดมาเพื่อคอนเทนต์นี้" if mine else f"สุ่มจากคลัง {len(pool)} ใบ"
+        print(f"[poster] ฉาก AI: {pick} ({why})")
+        return fetch_image(f"{SB_URL}/storage/v1/object/public/{BUCKET}/aibg/{pick}")
+    except Exception as e:
+        print(f"[poster] อ่านคลังฉากไม่ได้ ใช้รูปห้างจริงแทน: {str(e)[:80]}")
         return None
-    return fetch_image(mu)
 
 
 def load_concept(key, avoid=None):
