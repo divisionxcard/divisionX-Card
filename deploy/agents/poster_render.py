@@ -20,6 +20,7 @@ import base64
 import json
 import os
 import pathlib
+import random
 import re
 import sys
 import urllib.parse
@@ -209,7 +210,7 @@ def resolve_bg(content):
     return fetch_image(mu)
 
 
-def load_concept(key):
+def load_concept(key, avoid=None):
     """แนวคิดโปสเตอร์ — คุมสี ของประดับ และการจัดวาง
 
     ทำเป็น CSS แยกไฟล์ต่อแนวคิด แล้วฉีดต่อท้าย CSS หลัก แทนที่จะทำเทมเพลตแยก 10 ชุด
@@ -223,7 +224,23 @@ def load_concept(key):
         return "", ""
     cfg = json.loads(CONCEPTS_FILE.read_text(encoding="utf-8"))
     by_key = {c["key"]: c for c in cfg.get("concepts", [])}
-    key = key or cfg.get("default") or ""
+
+    # ── ไม่ระบุแนวคิด → สุ่มจากที่ใช้ได้ ไม่ใช่ตกมาที่ default ตลอด ──
+    # เดิม `key or cfg["default"]` แปลว่าทุกโปสเตอร์ได้ "treasure" เหมือนกันหมด
+    # ทำแนวคิดไว้ 8 แบบแต่ใช้จริงแบบเดียว — เจ้าของทักเองว่า
+    # "หน้าตาคล้ายกันทุกรูป เปลี่ยนแค่รูปที่เอามาเป็น Ref."
+    #
+    # ที่แย่กว่านั้นคือกด "สร้างโปสเตอร์ใหม่" แล้วได้ของหน้าตาเดิมเป๊ะ
+    # = ปุ่มที่กดแล้วเหมือนไม่มีอะไรเกิดขึ้น ทั้งที่ระบบทำงานถูก
+    #
+    # สุ่มโดยเลี่ยงแนวคิดที่คอนเทนต์นี้เพิ่งใช้ไป (ส่งมาทาง --avoid)
+    # จะได้ "กดใหม่แล้วเปลี่ยนจริง" ไม่ใช่สุ่มแล้วบังเอิญได้ตัวเดิม
+    if not key:
+        pool = [k for k, v in by_key.items() if v.get("available", True)]
+        if avoid and len(pool) > 1:
+            pool = [k for k in pool if k != avoid] or pool
+        key = random.choice(pool) if pool else (cfg.get("default") or "")
+
     c = by_key.get(key)
     if not c:
         avail = ", ".join(k for k, v in by_key.items() if v.get("available"))
@@ -365,7 +382,10 @@ def main():
 
     bg_img = resolve_bg(content)
 
-    ckey, ccss = load_concept(args.concept)
+    # แนวคิดที่ใช้ครั้งก่อนอ่านจากชื่อไฟล์โปสเตอร์เดิม — ไม่ต้องเพิ่มคอลัมน์ใน DB
+    # (ชื่อไฟล์รูปแบบ poster/{id}-{แนวคิด}-{เวลา}.png · ไฟล์เก่าที่ไม่มีแนวคิดจะไม่แมตช์ ซึ่งถูกแล้ว)
+    prev = re.search(rf"/poster/{args.id}-([a-z_]+)-\d+\.png", content.get("media_url") or "")
+    ckey, ccss = load_concept(args.concept, avoid=prev.group(1) if prev else None)
     html = build_html(content, sku_img, bg_img, branches, ckey, ccss)
     out = args.out or str(HERE / f"poster-{args.id}.png")
     render(html, out)
@@ -387,11 +407,30 @@ def main():
 
     raw = pathlib.Path(out).read_bytes()
     import time
-    key = f"poster/{args.id}-{int(time.time())}.png"
+
+    # ── ลบโปสเตอร์เก่าของคอนเทนต์นี้ก่อน ──
+    # ชื่อไฟล์มี timestamp จึงเป็นไฟล์ใหม่ทุกครั้งที่กด "สร้างโปสเตอร์ใหม่"
+    # ถ้าไม่ลบของเก่า กด 10 ครั้งก็ได้ขยะค้าง 10 ไฟล์ (ไฟล์ละ ~4 MB) และไม่มีอะไรชี้ถึงมันอีก
+    # ลบ "ก่อน" อัปตัวใหม่ไม่ได้ — ถ้าอัปพลาดจะเหลือคอนเทนต์ที่ไม่มีรูปเลย
+    # จึงอัปตัวใหม่ให้สำเร็จก่อน แล้วค่อยลบตัวเก่า
+    old = (content.get("media_url") or "")
+    # ใส่แนวคิดไว้ในชื่อไฟล์ด้วย — รอบหน้าจะได้อ่านกลับมาเพื่อ "ไม่สุ่มซ้ำตัวเดิม"
+    # ทำแบบนี้แทนการเพิ่มคอลัมน์ใน DB เพราะไม่ต้องรัน migration และข้อมูลติดไปกับไฟล์เอง
+    key = f"poster/{args.id}-{ckey or 'plain'}-{int(time.time())}.png"
     sb("POST", f"{BUCKET}/{key}", raw=raw, ctype="image/png", base="storage/v1/object")
     url = f"{SB_URL}/storage/v1/object/public/{BUCKET}/{key}"
     sb("PATCH", f"marketing_content?id=eq.{args.id}", {"media_url": url, "media_type": "image"})
     print(f"[poster] อัปโหลดแล้ว → {url}")
+
+    # ลบเฉพาะโปสเตอร์ที่ระบบสร้างเอง · ห้ามแตะรูปที่คนอัปเอง (/upload/) หรือรูปสินค้า
+    marker = f"/{BUCKET}/poster/{args.id}-"
+    if marker in old and old != url:
+        try:
+            sb("DELETE", f"{BUCKET}/{old.split(f'/{BUCKET}/', 1)[1]}", base="storage/v1/object")
+            print("[poster] ลบโปสเตอร์เก่าแล้ว")
+        except Exception as e:
+            # ลบไม่ได้ไม่ใช่เรื่องคอขาดบาดตาย — โปสเตอร์ใหม่ขึ้นเรียบร้อยแล้ว
+            print(f"[poster] ลบของเก่าไม่สำเร็จ (ข้ามไป): {str(e)[:80]}")
 
 
 if __name__ == "__main__":
