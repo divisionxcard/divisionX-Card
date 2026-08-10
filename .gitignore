@@ -95,3 +95,6 @@ wiki/Untitled*
 คู่มือ - พัฒนาโปรแกรม POS สำหรับตู้ Vending/
 *.xlsx
 deploy/docs/*.zip
+
+# โมเดลภาพบนเครื่อง (SDXL) — ใหญ่หลาย GB ห้ามเข้า git
+.venv-image/

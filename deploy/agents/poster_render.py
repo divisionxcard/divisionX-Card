@@ -123,6 +123,9 @@ def esc(s):
 # จุดจบประโยค — ใช้เป็นที่ตัดพาดหัว/บรรทัดรอง
 SENT_END = re.compile(r"(?<=[!?！？])\s+|(?<=[!?！？])(?=\S)")
 
+# ความยาวสูงสุดของบรรทัดเนื้อหาที่ยอมให้ขึ้นภาพ — ยาวกว่านี้อ่านไม่ออกบนฟีดมือถือ
+BODY_MAX = 80
+
 
 def split_caption(caption):
     """แยกแคปชั่นเป็น พาดหัว / รอง / เนื้อ / แฮชแท็ก
@@ -262,13 +265,32 @@ def build_html(content, sku_img, bg_img, branches, concept_key="", concept_css="
     head, sub, rest, tags = split_caption(content.get("caption"))
     head_html = highlight(head)
 
-    # ซอง + เงาสะท้อน + แสงพื้น — ใช้รูปเดียวกันสองครั้ง (ตัวที่สองพลิกกลับใน CSS)
+    # ── ไม่มีรูปสินค้า → ใช้รูปตู้จริงเป็นตัวเอกแทน ──
+    # เดิมซ่อน .hero ไปเฉย ๆ (display:none) ผลคือกลางภาพเหลือรูว่าง ~40%
+    # เพราะพาดหัวอยู่บน เนื้อหาอยู่ล่าง แล้วไม่มีอะไรมาแทนที่ตรงกลาง
+    # (เจ้าของเห็นแล้วให้ 2/10 · คอนเทนต์ #23 ไม่มี source_sku จึงไม่มีรูปซอง)
+    #
+    # ซ่อนของแล้วไม่จัดใหม่ = ทิ้งรูไว้ · โปสเตอร์ต้องมีตัวเอกเสมอ
+    # ตู้จริงเป็นตัวเอกที่ดีรองลงมา — เป็นของเราจริง ไม่ต้องพึ่ง SKU
+    hero_src = sku_img or machine_hero
     hero = (
-        f'<div class="stage"><img src="{sku_img}">'
+        f'<div class="stage"><img src="{hero_src}">'
         f'<div class="floor"></div>'
-        f'<img class="refl" src="{sku_img}"></div>'
-    ) if sku_img else ""
-    body = "".join(f"<p>{esc(l)}</p>" for l in rest)
+        f'<img class="refl" src="{hero_src}"></div>'
+    ) if hero_src else ""
+
+    # ── งบตัวอักษรบนภาพ ──
+    # เดิมยัดทุกบรรทัดที่เหลือลงไป — คอนเทนต์ #23 ได้ 359 ตัวอักษร 5 ย่อหน้าบนภาพเดียว
+    # นั่นคือ "แคปชั่น" ไม่ใช่ "โปสเตอร์" · โปสเตอร์ขายไอเดียเดียว
+    # รายละเอียดอยู่ในข้อความโพสต์ ซึ่งก๊อปได้ ซูมได้ ไม่โดน Facebook บีบ
+    #
+    # บนฟีดมือถือ ภาพ 1080px ถูกย่อเหลือ ~350px → ตัวอักษร 30px เหลือ ~10px อ่านไม่ออก
+    # เหลือไว้ 1 บรรทัดสั้น ๆ เท่านั้น ถ้ามีบรรทัดรองอยู่แล้วก็ไม่ต้องมีอีก
+    body = ""
+    if not sub:
+        short = next((l for l in rest if len(l) <= BODY_MAX), "")
+        if short:
+            body = f"<p>{esc(short)}</p>"
 
     return (tpl
             .replace("{{LOGO}}", logo)
@@ -278,8 +300,12 @@ def build_html(content, sku_img, bg_img, branches, concept_key="", concept_css="
             .replace("{{SUB}}", esc(sub))
             .replace("{{BODY}}", body)
             .replace("{{HERO}}", hero)
-            .replace("{{HERO_CLASS}}", "" if sku_img else "empty")
-            .replace("{{WRAP_CLASS}}", "" if sku_img else "no-hero")
+            # ⚠️ ผูกกับ hero_src ไม่ใช่ sku_img — ไม่งั้นตอนตกมาใช้รูปตู้เป็นตัวเอก
+            # จะยังโดน .hero.empty{display:none} ซ่อนทิ้ง แล้วได้รูว่างเหมือนเดิม
+            .replace("{{HERO_CLASS}}", "" if hero_src else "empty")
+            .replace("{{WRAP_CLASS}}", "" if hero_src else "no-hero")
+            # ตู้ถูกเลื่อนขึ้นไปเป็นตัวเอกแล้ว ไม่ต้องมีตู้เล็กมุมล่างซ้ายซ้ำอีก
+            .replace("{{MACHINE_ONLY}}", "machine-is-hero" if (not sku_img and hero_src) else "")
             .replace("{{BG}}", bg_img or machine_scene or "")
             .replace("{{MACHINE}}", machine_hero)
             .replace("{{MACHINE_CLASS}}", "has-machine" if machine_hero else "no-machine")
