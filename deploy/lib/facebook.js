@@ -120,6 +120,22 @@ export async function publishToPage({ caption, imageUrl, publish = true }) {
   return { postId: r.id || null, photoId: null, published: true }
 }
 
+/** URL รูปที่อยู่บนเซิร์ฟเวอร์ Facebook แล้ว — ใช้ให้คนดูผลของโหมดทดสอบ
+ *
+ *  รูปที่อัปแบบ published=false ไม่ขึ้นหน้าเพจ เปิดดูจาก facebook.com ไม่ได้
+ *  แต่ขอ URL ของไฟล์ผ่าน Graph API ได้ → เอาไปเปิดดูยืนยันว่ารูปส่งถึงจริง ไม่เพี้ยน
+ *  images[] เรียงจากใหญ่ไปเล็ก เอาตัวแรกคือความละเอียดเต็ม
+ */
+export async function photoImage(photoId) {
+  if (!photoId) return null
+  try {
+    const r = await graph(photoId, { params: { fields: "images" } })
+    return r.images?.[0]?.source || null
+  } catch {
+    return null   // ของแถม อัปสำเร็จไปแล้ว ไม่ควรทำให้ทั้งงานล้มเพราะขอรูปไม่ได้
+  }
+}
+
 /** ลิงก์เปิดโพสต์จริง — ขอจาก Graph API ไม่ประกอบ URL เอง เผื่อรูปแบบ facebook.com เปลี่ยน */
 export async function permalink(postId) {
   if (!postId) return null

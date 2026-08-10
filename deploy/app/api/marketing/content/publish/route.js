@@ -9,7 +9,7 @@
 import { createClient } from "@supabase/supabase-js"
 import { NextResponse } from "next/server"
 import { requireAdmin } from "../../../../../lib/apiAuth"
-import { checkPage, publishToPage, permalink, fbConfig } from "../../../../../lib/facebook"
+import { checkPage, publishToPage, permalink, photoImage, fbConfig } from "../../../../../lib/facebook"
 
 const db = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -93,10 +93,17 @@ export async function POST(req) {
   }
 
   // โหมดทดสอบ — อัปรูปขึ้นแต่ไม่ขึ้นเพจ ไม่แตะ DB
+  //
+  // คืน URL รูปบนเซิร์ฟเวอร์ Facebook มาด้วย ไม่ใช่แค่บอกว่า "ผ่าน"
+  // เพราะคำถามจริงของคนกดคือ "รูปกับแคปชั่นออกมาหน้าตายังไง" ไม่ใช่ "API ตอบ 200 ไหม"
+  // รูปที่ published=false เปิดจากหน้าเพจไม่ได้ แต่เปิดจาก URL ตรงได้
   if (dryRun) {
     return NextResponse.json({
-      ok: true, dryRun: true, photoId: result.photoId,
-      note: "อัปรูปขึ้น Facebook แล้วแต่ไม่ได้เผยแพร่ · จะหายเองใน ~24 ชม. · DB ไม่ถูกแก้",
+      ok: true, dryRun: true,
+      photoId: result.photoId,
+      photoUrl: await photoImage(result.photoId),
+      caption: item.caption,
+      note: "อัปขึ้น Facebook แล้วแต่ไม่ได้เผยแพร่ · ไม่มีใครเห็นบนเพจ · Facebook ลบให้เองใน ~24 ชม.",
     })
   }
 

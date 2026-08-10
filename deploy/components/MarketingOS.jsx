@@ -137,6 +137,7 @@ export default function MarketingOS() {
   // ต้องรู้ "ก่อน" กดโพสต์ ไม่ใช่ไปรู้ตอนกดแล้วพัง (token หมดอายุคือเรื่องปกติของ Meta)
   const [fb, setFb] = useState(null)
   const [posted, setPosted] = useState(null)   // ลิงก์โพสต์ที่เพิ่งขึ้นเพจ
+  const [dryRun, setDryRun] = useState(null)   // ผลทดสอบแบบไม่เผยแพร่
   // หน้าย่อยที่กำลังดู — ดู NAV ข้างบนว่าทำไมถึงแยกหน้า
   const [view, setView] = useState("ideas")
   const pasteRef = useRef(null)
@@ -429,6 +430,21 @@ export default function MarketingOS() {
       setReady(s => ({ items: (s.items || []).filter(i => i.id !== id) }))
     } catch (e) { setErr(e.message) } finally { setBusyId(null) }
   }
+  // ── ทดสอบโดยไม่ขึ้นเพจ ──
+  // อัปรูปขึ้น Facebook จริงด้วย published=false → ไม่มีใครเห็นบนเพจ หายเองใน 24 ชม.
+  // เดินเส้นทางเดียวกับตอนโพสต์จริงทุกอย่าง ต่างแค่ไม่กดเผยแพร่
+  // จึงพิสูจน์ได้ว่ารูป+แคปชั่นไทยส่งถึงจริง โดยไม่ต้องเสี่ยงกับเพจธุรกิจ
+  async function testPost(item) {
+    setBusyId(item.id)
+    setDryRun(null)
+    try {
+      const r = await api("content/publish", {
+        method: "POST", body: JSON.stringify({ id: item.id, dryRun: true }),
+      })
+      setDryRun({ ...r, id: item.id })
+    } catch (e) { setErr(e.message) } finally { setBusyId(null) }
+  }
+
   // ── โพสต์ขึ้นเพจจริง ──
   // ต่างจาก markPosted ตรงที่ตัวนี้ยิงขึ้น Facebook เอง ไม่ต้องก๊อปไปวาง
   // ⚠️ กดแล้วขึ้นเพจสาธารณะทันที ลบเองไม่ได้จากตรงนี้ — ต้องถามยืนยันก่อนเสมอ
@@ -1075,6 +1091,33 @@ export default function MarketingOS() {
               </div>
             )}
 
+            {/* ── ผลทดสอบแบบไม่เผยแพร่ ──
+                โชว์รูปที่อยู่บนเซิร์ฟเวอร์ Facebook แล้วจริง ๆ (ไม่ใช่รูปต้นทางจาก Supabase)
+                เพราะสิ่งที่ต้องพิสูจน์คือ "รูปส่งถึง Facebook ครบไหม" ถ้าโชว์รูปต้นทาง
+                ต่อให้ส่งไม่ถึงก็ยังเห็นรูปสวย ๆ อยู่ดี = ทดสอบแล้วไม่ได้อะไร */}
+            {dryRun && (
+              <div className="mb-3 bg-blue-50 border border-blue-200 rounded-xl p-3">
+                <div className="flex items-center gap-2 text-xs text-blue-800 mb-2">
+                  <Check size={14} className="shrink-0" />
+                  <span className="font-semibold">ทดสอบผ่าน · คอนเทนต์ #{dryRun.id}</span>
+                  <button onClick={() => setDryRun(null)} className="ml-auto text-blue-600">ปิด</button>
+                </div>
+                <p className="text-[11px] text-blue-700 mb-2">{dryRun.note}</p>
+                <div className="flex flex-col sm:flex-row gap-3">
+                  {dryRun.photoUrl && (
+                    <img src={dryRun.photoUrl} alt=""
+                      onClick={() => setPreview(dryRun.photoUrl)}
+                      title="รูปนี้ดึงมาจากเซิร์ฟเวอร์ Facebook แล้ว · กดดูเต็มจอ"
+                      className="w-full sm:w-40 rounded-lg border border-blue-200 shrink-0 cursor-zoom-in" />
+                  )}
+                  <div className="min-w-0">
+                    <p className="text-[11px] text-blue-500 mb-1">แคปชั่นที่จะโพสต์จริง</p>
+                    <p className="text-xs text-gray-700 whitespace-pre-wrap">{dryRun.caption}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
             <div className="space-y-3">
               {ready.items.map(item => {
                 const holes = holesIn(item.caption)
@@ -1117,15 +1160,31 @@ export default function MarketingOS() {
                         {/* ปุ่มหลักตอนต่อเพจได้ — ปิดไว้ถ้าแคปชั่นยังมีช่องว่างค้าง
                             route กันซ้ำอีกชั้นอยู่แล้ว แต่ปุ่มที่กดไม่ได้ตั้งแต่แรกชัดเจนกว่า */}
                         {fb?.connected && (
-                          <button
-                            disabled={busyId === item.id || holes.length > 0}
-                            onClick={() => publishNow(item)}
-                            title={holes.length ? "เติมช่องว่างให้ครบก่อน" : "ยิงขึ้นเพจทันที"}
-                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600
-                                       text-white text-sm font-medium disabled:opacity-40">
-                            <Send size={14} />
-                            {busyId === item.id ? "กำลังโพสต์…" : "โพสต์ขึ้นเพจ"}
-                          </button>
+                          <>
+                            <button
+                              disabled={busyId === item.id || holes.length > 0}
+                              onClick={() => publishNow(item)}
+                              title={holes.length ? "เติมช่องว่างให้ครบก่อน" : "ยิงขึ้นเพจทันที"}
+                              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600
+                                         text-white text-sm font-medium disabled:opacity-40">
+                              <Send size={14} />
+                              {busyId === item.id ? "กำลังโพสต์…" : "โพสต์ขึ้นเพจ"}
+                            </button>
+                            {/* โหมดทดสอบใช้ได้เฉพาะโพสต์ที่มีรูป — /feed ไม่มีวิธีอัปแบบไม่เผยแพร่
+                                ซ่อนปุ่มไปเลยดีกว่าโชว์แล้วกดไม่ได้ */}
+                            {item.media_url && (
+                              <button
+                                disabled={busyId === item.id}
+                                onClick={() => testPost(item)}
+                                title="อัปขึ้น Facebook จริงแต่ไม่เผยแพร่ — ไม่มีใครเห็นบนเพจ"
+                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg
+                                           border border-blue-200 text-blue-600 text-sm
+                                           disabled:opacity-40">
+                                <Maximize2 size={14} />
+                                {busyId === item.id ? "กำลังทดสอบ…" : "ทดสอบ (ไม่ขึ้นเพจ)"}
+                              </button>
+                            )}
+                          </>
                         )}
                         <button
                           disabled={busyId === item.id}
