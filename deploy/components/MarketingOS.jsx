@@ -1011,46 +1011,57 @@ export default function MarketingOS() {
           ต้องมีขั้นนี้ ไม่งั้น posted_at ว่างตลอด แล้วกราฟ "โพสต์ช่วยไหม" ในหน้าตัวเลข
           ก็ไม่มีข้อมูลจะคำนวณ · Telegram ก็จะส่งซ้ำเรื่อย ๆ เพราะไม่รู้ว่าโพสต์ไปแล้ว */}
       {view === "ready" && (
-        (ready.items || []).length === 0 ? (
-          <div className="bg-white rounded-2xl border border-gray-100 p-8 text-center">
-            <Send className="mx-auto text-gray-300 mb-2" size={28} />
-            <p className="text-gray-700 font-medium">ไม่มีอะไรรอโพสต์</p>
-            <p className="text-sm text-gray-400 mt-1">
-              อนุมัติคอนเทนต์จากหน้า{" "}
-              <button onClick={() => setView("approve")} className="text-blue-600 hover:underline">
-                รออนุมัติ
-              </button>{" "}
-              แล้วจะมาโผล่ที่นี่
-            </p>
-          </div>
-        ) : (
-          <section>
-            <h2 className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
-              <Send size={16} className="text-emerald-600" />
-              รอโพสต์
+        <section>
+          <h2 className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
+            <Send size={16} className="text-emerald-600" />
+            รอโพสต์
+            {(ready.items || []).length > 0 && (
               <span className="px-2 py-0.5 rounded-full bg-emerald-600 text-white text-xs">
                 {ready.items.length}
               </span>
-            </h2>
-            {/* สถานะการต่อเพจ — ต้องเห็นก่อนกดโพสต์ ไม่ใช่ไปรู้ตอนกดแล้วพัง */}
-            {fb?.connected ? (
-              <p className="text-xs text-gray-400 mb-2">
-                กด “โพสต์ขึ้นเพจ” เพื่อยิงขึ้น{" "}
-                <a href={fb.page?.link} target="_blank" rel="noreferrer"
-                  className="text-emerald-600 font-medium hover:underline">{fb.page?.name}</a>
-                {" "}ได้เลย · หรือก๊อปไปโพสต์เองแล้วกด “โพสต์แล้ว”
-              </p>
-            ) : (
-              <div className="mb-2 flex items-start gap-1.5 bg-gray-50 border border-gray-200
-                              text-gray-500 rounded-lg px-2.5 py-1.5 text-xs">
-                <AlertTriangle size={13} className="mt-0.5 shrink-0" />
-                <span>
-                  ยังโพสต์อัตโนมัติไม่ได้ — {fb?.error || "ยังไม่ได้ตั้งค่า Facebook"} ·
-                  ระหว่างนี้ก๊อปไปโพสต์เองแล้วกด “โพสต์แล้ว” ได้ตามเดิม
-                  {" "}(วิธีตั้งค่าอยู่ที่ <code>wiki/marketing/auto-posting-level3-setup.md</code>)
-                </span>
-              </div>
             )}
+          </h2>
+
+          {/* ── สถานะการต่อเพจ ──
+              ⚠️ ต้องอยู่ "นอก" เงื่อนไขว่ามีของรอโพสต์ไหม
+              ตอนแรกวางไว้ข้างในกล่องรายการ ผลคือวันที่ยังไม่มีของอนุมัติ (คิวว่าง)
+              จะไม่เห็นสถานะเลย → ตั้งค่า Facebook เสร็จแล้วก็เช็กไม่ได้ว่าติดไหม
+              ต้องรอมีของก่อนถึงจะรู้ ซึ่งกลับหัวกลับหาง */}
+          {fb?.connected ? (
+            <p className="text-xs text-gray-400 mb-2">
+              ต่อกับเพจ{" "}
+              <a href={fb.page?.link} target="_blank" rel="noreferrer"
+                className="text-emerald-600 font-medium hover:underline">{fb.page?.name}</a>
+              {" "}แล้ว
+              {fb.page?.followers != null && ` · ผู้ติดตาม ${baht(fb.page.followers)}`}
+              {" "}· กด “โพสต์ขึ้นเพจ” ยิงขึ้นได้เลย หรือก๊อปไปโพสต์เองแล้วกด “โพสต์แล้ว”
+            </p>
+          ) : (
+            <div className="mb-2 flex items-start gap-1.5 bg-gray-50 border border-gray-200
+                            text-gray-500 rounded-lg px-2.5 py-1.5 text-xs">
+              <AlertTriangle size={13} className="mt-0.5 shrink-0" />
+              <span>
+                ยังโพสต์อัตโนมัติไม่ได้ — {fb?.error || "ยังไม่ได้ตั้งค่า Facebook"} ·
+                ระหว่างนี้ก๊อปไปโพสต์เองแล้วกด “โพสต์แล้ว” ได้ตามเดิม
+                {" "}(วิธีตั้งค่าอยู่ที่ <code>wiki/marketing/auto-posting-level3-setup.md</code>)
+              </span>
+            </div>
+          )}
+
+          {(ready.items || []).length === 0 ? (
+            <div className="bg-white rounded-2xl border border-gray-100 p-8 text-center">
+              <Send className="mx-auto text-gray-300 mb-2" size={28} />
+              <p className="text-gray-700 font-medium">ไม่มีอะไรรอโพสต์</p>
+              <p className="text-sm text-gray-400 mt-1">
+                อนุมัติคอนเทนต์จากหน้า{" "}
+                <button onClick={() => setView("approve")} className="text-blue-600 hover:underline">
+                  รออนุมัติ
+                </button>{" "}
+                แล้วจะมาโผล่ที่นี่
+              </p>
+            </div>
+          ) : (
+            <>
 
             {posted && (
               <div className="mb-2 flex items-center gap-2 bg-emerald-50 border border-emerald-200
@@ -1138,8 +1149,9 @@ export default function MarketingOS() {
                 )
               })}
             </div>
-          </section>
-        )
+            </>
+          )}
+        </section>
       )}
 
       {/* ── ปฏิทินโพสต์ ──
