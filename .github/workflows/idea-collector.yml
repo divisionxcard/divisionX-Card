@@ -50,6 +50,30 @@ jobs:
           if [ "$IN_DRY_RUN" = "true" ]; then ARGS+=(--dry-run); echo "🧪 DRY-RUN"; fi
           python deploy/agents/idea_collector.py "${ARGS[@]}"
 
+      # ── ให้ AI คิด "มุมเล่า" ต่อทันทีหลังเก็บไอเดียเสร็จ ──
+      # ตัวเก็บไอเดียใส่ angle จาก template ตายตัวแค่ 7 แบบตาม franchise
+      # → ข่าว One Piece กี่ชิ้นก็ได้โจทย์เดียวกันหมด (วัดแล้ว: 86 ไอเดีย เหลือมุมต่างกันจริง 24)
+      # นี่คือรากของปัญหาคอนเทนต์ซ้ำ · ถ้าไม่ต่อขั้นนี้เข้ามา การเติมมุมย้อนหลังที่ทำไป
+      # จะเป็นแค่งานครั้งเดียว แล้วไอเดียของพรุ่งนี้ก็กลับไปใช้ template เหมือนเดิม
+      #
+      # continue-on-error: โควตา Gemini ฟรีมีจำกัดมาก (flash-latest วันละ 20 ครั้ง)
+      # วันไหนไม่พอก็ไม่เป็นไร ไอเดียยังอยู่ครบ แค่ใช้ angle template ไปก่อน
+      # — ไม่ควรทำให้ทั้ง job แดงเพราะเรื่องนี้
+      - name: Think angles (AI)
+        if: ${{ inputs.dry_run != true }}
+        continue-on-error: true
+        env:
+          SUPABASE_URL:         ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          GEMINI_API_KEY:       ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          if [ -z "$GEMINI_API_KEY" ]; then
+            echo "⏭  ยังไม่ได้ตั้ง secret GEMINI_API_KEY — ข้ามขั้นคิดมุม"
+            echo "   ไอเดียจะใช้ angle จาก template ไปก่อน (ดู idea_collector.angle_for)"
+            exit 0
+          fi
+          python deploy/agents/idea_angles.py --limit 40
+
       - name: Telegram alert on failure
         if: failure()
         env:
