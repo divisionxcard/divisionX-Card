@@ -46,6 +46,28 @@ const PIPE_STATE = {
   unknown:   { dot: "bg-gray-300",   text: "ไม่ทราบ",  cls: "text-gray-400" },
 }
 
+// ── เมนูซ้าย ───────────────────────────────────────────────────────────
+// เดิมทุกโซนกองอยู่หน้าเดียว เลื่อนยาวมาก — กว่าจะถึงตัวเลขต้องผ่านการ์ดคอนเทนต์ทุกใบ
+// แยกเป็นหน้าย่อยตามแบบที่เจ้าของเอามาให้ดู (heroaiengine)
+//
+// ⚠️ จุดที่ต้องระวังตอนแยก: ข้อดีเดิมของหน้าเดียวคือ "เปิดมาเห็นทันทีว่ามีอะไรรอกด"
+// พอแยกหน้าแล้วของที่อยู่หน้าอื่นจะหายไปจากสายตา → **ตัวเลขคงค้างต้องติดบนเมนูเสมอ**
+// ไม่งั้นจะแลกความสะดวกมาด้วยการลืมงาน ซึ่งแย่กว่าเดิม
+const NAV = [
+  { group: "วันนี้", items: [
+    { key: "ideas",   label: "ไอเดียวันนี้",   icon: Lightbulb,     tone: "bg-amber-500" },
+    { key: "approve", label: "รออนุมัติ",      icon: Megaphone,     tone: "bg-blue-600" },
+    { key: "ready",   label: "รอโพสต์",        icon: Send,          tone: "bg-emerald-600" },
+  ] },
+  { group: "ดูผล", items: [
+    { key: "metrics", label: "ตัวเลข",         icon: TrendingUp },
+  ] },
+  { group: "ระบบ", items: [
+    { key: "system",  label: "สายพานการผลิต",  icon: Clock,         tone: "bg-red-600" },
+    { key: "replies", label: "ตอบคอมเมนต์",    icon: MessageSquare, soon: "เฟส 3" },
+  ] },
+]
+
 function thaiAgo(iso) {
   if (!iso) return "—"
   const mins = Math.floor((Date.now() - new Date(iso).getTime()) / 60000)
@@ -113,6 +135,9 @@ export default function MarketingOS() {
   // ต้องรู้ "ก่อน" กดโพสต์ ไม่ใช่ไปรู้ตอนกดแล้วพัง (token หมดอายุคือเรื่องปกติของ Meta)
   const [fb, setFb] = useState(null)
   const [posted, setPosted] = useState(null)   // ลิงก์โพสต์ที่เพิ่งขึ้นเพจ
+  // หน้าย่อยที่กำลังดู — ดู NAV ข้างบนว่าทำไมถึงแยกหน้า
+  const [view, setView] = useState("ideas")
+  const pasteRef = useRef(null)
 
   // ── auth ──
   useEffect(() => {
@@ -457,9 +482,17 @@ export default function MarketingOS() {
   )
 
   const pending = content.items || []
+  const navCounts = {
+    ideas:   (ideas.items || []).length,
+    approve: pending.length,
+    ready:   (ready.items || []).length,
+    system:  pipeline?.failing || 0,
+  }
 
   return (
-    <Shell onRefresh={loadAll} loading={loading}>
+    <Shell onRefresh={loadAll} loading={loading}
+      nav={<NavRail view={view} setView={setView} counts={navCounts}
+        onNew={() => { setView("ideas"); setTimeout(() => pasteRef.current?.focus(), 0) }} />}>
       {err && (
         <div className="mb-4 flex items-start gap-2 bg-red-50 border border-red-200 text-red-700 rounded-xl p-3 text-sm">
           <AlertTriangle size={16} className="mt-0.5 shrink-0" /><span>{err}</span>
@@ -503,10 +536,9 @@ export default function MarketingOS() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
-        <div className="lg:col-span-2 space-y-5">
-        {/* ── สถานี 1 · ไอเดียวันนี้ ──
-            AI ไปหาข่าว/เทรนด์ + อ่านข้อมูลขายของเราเอง มาวางบนโต๊ะ คนแค่สแกนแล้วเลือก */}
+      {/* ── สถานี 1 · ไอเดียวันนี้ ──
+          AI ไปหาข่าว/เทรนด์ + อ่านข้อมูลขายของเราเอง มาวางบนโต๊ะ คนแค่สแกนแล้วเลือก */}
+      {view === "ideas" && (
         <section>
           <div className="flex items-center flex-wrap gap-2 mb-2">
             <h2 className="flex items-center gap-2 text-sm font-semibold text-gray-700">
@@ -538,6 +570,7 @@ export default function MarketingOS() {
               (TikTok ไม่มี RSS · Creative Center API ตอบ no permission) */}
           <div className="flex gap-2 mb-2">
             <input
+              ref={pasteRef}
               value={pasteUrl}
               onChange={e => setPasteUrl(e.target.value)}
               onKeyDown={e => { if (e.key === "Enter") addFromUrl() }}
@@ -658,8 +691,10 @@ export default function MarketingOS() {
             </div>
           )}
         </section>
+      )}
 
-        {/* ── สถานี 2 · กล่องอนุมัติ ── */}
+      {/* ── สถานี 2 · กล่องอนุมัติ ── */}
+      {view === "approve" && (
         <section>
           <h2 className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
             <Megaphone size={16} className="text-blue-600" />
@@ -967,13 +1002,27 @@ export default function MarketingOS() {
             </div>
           )}
         </section>
+      )}
 
-        {/* ── สถานี 3 · รอโพสต์ ──
-            ปลายทางของวงจร: อนุมัติแล้ว → ก๊อปไปโพสต์ → กดยืนยัน
-            ต้องมีขั้นนี้ ไม่งั้น posted_at ว่างตลอด แล้วกราฟ "โพสต์ช่วยไหม" ในโซน D
-            ก็ไม่มีข้อมูลจะคำนวณ · Telegram ก็จะส่งซ้ำเรื่อย ๆ เพราะไม่รู้ว่าโพสต์ไปแล้ว */}
-        {(ready.items || []).length > 0 && (
-          <section className="mt-6">
+      {/* ── สถานี 3 · รอโพสต์ ──
+          ปลายทางของวงจร: อนุมัติแล้ว → โพสต์ขึ้นเพจ (หรือก๊อปไปโพสต์เอง) → บันทึก
+          ต้องมีขั้นนี้ ไม่งั้น posted_at ว่างตลอด แล้วกราฟ "โพสต์ช่วยไหม" ในหน้าตัวเลข
+          ก็ไม่มีข้อมูลจะคำนวณ · Telegram ก็จะส่งซ้ำเรื่อย ๆ เพราะไม่รู้ว่าโพสต์ไปแล้ว */}
+      {view === "ready" && (
+        (ready.items || []).length === 0 ? (
+          <div className="bg-white rounded-2xl border border-gray-100 p-8 text-center">
+            <Send className="mx-auto text-gray-300 mb-2" size={28} />
+            <p className="text-gray-700 font-medium">ไม่มีอะไรรอโพสต์</p>
+            <p className="text-sm text-gray-400 mt-1">
+              อนุมัติคอนเทนต์จากหน้า{" "}
+              <button onClick={() => setView("approve")} className="text-blue-600 hover:underline">
+                รออนุมัติ
+              </button>{" "}
+              แล้วจะมาโผล่ที่นี่
+            </p>
+          </div>
+        ) : (
+          <section>
             <h2 className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
               <Send size={16} className="text-emerald-600" />
               รอโพสต์
@@ -1088,28 +1137,30 @@ export default function MarketingOS() {
               })}
             </div>
           </section>
-        )}
-        </div>
+        )
+      )}
 
-        <div className="space-y-4">
-          {/* ── โซน B · ยังไม่เปิด (เฟส 3) ── */}
-          <section>
-            <h2 className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
-              <MessageSquare size={16} className="text-gray-400" /> ตอบเอง
-              <span className="px-2 py-0.5 rounded-full bg-gray-200 text-gray-500 text-xs">เฟส 3</span>
-            </h2>
-            <div className="bg-white rounded-2xl border border-dashed border-gray-200 p-5 text-sm text-gray-500">
-              <p className="mb-2">
-                กล่องคอมเมนต์/แชทที่ AI ตอบเองไม่ได้ จะมาโผล่ตรงนี้
-              </p>
-              <p className="text-xs text-gray-400">
-                ยังทำไม่ได้เพราะต้องขอ permission อ่าน/ตอบคอมเมนต์จาก Meta ก่อน
-              </p>
-            </div>
-          </section>
+      {/* ── ตอบคอมเมนต์ · ยังไม่เปิด (เฟส 3) ── */}
+      {view === "replies" && (
+        <section>
+          <h2 className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
+            <MessageSquare size={16} className="text-gray-400" /> ตอบคอมเมนต์
+            <span className="px-2 py-0.5 rounded-full bg-gray-200 text-gray-500 text-xs">เฟส 3</span>
+          </h2>
+          <div className="bg-white rounded-2xl border border-dashed border-gray-200 p-5 text-sm text-gray-500">
+            <p className="mb-2">
+              กล่องคอมเมนต์/แชทที่ AI ตอบเองไม่ได้ จะมาโผล่ตรงนี้
+            </p>
+            <p className="text-xs text-gray-400">
+              ยังทำไม่ได้เพราะต้องขอ permission อ่าน/ตอบคอมเมนต์จาก Meta ก่อน
+            </p>
+          </div>
+        </section>
+      )}
 
-          {/* ── โซน C · สายพาน ── */}
-          <section>
+      {/* ── สายพานการผลิต ── */}
+      {view === "system" && (
+        <section className="max-w-2xl">
             <h2 className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
               <Clock size={16} className="text-blue-600" /> สายพานการผลิต
               {pipeline?.failing > 0 && (
@@ -1138,11 +1189,11 @@ export default function MarketingOS() {
               })}
               {!pipeline && <p className="p-3 text-sm text-gray-400">กำลังโหลด…</p>}
             </div>
-          </section>
-        </div>
-      </div>
+        </section>
+      )}
 
-      {/* ── โซน D · ตัวเลข ── */}
+      {/* ── ตัวเลข ── */}
+      {view === "metrics" && (
       <section>
         <div className="flex items-center justify-between mb-2">
           <h2 className="flex items-center gap-2 text-sm font-semibold text-gray-700">
@@ -1270,15 +1321,72 @@ export default function MarketingOS() {
           </div>
         )}
       </section>
+      )}
     </Shell>
   )
 }
 
-function Shell({ children, onRefresh, loading }) {
+// ── แถบเมนู ───────────────────────────────────────────────────────────
+// จอใหญ่ = คอลัมน์ซ้ายติดหนึบ · จอเล็ก = แถบเลื่อนแนวนอนด้านบน
+// ตัวเลขคงค้างติดอยู่ทุกเมนู เพื่อไม่ให้ "แยกหน้า" กลายเป็น "ลืมงานที่อยู่หน้าอื่น"
+// export ไว้เพื่อให้ทำหน้าตรวจชั่วคราวมาถ่ายภาพดูได้โดยไม่ต้องล็อกอิน
+// (เจอบั๊ก 2 ตัวจากวิธีนี้: ตัวหนังสือ active อ่านไม่ออกบนธีมมืด + เมนูไม่ติดหนึบจริง)
+export function NavRail({ view, setView, counts, onNew }) {
+  return (
+    <nav className="lg:sticky lg:top-[69px]">
+      <button onClick={onNew}
+        className="hidden lg:flex w-full items-center justify-center gap-1.5 mb-4 px-3 py-2.5
+                   rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold">
+        <Plus size={16} /> เพิ่มไอเดียเอง
+      </button>
+
+      <div className="flex lg:flex-col gap-1 overflow-x-auto lg:overflow-visible
+                      -mx-4 px-4 lg:mx-0 lg:px-0 pb-1 lg:pb-0">
+        {NAV.map(g => (
+          <div key={g.group} className="flex lg:flex-col gap-1 shrink-0 lg:mb-3">
+            <p className="hidden lg:block px-2 mb-0.5 text-[11px] font-semibold
+                          text-gray-400 tracking-wide">{g.group}</p>
+            {g.items.map(it => {
+              const Icon = it.icon
+              const n = counts[it.key] || 0
+              const on = view === it.key
+              // ⚠️ ห้ามใช้ text-gray-900 / bg-white/70 ตรงนี้ — ชั้นแปลงธีมมืดใน globals.css
+              // แปลงเฉพาะ .text-gray-300..800 กับ .bg-white เป๊ะ ๆ · คลาสที่ไม่อยู่ในลิสต์
+              // จะค้างเป็นสีจริงแล้วอ่านไม่ออกบนพื้นกรมท่า (เจอตอนถ่ายภาพมาตรวจ)
+              return (
+                <button key={it.key} onClick={() => setView(it.key)}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-xl text-sm whitespace-nowrap
+                              shrink-0 transition ${on
+                                ? "bg-white border border-gray-200 text-gray-800 font-semibold shadow-sm"
+                                : "text-gray-500 hover:bg-gray-100 border border-transparent"}`}>
+                  <Icon size={16} className={on ? "text-blue-600" : "text-gray-400"} />
+                  {it.label}
+                  {n > 0 && (
+                    <span className={`lg:ml-auto px-1.5 min-w-[20px] text-center rounded-full
+                                      text-[11px] font-medium text-white ${it.tone || "bg-gray-400"}`}>
+                      {n}
+                    </span>
+                  )}
+                  {it.soon && (
+                    <span className="lg:ml-auto px-1.5 rounded-full bg-gray-100 text-gray-400 text-[10px]">
+                      {it.soon}
+                    </span>
+                  )}
+                </button>
+              )
+            })}
+          </div>
+        ))}
+      </div>
+    </nav>
+  )
+}
+
+export function Shell({ children, nav, onRefresh, loading }) {
   return (
     <main className="min-h-screen bg-gray-50">
       <header className="bg-white border-b border-gray-100 sticky top-0 z-10">
-        <div className="max-w-6xl mx-auto px-4 py-3 flex items-center gap-3">
+        <div className="max-w-7xl mx-auto px-4 py-3 flex items-center gap-3">
           <Megaphone size={20} className="text-blue-600" />
           <div className="flex-1">
             <h1 className="font-bold text-gray-800 leading-tight">Marketing OS</h1>
@@ -1293,7 +1401,13 @@ function Shell({ children, onRefresh, loading }) {
           )}
         </div>
       </header>
-      <div className="max-w-6xl mx-auto px-4 py-5">{children}</div>
+      {/* ⚠️ อย่าใส่ items-start ตรงนี้ — คอลัมน์เมนูจะสูงเท่าเนื้อเมนูพอดี
+          แล้ว position:sticky จะไม่มีที่ให้เลื่อน (เลื่อนหน้าแล้วเมนูหลุดหายขึ้นไปเลย)
+          ปล่อยให้ stretch เต็มความสูงแถว เมนูถึงจะค้างอยู่กับที่จริง — วัดด้วย Playwright แล้ว */}
+      <div className="max-w-7xl mx-auto px-4 py-5 lg:flex lg:gap-6">
+        {nav && <div className="lg:w-52 lg:shrink-0 mb-4 lg:mb-0">{nav}</div>}
+        <div className="flex-1 min-w-0">{children}</div>
+      </div>
     </main>
   )
 }
