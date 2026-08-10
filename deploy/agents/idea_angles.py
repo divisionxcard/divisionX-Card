@@ -31,6 +31,7 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
+import _console  # noqa: F401 — บังคับ stdout เป็น UTF-8 ต้องมาก่อน print แรก
 
 HERE = pathlib.Path(__file__).resolve().parent
 ROOT = HERE.parent

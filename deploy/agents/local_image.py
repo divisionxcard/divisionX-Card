@@ -31,9 +31,11 @@ import os
 import pathlib
 import sys
 import time
+import _console  # noqa: F401 — บังคับ stdout เป็น UTF-8 ต้องมาก่อน print แรก
 
 HERE = pathlib.Path(__file__).resolve().parent
 ROOT = HERE.parent
+
 
 # ตัวบีบขนาด Q4_K_S — 6.47 GB · คุณภาพต่างจากตัวเต็มน้อยมากในงานฉาก/แสง
 # ตัวเต็ม fp16 คือ 23.8 GB ซึ่งเกิน VRAM 6 GB ไปมาก
@@ -50,32 +52,39 @@ GUIDANCE = 0.0          # schnell ไม่ใช้ guidance (ต่างจ�
 # ทุกฉาก **ห้ามมีตัวอักษร ห้ามมีสินค้า** — สองอย่างนั้นเทมเพลตวางทับเอง
 SCENES = {
     "hero": (
-        "Empty premium retail display podium in a modern Thai shopping mall at night, "
-        "deep navy blue and teal color grading, electric cyan neon rim lighting, "
-        "polished dark reflective floor, soft volumetric haze, shallow depth of field, "
-        "cinematic product photography lighting, clean negative space in the upper half"
+        "Polished dark stone podium under a cyan spotlight, deep navy studio void behind it, "
+        "electric cyan rim light, glossy reflective floor, soft volumetric haze, "
+        "cinematic product photography, wide empty space above the podium"
     ),
     "hype": (
         "Abstract energy background, electric cyan lightning arcs over deep navy, "
         "brushed chrome shards catching rim light, dynamic diagonal composition, "
-        "motion blur streaks, dramatic contrast, dark edges with a bright glowing centre"
+        "motion blur streaks, dramatic contrast, dark edges around a bright glowing centre"
     ),
     "shelf": (
-        "Blurred bokeh of a brightly lit vending machine aisle in a Thai mall at night, "
-        "cool navy and cyan tones, warm accent lights bokeh, shot on 85mm f1.4, "
-        "very shallow depth of field, clean empty foreground"
+        "Heavily blurred bokeh of colourful lights in a dark navy interior, "
+        "cool cyan and teal tones with warm amber bokeh circles, shot on 85mm f1.2, "
+        "extremely shallow depth of field, smooth empty foreground"
     ),
     "luxe": (
-        "Dark navy velvet surface with soft spotlight pool, drifting gold and cyan dust motes, "
-        "elegant minimal luxury product staging, deep shadows, subtle chrome reflections, "
+        "Dark navy velvet surface under a soft spotlight pool, drifting gold and cyan dust motes, "
+        "elegant minimal luxury staging, deep shadows, subtle chrome reflections, "
         "generous empty space in the centre"
     ),
 }
 
-NEGATIVE_HINT = (
-    "no text, no letters, no words, no numbers, no watermark, no logo, "
-    "no people, no faces, no anime characters, no trading cards, no packaging"
-)
+# ⚠️ ห้ามใส่ "no text / no people" ต่อท้าย prompt
+#
+# FLUX.1-schnell เป็นรุ่นกลั่น (guidance_scale=0) จึง **ไม่มีระบบ negative prompt**
+# คำที่เราเขียนทั้งหมดถูกอ่านเป็น "สิ่งที่อยากได้" หมด — เขียน "no text" จึงกลายเป็น
+# การป้อนคำว่า text เข้าไป แล้วโมเดลใส่ตัวหนังสือมาให้ (มั่ว ๆ) ยิ่งห้ามยิ่งได้
+#
+# เจอจริงในภาพทดสอบใบแรก: สั่ง "no text, no people" แล้วได้ป้ายร้านเขียน
+# "EMANG" / "ThAre" กับคนเดินอยู่ขวามือ ครบทั้งสองอย่างที่ห้าม
+#
+# วิธีที่ถูกคือ **บอกแต่สิ่งที่อยากได้ และไม่เอ่ยถึงสิ่งที่ไม่อยากได้เลย**
+# เลี่ยงคำที่ลากบริบทตัวหนังสือ/คนมาเอง เช่น shopping mall, shop, store, signage, aisle
+# → เปลี่ยนไปใช้คำแนวสตูดิโอ (studio void, podium, backdrop) ซึ่งไม่มีป้ายให้เขียน
 
 
 def load_env():
@@ -151,7 +160,7 @@ def generate(prompt, out, width=1024, height=1024, seed=None):
 
     t0 = time.time()
     img = pipe(
-        prompt=f"{prompt}. {NEGATIVE_HINT}",
+        prompt=prompt,
         num_inference_steps=STEPS,
         guidance_scale=GUIDANCE,
         width=width, height=height,

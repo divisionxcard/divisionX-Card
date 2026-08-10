@@ -32,6 +32,7 @@ AIBG_PREFIX = "aibg/"               # โฟลเดอร์ที่ poster_r
 
 sys.path.insert(0, str(HERE))
 from local_image import SCENES, generate, load_env   # noqa: E402
+import _console  # noqa: F401 — บังคับ stdout เป็น UTF-8 ต้องมาก่อน print แรก
 
 
 def sb_request(method, path, data=None, ctype=None, base="rest/v1"):

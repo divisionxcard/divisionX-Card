@@ -42,6 +42,7 @@ BUCKET = "marketing"
 
 sys.path.insert(0, str(HERE))
 from local_image import generate, load_env   # noqa: E402
+import _console  # noqa: F401 — บังคับ stdout เป็น UTF-8 ต้องมาก่อน print แรก
 
 GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta"
 # ไล่ตามโควตา — เหมือนที่ทำใน idea_angles.py (โควตาฟรีนับแยกตามโมเดล)
