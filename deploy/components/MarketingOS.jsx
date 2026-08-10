@@ -12,7 +12,7 @@ import {
   Megaphone, RefreshCw, Check, X, Pencil, Clock, AlertTriangle,
   Wallet, Package, Receipt, TrendingUp, Trophy, MessageSquare, Lock,
   Lightbulb, Newspaper, Youtube, BarChart3, ExternalLink, Sparkles, Music2, Plus,
-  Image as ImageIcon, Send, Copy, Maximize2,
+  Image as ImageIcon, Send, Copy, Maximize2, Calendar as CalendarIcon,
 } from "lucide-react"
 import {
   ResponsiveContainer, ComposedChart, Bar, Line, XAxis, YAxis,
@@ -20,6 +20,7 @@ import {
 } from "recharts"
 import { supabase } from "../lib/supabase"
 import KpiCard from "./shared/KpiCard"
+import PostCalendar from "./marketing/PostCalendar"
 
 const PLATFORM_LABEL = { fb: "FB เพจ", line: "LINE OA", ig: "Instagram", tiktok: "TikTok" }
 const SLOT_LABEL = { morning: "เช้า", evening: "เย็น" }
@@ -58,6 +59,7 @@ const NAV = [
     { key: "ideas",   label: "ไอเดียวันนี้",   icon: Lightbulb,     tone: "bg-amber-500" },
     { key: "approve", label: "รออนุมัติ",      icon: Megaphone,     tone: "bg-blue-600" },
     { key: "ready",   label: "รอโพสต์",        icon: Send,          tone: "bg-emerald-600" },
+    { key: "calendar", label: "ปฏิทินโพสต์",   icon: CalendarIcon },
   ] },
   { group: "ดูผล", items: [
     { key: "metrics", label: "ตัวเลข",         icon: TrendingUp },
@@ -1139,6 +1141,11 @@ export default function MarketingOS() {
           </section>
         )
       )}
+
+      {/* ── ปฏิทินโพสต์ ──
+          โหลดข้อมูลเองแยกจาก loadAll เพราะข้อมูลผูกกับ "เดือนที่กำลังดู"
+          ถ้าเอาไปรวมใน loadAll จะต้องยกสถานะเดือนขึ้นมาไว้ตรงนี้โดยไม่จำเป็น */}
+      {view === "calendar" && <PostCalendar api={api} onPreview={setPreview} />}
 
       {/* ── ตอบคอมเมนต์ · ยังไม่เปิด (เฟส 3) ── */}
       {view === "replies" && (
