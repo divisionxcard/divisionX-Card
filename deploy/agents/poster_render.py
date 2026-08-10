@@ -370,8 +370,16 @@ def main():
     out = args.out or str(HERE / f"poster-{args.id}.png")
     render(html, out)
     size = pathlib.Path(out).stat().st_size
-    print(f"[poster] เรนเดอร์เสร็จ {out} ({size/1024:.0f} KB) · แนวคิด={ckey or "-"} · สาขา={branches} · "
-          f"รูปสินค้า={'มี' if sku_img else 'ไม่มี'} · พื้นหลัง={'AI (aibg)' if bg_img else 'รูปห้างจริง'}")
+    # ⚠️ ห้ามใช้ quote ชนิดเดียวกันซ้อนใน f-string เช่น f"…{ckey or "-"}…"
+    # Python 3.12 ขึ้นไปเขียนแบบนั้นได้ (PEP 701) แต่ **3.11 พังทันที** เป็น SyntaxError
+    # เครื่องเจ้าของเป็น 3.12.9 จึงรันผ่าน แต่ workflow ตั้งไว้ 3.11 → ปุ่มสร้างโปสเตอร์
+    # ล้มเงียบ ๆ ติดกัน 4 ครั้งตั้งแต่ 2026-08-09 โดยไม่มีใครรู้
+    # (ผมเคยเห็นบรรทัดนี้ตอนอ่าน diff แล้วสรุปว่า "คงใช้ได้" เพราะเห็นเรนเดอร์บนเครื่องผ่าน — ผิด)
+    concept_txt = ckey or "-"
+    sku_txt = "มี" if sku_img else "ไม่มี"
+    bg_txt = "AI (aibg)" if bg_img else "รูปห้างจริง"
+    print(f"[poster] เรนเดอร์เสร็จ {out} ({size/1024:.0f} KB) · แนวคิด={concept_txt} · "
+          f"สาขา={branches} · รูปสินค้า={sku_txt} · พื้นหลัง={bg_txt}")
 
     if args.dry_run:
         print("[poster] dry-run — ไม่อัปโหลด ไม่แก้ DB")
