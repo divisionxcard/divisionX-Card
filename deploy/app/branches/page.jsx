@@ -41,7 +41,11 @@ export default async function BranchesPage() {
           border:1px solid var(--dx-border-strong);margin-bottom:24px;}
         .bx-hero::after{content:"";position:absolute;left:0;right:0;bottom:0;height:2px;
           background:linear-gradient(90deg,transparent,var(--dx-cyan),transparent);opacity:.7;}
-        .bx-logo{height:54px;width:auto;margin-bottom:12px;filter:drop-shadow(0 0 14px var(--dx-glow));}
+        /* 54px → 62px (+15% ตามที่เจ้าของขอ)
+           ⚠️ ไฟล์ต้นฉบับที่ได้มาเป็น 3000×3000 แต่ตัวโลโก้จริงกินแค่ 20.5% ที่เหลือเป็นขอบว่าง
+           ตั้ง height ตรง ๆ จะได้โลโก้ที่ *เห็นจริง* แค่ ~26px = เล็กลงกว่าเดิม ตรงข้ามกับที่สั่ง
+           จึงตัดขอบว่างออกก่อน (เหลือ 466×400) แล้วค่อยตั้งความสูง */
+        .bx-logo{height:62px;width:auto;margin-bottom:12px;filter:drop-shadow(0 0 14px var(--dx-glow));}
         .bx-title{font-size:clamp(24px,5vw,34px);font-weight:800;letter-spacing:-.5px;margin:0;}
         .bx-title b{color:var(--dx-cyan);}
         .bx-sub{color:var(--dx-cyan-soft);font-size:14px;margin-top:8px;font-weight:600;}
@@ -82,7 +86,8 @@ export default async function BranchesPage() {
       <div className="bx-wrap">
         {/* Hero */}
         <header className="bx-hero">
-          <img className="bx-logo" src="/logo.png" alt="DivisionX Card" />
+          {/* โลโก้ขาวโปร่งใส — ใช้เฉพาะหน้านี้ หน้าอื่นยังใช้ /logo.png เดิม */}
+          <img className="bx-logo" src="/logo-white.png" alt="DivisionX Card" />
           <h1 className="bx-title">สาขาที่<b>พร้อมให้บริการ</b></h1>
           <div className="bx-sub">ตู้กดการ์ดเกมอัตโนมัติ · เปิดตามเวลาห้าง</div>
           <div className="bx-tag">รวดเร็ว · ปลอดภัย · ทันสมัย · {BRANCHES.length} สาขาในห้างชั้นนำ</div>
