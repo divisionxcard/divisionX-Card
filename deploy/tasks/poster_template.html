@@ -205,6 +205,9 @@
     background: radial-gradient(ellipse, rgba(170,232,255,.40), rgba(0,150,230,.16) 46%, transparent 74%);
     filter: blur(13px) }
   .no-machine .machine { display: none }
+  /* ครบทั้งฉาก AI และซองสินค้าแล้ว — ตู้กลายเป็นตัวที่สามที่แย่งสายตา ดูเหตุผลเต็มใน poster_render.py
+     !important เพราะแนวคิดบางตัวตั้ง .machine ของตัวเองแล้วถูกฉีดต่อท้าย */
+  body.hide-machine .machine { display: none !important }
 
   /* ══ .has-aiscene — เมื่อพื้นหลังเป็นฉากที่ AI วาดมาให้เนื้อหานี้โดยเฉพาะ ══
      ฉาก AI ≠ รูปถ่าย · เทมเพลตเบลอ 9-17px + ย้อมสี + ใส่ของประดับ เพราะพื้นหลังเดิม
@@ -518,7 +521,7 @@
 <!-- {{WRAP_CLASS}} ("no-hero" เมื่อไม่มีรูปสินค้า) ต้องอยู่ที่ body ด้วย ไม่ใช่แค่ที่ .wrap
      เพราะ .machine / .medal / .anchor อยู่นอก .wrap — ถ้าใส่แค่ที่ .wrap กฎ .no-hero ของสามตัวนี้
      จะไม่เคยทำงานเลย (เจอจริงตอนลอง --sku ที่ไม่มีรูป) · สกินก็ hook ที่ body ได้ง่ายกว่า -->
-<body class="{{CONCEPT_CLASS}} {{MACHINE_CLASS}} {{WRAP_CLASS}} {{MACHINE_ONLY}} {{SCENE_CLASS}}">
+<body class="{{CONCEPT_CLASS}} {{MACHINE_CLASS}} {{WRAP_CLASS}} {{MACHINE_ONLY}} {{SCENE_CLASS}} {{MACHINE_SIDE}}">
 
   <!-- ── ชั้นบรรยากาศ ── -->
   <div class="bg" style="background-image:url({{BG}})"></div>
