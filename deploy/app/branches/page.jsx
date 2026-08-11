@@ -41,11 +41,12 @@ export default async function BranchesPage() {
           border:1px solid var(--dx-border-strong);margin-bottom:24px;}
         .bx-hero::after{content:"";position:absolute;left:0;right:0;bottom:0;height:2px;
           background:linear-gradient(90deg,transparent,var(--dx-cyan),transparent);opacity:.7;}
-        /* 54px → 62px (+15% ตามที่เจ้าของขอ)
+        /* 54px → 62px (+15%) → 93px (+50% อีกรอบ) ตามที่เจ้าของขอ
            ⚠️ ไฟล์ต้นฉบับที่ได้มาเป็น 3000×3000 แต่ตัวโลโก้จริงกินแค่ 20.5% ที่เหลือเป็นขอบว่าง
            ตั้ง height ตรง ๆ จะได้โลโก้ที่ *เห็นจริง* แค่ ~26px = เล็กลงกว่าเดิม ตรงข้ามกับที่สั่ง
-           จึงตัดขอบว่างออกก่อน (เหลือ 466×400) แล้วค่อยตั้งความสูง */
-        .bx-logo{height:62px;width:auto;margin-bottom:12px;filter:drop-shadow(0 0 14px var(--dx-glow));}
+           จึงตัดขอบว่างออกก่อน (เหลือ 466×400) แล้วค่อยตั้งความสูง
+           ไฟล์เก็บไว้สูง 400px — แสดง 93px จึงยังเหลือความละเอียดเผื่อจอ retina 4 เท่า */
+        .bx-logo{height:93px;width:auto;margin-bottom:12px;filter:drop-shadow(0 0 14px var(--dx-glow));}
         .bx-title{font-size:clamp(24px,5vw,34px);font-weight:800;letter-spacing:-.5px;margin:0;}
         .bx-title b{color:var(--dx-cyan);}
         .bx-sub{color:var(--dx-cyan-soft);font-size:14px;margin-top:8px;font-weight:600;}
