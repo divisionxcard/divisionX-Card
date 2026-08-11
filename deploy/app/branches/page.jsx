@@ -57,7 +57,10 @@ export default async function BranchesPage() {
         .bx-card:hover{border-color:var(--dx-border-glow);transform:translateY(-2px);}
         .bx-row{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;}
         .bx-name{font-size:17px;font-weight:700;line-height:1.3;}
-        .bx-floor{flex:none;background:var(--dx-glow-soft);color:var(--dx-cyan);border:1px solid var(--dx-border-glow);
+        /* ชั้น = ข้อมูลที่ลูกค้าต้องอ่านให้ชัดที่สุดตอนยืนอยู่ในห้าง จึงแยกสีออกจากฟ้าของแบรนด์
+           ⚠️ ห้ามใช้ --dx-danger (#FF4466) ตรง ๆ — วัดแล้วคอนทราสต์บนพื้นการ์ดกรมท่าได้แค่ ~3.6:1
+           ต่ำกว่าเกณฑ์อ่านง่าย 4.5:1 · ใช้แดงอ่อนกว่าเพื่อให้ยังอ่านออกบนพื้นเข้ม */
+        .bx-floor{flex:none;background:rgba(255,90,120,.14);color:#FF8DA1;border:1px solid rgba(255,90,120,.42);
           font-size:12px;font-weight:700;padding:3px 11px;border-radius:999px;white-space:nowrap;}
         .bx-hint{color:var(--dx-text-muted);font-size:13px;margin-top:8px;line-height:1.45;flex:1;}
         .bx-btn{margin-top:14px;display:inline-flex;align-items:center;justify-content:center;gap:7px;
