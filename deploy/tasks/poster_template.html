@@ -206,6 +206,36 @@
     filter: blur(13px) }
   .no-machine .machine { display: none }
 
+  /* ══ .has-aiscene — เมื่อพื้นหลังเป็นฉากที่ AI วาดมาให้เนื้อหานี้โดยเฉพาะ ══
+     ฉาก AI ≠ รูปถ่าย · เทมเพลตเบลอ 9-17px + ย้อมสี + ใส่ของประดับ เพราะพื้นหลังเดิม
+     เป็น "รูปถ่ายห้างที่มีของรกและตัวหนังสือ" ต้องกลบให้อ่านตัวอักษรได้
+     แต่ฉาก AI ถูกสั่งให้เว้นที่ว่างไว้แล้วตั้งแต่ตอนวาด — เบลอ+ย้อมทับจึงเหลือแต่คราบสี
+
+     เจอจริง: ฉากเส้นแสงที่สวยมาก โดน blur(17px)+hue-rotate ของ unbox จนกลายเป็น
+     พื้นม่วงขุ่น ๆ · เสียของที่ใช้เวลาวาด 10 นาทีไปทั้งใบ
+
+     ⚠️ ต้องใช้ !important เพราะ CSS ของแนวคิดถูกฉีดต่อท้ายไฟล์นี้
+     (body.c-unbox .bg มี specificity เท่ากันแต่มาทีหลัง → ชนะเสมอถ้าไม่ใส่) */
+  body.has-aiscene .bg {
+    filter: none !important;                    /* ฉากคมชัดตามที่วาดมา */
+    inset: 0 !important;                        /* ไม่ต้องเผื่อขอบให้เบลอกินอีกแล้ว */
+  }
+  /* ย้อมสีเหลือบาง ๆ พอให้ตัวอักษรลอย ไม่ใช่เปลี่ยนสีทั้งฉาก */
+  body.has-aiscene .grad { opacity: .34 !important }
+  /* ของประดับพวกเส้น/ตาราง/ลำแสง — ฉาก AI มีจังหวะของตัวเองแล้ว ใส่เพิ่มคือรก */
+  body.has-aiscene .rays,
+  body.has-aiscene .rays2,
+  body.has-aiscene .streaks,
+  body.has-aiscene .grid,
+  body.has-aiscene .beam { display: none !important }
+  /* แทนด้วยชั้นมืดเฉพาะฝั่งซ้ายที่มีตัวอักษร — ที่อื่นปล่อยให้เห็นฉากเต็ม ๆ */
+  body.has-aiscene .vig::after {
+    content: ""; position: absolute; inset: 0; z-index: 1;
+    background: linear-gradient(100deg,
+      rgba(6,14,32,.86) 0%, rgba(6,14,32,.72) 34%,
+      rgba(6,14,32,.28) 58%, rgba(6,14,32,0) 78%);
+  }
+
   /* ── ไม่มีรูปสินค้า → ตู้ขึ้นมาเป็นตัวเอกแทน ──
      กันตู้โผล่ 2 ที่ (ตัวเอกฝั่งขวา + ตัวเล็กมุมล่างซ้าย) ซึ่งดูเหมือนวางผิด
      และตู้เป็นภาพถ่ายแนวตั้งเต็มตัว ต่างจากซองที่เป็นภาพตัดพื้นหลัง
@@ -488,7 +518,7 @@
 <!-- {{WRAP_CLASS}} ("no-hero" เมื่อไม่มีรูปสินค้า) ต้องอยู่ที่ body ด้วย ไม่ใช่แค่ที่ .wrap
      เพราะ .machine / .medal / .anchor อยู่นอก .wrap — ถ้าใส่แค่ที่ .wrap กฎ .no-hero ของสามตัวนี้
      จะไม่เคยทำงานเลย (เจอจริงตอนลอง --sku ที่ไม่มีรูป) · สกินก็ hook ที่ body ได้ง่ายกว่า -->
-<body class="{{CONCEPT_CLASS}} {{MACHINE_CLASS}} {{WRAP_CLASS}} {{MACHINE_ONLY}}">
+<body class="{{CONCEPT_CLASS}} {{MACHINE_CLASS}} {{WRAP_CLASS}} {{MACHINE_ONLY}} {{SCENE_CLASS}}">
 
   <!-- ── ชั้นบรรยากาศ ── -->
   <div class="bg" style="background-image:url({{BG}})"></div>

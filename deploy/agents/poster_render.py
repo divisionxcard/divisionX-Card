@@ -313,7 +313,13 @@ def build_html(content, sku_img, bg_img, branches, concept_key="", concept_css="
     #
     # ซ่อนของแล้วไม่จัดใหม่ = ทิ้งรูไว้ · โปสเตอร์ต้องมีตัวเอกเสมอ
     # ตู้จริงเป็นตัวเอกที่ดีรองลงมา — เป็นของเราจริง ไม่ต้องพึ่ง SKU
-    hero_src = sku_img or machine_hero
+    # ── ตัวเอกของภาพ ──
+    # มีรูปสินค้า → ใช้สินค้าเสมอ (ดีที่สุด)
+    # ไม่มีสินค้า แต่มีฉาก AI → **ไม่ต้องมีตัวเอก** ปล่อยให้ฉากเล่นเต็มที่
+    #   เจอจริง: เอาฉาก AI สวย ๆ มาแล้วเอารูปตู้ทับขวา 55% → ฉากแทบมองไม่เห็น
+    #   กลายเป็นสองตัวเอกชนกัน และเสียเวลา 10 นาทีที่วาดฉากไปเปล่า ๆ
+    # ไม่มีทั้งคู่ → ใช้รูปตู้กันรูว่างกลางภาพ (เหตุผลเดิม)
+    hero_src = sku_img or ("" if bg_img else machine_hero)
     hero = (
         f'<div class="stage"><img src="{hero_src}">'
         f'<div class="floor"></div>'
@@ -347,6 +353,9 @@ def build_html(content, sku_img, bg_img, branches, concept_key="", concept_css="
             .replace("{{WRAP_CLASS}}", "" if hero_src else "no-hero")
             # ตู้ถูกเลื่อนขึ้นไปเป็นตัวเอกแล้ว ไม่ต้องมีตู้เล็กมุมล่างซ้ายซ้ำอีก
             .replace("{{MACHINE_ONLY}}", "machine-is-hero" if (not sku_img and hero_src) else "")
+            # ฉากที่ AI วาดมาเป็น "พื้นหลังสำเร็จรูป" อยู่แล้ว ต่างจากรูปถ่ายห้าง
+            # ต้องปิดการเบลอ/ย้อมสี/ของประดับที่เทมเพลตใส่ไว้เพื่อกลบรูปถ่าย
+            .replace("{{SCENE_CLASS}}", "has-aiscene" if bg_img else "")
             .replace("{{BG}}", bg_img or machine_scene or "")
             .replace("{{MACHINE}}", machine_hero)
             .replace("{{MACHINE_CLASS}}", "has-machine" if machine_hero else "no-machine")
