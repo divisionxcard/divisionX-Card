@@ -41,6 +41,22 @@ export default async function BranchesPage() {
           border:1px solid var(--dx-border-strong);margin-bottom:24px;}
         .bx-hero::after{content:"";position:absolute;left:0;right:0;bottom:0;height:2px;
           background:linear-gradient(90deg,transparent,var(--dx-cyan),transparent);opacity:.7;}
+
+        /* ══ แบนเนอร์ที่เจ้าของออกแบบเอง — ใช้เฉพาะจอกว้าง ══
+           ภาพมีตัวหนังสือฝังอยู่ในตัว (พาดหัว/ไอคอน/เบอร์ติดต่อ) จึงมาแทนบล็อกข้อความทั้งก้อน
+           ⚠️ แต่ **จอเล็กใช้ไม่ได้** — ภาพอัตราส่วน 1.99:1 พอย่อลงกล่องกว้าง 354px
+           พาดหัวจะเหลือ ~16px และบรรทัดเล็กเหลือ ~8px คืออ่านไม่ออก
+           ลูกค้าส่วนใหญ่เปิดหน้านี้จากมือถือตอนยืนอยู่ในห้าง จึงคงบล็อกข้อความ HTML ไว้ให้จอเล็ก
+           (ตัวหนังสือจริงย่อ-ขยายได้ ภาพทำไม่ได้) */
+        .bx-hero-img{display:none;}
+        @media (min-width:720px){
+          .bx-hero{padding:0;}
+          .bx-hero-img{display:block;width:100%;height:auto;}
+          /* ซ่อนด้วยตา แต่ยังอยู่ในผังสำหรับ screen reader และ SEO —
+             ใช้ display:none ไม่ได้ จะทำให้ h1 หายไปจาก Google ด้วย */
+          .bx-hero-text{position:absolute;width:1px;height:1px;padding:0;margin:-1px;
+            overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0;}
+        }
         /* 54px → 62px (+15%) → 93px (+50% อีกรอบ) ตามที่เจ้าของขอ
            ⚠️ ไฟล์ต้นฉบับที่ได้มาเป็น 3000×3000 แต่ตัวโลโก้จริงกินแค่ 20.5% ที่เหลือเป็นขอบว่าง
            ตั้ง height ตรง ๆ จะได้โลโก้ที่ *เห็นจริง* แค่ ~26px = เล็กลงกว่าเดิม ตรงข้ามกับที่สั่ง
@@ -87,11 +103,20 @@ export default async function BranchesPage() {
       <div className="bx-wrap">
         {/* Hero */}
         <header className="bx-hero">
-          {/* โลโก้ขาวโปร่งใส — ใช้เฉพาะหน้านี้ หน้าอื่นยังใช้ /logo.png เดิม */}
-          <img className="bx-logo" src="/logo-white.png" alt="DivisionX Card" />
-          <h1 className="bx-title">สาขาที่<b>พร้อมให้บริการ</b></h1>
-          <div className="bx-sub">ตู้กดการ์ดเกมอัตโนมัติ · เปิดตามเวลาห้าง</div>
-          <div className="bx-tag">รวดเร็ว · ปลอดภัย · ทันสมัย · {BRANCHES.length} สาขาในห้างชั้นนำ</div>
+          {/* แบนเนอร์สำหรับจอกว้าง — ตัวหนังสือฝังในภาพ จึงต้องใส่ alt ให้ครบความหมาย
+              ไม่ใช้ next/image เพราะหน้านี้เป็น static + ISR ภาพเดียวคงที่ ไม่ได้อะไรเพิ่ม */}
+          <img className="bx-hero-img" src="/branches-hero.jpg"
+            width="1339" height="674"
+            alt="DivisionX Card — สาขาที่พร้อมให้บริการ · ตู้กดการ์ดเกมอัตโนมัติ เปิดตามเวลาห้าง" />
+
+          {/* บล็อกข้อความ — แสดงจริงบนจอเล็ก · จอกว้างซ่อนด้วยตาแต่ยังอยู่ให้ SEO อ่าน */}
+          <div className="bx-hero-text">
+            {/* โลโก้ขาวโปร่งใส — ใช้เฉพาะหน้านี้ หน้าอื่นยังใช้ /logo.png เดิม */}
+            <img className="bx-logo" src="/logo-white.png" alt="DivisionX Card" />
+            <h1 className="bx-title">สาขาที่<b>พร้อมให้บริการ</b></h1>
+            <div className="bx-sub">ตู้กดการ์ดเกมอัตโนมัติ · เปิดตามเวลาห้าง</div>
+            <div className="bx-tag">รวดเร็ว · ปลอดภัย · ทันสมัย · {BRANCHES.length} สาขาในห้างชั้นนำ</div>
+          </div>
         </header>
 
         {/* Branches */}
