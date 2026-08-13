@@ -69,6 +69,8 @@ def map_name_to_sku(name: str) -> str | None:
         ("dream",         "PKM Dream EX"),
         ("ninja",         "PKM Ninja"),
         ("ghost",         "PKM Ghost"),
+        # 2026-08-13 หลังบ้าน WW เปลี่ยนชื่อชุดนี้เป็น "Pokemon M5 Abyss Eye"
+        ("abyss",         "PKM Ghost"),
         ("solo leveling", "SLL UA 51"),
         ("chaos",         "YGH Chaos Origins"),
         ("revals",        "YGH The Revals"),

@@ -70,6 +70,10 @@ def map_goods_to_sku(goods_name: str) -> str | None:
         ("solo leveling",   "SLL UA 51"),
         # WW ตู้ wwv03/04/05 (2026-06-03) — ชื่อ portal ≠ ชื่อ DvX
         ("pokemon ghost",   "PKM Ghost"),
+        # 2026-08-13 หลังบ้านเปลี่ยนชื่อชุดนี้เป็น "Pokemon M5 Abyss Eye" (เจ้าของยืนยัน)
+        # ใช้คำว่า abyss คำเดียวเพื่อรับได้ทุกรูปแบบ — ไม่มี SKU อื่นที่มีคำนี้ จึงไม่ชนกัน
+        # ⚠ คงบรรทัด pokemon ghost ไว้ ตู้อื่นอาจยังใช้ชื่อเดิม + ประวัติยอดขายอ้างชื่อนี้
+        ("abyss",           "PKM Ghost"),
         ("chaos origins",   "YGH Chaos Origins"),
         ("limited over",    "YGH The Revals"),   # portal เรียก "Yuki oh Limited Over Collection"
         ("the revals",      "YGH The Revals"),   # เผื่อ portal เปลี่ยนเป็นชื่อจริงทีหลัง
