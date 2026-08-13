@@ -56,12 +56,6 @@ export default async function BranchesPage() {
            + จำนวนสาขาในบล็อกนี้นับจากฐานข้อมูลจริง ต่างจากในภาพที่เป็นเลขตายตัว */
         .bx-hero-text{position:absolute;width:1px;height:1px;padding:0;margin:-1px;
           overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0;}
-        /* 54px → 62px (+15%) → 93px (+50% อีกรอบ) ตามที่เจ้าของขอ
-           ⚠️ ไฟล์ต้นฉบับที่ได้มาเป็น 3000×3000 แต่ตัวโลโก้จริงกินแค่ 20.5% ที่เหลือเป็นขอบว่าง
-           ตั้ง height ตรง ๆ จะได้โลโก้ที่ *เห็นจริง* แค่ ~26px = เล็กลงกว่าเดิม ตรงข้ามกับที่สั่ง
-           จึงตัดขอบว่างออกก่อน (เหลือ 466×400) แล้วค่อยตั้งความสูง
-           ไฟล์เก็บไว้สูง 400px — แสดง 93px จึงยังเหลือความละเอียดเผื่อจอ retina 4 เท่า */
-        .bx-logo{height:93px;width:auto;margin-bottom:12px;filter:drop-shadow(0 0 14px var(--dx-glow));}
         .bx-title{font-size:clamp(24px,5vw,34px);font-weight:800;letter-spacing:-.5px;margin:0;}
         .bx-title b{color:var(--dx-cyan);}
         .bx-sub{color:var(--dx-cyan-soft);font-size:14px;margin-top:8px;font-weight:600;}
@@ -113,10 +107,11 @@ export default async function BranchesPage() {
             width="1339" height="674"
             alt="DivisionX Card — สาขาที่พร้อมให้บริการ · ตู้กดการ์ดเกมอัตโนมัติ เปิดตามเวลาห้าง" />
 
-          {/* บล็อกข้อความ — แสดงจริงบนจอเล็ก · จอกว้างซ่อนด้วยตาแต่ยังอยู่ให้ SEO อ่าน */}
+          {/* บล็อกข้อความ — ไม่แสดงให้เห็นแล้วทุกจอ (แบนเนอร์มีข้อความในตัว)
+              แต่ต้องคงไว้ใน DOM ให้ Google อ่าน · เก็บเฉพาะตัวที่มีค่าต่อ SEO
+              เคยมี <img> โลโก้อยู่ตรงนี้ด้วย — เอาออกแล้วเพราะไม่มีใครเห็น
+              แต่ยังโหลด 25 KB ทุกครั้ง และ alt ก็ไม่ได้บอกอะไรเกินกว่า <h1> กับ <title> */}
           <div className="bx-hero-text">
-            {/* โลโก้ขาวโปร่งใส — ใช้เฉพาะหน้านี้ หน้าอื่นยังใช้ /logo.png เดิม */}
-            <img className="bx-logo" src="/logo-white.png" alt="DivisionX Card" />
             <h1 className="bx-title">สาขาที่<b>พร้อมให้บริการ</b></h1>
             <div className="bx-sub">ตู้กดการ์ดเกมอัตโนมัติ · เปิดตามเวลาห้าง</div>
             <div className="bx-tag">รวดเร็ว · ปลอดภัย · ทันสมัย · {BRANCHES.length} สาขาในห้างชั้นนำ</div>
