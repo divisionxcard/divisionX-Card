@@ -149,6 +149,9 @@ def map_product_to_sku(product_name: str) -> str | None:
         ("chaos origins",   "YGH Chaos Origins"),
         ("limited over",    "YGH The Revals"),
         ("the revals",      "YGH The Revals"),
+        # 2026-08-13 หลังบ้าน WW แก้คำสะกดเป็น "Rivals" · ใส่ที่ VMS ด้วยเผื่อแก้ตามทีหลัง
+        # ⚠ ตู้ chukes ยังใช้ "Revals" อยู่ → ต้องรับทั้งสองคำ ห้ามลบบรรทัดบน
+        ("the rivals",      "YGH The Revals"),
         ("the heroes",      "YGH The Heroes"),
     ):
         if key in name:

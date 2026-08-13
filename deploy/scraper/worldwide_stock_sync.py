@@ -73,6 +73,9 @@ def map_goods_to_sku(goods_name: str) -> str | None:
         ("chaos origins",   "YGH Chaos Origins"),
         ("limited over",    "YGH The Revals"),   # portal เรียก "Yuki oh Limited Over Collection"
         ("the revals",      "YGH The Revals"),   # เผื่อ portal เปลี่ยนเป็นชื่อจริงทีหลัง
+        # 2026-08-13 หลังบ้าน WW แก้คำสะกดเป็น "Rivals" (ของเดิมสะกดผิด)
+        # ⚠ ตู้ chukes ยังใช้ "Revals" อยู่ → ต้องรับทั้งสองคำ ห้ามลบบรรทัดบน
+        ("the rivals",      "YGH The Revals"),
         ("the heroes",      "YGH The Heroes"),   # ⚠ raw name ยังไม่ verify (ยังไม่มาถึงตู้)
     ):
         if sub in lower:

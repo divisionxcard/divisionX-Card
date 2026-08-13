@@ -72,6 +72,8 @@ def map_name_to_sku(name: str) -> str | None:
         ("solo leveling", "SLL UA 51"),
         ("chaos",         "YGH Chaos Origins"),
         ("revals",        "YGH The Revals"),
+        # 2026-08-13 หลังบ้าน WW แก้คำสะกดเป็น "Rivals" · ใส่ที่ payif ด้วยเผื่อแก้ตามทีหลัง
+        ("rivals",        "YGH The Revals"),
         ("heroes",        "YGH The Heroes"),
     ):
         if sub in lower:

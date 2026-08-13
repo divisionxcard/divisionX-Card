@@ -101,6 +101,10 @@ def map_goods_to_sku(goods_name: str) -> str | None:
         ("chaos origins",   "YGH Chaos Origins"),
         ("limited over",    "YGH The Revals"),   # portal เรียก "Yuki oh Limited Over Collection"
         ("the revals",      "YGH The Revals"),   # เผื่อ portal เปลี่ยนเป็นชื่อจริงทีหลัง
+        # 2026-08-13 หลังบ้าน WW แก้คำสะกดเป็น "Rivals" (ของเดิมสะกดผิด)
+        # ⚠ ไฟล์นี้ทิ้งรายการขายทั้งแถวถ้า map ไม่ติด (บรรทัด "if not sku_id: continue")
+        #    ถ้าลืมบรรทัดนี้ = ยอดขายหายเงียบ ๆ ไม่มี error ให้เห็น
+        ("the rivals",      "YGH The Revals"),
         ("the heroes",      "YGH The Heroes"),   # ⚠ raw name ยังไม่ verify (ยังไม่มาถึงตู้)
     ):
         if sub in lower:
