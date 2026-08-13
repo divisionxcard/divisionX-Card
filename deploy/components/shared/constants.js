@@ -36,4 +36,42 @@ export const THAI_MONTHS = ["ม.ค.","ก.พ.","มี.ค.","เม.ย.","�
 
 export const SKU_SERIES_ORDER = { OP: 0, PRB: 1, EB: 2 }
 
+// ลำดับ SKU สำหรับ "รายงานเตรียมของเติมตู้" เท่านั้น (ไม่ใช้กับตารางทำงานหรือหน้าอื่น)
+// เรียงตามใบที่แอดมินใช้จริง เพราะคนเดินหยิบของไล่ตามลำดับนี้อยู่แล้ว
+// ถ้าเรียงตามตัวอักษร EB จะขึ้นก่อน OP และ B29 ขึ้นก่อน FB ซึ่งสวนทางกับการหยิบของจริง
+//
+// ⚠️ SKU ที่ไม่อยู่ในรายการนี้ "ไม่หาย" — จะไปต่อท้ายเรียงตามตัวอักษร
+//    (จงใจ เพื่อให้สินค้าใหม่ยังโผล่ในรายงานแม้ยังไม่ได้มาเพิ่มลำดับตรงนี้)
+export const REFILL_REPORT_SKU_ORDER = [
+  // ── One Piece ──
+  "OP 01", "OP 02", "OP 03", "OP 04", "OP 05", "OP 06", "OP 07", "OP 08",
+  "OP 09", "OP 10", "OP 11", "OP 12", "OP 13", "OP 14", "OP 15", "OP 16",
+  "PRB 01", "PRB 02",
+  "EB 01", "EB 02", "EB 03", "EB 04",
+  // ── Dragon Ball ── (FB 10-15 ปิดใช้งานอยู่ · ใส่ไว้ให้ลำดับถูกถ้าเปิดกลับมา)
+  "FB 01", "FB 02", "FB 03", "FB 04", "FB 05", "FB 06", "FB 07", "FB 08", "FB 09",
+  "FB 10", "FB 11", "FB 12", "FB 13", "FB 14", "FB 15",
+  "B29",
+  // ── Naruto ──
+  "NRT Jin - 1", "NRT Jin - 2", "NRT Series - 01", "NRT Series - 02",
+  // ── Pokemon ──
+  "PKM Dream EX",   // ใบแอดมินเขียน "Mega Dream"
+  "PKM Ghost",      // ใบแอดมินเขียน "M5 Abyss Eye"
+  "PKM Ninja",
+  // ── Solo Leveling ──
+  "SLL UA 51",      // ใบแอดมินเขียน "Ua01"
+  // ── Yu-Gi-Oh ──
+  "YGH Chaos Origins",
+  "YGH The Revals", // ชื่อจริงตอนนี้คือ "Yu-Gi-Oh The Rivals" (sku_id ยังเป็นคำเดิม)
+  "YGH UT01",
+  "YGH The Heroes", // ไม่มีในใบแอดมิน — ต่อท้ายกลุ่มไว้ไม่ให้ตกหล่น
+  // ── Mobile Legends ──
+  "MLBB HOD - 02",  // ใบแอดมินเขียน "HOD002"
+  // ── Transformers ──
+  "TF Overdrive 01",
+  // ── My Little Pony ──
+  "MLP SEA02",
+  "MLP BP-01",      // ใบแอดมินเขียน "Booster Pack 01"
+]
+
 export const UNIT_LABEL = { pack: "ซอง", box: "กล่อง", cotton: "Cotton" }

@@ -4,7 +4,7 @@ import {
   AlertTriangle, CheckCircle, X, Monitor,
   Boxes, Package, RefreshCw, Loader2, Printer,
 } from "lucide-react"
-import { fmt, getSkuSeries } from "../shared/helpers"
+import { fmt, getSkuSeries, compareSkuForRefillReport } from "../shared/helpers"
 import { SKU_SERIES_ORDER } from "../shared/constants"
 import { KpiCard, SectionTitle } from "../shared/dx-components"
 
@@ -268,11 +268,8 @@ export default function PageRefillPrep({ machines, machineStock, machineAssignme
       .map(([machId, items]) => ({
         machId,
         name: machineNameMap[machId] || machId,
-        items: items.sort((a, b) => {
-          const sa = SKU_SERIES_ORDER[getSkuSeries(a.sku_id)] ?? 9
-          const sb = SKU_SERIES_ORDER[getSkuSeries(b.sku_id)] ?? 9
-          return sa - sb || (a.sku_id || "").localeCompare(b.sku_id || "")
-        }),
+        // ลำดับตามใบที่แอดมินใช้จริง — เฉพาะรายงาน · ตารางทำงานด้านบนยังเรียงแบบเดิม
+        items: items.sort((a, b) => compareSkuForRefillReport(a.sku_id, b.sku_id)),
         totalPacks: items.reduce((a, r) => {
           const sku = skus.find(s => s.sku_id === r.sku_id)
           return a + (r.isBox ? getQty(r) * (sku?.packs_per_box || 24) : getQty(r))
@@ -317,12 +314,10 @@ export default function PageRefillPrep({ machines, machineStock, machineAssignme
         const packs = r.isBox ? qty * ppb : qty
         return { ...r, qty, packs }
       })
-      // sort · pack ก่อน, box ล่างสุด · ในแต่ละ type: series + sku_id
+      // sort · pack ก่อน, box ล่างสุด (คงไว้เหมือนเดิม) · ในแต่ละกลุ่มเรียงตามใบแอดมิน
       .sort((a, b) => {
         if (a.isBox !== b.isBox) return a.isBox ? 1 : -1
-        const sa = SKU_SERIES_ORDER[getSkuSeries(a.sku_id)] ?? 9
-        const sb = SKU_SERIES_ORDER[getSkuSeries(b.sku_id)] ?? 9
-        return sa - sb || (a.sku_id || "").localeCompare(b.sku_id || "")
+        return compareSkuForRefillReport(a.sku_id, b.sku_id)
       })
 
       if (enriched.length === 0) return ""

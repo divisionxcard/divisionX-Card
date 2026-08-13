@@ -1,4 +1,4 @@
-import { THAI_MONTHS, SKU_SERIES_ORDER } from "./constants"
+import { THAI_MONTHS, SKU_SERIES_ORDER, REFILL_REPORT_SKU_ORDER } from "./constants"
 
 export const fmt   = (n) => (n ?? 0).toLocaleString("th-TH")
 export const fmtB  = (n) => `฿${(n ?? 0).toLocaleString("th-TH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
@@ -21,6 +21,15 @@ export const getSkuSeries = (skuId) => {
   if (skuId.startsWith("PRB")) return "PRB"
   if (skuId.startsWith("EB"))  return "EB"
   return "ZZ"
+}
+
+// เทียบลำดับ SKU ตามใบที่แอดมินใช้ — ใช้เฉพาะรายงานเตรียมของเติมตู้
+// ตัวที่ไม่อยู่ในรายการไปต่อท้าย เรียงตามตัวอักษรกันเอง (สินค้าใหม่จะไม่หายจากรายงาน)
+const REFILL_ORDER_INDEX = Object.fromEntries(REFILL_REPORT_SKU_ORDER.map((s, i) => [s, i]))
+export const compareSkuForRefillReport = (a, b) => {
+  const ia = REFILL_ORDER_INDEX[a] ?? Number.MAX_SAFE_INTEGER
+  const ib = REFILL_ORDER_INDEX[b] ?? Number.MAX_SAFE_INTEGER
+  return ia - ib || (a || "").localeCompare(b || "")
 }
 
 export const sortSkus = (list) => [...list].sort((a, b) => {
