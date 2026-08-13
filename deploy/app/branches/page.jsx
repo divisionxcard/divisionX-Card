@@ -36,27 +36,26 @@ export default async function BranchesPage() {
     <main style={{ minHeight: "100vh", background: "var(--dx-bg-page)", color: "var(--dx-text)", fontFamily: "var(--dx-font)" }}>
       <style dangerouslySetInnerHTML={{ __html: `
         .bx-wrap{max-width:1080px;margin:0 auto;padding:28px 18px 60px;}
-        .bx-hero{position:relative;text-align:center;padding:30px 16px 26px;border-radius:20px;overflow:hidden;
+        .bx-hero{position:relative;text-align:center;padding:0;border-radius:20px;overflow:hidden;
           background:radial-gradient(120% 130% at 50% -20%, rgba(0,212,255,.18), rgba(0,212,255,0) 60%), var(--dx-bg-surface);
           border:1px solid var(--dx-border-strong);margin-bottom:24px;}
         .bx-hero::after{content:"";position:absolute;left:0;right:0;bottom:0;height:2px;
           background:linear-gradient(90deg,transparent,var(--dx-cyan),transparent);opacity:.7;}
 
-        /* ══ แบนเนอร์ที่เจ้าของออกแบบเอง — ใช้เฉพาะจอกว้าง ══
+        /* ══ แบนเนอร์ที่เจ้าของออกแบบเอง — ใช้ทุกขนาดจอ ══
            ภาพมีตัวหนังสือฝังอยู่ในตัว (พาดหัว/ไอคอน/เบอร์ติดต่อ) จึงมาแทนบล็อกข้อความทั้งก้อน
-           ⚠️ แต่ **จอเล็กใช้ไม่ได้** — ภาพอัตราส่วน 1.99:1 พอย่อลงกล่องกว้าง 354px
-           พาดหัวจะเหลือ ~16px และบรรทัดเล็กเหลือ ~8px คืออ่านไม่ออก
-           ลูกค้าส่วนใหญ่เปิดหน้านี้จากมือถือตอนยืนอยู่ในห้าง จึงคงบล็อกข้อความ HTML ไว้ให้จอเล็ก
-           (ตัวหนังสือจริงย่อ-ขยายได้ ภาพทำไม่ได้) */
-        .bx-hero-img{display:none;}
-        @media (min-width:720px){
-          .bx-hero{padding:0;}
-          .bx-hero-img{display:block;width:100%;height:auto;}
-          /* ซ่อนด้วยตา แต่ยังอยู่ในผังสำหรับ screen reader และ SEO —
-             ใช้ display:none ไม่ได้ จะทำให้ h1 หายไปจาก Google ด้วย */
-          .bx-hero-text{position:absolute;width:1px;height:1px;padding:0;margin:-1px;
-            overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0;}
-        }
+           ⚠️ บนมือถือตัวหนังสือในภาพเล็กมาก — ภาพ 1.99:1 ย่อลงกล่องกว้าง 354px เหลือ 26%
+           พาดหัวเหลือ ~16px · บรรทัดเล็กเหลือ ~8px และซูมไม่ได้เพราะเป็นภาพ
+           เดิมจึงซ่อนภาพบนจอ <720px แล้วโชว์ข้อความ HTML แทน
+           แต่เจ้าของเห็นตัวเลขแล้วเลือกให้โชว์ภาพทุกจอ (2026-08-13) — คงไว้ตามนั้น
+           ถ้าจะให้อ่านออกบนมือถือจริง ต้องมีภาพเวอร์ชันมือถือแยก (อัตราส่วน ~1.2:1 ตัวหนังสือใหญ่ขึ้น ~4 เท่า) */
+        .bx-hero-img{display:block;width:100%;height:auto;}
+        /* บล็อกข้อความไม่แสดงให้เห็นแล้วทุกจอ แต่ต้องคงไว้ใน DOM
+           ⚠️ ซ่อนด้วย clip ไม่ใช่ display:none — display:none จะทำให้ <h1> หายจากที่ Google อ่าน
+           = เสีย SEO ของหน้าสาธารณะ (ตัวหนังสือที่ฝังในภาพ Google อ่านไม่ออก)
+           + จำนวนสาขาในบล็อกนี้นับจากฐานข้อมูลจริง ต่างจากในภาพที่เป็นเลขตายตัว */
+        .bx-hero-text{position:absolute;width:1px;height:1px;padding:0;margin:-1px;
+          overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0;}
         /* 54px → 62px (+15%) → 93px (+50% อีกรอบ) ตามที่เจ้าของขอ
            ⚠️ ไฟล์ต้นฉบับที่ได้มาเป็น 3000×3000 แต่ตัวโลโก้จริงกินแค่ 20.5% ที่เหลือเป็นขอบว่าง
            ตั้ง height ตรง ๆ จะได้โลโก้ที่ *เห็นจริง* แค่ ~26px = เล็กลงกว่าเดิม ตรงข้ามกับที่สั่ง
@@ -103,9 +102,14 @@ export default async function BranchesPage() {
       <div className="bx-wrap">
         {/* Hero */}
         <header className="bx-hero">
-          {/* แบนเนอร์สำหรับจอกว้าง — ตัวหนังสือฝังในภาพ จึงต้องใส่ alt ให้ครบความหมาย
-              ไม่ใช้ next/image เพราะหน้านี้เป็น static + ISR ภาพเดียวคงที่ ไม่ได้อะไรเพิ่ม */}
+          {/* แบนเนอร์ — ตัวหนังสือฝังในภาพ จึงต้องใส่ alt ให้ครบความหมาย
+              ไม่ใช้ next/image เพราะหน้านี้เป็น static + ISR ภาพเดียวคงที่ ไม่ได้อะไรเพิ่ม
+              srcSet: มือถือกล่องกว้างแค่ 354px ถ้าส่งไฟล์ 1339px ไปคือจ่าย 252 KB เพื่อแสดง 354px
+              ตัว 800w (105 KB) พอสำหรับจอ DPR2 → ประหยัด 147 KB บนเน็ตในห้าง
+              sizes อิงสูตรกล่องจริง: min(1080, 100vw) − 36 (padding ของ .bx-wrap ข้างละ 18) */}
           <img className="bx-hero-img" src="/branches-hero.jpg"
+            srcSet="/branches-hero-800.jpg 800w, /branches-hero.jpg 1339w"
+            sizes="(min-width:1116px) 1044px, calc(100vw - 36px)"
             width="1339" height="674"
             alt="DivisionX Card — สาขาที่พร้อมให้บริการ · ตู้กดการ์ดเกมอัตโนมัติ เปิดตามเวลาห้าง" />
 
