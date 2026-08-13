@@ -81,6 +81,12 @@ def map_goods_to_sku(goods_name: str) -> str | None:
         # ⚠ ตู้ chukes ยังใช้ "Revals" อยู่ → ต้องรับทั้งสองคำ ห้ามลบบรรทัดบน
         ("the rivals",      "YGH The Revals"),
         ("the heroes",      "YGH The Heroes"),   # ⚠ raw name ยังไม่ verify (ยังไม่มาถึงตู้)
+        # ── สินค้าใหม่ 2026-08-13 · ตอนนี้อยู่แค่ตู้ chukes ใส่ไว้เผื่อมาลง WW ──
+        # ⚠ MLP มี 2 ไลน์แล้ว (SEA / BP) ถ้ามีชุดใหม่ตามมาให้เปลี่ยนเป็น regex ที่บังคับมีเลข
+        ("pony sea02",      "MLP SEA02"),
+        ("pony bp-01",      "MLP BP-01"),
+        ("overdrive",       "TF Overdrive 01"),
+        ("ut01",            "YGH UT01"),
     ):
         if sub in lower:
             return sku

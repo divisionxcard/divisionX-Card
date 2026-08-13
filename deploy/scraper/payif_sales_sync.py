@@ -57,6 +57,8 @@ PACKS_PER_BOX = {
     "PKM Dream EX": 10, "PKM Ninja": 30, "PKM Ghost": 30,
     "SLL UA 51": 16,
     "YGH The Heroes": 15, "YGH The Revals": 15, "YGH Chaos Origins": 30,
+    # สินค้าใหม่ 2026-08-13 (ตอนนี้อยู่แค่ตู้ chukes) — เจ้าของยืนยันตัวเลขเอง
+    "YGH UT01": 15, "TF Overdrive 01": 15, "MLP SEA02": 30, "MLP BP-01": 20,
 }
 
 # format วันที่ของ Vendos (จาก static config.js)

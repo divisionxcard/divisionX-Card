@@ -156,6 +156,14 @@ def map_product_to_sku(product_name: str) -> str | None:
         # ⚠ ตู้ chukes ยังใช้ "Revals" อยู่ → ต้องรับทั้งสองคำ ห้ามลบบรรทัดบน
         ("the rivals",      "YGH The Revals"),
         ("the heroes",      "YGH The Heroes"),
+        # ── สินค้าใหม่ 2026-08-13 (ลงตู้ chukes01-03 · ช่องซอง ความจุ 12) ──
+        # ⚠ MLP มี 2 ไลน์แล้ว (SEA / BP) ถ้าวันหน้ามี SEA03, BP-02 ตามมา
+        #    ให้เลิกใช้ substring แล้วเปลี่ยนเป็น regex ที่บังคับมีเลขชุด
+        #    ไม่งั้นชุดใหม่จะถูกชุดเก่ากลืน แบบเดียวกับที่เคยเกิดกับ Naruto Jin
+        ("pony sea02",      "MLP SEA02"),
+        ("pony bp-01",      "MLP BP-01"),
+        ("overdrive",       "TF Overdrive 01"),
+        ("ut01",            "YGH UT01"),
     ):
         if key in name:
             return sku

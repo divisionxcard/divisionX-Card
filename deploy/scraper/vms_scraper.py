@@ -35,6 +35,8 @@ PACKS_PER_BOX = {
     "SLL UA 51": 16,
     # YGH ขายที่ตู้ VMS ด้วย — Chaos Origins 30 ซอง/กล่อง (2026-07-29)
     "YGH The Heroes": 15, "YGH The Revals": 15, "YGH Chaos Origins": 30,
+    # สินค้าใหม่ 2026-08-13 (ตู้ chukes01-03) — เจ้าของยืนยันตัวเลขเอง
+    "YGH UT01": 15, "TF Overdrive 01": 15, "MLP SEA02": 30, "MLP BP-01": 20,
 }
 
 # ── VMS Product Name → SKU ID Mapping ───────────────────────────

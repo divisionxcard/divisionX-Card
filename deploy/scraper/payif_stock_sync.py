@@ -77,6 +77,11 @@ def map_name_to_sku(name: str) -> str | None:
         # 2026-08-13 หลังบ้าน WW แก้คำสะกดเป็น "Rivals" · ใส่ที่ payif ด้วยเผื่อแก้ตามทีหลัง
         ("rivals",        "YGH The Revals"),
         ("heroes",        "YGH The Heroes"),
+        # ── สินค้าใหม่ 2026-08-13 · ตอนนี้อยู่แค่ตู้ chukes ใส่ไว้เผื่อมาลง pf ──
+        ("pony sea02",    "MLP SEA02"),
+        ("pony bp-01",    "MLP BP-01"),
+        ("overdrive",     "TF Overdrive 01"),
+        ("ut01",          "YGH UT01"),
     ):
         if sub in lower:
             return sku
