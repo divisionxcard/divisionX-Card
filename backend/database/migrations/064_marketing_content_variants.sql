@@ -21,3 +21,4 @@ ALTER TABLE marketing_content
 
 COMMENT ON COLUMN marketing_content.variants IS
   'แคปชั่นสำหรับช่องทางอื่นจากเรื่องเดียวกัน {ig,tiktok,script} · caption = ตัวหลัก (Facebook)';
+
