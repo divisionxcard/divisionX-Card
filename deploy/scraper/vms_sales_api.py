@@ -53,6 +53,23 @@ DIRECT_MAP = {
     "naruto jin1":     "NRT Jin - 1",
     "pokemon maga ex": "PKM Dream EX",
     "solo leveling":   "SLL UA 51",
+    # ── mirror vms_stock_sync.py — ไฟล์นี้เคยตกหล่นจนยอดขายถูกทิ้งทั้งแถว ──
+    # ตู้ VMS ส่ง 'Pokemon Ghost ' (มีช่องว่างท้าย) · strip() ในฟังก์ชันจัดการแล้ว
+    "pokemon ghost":   "PKM Ghost",
+    "abyss":           "PKM Ghost",   # 2026-08-13 หลังบ้านเปลี่ยนชื่อเป็น M5 Abyss Eye
+    "chaos origins":   "YGH Chaos Origins",
+    "limited over":    "YGH The Revals",
+    "the revals":      "YGH The Revals",
+    # ⚠ ตู้ chukes ยังสะกด "Revals" · WW แก้เป็น "Rivals" แล้ว → ต้องรับทั้งสองคำ
+    "the rivals":      "YGH The Revals",
+    "the heroes":      "YGH The Heroes",
+    # ── สินค้าใหม่ 2026-08-13 (chukes01-04 + wwv03/04) ──
+    # ⚠ MLP มี 2 ไลน์แล้ว (SEA / BP) ถ้ามี SEA03 หรือ BP-02 ตามมา
+    #    ต้องเลิก substring เปลี่ยนเป็น regex ที่บังคับมีเลขชุด ไม่งั้นชุดใหม่ถูกชุดเก่ากลืน
+    "pony sea02":      "MLP SEA02",
+    "pony bp-01":      "MLP BP-01",
+    "overdrive":       "TF Overdrive 01",
+    "ut01":            "YGH UT01",
 }
 
 def map_product_to_sku(product_name: str) -> str | None:

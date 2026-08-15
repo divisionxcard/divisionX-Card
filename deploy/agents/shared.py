@@ -57,6 +57,19 @@ def map_product_to_sku(product_name: str) -> str | None:
         ("naruto jin1",     "NRT Jin - 1"),
         ("pokemon maga ex", "PKM Dream EX"),
         ("solo leveling",   "SLL UA 51"),
+        # ── mirror vms_stock_sync.py ──
+        ("pokemon ghost",   "PKM Ghost"),
+        ("abyss",           "PKM Ghost"),   # 2026-08-13 เปลี่ยนชื่อเป็น M5 Abyss Eye
+        ("chaos origins",   "YGH Chaos Origins"),
+        ("limited over",    "YGH The Revals"),
+        ("the revals",      "YGH The Revals"),
+        ("the rivals",      "YGH The Revals"),  # WW แก้คำสะกด · chukes ยังใช้ Revals
+        ("the heroes",      "YGH The Heroes"),
+        # ── สินค้าใหม่ 2026-08-13 · MLP มี 2 ไลน์ (SEA/BP) ดูคำเตือนใน vms_stock_sync.py ──
+        ("pony sea02",      "MLP SEA02"),
+        ("pony bp-01",      "MLP BP-01"),
+        ("overdrive",       "TF Overdrive 01"),
+        ("ut01",            "YGH UT01"),
     ):
         if key in name:
             return sku
