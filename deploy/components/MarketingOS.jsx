@@ -80,6 +80,28 @@ function thaiAgo(iso) {
   return `${Math.floor(hrs / 24)} วันที่แล้ว`
 }
 
+// ผลตรวจจาก AI ผู้ตรวจ (Hermes อ่านทุกชิ้นก่อนเจ้าของ · migration 066)
+// สีสื่อความหมายอย่างเดียวไม่พอ — ใส่คำไทยกำกับด้วย เพราะเจ้าของอ่านบนมือถือกลางแดดบ่อย
+const VERDICT = {
+  pass: { label: "ผ่าน — โพสต์ได้เลย",  icon: Check,         cls: "text-emerald-700 bg-emerald-50 border-emerald-200" },
+  fix:  { label: "ควรแก้ก่อนโพสต์",     icon: AlertTriangle, cls: "text-orange-700 bg-orange-50 border-orange-200" },
+  drop: { label: "ไม่ควรใช้ชิ้นนี้",    icon: X,             cls: "text-rose-700 bg-rose-50 border-rose-200" },
+}
+
+function ReviewNote({ verdict, notes }) {
+  const v = VERDICT[verdict]
+  if (!v) return null                      // verdict แปลก ๆ = ไม่แสดงดีกว่าแสดงผิด
+  const Icon = v.icon
+  return (
+    <div className={`text-xs rounded-lg border px-2.5 py-1.5 mb-2 ${v.cls}`}>
+      <div className="flex items-center gap-1.5 font-medium">
+        <Icon size={13} /> ผู้ตรวจ: {v.label}
+      </div>
+      {notes && <p className="mt-1 leading-relaxed whitespace-pre-wrap opacity-90">{notes}</p>}
+    </div>
+  )
+}
+
 export default function MarketingOS() {
   const [token, setToken] = useState(null)
   const [authState, setAuthState] = useState("checking")   // checking | ok | anon | forbidden
@@ -720,6 +742,28 @@ export default function MarketingOS() {
             <span className="px-2 py-0.5 rounded-full bg-blue-600 text-white text-xs">{pending.length}</span>
           </h2>
 
+          {/* สรุปผลตรวจของทั้งกล่อง — ให้รู้ตั้งแต่ยังไม่เลื่อนว่าเหลือของดีให้หยิบกี่ชิ้น
+              นับจากที่ตรวจแล้วเท่านั้น ที่ยังไม่ตรวจไม่นับ จะได้ไม่หลอกตาว่าเคลียร์แล้ว */}
+          {pending.some(i => i.review_verdict) && (
+            <div className="flex flex-wrap items-center gap-2 mb-3 text-xs">
+              {["pass", "fix", "drop"].map(k => {
+                const n = pending.filter(i => i.review_verdict === k).length
+                if (!n) return null
+                const V = VERDICT[k]
+                return (
+                  <span key={k} className={`px-2 py-1 rounded-lg border ${V.cls}`}>
+                    {V.label} · {n}
+                  </span>
+                )
+              })}
+              {pending.some(i => !i.review_verdict) && (
+                <span className="px-2 py-1 rounded-lg border border-gray-200 bg-gray-50 text-gray-500">
+                  ยังไม่ได้ตรวจ · {pending.filter(i => !i.review_verdict).length}
+                </span>
+              )}
+            </div>
+          )}
+
           {pending.length === 0 ? (
             <div className="bg-white rounded-2xl border border-gray-100 p-8 text-center">
               <Check className="mx-auto text-green-500 mb-2" size={28} />
@@ -935,6 +979,13 @@ export default function MarketingOS() {
                     <p className="text-xs text-amber-700 bg-amber-50 rounded-lg px-2.5 py-1.5 mb-2">
                       💡 จาก: {item.source_reason}
                     </p>
+                  )}
+
+                  {/* ผลตรวจจาก AI ผู้ตรวจ (Hermes) — อ่านก่อนตัดสินใจ
+                      วางไว้เหนือปุ่มโดยตั้งใจ: เห็นข้อท้วงติงก่อนนิ้วไปถึงปุ่มอนุมัติ
+                      ⚠ เป็นแค่ความเห็น ไม่ได้เปลี่ยนสถานะอะไร เจ้าของยังตัดสินเองทุกชิ้น */}
+                  {item.review_verdict && (
+                    <ReviewNote verdict={item.review_verdict} notes={item.review_notes} />
                   )}
 
                   {/* ลิงก์ต้นทางอยู่ตรงนี้ ไม่ใช่ในตัวแคปชั่น — URL ข่าวยาวมากจนอ่านแคปชั่นไม่ออก */}
