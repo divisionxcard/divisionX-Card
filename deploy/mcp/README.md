@@ -67,6 +67,33 @@ openclaw mcp reload    # หลังแก้โค้ด server — ให้ 
 
 > ถ้าย้าย repo ต้องแก้ path ทั้งใน `openclaw.json` (ผ่าน `openclaw mcp set`) และ `.mcp.json`
 
+### Hermes Agent (ต่อไว้แล้ว 2026-08-17)
+
+config อยู่ที่ `C:\Users\choog\AppData\Local\hermes\config.yaml` (Windows ไม่ใช่ `~/.hermes`):
+
+```yaml
+mcp_servers:
+  divisionx:
+    command: py
+    args: ['-3', 'c:/Projects/divisionX Card/deploy/mcp/dvx_mcp_server.py']
+    enabled: true
+    connect_timeout: 60
+    tools:
+      exclude: [sync_data]      # เริ่มแบบอ่านอย่างเดียว · เอาออกเมื่อพร้อมให้สั่ง sync
+```
+
+**ไม่ต้องตั้ง `cwd` หรือ `env`** — [envload.py](../agents/envload.py) หา `deploy/.env.local` จากตำแหน่งไฟล์ตัวเอง
+(ต่างจาก OpenClaw ที่ต้องระบุ `--cwd`)
+
+```bash
+hermes mcp list            # ควรขึ้น divisionx · ✓ enabled
+hermes mcp test divisionx  # ควรขึ้น Connected + Tools discovered: 6
+hermes tools list          # ยืนยันว่า [excluded: sync_data] จริง
+```
+
+ในแชทพิมพ์ `/reload-mcp` หลังแก้โค้ด server · ตัว `hermes mcp add` ถามยืนยันแบบ interactive
+รันจาก agent ไม่ได้ — แก้ `config.yaml` ตรง ๆ เร็วกว่าและได้ `exclude` ตั้งแต่แรก
+
 ## ทดสอบมือ
 
 รัน server แล้วคุยผ่าน MCP client:
