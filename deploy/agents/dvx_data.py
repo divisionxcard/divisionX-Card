@@ -692,9 +692,13 @@ def query_post_performance(days=30, min_sample=10):
         "from_system": sum(1 for p in posts if p["from_system"]),
         "avg_reactions": avg(posts, "reactions"),
         "avg_reactions_24h": avg(posts, "reactions_24h"),
-        "by_format": {k: {"posts": len(v), "avg_reactions": avg(v, "reactions")}
+        # enough = ช่องนี้มีโพสต์พอจะเชื่อได้ไหม — ค่าเฉลี่ยจาก 1-2 โพสต์คือความบังเอิญ
+        # ไม่ใช่ข้อสรุป · ตัดสินใจจากมันคือวิธีสร้างความมั่นใจผิด ๆ ที่ดูมีข้อมูลรองรับ
+        "by_format": {k: {"posts": len(v), "avg_reactions": avg(v, "reactions"),
+                          "enough": len(v) >= 3}
                       for k, v in sorted(by_format.items())},
-        "by_hour_th": {str(k): {"posts": len(v), "avg_reactions": avg(v, "reactions")}
+        "by_hour_th": {str(k): {"posts": len(v), "avg_reactions": avg(v, "reactions"),
+                                "enough": len(v) >= 3}
                        for k, v in sorted(by_hour.items())},
         "top": posts[:10],
         "note": (
@@ -703,6 +707,8 @@ def query_post_performance(days=30, min_sample=10):
             "อย่าเปลี่ยนกลยุทธ์จากตัวเลขชุดนี้"
             if n < min_sample else
             "reactions_24h คือตัวเทียบที่ยุติธรรมข้ามโพสต์ ส่วน reactions คือยอดสะสมถึงตอนนี้ "
+            "(เป็น null ถ้าเริ่มเก็บหลังโพสต์ไปนานแล้ว — จะมีค่าเฉพาะโพสต์ที่เก็บตั้งแต่วันแรก) "
+            "· ช่องที่ enough=false มีโพสต์น้อยกว่า 3 ชิ้น ห้ามใช้สรุปว่าเวลาไหน/รูปแบบไหนดีกว่า "
             "· ไม่มี reach เพราะ Meta ปลด metric ออกจาก Graph API แล้ว"
         ),
     }
