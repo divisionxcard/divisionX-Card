@@ -1,0 +1,62 @@
+name: Marketing Auto Post
+
+# โพสต์คอนเทนต์ที่เจ้าของอนุมัติแล้วและถึงเวลาที่วางไว้ในปฏิทิน
+#
+# รันบนคลาวด์โดยตั้งใจ — โพสต์ต้องขึ้นตามเวลาแม้คอมที่บ้านปิดอยู่
+# ตัวตัดสินใจว่าโพสต์ชิ้นไหนอยู่ฝั่งเว็บ (/api/marketing/content/publish-due)
+# workflow นี้เป็นแค่ตัวจับเวลาที่ไปเคาะประตู
+#
+# ปิดอยู่โดยปริยาย: ถ้าไม่มี secret AUTOPOST_SECRET ปลายทางจะตอบ 503 แล้วไม่โพสต์อะไร
+# เปิดใช้ = ตั้ง secret ทั้งฝั่ง GitHub และ env บน Vercel ให้ค่าตรงกัน
+
+on:
+  schedule:
+    # ทุก 15 นาที — ความคลาดเคลื่อนสูงสุด 15 นาทีจากเวลาที่ตั้งไว้ ซึ่งพอสำหรับโพสต์เพจ
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "ทดสอบ (อัปรูปขึ้น FB แต่ไม่เผยแพร่ · ไม่แตะฐานข้อมูล)"
+        required: false
+        default: "false"
+
+jobs:
+  post:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 5
+    steps:
+      - name: เคาะปลายทางให้โพสต์ของที่ถึงคิว
+        env:
+          SECRET: ${{ secrets.AUTOPOST_SECRET }}
+          DRY: ${{ github.event.inputs.dry_run }}
+        run: |
+          if [ -z "$SECRET" ]; then
+            echo "ยังไม่ได้ตั้ง secret AUTOPOST_SECRET — ข้ามรอบนี้ (ยังไม่เปิดใช้โพสต์อัตโนมัติ)"
+            exit 0
+          fi
+          body='{"dryRun":false}'
+          [ "$DRY" = "true" ] && body='{"dryRun":true}'
+
+          # -sS = เงียบแต่ยังโชว์ error · แยก body กับ status code ออกจากกันเพื่ออ่านทั้งคู่
+          out=$(curl -sS -w '\n%{http_code}' -X POST \
+            -H "Authorization: Bearer $SECRET" \
+            -H "Content-Type: application/json" \
+            -d "$body" \
+            "https://division-x-card.vercel.app/api/marketing/content/publish-due")
+          code=$(echo "$out" | tail -1)
+          json=$(echo "$out" | sed '$d')
+          echo "HTTP $code"
+          echo "$json"
+
+          # 503 = ยังไม่ได้เปิดใช้ (ไม่มี secret ฝั่ง Vercel หรือยังไม่ตั้ง FB) — ไม่ใช่ความล้มเหลว
+          if [ "$code" = "503" ]; then
+            echo "ปลายทางยังไม่พร้อม — ไม่ถือว่าล้มเหลว"
+            exit 0
+          fi
+          [ "$code" = "200" ] || { echo "::error::publish-due ตอบ HTTP $code"; exit 1; }
+
+          # โพสต์ขึ้นเพจแล้วแต่บันทึก DB ไม่สำเร็จ = ต้องมีคนไปแก้มือ ห้ามให้ผ่านเงียบ ๆ
+          echo "$json" | grep -q '"needsManualFix":true' \
+            && { echo "::error::มีชิ้นที่ขึ้นเพจแล้วแต่บันทึกฐานข้อมูลไม่สำเร็จ — ต้องแก้มือ อย่ายิงซ้ำ"; exit 1; }
+
+          echo "$json" | grep -q '"failed":0' || echo "::warning::มีชิ้นที่โพสต์ไม่สำเร็จในรอบนี้"

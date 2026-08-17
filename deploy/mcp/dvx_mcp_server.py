@@ -213,6 +213,42 @@ def review_content(content_id: int, verdict: str, notes: str) -> dict:
 
 
 @server.tool(
+    description="แผนการโพสต์ข้างหน้า + คอนเทนต์ที่อนุมัติแล้วแต่ยังไม่มีวัน "
+                "ใช้ก่อนวางแผนทุกครั้ง เพื่อไม่ให้ตั้งเวลาทับของเดิมหรือลืมของที่รออยู่",
+    annotations=READ_ONLY,
+)
+def get_post_plan(days: int = 14, include_unscheduled: bool = True) -> dict:
+    """
+    Args:
+        days: มองไปข้างหน้ากี่วัน
+        include_unscheduled: เอาของที่อนุมัติแล้วแต่ยังไม่มีวันมาด้วย (default True)
+    """
+    try:
+        return data.query_post_plan(days=days, include_unscheduled=include_unscheduled)
+    except Exception as e:
+        return _fail(e)
+
+
+@server.tool(
+    description="กำหนดเวลาโพสต์ให้คอนเทนต์ 1 ชิ้น (เวลาไทย) — ถึงเวลาแล้วระบบจะโพสต์ขึ้นเพจเอง "
+                "ถ้าเจ้าของอนุมัติชิ้นนั้นแล้ว · กันตั้งเวลาย้อนหลังและกันตั้งชนกันให้อยู่แล้ว "
+                "เรียก get_post_plan ดูแผนก่อนเสมอ",
+    annotations=WRITES,
+)
+def schedule_content(content_id: int, when: str, force: bool = False) -> dict:
+    """
+    Args:
+        content_id: id ของคอนเทนต์
+        when: เวลาไทยรูปแบบ 'YYYY-MM-DD HH:MM' เช่น '2026-08-18 19:30'
+        force: ข้ามการกันตั้งชนกัน/ข้ามคำค้านของผู้ตรวจ — ใช้เมื่อเจ้าของสั่งเองเท่านั้น
+    """
+    try:
+        return data.schedule_content(content_id, when, force=force)
+    except Exception as e:
+        return _fail(e)
+
+
+@server.tool(
     description="ผลรัน sync ล่าสุด — ใช้เช็คว่างานที่สั่งไปด้วย sync_data เสร็จหรือยัง "
                 "และรอบ cron ที่ผ่านมาสำเร็จไหม",
     annotations=READ_ONLY,

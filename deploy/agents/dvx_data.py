@@ -551,3 +551,137 @@ def save_content_review(content_id, verdict, notes, reviewer="hermes"):
         raise DvxError(f"ไม่เจอคอนเทนต์ id={content_id}")
     return {"saved": True, "id": out[0]["id"], "verdict": verdict,
             "note": "บันทึกความเห็นแล้ว — สถานะยังเป็นของเดิม รอคนตัดสินใจขั้นสุดท้าย"}
+
+
+# ── ปฏิทินโพสต์ ─────────────────────────────────────────────────────────
+# เวลาที่ตั้งไว้จะถูกโพสต์ขึ้นเพจอัตโนมัติเมื่อถึงกำหนด (workflow marketing-autopost)
+# จึงต้องกันเวลาย้อนหลังและกันตั้งชนกันไว้ที่ชั้นนี้ ไม่ใช่ไปหวังว่า agent จะคิดเอง
+MIN_GAP_MINUTES = 45        # โพสต์ติดกันเกินนี้คนตามอ่านไม่ทัน และดูเหมือนสแปม
+
+
+def _iso_z(dt):
+    """datetime → '2026-08-17T08:30:00Z' — ใช้ในสตริง query เท่านั้น
+    ⚠ ห้ามใช้ isoformat() ตรง ๆ ใน query: '+00:00' จะถูกตีความเป็นช่องว่าง
+      แล้ว PostgREST ตอบ 400 invalid input syntax for timestamp (เจอจริงตอนเขียนฟังก์ชันนี้)"""
+    return dt.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def query_post_plan(days=14, include_unscheduled=True):
+    """แผนการโพสต์ข้างหน้า + ของที่อนุมัติแล้วแต่ยังไม่มีวัน
+
+    ผู้วางแผนต้องเห็นสองอย่างนี้พร้อมกัน ไม่งั้นจะวางทับของเดิมหรือลืมของที่รออยู่
+    """
+    now = datetime.now(timezone.utc)
+    until = _iso_z(now + timedelta(days=max(1, days)))
+    rows = sb_get("marketing_content?select=id,status,caption,content_format,source_sku,"
+                  "scheduled_at,posted_at,post_url,review_verdict,review_notes"
+                  f"&scheduled_at=gte.{_iso_z(now)}&scheduled_at=lte.{until}"
+                  "&order=scheduled_at.asc")
+    planned = [{
+        "id": r["id"], "status": r.get("status"),
+        "when_th": _th_datetime(r.get("scheduled_at")),
+        "scheduled_at": r.get("scheduled_at"),
+        "format": r.get("content_format"), "sku": r.get("source_sku"),
+        "review": r.get("review_verdict"),
+        "caption": _clip(r.get("caption"), 120),
+    } for r in rows]
+
+    waiting = []
+    if include_unscheduled:
+        pend = sb_get("marketing_content?select=id,status,caption,content_format,source_sku,"
+                      "review_verdict,review_notes&status=eq.approved&scheduled_at=is.null"
+                      "&post_id=is.null&order=created_at.asc")
+        waiting = [{
+            "id": r["id"], "format": r.get("content_format"), "sku": r.get("source_sku"),
+            "review": r.get("review_verdict"),
+            "review_notes": _clip(r.get("review_notes"), 160),
+            "caption": _clip(r.get("caption"), 120),
+        } for r in pend]
+
+    return {
+        "now_th": _th_datetime(now.isoformat()),
+        "window_days": days,
+        "planned_count": len(planned), "waiting_count": len(waiting),
+        "min_gap_minutes": MIN_GAP_MINUTES,
+        "planned": planned,
+        "waiting_for_date": waiting,
+        "note": ("ของใน planned จะถูกโพสต์ขึ้นเพจอัตโนมัติเมื่อถึงเวลา (ตรวจทุก 15 นาที) — "
+                 "เฉพาะที่เจ้าของอนุมัติแล้วเท่านั้น ชิ้นที่ผู้ตรวจให้ drop ตัวตั้งเวลาจะไม่โพสต์ · "
+                 f"เว้นระยะระหว่างโพสต์อย่างน้อย {MIN_GAP_MINUTES} นาที"),
+    }
+
+
+def _th_datetime(iso):
+    """ISO (UTC) → '17 ส.ค. 19:30' เวลาไทย"""
+    if not iso:
+        return None
+    try:
+        dt = datetime.fromisoformat(iso.replace("Z", "+00:00")).astimezone(TH)
+    except ValueError:
+        return None
+    return f"{thai_date(dt.date())} {dt:%H:%M}"
+
+
+def _parse_th_when(when):
+    """'2026-08-18 19:30' หรือ '2026-08-18T19:30' (เวลาไทย) → datetime UTC"""
+    s = (when or "").strip().replace("T", " ")
+    for fmt in ("%Y-%m-%d %H:%M", "%Y-%m-%d %H:%M:%S"):
+        try:
+            return datetime.strptime(s, fmt).replace(tzinfo=TH).astimezone(timezone.utc)
+        except ValueError:
+            continue
+    raise DvxError(f"อ่านเวลาไม่ออก: '{when}' — ใช้รูปแบบ 'YYYY-MM-DD HH:MM' (เวลาไทย)")
+
+
+def schedule_content(content_id, when, force=False):
+    """กำหนดเวลาโพสต์ให้คอนเทนต์ 1 ชิ้น (เวลาไทย) — ถึงเวลาแล้วระบบจะโพสต์เอง"""
+    target = _parse_th_when(when)
+    now = datetime.now(timezone.utc)
+    if target < now - timedelta(minutes=5):
+        raise DvxError(f"เวลาที่ให้มาเป็นอดีต ({_th_datetime(target.isoformat())}) — "
+                       "ตั้งเวลาย้อนหลังแล้วระบบจะโพสต์ทันทีในรอบถัดไป ซึ่งไม่ใช่การวางแผน")
+
+    rows = sb_get(f"marketing_content?select=id,status,caption,review_verdict,post_id,scheduled_at"
+                  f"&id=eq.{int(content_id)}")
+    if not rows:
+        raise DvxError(f"ไม่เจอคอนเทนต์ id={content_id}")
+    item = rows[0]
+    if item.get("post_id"):
+        raise DvxError("ชิ้นนี้โพสต์ขึ้นเพจไปแล้ว")
+    if item.get("status") not in ("pending", "approved", "scheduled"):
+        raise DvxError(f"สถานะ '{item.get('status')}' ตั้งเวลาโพสต์ไม่ได้ "
+                       "(ต้องเป็น pending / approved / scheduled)")
+    if item.get("review_verdict") == "drop" and not force:
+        raise DvxError("ผู้ตรวจระบุว่าไม่ควรใช้ชิ้นนี้ (drop) — ถ้ายืนยันจริงให้ส่ง force=True")
+
+    # กันตั้งชนกัน — ดูของที่วางไว้แล้วในช่วง ±MIN_GAP_MINUTES
+    lo = _iso_z(target - timedelta(minutes=MIN_GAP_MINUTES))
+    hi = _iso_z(target + timedelta(minutes=MIN_GAP_MINUTES))
+    near = sb_get(f"marketing_content?select=id,scheduled_at&scheduled_at=gte.{lo}"
+                  f"&scheduled_at=lte.{hi}&id=neq.{int(content_id)}&post_id=is.null")
+    if near and not force:
+        others = ", ".join(f"id={n['id']} ({_th_datetime(n['scheduled_at'])})" for n in near[:3])
+        raise DvxError(f"ใกล้กับโพสต์ที่วางไว้แล้วเกินไป (ห่างน้อยกว่า {MIN_GAP_MINUTES} นาที): {others} "
+                       "— เลื่อนเวลาให้ห่างขึ้น หรือส่ง force=True ถ้าตั้งใจโพสต์ติดกัน")
+
+    body = json.dumps({"scheduled_at": target.isoformat()}).encode("utf-8")
+    req = urllib.request.Request(
+        f"{SB_URL}/rest/v1/marketing_content?id=eq.{int(content_id)}",
+        data=body, method="PATCH",
+        headers={"apikey": SB_KEY, "Authorization": f"Bearer {SB_KEY}",
+                 "Content-Type": "application/json", "Prefer": "return=representation"},
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=30) as r:
+            out = json.loads(r.read().decode("utf-8"))
+    except urllib.error.HTTPError as e:
+        raise DvxError(f"ตั้งเวลาไม่สำเร็จ (HTTP {e.code}): {e.read().decode('utf-8', 'ignore')[:200]}")
+
+    auto = item.get("status") in ("approved", "scheduled")
+    return {
+        "saved": True, "id": out[0]["id"],
+        "when_th": _th_datetime(target.isoformat()),
+        "will_auto_post": auto,
+        "note": ("ถึงเวลาแล้วระบบจะโพสต์ขึ้นเพจให้เอง (ตรวจทุก 15 นาที)" if auto else
+                 "ชิ้นนี้ยังไม่ได้อนุมัติ — ตั้งเวลาไว้ได้ แต่จะไม่โพสต์จนกว่าเจ้าของจะอนุมัติ"),
+    }
