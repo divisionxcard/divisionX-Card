@@ -45,5 +45,12 @@ jobs:
           fi
           [ "$code" = "200" ] || { echo "::error::metrics-collect ตอบ HTTP $code"; exit 1; }
 
+          # ⚠ ห้ามใช้ [ ... ] && echo เป็น "คำสั่งสุดท้าย" ของ step
+          # ถ้าเงื่อนไขเป็นเท็จ (ซึ่งคือกรณีปกติ!) exit code ของ [ จะเป็น 1
+          # แล้ว step ล้มทั้งที่งานสำเร็จ — เกิดจริงรอบแรก: HTTP 200 เก็บได้ 25 โพสต์ แต่ job แดง
           collected=$(echo "$json" | sed -n 's/.*"collected":\([0-9]*\).*/\1/p')
-          [ "$collected" = "0" ] && echo "::warning::ไม่พบโพสต์บนเพจให้เก็บเลย — ผิดปกติถ้าเพจมีโพสต์อยู่"
+          if [ "$collected" = "0" ]; then
+            echo "::warning::ไม่พบโพสต์บนเพจให้เก็บเลย — ผิดปกติถ้าเพจมีโพสต์อยู่"
+          else
+            echo "เก็บได้ $collected โพสต์"
+          fi
