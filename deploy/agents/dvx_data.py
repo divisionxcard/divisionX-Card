@@ -611,6 +611,103 @@ def query_post_plan(days=14, include_unscheduled=True):
     }
 
 
+def query_post_performance(days=30, min_sample=10):
+    """ผลลัพธ์โพสต์บนเพจ — ไลก์/คอมเมนต์/แชร์ ต่อโพสต์ + สรุปว่าอะไรเวิร์ก
+
+    ใช้สแนปช็อตล่าสุดของแต่ละโพสต์เป็นตัวเลขปัจจุบัน และสแนปช็อตที่อายุใกล้ 24 ชม.
+    เป็นตัวเทียบข้ามโพสต์ (โพสต์เก่ามีเวลาสะสมมากกว่า เทียบตัวเลขปัจจุบันตรง ๆ ไม่ยุติธรรม)
+    """
+    since = _iso_z(datetime.now(timezone.utc) - timedelta(days=max(1, days)))
+    try:
+        snaps = sb_get("post_metrics?select=post_id,content_id,posted_at,message,permalink,"
+                       "reactions,likes,comments,shares,clicks,age_hours,captured_at"
+                       f"&posted_at=gte.{since}&order=captured_at.asc")
+    except DvxError as e:
+        # PostgREST บอกว่าไม่มีตารางได้ 2 แบบ: 404 PGRST205 (ไม่อยู่ใน schema cache)
+        # กับ 42P01 ของ Postgres — ดักทั้งคู่ ไม่งั้น agent จะเห็น error ดิบที่ทำอะไรต่อไม่ถูก
+        if "post_metrics" in str(e) and any(k in str(e) for k in
+                                            ("PGRST205", "does not exist", "42P01", "Could not find")):
+            raise DvxError("ยังไม่มีตาราง post_metrics — ต้องรัน "
+                           "backend/database/migrations/067_post_metrics.sql ใน Supabase ก่อน")
+        raise
+    if not snaps:
+        return {"posts": 0, "note": "ยังไม่มีข้อมูลผลลัพธ์โพสต์ — ตัวเก็บยังไม่ได้รัน "
+                                    "หรือเพจยังไม่มีโพสต์ในช่วงเวลานี้"}
+
+    latest, at24 = {}, {}
+    for s in snaps:
+        pid = s["post_id"]
+        latest[pid] = s                      # เรียงตาม captured_at แล้ว ตัวท้ายคือล่าสุด
+        age = float(s.get("age_hours") or 0)
+        if age <= 30:                        # เผื่อรอบเก็บคลาด — 24±6 ชม. ยังเทียบกันได้
+            prev = at24.get(pid)
+            if prev is None or abs(age - 24) < abs(float(prev.get("age_hours") or 0) - 24):
+                at24[pid] = s
+
+    # ผูกกับคอนเทนต์ในระบบเพื่อรู้ว่ารูปแบบไหน/สินค้าไหน (โพสต์มือจะไม่มี)
+    cids = [v["content_id"] for v in latest.values() if v.get("content_id")]
+    meta = {}
+    if cids:
+        ids = ",".join(str(c) for c in set(cids))
+        for c in sb_get(f"marketing_content?select=id,content_format,source_sku&id=in.({ids})"):
+            meta[c["id"]] = c
+
+    posts = []
+    for pid, s in latest.items():
+        m = meta.get(s.get("content_id")) or {}
+        first_day = at24.get(pid)
+        posts.append({
+            "post_id": pid,
+            "posted_th": _th_datetime(s.get("posted_at")),
+            "hour_th": int(datetime.fromisoformat(s["posted_at"].replace("Z", "+00:00"))
+                           .astimezone(TH).strftime("%H")) if s.get("posted_at") else None,
+            "from_system": bool(s.get("content_id")),
+            "format": m.get("content_format"), "sku": m.get("source_sku"),
+            "reactions": s.get("reactions"), "comments": s.get("comments"),
+            "shares": s.get("shares"), "clicks": s.get("clicks"),
+            "reactions_24h": (first_day or {}).get("reactions"),
+            "age_hours": s.get("age_hours"),
+            "message": _clip(s.get("message"), 90),
+            "permalink": s.get("permalink"),
+        })
+    posts.sort(key=lambda p: (p["reactions"] or 0), reverse=True)
+
+    def avg(rows, key):
+        vals = [r[key] for r in rows if r.get(key) is not None]
+        return round(sum(vals) / len(vals), 1) if vals else None
+
+    by_format = {}
+    for p in posts:
+        if p["format"]:
+            by_format.setdefault(p["format"], []).append(p)
+    by_hour = {}
+    for p in posts:
+        if p["hour_th"] is not None:
+            by_hour.setdefault(p["hour_th"], []).append(p)
+
+    n = len(posts)
+    return {
+        "posts": n,
+        "window_days": days,
+        "from_system": sum(1 for p in posts if p["from_system"]),
+        "avg_reactions": avg(posts, "reactions"),
+        "avg_reactions_24h": avg(posts, "reactions_24h"),
+        "by_format": {k: {"posts": len(v), "avg_reactions": avg(v, "reactions")}
+                      for k, v in sorted(by_format.items())},
+        "by_hour_th": {str(k): {"posts": len(v), "avg_reactions": avg(v, "reactions")}
+                       for k, v in sorted(by_hour.items())},
+        "top": posts[:10],
+        "note": (
+            f"⚠ มีแค่ {n} โพสต์ — ยังน้อยเกินกว่าจะสรุปว่ารูปแบบไหนหรือเวลาไหนดีกว่า "
+            f"(ควรมีอย่างน้อย {min_sample} โพสต์) บอกได้แค่ว่าโพสต์ไหนได้เยอะกว่า "
+            "อย่าเปลี่ยนกลยุทธ์จากตัวเลขชุดนี้"
+            if n < min_sample else
+            "reactions_24h คือตัวเทียบที่ยุติธรรมข้ามโพสต์ ส่วน reactions คือยอดสะสมถึงตอนนี้ "
+            "· ไม่มี reach เพราะ Meta ปลด metric ออกจาก Graph API แล้ว"
+        ),
+    }
+
+
 def _th_datetime(iso):
     """ISO (UTC) → '17 ส.ค. 19:30' เวลาไทย"""
     if not iso:

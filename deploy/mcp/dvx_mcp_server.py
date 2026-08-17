@@ -213,6 +213,24 @@ def review_content(content_id: int, verdict: str, notes: str) -> dict:
 
 
 @server.tool(
+    description="ผลลัพธ์ของโพสต์บนเพจ — ไลก์/รีแอ็กชัน คอมเมนต์ แชร์ ต่อโพสต์ "
+                "พร้อมสรุปตามรูปแบบคอนเทนต์และชั่วโมงที่โพสต์ "
+                "ใช้ตอบว่า 'คอนเทนต์แบบไหนเวิร์ก' 'ควรโพสต์เวลาไหน' — "
+                "อ่าน note ก่อนสรุปทุกครั้ง ถ้าจำนวนโพสต์ยังน้อยห้ามฟันธง",
+    annotations=READ_ONLY,
+)
+def get_post_performance(days: int = 30) -> dict:
+    """
+    Args:
+        days: ดูย้อนหลังกี่วัน
+    """
+    try:
+        return data.query_post_performance(days=days)
+    except Exception as e:
+        return _fail(e)
+
+
+@server.tool(
     description="แผนการโพสต์ข้างหน้า + คอนเทนต์ที่อนุมัติแล้วแต่ยังไม่มีวัน "
                 "ใช้ก่อนวางแผนทุกครั้ง เพื่อไม่ให้ตั้งเวลาทับของเดิมหรือลืมของที่รออยู่",
     annotations=READ_ONLY,
