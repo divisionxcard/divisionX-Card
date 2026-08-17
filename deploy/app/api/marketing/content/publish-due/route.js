@@ -66,7 +66,16 @@ export async function POST(req) {
     .limit(MAX_PER_RUN)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  if (!due?.length) return NextResponse.json({ ok: true, checked_at: nowIso, posted: 0, results: [] })
+
+  // ⚠ ต้องคืน "รูปเดียวกัน" กับตอนมีของถึงคิว — ครบทุก field รวมทั้ง failed
+  // เคยพลาดมาแล้ว: ทางนี้เคยคืนแค่ posted แล้ว workflow ที่มองหา "failed":0
+  // หาไม่เจอ จึงเตือนว่ามีชิ้นโพสต์ไม่สำเร็จทั้งที่ไม่มีอะไรล้มเลย
+  // คำตอบที่รูปไม่คงที่ = คนอ่านผลผิด ต่อให้ตัวเลขทุกตัวถูก
+  if (!due?.length) {
+    return NextResponse.json({
+      ok: true, checked_at: nowIso, dryRun, due: 0, posted: 0, failed: 0, results: [],
+    })
+  }
 
   const results = []
   for (const item of due) {
