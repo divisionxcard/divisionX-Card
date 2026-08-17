@@ -18,9 +18,14 @@ const TH_DOW = ["จ.", "อ.", "พ.", "พฤ.", "ศ.", "ส.", "อา."]
 const PLATFORM_LABEL = { fb: "FB เพจ", line: "LINE OA", ig: "Instagram", tiktok: "TikTok" }
 const SLOT_LABEL = { morning: "เช้า", evening: "เย็น" }
 
+// 3 สถานะที่ต่างกันจริงในสายตาเจ้าของ:
+//   posted    = ขึ้นเพจไปแล้ว
+//   auto      = ถึงเวลาแล้วระบบยิงเอง ไม่ต้องกดอะไร  ← ต้องแยกให้ชัด เพราะ "จองวัน" เฉย ๆ ไม่ยิง
+//   scheduled = จองวันไว้ แต่ยังมีอะไรค้างจนระบบจะไม่ยิง (ดู no_auto_reason)
 const KIND = {
   posted:    { dot: "bg-emerald-500", chip: "bg-emerald-50 text-emerald-800 border-emerald-200", label: "โพสต์แล้ว" },
-  scheduled: { dot: "bg-blue-500",    chip: "bg-blue-50 text-blue-800 border-blue-200",          label: "จองเวลาแล้ว" },
+  auto:      { dot: "bg-violet-500",  chip: "bg-violet-50 text-violet-800 border-violet-200",    label: "โพสต์อัตโนมัติ" },
+  scheduled: { dot: "bg-blue-500",    chip: "bg-blue-50 text-blue-800 border-blue-200",          label: "จองวันไว้ (ยังไม่ยิงเอง)" },
 }
 
 export default function PostCalendar({ api, onPreview }) {
@@ -216,6 +221,28 @@ export default function PostCalendar({ api, onPreview }) {
                   onClick={() => onPreview?.(detail.media_url)}
                   className="w-full rounded-xl border border-gray-100 mb-3 cursor-zoom-in" />
               )}
+              {/* บอกให้ชัดว่าชิ้นนี้จะยิงเองหรือไม่ยิง — คำถามแรกของคนเปิดดูคือ "ต้องกดอะไรอีกไหม" */}
+              {detail.kind === "auto" && (
+                <div className="mb-3 text-xs rounded-lg border border-violet-200 bg-violet-50 text-violet-800 px-2.5 py-2">
+                  <div className="flex items-center gap-1.5 font-medium">
+                    <Clock size={13} /> ระบบจะโพสต์ขึ้นเพจเองเมื่อถึงเวลา — ไม่ต้องกดอะไรอีก
+                  </div>
+                  <p className="mt-1 opacity-90">
+                    {new Date(detail.scheduled_at).toLocaleString("th-TH", {
+                      dateStyle: "full", timeStyle: "short", timeZone: "Asia/Bangkok",
+                    })} · ตรวจคิวทุก 15 นาที จึงอาจคลาดได้ไม่เกิน 15 นาที
+                  </p>
+                </div>
+              )}
+              {detail.kind === "scheduled" && detail.no_auto_reason && (
+                <div className="mb-3 text-xs rounded-lg border border-amber-200 bg-amber-50 text-amber-800 px-2.5 py-2">
+                  <div className="flex items-center gap-1.5 font-medium">
+                    <Clock size={13} /> จองวันไว้แล้ว แต่ระบบจะยังไม่โพสต์เอง
+                  </div>
+                  <p className="mt-1 opacity-90">{detail.no_auto_reason}</p>
+                </div>
+              )}
+
               <p className="text-sm text-gray-700 whitespace-pre-wrap">{detail.caption}</p>
               <div className="flex flex-wrap items-center gap-2 mt-4">
                 {detail.post_url && (
@@ -224,7 +251,9 @@ export default function PostCalendar({ api, onPreview }) {
                     <ExternalLink size={14} /> เปิดโพสต์จริง
                   </a>
                 )}
-                {detail.kind === "scheduled" && (
+                {/* ⚠ ต้องรับทั้ง scheduled และ auto — ตอนเพิ่ม kind "auto" เกือบทำให้ปุ่มเลื่อน/เอาวันออก
+                    หายไปจากชิ้นที่ตั้งเวลาไว้แล้ว ซึ่งเป็นชิ้นที่ต้องแก้วันบ่อยที่สุด */}
+                {(detail.kind === "scheduled" || detail.kind === "auto") && (
                   <>
                     <input type="date" defaultValue={thaiDay(detail.scheduled_at)}
                       onChange={e => e.target.value && setDate(detail.id, e.target.value).then(() => setDetail(null))}

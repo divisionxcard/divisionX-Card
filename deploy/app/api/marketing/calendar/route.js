@@ -18,7 +18,24 @@ const db = createClient(
 const TABLE = "marketing_content"
 
 const FIELDS = "id,status,platform,slot,caption,media_url,post_url,post_id,source_sku," +
-               "scheduled_at,posted_at,created_at"
+               "scheduled_at,posted_at,created_at,review_verdict,review_notes"
+
+// ชิ้นนี้จะถูกโพสต์เองเมื่อถึงเวลาไหม — เงื่อนไขต้องตรงกับที่ publish-due ใช้เลือกของจริง
+// ถ้าสองที่ไม่ตรงกัน ปฏิทินจะโชว์ว่า "จะโพสต์เอง" แต่ถึงเวลาแล้วเงียบ (หรือกลับกัน ซึ่งแย่กว่า)
+// ดูด่านตัวจริงที่ lib/publishContent.js → blockReason()
+function autoPostState(r) {
+  if (r.posted_at || r.post_id) return { auto: false, why: null }
+  if (!r.scheduled_at) return { auto: false, why: "ยังไม่ได้กำหนดเวลา" }
+  if (!["approved", "scheduled"].includes(r.status)) {
+    return { auto: false, why: "ยังไม่ได้อนุมัติ — ระบบจะไม่โพสต์จนกว่าจะกดอนุมัติ" }
+  }
+  if (r.review_verdict === "drop") {
+    return { auto: false, why: "ผู้ตรวจระบุว่าไม่ควรใช้ชิ้นนี้ — ตัวตั้งเวลาจะข้ามไป" }
+  }
+  const holes = (r.caption || "").match(/\{[^}]{1,40}\}/g)
+  if (holes) return { auto: false, why: `ยังมีช่องว่างค้าง: ${holes.join(", ")}` }
+  return { auto: true, why: null }
+}
 
 export async function GET(req) {
   const gate = await requireAdmin(req)
@@ -47,7 +64,12 @@ export async function GET(req) {
       const posted = Boolean(r.posted_at)
       const key = thaiDay(posted ? r.posted_at : r.scheduled_at)
       if (!key || !key.startsWith(month)) continue
-      ;(days[key] ||= []).push({ ...r, kind: posted ? "posted" : "scheduled" })
+      const { auto, why } = autoPostState(r)
+      ;(days[key] ||= []).push({
+        ...r,
+        kind: posted ? "posted" : (auto ? "auto" : "scheduled"),
+        no_auto_reason: why,          // โชว์ในแผงรายละเอียด เมื่อจองวันไว้แต่จะไม่ยิงเอง
+      })
     }
 
     // ของที่รอคิวอยู่แต่ยังไม่ได้ปักวัน — เอาไปโชว์ข้างปฏิทินให้ลากมาลงวันได้
@@ -65,6 +87,7 @@ export async function GET(req) {
       unscheduled: loose || [],
       counts: {
         posted: Object.values(days).flat().filter(x => x.kind === "posted").length,
+        auto: Object.values(days).flat().filter(x => x.kind === "auto").length,
         scheduled: Object.values(days).flat().filter(x => x.kind === "scheduled").length,
         unscheduled: (loose || []).length,
       },
