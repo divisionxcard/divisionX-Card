@@ -15,6 +15,7 @@ import json
 import collections
 import urllib.request
 import urllib.error
+import urllib.parse
 from datetime import datetime, timedelta, timezone
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -338,4 +339,113 @@ def query_restock_alerts(threshold_days=1.0, min_velocity=2.0):
         "alerts": alerts,
         "note": ("คำนวณจากสต็อกที่ sync ล่าสุดเทียบ velocity 14 วัน — "
                  "ถ้าเพิ่งเติมของแล้วยังไม่ sync ตัวเลขจะยังเป็นของเก่า"),
+    }
+
+
+# ── การตลาด ─────────────────────────────────────────────────────────────
+def _clip(text, n):
+    """ตัดข้อความยาวให้พอดีบริบทของ agent · เก็บ HTML ดิบไม่มีประโยชน์"""
+    t = " ".join((text or "").split())
+    return t if len(t) <= n else t[:n].rstrip() + "…"
+
+
+def _th_stamp(iso):
+    """'2026-08-17T10:20:00+00:00' → '17 ส.ค.' (เวลาไทย) · คืน None ถ้าว่าง"""
+    if not iso:
+        return None
+    try:
+        dt = datetime.fromisoformat(iso.replace("Z", "+00:00")).astimezone(TH)
+    except ValueError:
+        return None
+    return thai_date(dt.date())
+
+
+def query_marketing_ideas(status="new", limit=20, source=None, sku=None):
+    """ไอเดียคอนเทนต์ที่ตัวเก็บไอเดียหามาได้ — เรียงตามคะแนนความเกี่ยวข้อง
+
+    status: new (ยังไม่ได้ใช้) · picked (เลือกไปเขียนแล้ว) · all
+    source: news · tiktok · youtube · internal
+    """
+    q = ("marketing_ideas?select=id,status,source,source_label,title,summary,url,"
+         "angle,chosen_angle,score,related_sku,content_id,created_at")
+    if status and status != "all":
+        q += f"&status=eq.{status}"
+    if source:
+        q += f"&source=eq.{source}"
+    if sku:
+        q += f"&related_sku=eq.{urllib.parse.quote(sku)}"
+    rows = sb_get(q + "&order=score.desc,created_at.desc")
+
+    by_source = collections.Counter(r.get("source") or "?" for r in rows)
+    by_sku = collections.Counter(r["related_sku"] for r in rows if r.get("related_sku"))
+    # มุมเล่าซ้ำ = รากของปัญหาคอนเทนต์ซ้ำ (ดู idea_angles.py) — นับให้ agent เห็นเลย
+    angles = collections.Counter(
+        (r.get("chosen_angle") or r.get("angle") or "").strip() for r in rows
+    )
+    angles.pop("", None)
+    dup_angles = [{"angle": _clip(a, 60), "count": c} for a, c in angles.most_common(3) if c > 1]
+
+    ideas = [{
+        "id": r["id"], "status": r.get("status"), "source": r.get("source"),
+        "title": _clip(r.get("title"), 120),
+        "angle": _clip(r.get("chosen_angle") or r.get("angle"), 160),
+        "summary": _clip(r.get("summary"), 200),
+        "score": r.get("score"), "related_sku": r.get("related_sku"),
+        "url": r.get("url"), "created": _th_stamp(r.get("created_at")),
+        "written": bool(r.get("content_id")),
+    } for r in rows[:max(1, limit)]]
+
+    return {
+        "status": status, "total": len(rows), "showing": len(ideas),
+        "by_source": dict(by_source),
+        "top_sku": dict(by_sku.most_common(5)),
+        "repeated_angles": dup_angles,
+        "ideas": ideas,
+        "note": ("เรียงตามคะแนนความเกี่ยวข้องกับสินค้าที่เราขายจริง (นับคำที่ตรง ไม่ได้ใช้ AI) — "
+                 "คะแนนสูงไม่ได้แปลว่าคอนเทนต์จะดี แค่แปลว่าเกี่ยวกับของที่เรามี · "
+                 "ถ้า repeated_angles มีตัวเลขสูง แปลว่าโจทย์ซ้ำตั้งแต่ต้นทาง เขียนยังไงก็จะออกมาแนวเดียวกัน"),
+    }
+
+
+def query_content_queue(status=None, limit=20):
+    """คิวคอนเทนต์ — ร่าง/รออนุมัติ/ถูกตีตก/โพสต์แล้ว พร้อมเหตุผลที่ถูกตีตก
+
+    status: draft · pending · approved · rejected · posted · (ว่าง = ทุกสถานะ)
+    """
+    q = ("marketing_content?select=id,status,platform,caption,content_format,source_sku,"
+         "source_reason,reject_reason,scheduled_at,posted_at,post_url,idea_id,created_at")
+    if status:
+        q += f"&status=eq.{status}"
+    rows = sb_get(q + "&order=created_at.desc")
+
+    by_status = collections.Counter(r.get("status") or "?" for r in rows)
+    by_format = collections.Counter(r["content_format"] for r in rows if r.get("content_format"))
+    rejects = collections.Counter(
+        _clip(r.get("reject_reason"), 60) for r in rows
+        if r.get("status") == "rejected" and r.get("reject_reason")
+    )
+
+    items = [{
+        "id": r["id"], "status": r.get("status"), "platform": r.get("platform"),
+        "format": r.get("content_format"), "sku": r.get("source_sku"),
+        "caption": _clip(r.get("caption"), 300),
+        "why_written": _clip(r.get("source_reason"), 120),
+        "reject_reason": _clip(r.get("reject_reason"), 160),
+        "created": _th_stamp(r.get("created_at")),
+        "posted": _th_stamp(r.get("posted_at")),
+        "post_url": r.get("post_url"),
+        "idea_id": r.get("idea_id"),
+    } for r in rows[:max(1, limit)]]
+
+    posted = by_status.get("posted", 0)
+    return {
+        "status_filter": status or "ทุกสถานะ",
+        "total": len(rows), "showing": len(items),
+        "by_status": dict(by_status),
+        "by_format": dict(by_format.most_common()),
+        "top_reject_reasons": [{"reason": r, "count": c} for r, c in rejects.most_common(5)],
+        "items": items,
+        "note": ("⚠ ระบบยังไม่เก็บผลลัพธ์ของโพสต์ (ยอดวิว/เอนเกจ) — ตอบไม่ได้ว่าคอนเทนต์แบบไหนเวิร์ก "
+                 "บอกได้แค่ว่าผลิตอะไรไปบ้างและอะไรถูกตีตก · "
+                 f"โพสต์จริงแล้ว {posted} ชิ้นจากทั้งหมด {len(rows)} ชิ้น"),
     }

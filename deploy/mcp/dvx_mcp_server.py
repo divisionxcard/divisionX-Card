@@ -137,6 +137,46 @@ def get_restock_alerts(threshold_days: float = 1.0, min_velocity: float = 2.0) -
 
 
 @server.tool(
+    description="ไอเดียคอนเทนต์ในคิว — ที่ตัวเก็บไอเดียหามาจากข่าว/YouTube/ข้อมูลขายของเราเอง "
+                "ใช้ตอบว่า 'มีอะไรให้ทำบ้าง' 'ไอเดียไหนควรหยิบก่อน' "
+                "ถ้าจะจัดลำดับความสำคัญ ให้เรียก get_sales ดูของที่ขายดีจริงประกอบด้วย",
+    annotations=READ_ONLY,
+)
+def get_marketing_ideas(status: str = "new", limit: int = 20,
+                        source: str = "", sku: str = "") -> dict:
+    """
+    Args:
+        status: new (ยังไม่ได้ใช้) · picked (เลือกไปเขียนแล้ว) · all
+        limit: จำนวนไอเดียที่ส่งกลับ (สรุปยอดรวมนับจากทั้งหมดเสมอ)
+        source: กรองแหล่ง — news · tiktok · youtube · internal
+        sku: กรองเฉพาะไอเดียที่ผูกกับ SKU นี้
+    """
+    try:
+        return data.query_marketing_ideas(status=status, limit=limit,
+                                          source=source or None, sku=sku or None)
+    except Exception as e:
+        return _fail(e)
+
+
+@server.tool(
+    description="คิวคอนเทนต์ — แคปชั่นที่เขียนแล้วแยกตามสถานะ (ร่าง/รออนุมัติ/ถูกตีตก/โพสต์แล้ว) "
+                "พร้อมเหตุผลที่ถูกตีตก ใช้ตอบว่า 'ค้างอะไรอยู่' 'ทำไมงานไม่ออก' "
+                "'ที่ถูกปฏิเสธมีอะไรเหมือนกัน' — ยังไม่มีข้อมูลยอดวิว/เอนเกจ",
+    annotations=READ_ONLY,
+)
+def get_content_queue(status: str = "", limit: int = 20) -> dict:
+    """
+    Args:
+        status: draft · pending · approved · rejected · posted (ว่าง = ทุกสถานะ)
+        limit: จำนวนชิ้นที่ส่งกลับ (สรุปยอดรวมนับจากทั้งหมดเสมอ)
+    """
+    try:
+        return data.query_content_queue(status=status or None, limit=limit)
+    except Exception as e:
+        return _fail(e)
+
+
+@server.tool(
     description="ผลรัน sync ล่าสุด — ใช้เช็คว่างานที่สั่งไปด้วย sync_data เสร็จหรือยัง "
                 "และรอบ cron ที่ผ่านมาสำเร็จไหม",
     annotations=READ_ONLY,
