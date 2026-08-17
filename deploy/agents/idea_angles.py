@@ -141,7 +141,10 @@ PACE_SEC = 5
 BACKOFF = [20, 45, 90]
 
 # ไล่จากคุณภาพดีสุดลงไป · flash-lite ยังเหลือโควตาตอน flash หมดแล้ว (เช็กแล้ว)
-MODEL_CHAIN = ["gemini-flash-latest", "gemini-flash-lite-latest", "gemini-2.0-flash-lite"]
+# 2026-08-17 ยิงจริงทีละตัวแล้วตัด gemini-2.0-flash-lite ออก — ตายไปแล้ว (404 no longer available)
+# ตัวที่ตายเหมือนกัน: gemini-2.5-flash, gemini-2.5-flash-lite · gemini-pro-latest มีอยู่แต่ 429 ตั้งแต่ครั้งแรก
+# เหลือสองตัวนี้ที่ใช้ได้จริง — ก่อนเติมชื่อใหม่ให้ยิงทดสอบก่อนเสมอ อย่าเชื่อ ListModels
+MODEL_CHAIN = ["gemini-flash-latest", "gemini-flash-lite-latest"]
 
 
 class QuotaOut(Exception):

@@ -260,9 +260,43 @@ const GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta"
 // (gemini-2.5-flash โดนไปแล้วทั้งที่ยังโผล่ใน ListModels) alias จะชี้รุ่นปัจจุบันเสมอ
 const GEMINI_DEFAULT = "gemini-flash-latest"
 
+// ลำดับโมเดลสำรอง — โควตาฟรีนับแยกตามโมเดล เปลี่ยนโมเดลจึงได้ก้อนใหม่จริง
+// และตอนรุ่นหนึ่งคนแห่ใช้จนล้น (503 "high demand") อีกรุ่นมักยังว่างอยู่
+// ⚠ ตรวจของจริงก่อนใส่ชื่อ — 2026-08-17 ลองแล้ว gemini-2.0-flash-lite / 2.5-flash /
+//   2.5-flash-lite ตายหมด (404 no longer available) เหลือสองตัวนี้ที่ยังใช้ได้
+const GEMINI_CHAIN = ["gemini-flash-latest", "gemini-flash-lite-latest"]
+
+const sleep = ms => new Promise(r => setTimeout(r, ms))
+
+// ล้มแบบชั่วคราว (คนใช้เยอะ/ระบบ Google สะดุด) — รอแล้วลองใหม่ได้ ต่างจากโควตาหมดที่รอไปก็เท่านั้น
+const isTransient = (status, msg) =>
+  status === 503 || status === 500 || status === 502 ||
+  /high demand|overloaded|unavailable|try again later/i.test(msg || "")
+
+// 429 มีสองแบบ: รายวัน (รอไปก็ไม่หาย ต้องเปลี่ยนโมเดล) กับต่อนาที (รอแล้วหาย)
+const isDailyQuota = msg => /per day|daily|GenerateRequestsPerDay/i.test(msg || "")
+
 async function askGemini(voice, prompt) {
+  const first = process.env.GEMINI_MODEL || voice.gemini_model || GEMINI_DEFAULT
+  const chain = [first, ...GEMINI_CHAIN.filter(m => m !== first)]
+  let lastErr
+  for (const model of chain) {
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      try {
+        return await askGeminiOnce(voice, prompt, model)
+      } catch (e) {
+        lastErr = e
+        if (e.switchModel) break              // โมเดลนี้ไม่ไหวแล้ว — ข้ามไปตัวถัดไป
+        if (!e.retryable || attempt === 2) break
+        await sleep(attempt * 1500)           // 1.5s แล้ว 3s — ปล่อยให้คลื่นคนใช้ผ่านไปก่อน
+      }
+    }
+  }
+  throw lastErr || new Error("Gemini เรียกไม่สำเร็จ")
+}
+
+async function askGeminiOnce(voice, prompt, model) {
   const key = process.env.GEMINI_API_KEY
-  const model = process.env.GEMINI_MODEL || voice.gemini_model || GEMINI_DEFAULT
   const res = await fetch(`${GEMINI_BASE}/models/${model}:generateContent`, {
     method: "POST",
     headers: { "Content-Type": "application/json", "x-goog-api-key": key },
@@ -281,16 +315,30 @@ async function askGemini(voice, prompt) {
   const json = await res.json().catch(() => ({}))
   if (!res.ok) {
     const msg = json?.error?.message || `HTTP ${res.status}`
-    // 429 = ใช้เกินโควตาฟรีของวันนี้ — บอกให้ชัดว่าไม่ใช่ระบบพัง
+    // คนแห่ใช้จนล้น — ไม่ใช่ระบบเราพัง ให้ลองใหม่/สลับโมเดลก่อนค่อยยอมแพ้
+    if (isTransient(res.status, msg)) {
+      const e = new Error(`Gemini รุ่น "${model}" คนใช้เยอะจนล้นชั่วคราว (${msg.slice(0, 100)})`)
+      e.retryable = true
+      throw e
+    }
     if (res.status === 429) {
-      throw new Error(`ใช้โควตาฟรีของ Gemini ครบแล้ววันนี้ (${msg}) — รอพรุ่งนี้ หรือสลับไปใช้ Ollama บนเครื่อง`)
+      const e = new Error(
+        isDailyQuota(msg)
+          ? `ใช้โควตาฟรีของ "${model}" ครบแล้ววันนี้ (${msg.slice(0, 100)})`
+          : `เรียก "${model}" ถี่เกินลิมิตต่อนาที (${msg.slice(0, 100)})`)
+      // รายวัน → เปลี่ยนโมเดลเลย (โควตานับแยกตามโมเดล) · ต่อนาที → รอแล้วลองซ้ำได้
+      if (isDailyQuota(msg)) e.switchModel = true
+      else e.retryable = true
+      throw e
     }
     // Google ปลดรุ่นเก่าเป็นระยะ และ ListModels ยังโชว์อยู่ → probe จับไม่ได้ ต้องดักตรงนี้
     if (/no longer available|not found|is not supported/i.test(msg)) {
-      throw new Error(
+      const e = new Error(
         `โมเดล "${model}" ใช้ไม่ได้แล้ว (${msg.slice(0, 120)}) — ` +
         `แก้ gemini_model ใน deploy/tasks/content_voice.json เป็น "${GEMINI_DEFAULT}" ` +
         `หรือ gemini-flash-lite-latest`)
+      e.switchModel = true
+      throw e
     }
     throw new Error(msg)
   }
@@ -304,9 +352,11 @@ async function askGemini(voice, prompt) {
 
   // ตอบว่างเพราะโควตา output หมดไปกับ thinking — บอกทางแก้ให้ชัด ไม่ใช่แค่ "โมเดลตอบว่าง"
   if (!text && cand?.finishReason === "MAX_TOKENS") {
-    throw new Error(
+    const e = new Error(
       `โมเดลใช้โควตาไปกับการคิดจนไม่เหลือเขียน (thinking ${json?.usageMetadata?.thoughtsTokenCount || "?"} token) — ` +
       `เพิ่ม maxOutputTokens ในโค้ด หรือสลับเป็น gemini-flash-lite-latest ที่คิดน้อยกว่า`)
+    e.switchModel = true    // รุ่น lite คิดน้อยกว่า ลองตัวถัดไปเลยดีกว่ายิงซ้ำรุ่นเดิม
+    throw e
   }
   return { text, model }
 }
