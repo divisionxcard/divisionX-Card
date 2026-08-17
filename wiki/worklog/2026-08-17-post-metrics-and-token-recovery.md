@@ -2,8 +2,8 @@
 type: worklog
 date: 2026-08-17
 tags: [marketing, facebook, metrics, token, graph-api, hermes, mcp]
-commits: [a5e2083]
-status: ✅ เก็บข้อมูลจริงแล้ว 25 โพสต์ — เหลืออัปเดต token ใน Vercel
+commits: [a5e2083, fd37292, ee689c4]
+status: ✅ ครบวงบนคลาวด์แล้ว — token ใหม่อยู่บน Vercel · workflow เก็บสถิติเขียว · เก็บได้ 25 โพสต์
 ---
 
 # กู้ token Facebook + เริ่มเก็บผลลัพธ์โพสต์
@@ -95,10 +95,30 @@ OAuthException (code 200)
 `42P01` ของ Postgres · ดักแบบเดียวไม่พอ ต้องดักทั้งคู่ ไม่งั้น agent เห็น SQL error ดิบ
 แล้วทำอะไรต่อไม่ถูก
 
+## ยืนยันบนคลาวด์แล้ว (หลังเจ้าของอัปเดต token ใน Vercel + redeploy)
+
+```
+POST /api/marketing/metrics-collect      → 200 · collected 25 · saved 0 (กันซ้ำรายชั่วโมงทำงาน)
+POST /api/marketing/content/publish-due  → 200 · due 0 · posted 0 · failed 0
+workflow Marketing Post Metrics          → success
+```
+
+### บั๊ก CI ที่เจอจากรอบแรก: job แดงทั้งที่งานสำเร็จ
+
+รอบแรกของ workflow ได้ HTTP 200 เก็บครบ 25 โพสต์ **แต่ job ขึ้น failure**
+
+บรรทัดสุดท้ายของ step เขียนเป็น `[ "$collected" = "0" ] && echo ...`
+พอเงื่อนไขเป็นเท็จ — ซึ่งคือ**กรณีปกติ** เพราะเก็บได้ 25 — `[` คืน exit code 1
+GitHub เอา exit code ของคำสั่งสุดท้ายเป็นผลของ step → แดง
+
+**นี่คือบั๊กคลาสเดียวกับ `grep -q` ในตัวโพสต์อัตโนมัติเมื่อชั่วโมงก่อน** —
+เขียนตัวตรวจแบบ shorthand แล้วผลของ "การตรวจ" ไปปนกับผลของ "งาน"
+
+> กฎที่ควรจำ: ใน CI **ห้ามให้ `[ ... ] &&` หรือ `grep -q` เป็นคำสั่งสุดท้ายของ step**
+> ใช้ `if/fi` เสมอ · ที่อยู่กลาง step ไม่กระทบ (bash ไม่ออกเมื่อ `[` ล้มใน AND-OR list)
+
 ## ค้าง
 
-- **อัปเดต `FB_PAGE_ACCESS_TOKEN` บน Vercel** + redeploy — ที่แก้ไปคือไฟล์ในเครื่องเท่านั้น
-  ตัวบนคลาวด์ยังเป็นตัวที่ตายแล้ว ทั้งโพสต์อัตโนมัติและตัวเก็บสถิติจึงยังทำงานไม่ได้
 - รีเซ็ต APP_SECRET (ต้องกู้ token ใหม่พร้อมกัน)
 - `by_format` ยังว่างเปล่าเพราะไม่มีโพสต์ไหนมาจากระบบ — จะเริ่มมีข้อมูลเมื่อโพสต์ผ่านปฏิทิน
 
