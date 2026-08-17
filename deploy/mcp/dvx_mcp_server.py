@@ -177,6 +177,42 @@ def get_content_queue(status: str = "", limit: int = 20) -> dict:
 
 
 @server.tool(
+    description="คอนเทนต์ที่รอตรวจ พร้อมกฎแบรนด์ตัวจริงและแคปชั่นที่เผยแพร่ไปแล้วไว้เทียบความซ้ำ "
+                "ใช้เป็นด่านแรกก่อนเจ้าของอ่านเอง — ตรวจแล้วบันทึกผลด้วย review_content",
+    annotations=READ_ONLY,
+)
+def get_content_for_review(limit: int = 10, include_reviewed: bool = False) -> dict:
+    """
+    Args:
+        limit: ตรวจทีละกี่ชิ้น (แนะนำไม่เกิน 10 ต่อรอบ จะได้อ่านละเอียดจริง)
+        include_reviewed: True = เอาชิ้นที่เคยตรวจแล้วมาด้วย (ปกติไม่ต้อง)
+    """
+    try:
+        return data.query_content_for_review(limit=limit, include_reviewed=include_reviewed)
+    except Exception as e:
+        return _fail(e)
+
+
+@server.tool(
+    description="บันทึกผลตรวจคอนเทนต์ 1 ชิ้น — pass (โพสต์ได้เลย) · fix (ควรแก้ก่อน) · "
+                "drop (ไม่ควรใช้ชิ้นนี้) ไม่เปลี่ยนสถานะคอนเทนต์ เจ้าของยังเป็นคนตัดสินขั้นสุดท้าย "
+                "verdict fix/drop ต้องเขียนให้ชัดว่าติดตรงไหนและควรแก้เป็นอะไร",
+    annotations=WRITES,
+)
+def review_content(content_id: int, verdict: str, notes: str) -> dict:
+    """
+    Args:
+        content_id: id ของคอนเทนต์ที่ตรวจ
+        verdict: pass · fix · drop
+        notes: เหตุผลภาษาไทย — ชี้จุดที่แก้ได้จริง เช่น "บรรทัดแรกไม่สะดุด ลองขึ้นด้วยตัวเลข"
+    """
+    try:
+        return data.save_content_review(content_id, verdict, notes)
+    except Exception as e:
+        return _fail(e)
+
+
+@server.tool(
     description="ผลรัน sync ล่าสุด — ใช้เช็คว่างานที่สั่งไปด้วย sync_data เสร็จหรือยัง "
                 "และรอบ cron ที่ผ่านมาสำเร็จไหม",
     annotations=READ_ONLY,

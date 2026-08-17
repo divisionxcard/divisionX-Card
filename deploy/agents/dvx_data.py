@@ -449,3 +449,105 @@ def query_content_queue(status=None, limit=20):
                  "บอกได้แค่ว่าผลิตอะไรไปบ้างและอะไรถูกตีตก · "
                  f"โพสต์จริงแล้ว {posted} ชิ้นจากทั้งหมด {len(rows)} ชิ้น"),
     }
+
+
+# ── ด่านตรวจคอนเทนต์ (AI ตรวจก่อนถึงมือคน) ───────────────────────────────
+VOICE_FILE = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                          "tasks", "content_voice.json")
+
+
+def load_content_rules():
+    """กฎแบรนด์ตัวจริงจาก content_voice.json — ผู้ตรวจต้องตรวจกับไฟล์นี้ ไม่ใช่กับความจำ"""
+    try:
+        with open(VOICE_FILE, encoding="utf-8-sig") as f:
+            v = json.load(f)
+    except (OSError, ValueError) as e:
+        raise DvxError(f"อ่าน content_voice.json ไม่ได้: {e}")
+    return {
+        "brand": v.get("brand"), "slogan": v.get("slogan"),
+        "audience": v.get("audience"), "tone": v.get("tone"),
+        "catchphrases": v.get("catchphrases", []),
+        "hard_rules": v.get("rules", []),
+        "example_good": v.get("example"),
+        "formats": [{"key": f.get("key"), "label": f.get("label")}
+                    for f in v.get("content_formats", [])],
+    }
+
+
+def query_content_for_review(limit=10, include_reviewed=False):
+    """คอนเทนต์ที่รอคนอนุมัติและยังไม่ผ่านด่านตรวจ + กฎแบรนด์ที่ต้องใช้ตรวจ
+
+    ส่งกฎไปพร้อมกันตั้งใจ — ผู้ตรวจจะได้เทียบกับกฎจริงที่แก้ได้จากไฟล์
+    ไม่ใช่ตรวจตามที่จำมาซึ่งจะเพี้ยนตามเวลา
+    """
+    q = ("marketing_content?select=id,status,platform,caption,content_format,source_sku,"
+         "source_reason,idea_id,created_at,review_verdict,review_notes,revision_count"
+         "&status=in.(pending,draft)")
+    if not include_reviewed:
+        q += "&review_verdict=is.null"
+    try:
+        rows = sb_get(q + "&order=created_at.asc")
+    except DvxError as e:
+        # ยังไม่ได้รัน migration — บอกทางแก้ให้ชัด ดีกว่าโยน SQL error ดิบ ๆ ใส่หน้า agent
+        if "review_verdict" in str(e) and "does not exist" in str(e):
+            raise DvxError("ตาราง marketing_content ยังไม่มีคอลัมน์สำหรับเก็บผลตรวจ — "
+                           "ต้องรัน backend/database/migrations/066_content_review.sql "
+                           "ใน Supabase SQL Editor ก่อน แล้วค่อยเรียกใหม่")
+        raise
+
+    # แคปชั่นที่โพสต์/อนุมัติไปแล้ว — ให้ผู้ตรวจดูว่าชิ้นใหม่ซ้ำแนวเดิมไหม
+    recent = sb_get("marketing_content?select=caption&status=in.(posted,approved)"
+                    "&order=created_at.desc&limit=8")
+
+    items = [{
+        "id": r["id"], "status": r.get("status"), "platform": r.get("platform"),
+        "format": r.get("content_format"), "sku": r.get("source_sku"),
+        "caption": r.get("caption"),          # ตัวเต็ม — ตรวจงานต้องเห็นของจริงทั้งชิ้น
+        "why_written": _clip(r.get("source_reason"), 200),
+        "revision_count": r.get("revision_count") or 0,
+        "created": _th_stamp(r.get("created_at")),
+    } for r in rows[:max(1, limit)]]
+
+    return {
+        "waiting": len(rows), "showing": len(items),
+        "rules": load_content_rules(),
+        "recent_published": [_clip(r.get("caption"), 160) for r in recent if r.get("caption")],
+        "items": items,
+        "note": ("ตรวจทีละชิ้นแล้วบันทึกผลด้วย review_content — pass ถ้าโพสต์ได้เลย · "
+                 "fix ถ้าควรแก้ (ต้องบอกจุดที่แก้ได้จริง ไม่ใช่คำติลอย ๆ) · drop ถ้าไม่ควรใช้ชิ้นนี้ · "
+                 "recent_published มีไว้เทียบว่าซ้ำแนวเดิมไหม ไม่ใช่ตัวอย่างให้เลียนแบบ"),
+    }
+
+
+def save_content_review(content_id, verdict, notes, reviewer="hermes"):
+    """บันทึกผลตรวจ — ไม่แตะ status ของคอนเทนต์ คนยังเป็นผู้ตัดสินเหมือนเดิม"""
+    verdict = (verdict or "").strip().lower()
+    if verdict not in ("pass", "fix", "drop"):
+        raise DvxError(f"verdict ต้องเป็น pass / fix / drop เท่านั้น (ได้ '{verdict}')")
+    notes = (notes or "").strip()
+    if verdict != "pass" and len(notes) < 10:
+        raise DvxError("verdict fix/drop ต้องเขียนเหตุผลให้ชัดว่าติดตรงไหน แก้ยังไง")
+
+    body = json.dumps({
+        "review_verdict": verdict, "review_notes": notes[:2000],
+        "reviewed_at": datetime.now(timezone.utc).isoformat(), "reviewed_by": reviewer,
+    }).encode("utf-8")
+    req = urllib.request.Request(
+        f"{SB_URL}/rest/v1/marketing_content?id=eq.{int(content_id)}",
+        data=body, method="PATCH",
+        headers={"apikey": SB_KEY, "Authorization": f"Bearer {SB_KEY}",
+                 "Content-Type": "application/json", "Prefer": "return=representation"},
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=30) as r:
+            out = json.loads(r.read().decode("utf-8"))
+    except urllib.error.HTTPError as e:
+        detail = e.read().decode("utf-8", "ignore")[:200]
+        if "review_verdict" in detail and "column" in detail:
+            raise DvxError("ตาราง marketing_content ยังไม่มีคอลัมน์ review_* — "
+                           "ต้องรัน migration 066_content_review.sql ก่อน")
+        raise DvxError(f"บันทึกผลตรวจไม่สำเร็จ (HTTP {e.code}): {detail}")
+    if not out:
+        raise DvxError(f"ไม่เจอคอนเทนต์ id={content_id}")
+    return {"saved": True, "id": out[0]["id"], "verdict": verdict,
+            "note": "บันทึกความเห็นแล้ว — สถานะยังเป็นของเดิม รอคนตัดสินใจขั้นสุดท้าย"}
