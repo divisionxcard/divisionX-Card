@@ -12,7 +12,7 @@ import {
   Megaphone, RefreshCw, Check, X, Pencil, Clock, AlertTriangle,
   Wallet, Package, Receipt, TrendingUp, Trophy, MessageSquare, Lock,
   Lightbulb, Newspaper, Youtube, BarChart3, ExternalLink, Sparkles, Music2, Plus,
-  Image as ImageIcon, Send, Copy, Maximize2, Calendar as CalendarIcon,
+  Image as ImageIcon, Send, Copy, Maximize2, Calendar as CalendarIcon, Download,
 } from "lucide-react"
 import {
   ResponsiveContainer, ComposedChart, Bar, Line, XAxis, YAxis,
@@ -109,6 +109,36 @@ export default function MarketingOS() {
   const [err, setErr] = useState("")
   const [notice, setNotice] = useState("")   // ข้อความบอกว่าสั่งงาน async ไปแล้ว
   const [preview, setPreview] = useState(null)   // url ภาพที่กำลังดูเต็มจอ
+  const [downloading, setDownloading] = useState(false)
+
+  // ── ดาวน์โหลดรูปที่ดูอยู่ ──
+  // ⚠ ใช้ <a download> กับ URL ของ Supabase ตรง ๆ ไม่ได้ผล — เบราว์เซอร์เมิน attribute
+  //   download เมื่อลิงก์ข้ามโดเมน แล้วจะกลายเป็นเปิดแท็บใหม่หรือไม่เกิดอะไรเลย
+  //   ต้องดึงเป็น blob มาก่อนแล้วค่อยสร้างลิงก์จาก object URL (วิธีเดียวกับที่หน้าเตรียมของใช้)
+  async function downloadImage(url) {
+    if (!url || downloading) return
+    setDownloading(true)
+    try {
+      const res = await fetch(url)
+      if (!res.ok) throw new Error(`โหลดรูปไม่สำเร็จ (HTTP ${res.status})`)
+      const blob = await res.blob()
+      const objectUrl = URL.createObjectURL(blob)
+      const a = document.createElement("a")
+      a.href = objectUrl
+      // ตั้งชื่อไฟล์ให้รู้ที่มา — เวลาโหลดหลายใบจะได้ไม่ชนกันเป็น image(1).png
+      const ext = (blob.type.split("/")[1] || "png").replace("jpeg", "jpg")
+      a.download = `divisionx-${new Date().toISOString().slice(0, 10)}-${Date.now() % 100000}.${ext}`
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      // ปล่อยหน่วยความจำหลังเบราว์เซอร์เริ่มโหลดแล้ว
+      setTimeout(() => URL.revokeObjectURL(objectUrl), 10000)
+    } catch (e) {
+      setErr(`ดาวน์โหลดไม่สำเร็จ: ${e.message} — กดคลิกขวาที่รูปแล้วเลือกบันทึกรูปภาพแทนได้`)
+    } finally {
+      setDownloading(false)
+    }
+  }
   // ธงบอกว่ายังอยู่บนหน้านี้ไหม — ลูปรอผลโปสเตอร์ต้องหยุดเองถ้าคนปิดหน้าไปแล้ว
   // ไม่งั้นจะยิง API ต่อและ setState กับ component ที่ถูก unmount ไปแล้ว
   const alive = useRef(true)
@@ -550,6 +580,11 @@ export default function MarketingOS() {
             className="max-h-[90vh] max-w-full object-contain rounded-xl shadow-2xl cursor-default" />
           <div className="absolute top-4 right-4 flex items-center gap-2"
             onClick={(e) => e.stopPropagation()}>
+            <button onClick={() => downloadImage(preview)} disabled={downloading}
+              className="px-3 py-1.5 rounded-lg bg-white/15 hover:bg-white/25 text-white text-sm
+                         flex items-center gap-1.5 disabled:opacity-50">
+              <Download size={14} /> {downloading ? "กำลังโหลด…" : "ดาวน์โหลด"}
+            </button>
             <a href={preview} target="_blank" rel="noreferrer"
               className="px-3 py-1.5 rounded-lg bg-white/15 hover:bg-white/25 text-white text-sm
                          flex items-center gap-1.5">
