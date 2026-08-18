@@ -1,0 +1,199 @@
+<!doctype html>
+<!--
+  poster_template_v2.html — แนว "ดำ-ทอง คอนทราสต์สูง" ตามภาพอ้างอิงที่เจ้าของเลือกเอง (2026-08-18)
+
+  ต่างจาก poster_template.html เดิมตรงไหน และทำไม:
+    เดิม  กรอบทองหนา + สมอ + เข็มทิศ + ประกาย → ของประดับแย่งซีนสินค้า
+    ใหม่  ตัดของประดับเกือบหมด เหลือแค่แถบเฉียงแดงหลังพาดหัว · ให้ "ซอง" กินพื้นที่มากที่สุดในภาพ
+    เดิม  ยัดแคปชั่นเต็มลงในภาพ (ซ้ำกับข้อความในโพสต์ และบนมือถืออ่านไม่ไหว)
+    ใหม่  ในภาพมีแค่ พาดหัว + บรรทัดรองสั้น ๆ + จุดขาย 3 ข้อ + CTA
+
+  โครงตามภาพอ้างอิง:
+    แถบบน      โลโก้ซ้าย + ป้ายมุมขวา
+    พาดหัว     ตัวหนาใหญ่ มีแถบแดงเฉียงรองหลัง (แทนรอยแปรงในภาพอ้างอิง)
+    กลาง       ซองยักษ์ชิดขวา + คอลัมน์จุดขาย 3 ข้อชิดซ้าย (แบบ ULTRA RARE / PREMIUM QUALITY)
+    แถบล่าง    CTA เต็มความกว้าง + แฮชแท็ก
+
+  ⚠️ กับดักที่ยกมาจากเทมเพลตเดิม ห้ามแก้กลับ:
+    1. ห้ามใส่อีโมจิ — ubuntu บน CI ไม่มีฟอนต์อีโมจิสี จะได้สี่เหลี่ยม → ใช้ inline SVG เท่านั้น
+    2. ห้ามใช้ -webkit-text-stroke กับภาษาไทย — เส้นขอบกินช่องว่างระหว่างสระบนกับวรรณยุกต์
+       "ที่" จะเหลือ "ที" → ใช้ text-shadow ซ้อนหลายทิศแทน
+    3. text-shadow ใช้กับ background-clip:text ไม่ได้ → ถ้าอยากได้ทั้งไล่สีและขอบ ใช้ filter: drop-shadow
+-->
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<style>
+  @font-face { font-family: "DX"; src: url("{{FONT_REGULAR}}"); font-weight: 400; }
+  @font-face { font-family: "DX"; src: url("{{FONT_BOLD}}");    font-weight: 800; }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { width: 1080px; height: 1080px; overflow: hidden; font-family: "DX", sans-serif; }
+
+  .poster { position: relative; width: 1080px; height: 1080px; background: #08080b; overflow: hidden; }
+
+  /* ── พื้นหลัง: ดำสนิท + แสงอุ่นจากขวาบน (ทิศเดียวกับไฟที่ส่องซอง) ── */
+  .glow {
+    position: absolute; inset: 0;
+    background:
+      radial-gradient(1000px 700px at 74% 30%, rgba(214,164,58,.30), transparent 62%),
+      radial-gradient(760px 620px at 18% 84%, rgba(190,32,44,.22), transparent 66%),
+      linear-gradient(160deg, #0d0d12 0%, #08080b 55%, #0b0a0d 100%);
+  }
+  /* รูปฉาก/ตู้จริง — จมอยู่ใต้ทุกอย่าง ให้เป็นบรรยากาศ ไม่ใช่ตัวเอก */
+  .bg {
+    position: absolute; inset: 0; background: url("{{BG}}") center/cover no-repeat;
+    opacity: .16; filter: saturate(.75) contrast(1.05);
+  }
+  .vig { position: absolute; inset: 0; box-shadow: inset 0 0 260px 90px rgba(0,0,0,.92); }
+  /* เส้นทองบาง ๆ รอบขอบ — คุมกรอบภาพโดยไม่หนาเทอะทะแบบกรอบเดิม */
+  .edge { position: absolute; inset: 16px; border: 2px solid rgba(214,164,58,.42); }
+  .edge::after {
+    content: ""; position: absolute; inset: 6px; border: 1px solid rgba(214,164,58,.16);
+  }
+
+  /* ── แถบหัว ── */
+  .top { position: absolute; top: 44px; left: 52px; right: 52px; display: flex; align-items: center; gap: 16px; }
+  .logo { width: 62px; height: 62px; border-radius: 14px; background: url("{{LOGO}}") center/contain no-repeat; }
+  .brand { font-weight: 800; font-size: 27px; letter-spacing: 3px; color: #f4e6c4; }
+  .brand small { display: block; font-weight: 400; font-size: 15px; letter-spacing: .6px; color: #9a8f79; margin-top: 3px; }
+  .badge {
+    margin-left: auto; padding: 9px 20px; border: 2px solid #d6a43a; border-radius: 999px;
+    font-weight: 800; font-size: 18px; color: #f6dc9a; letter-spacing: .5px;
+    background: rgba(214,164,58,.10);
+  }
+
+  /* ── พาดหัว ── */
+  .head { position: absolute; top: 152px; left: 52px; width: 560px; }
+  .kicker {
+    display: inline-block; transform: skewX(-9deg);
+    background: linear-gradient(90deg, #be202c, #8d151f);
+    padding: 7px 18px; margin-bottom: 16px;
+  }
+  .kicker span { display: inline-block; transform: skewX(9deg); font-weight: 800; font-size: 20px; color: #fff; letter-spacing: 1px; }
+  h1 {
+    font-weight: 800; font-size: {{HEAD_SIZE}}px; line-height: 1.16; color: #fff;
+    text-shadow: 0 3px 0 rgba(0,0,0,.65), 0 8px 26px rgba(0,0,0,.9);
+  }
+  /* เน้นเฉพาะตัวเลข/รหัสชุด (มาจาก highlight() ฝั่ง Python) */
+  h1 em { font-style: normal; color: #ffcf5c; text-shadow: 0 3px 0 rgba(0,0,0,.6), 0 0 26px rgba(255,190,60,.55); }
+  .sub { margin-top: 18px; font-size: 25px; line-height: 1.45; color: #d9cdb4; max-width: 520px; }
+
+  /* ── จุดขาย 3 ข้อ (แบบ ULTRA RARE / PREMIUM QUALITY ในภาพอ้างอิง) ── */
+  .feats { position: absolute; left: 52px; top: 556px; width: 470px; display: flex; flex-direction: column; gap: 20px; }
+  .feat {
+    display: flex; align-items: center; gap: 14px;
+    background: linear-gradient(90deg, rgba(214,164,58,.16), rgba(214,164,58,.02));
+    border-left: 4px solid #d6a43a; padding: 17px 18px;
+  }
+  .feat svg { width: 34px; height: 34px; flex: none; }
+  .feat b { font-weight: 800; font-size: 23px; color: #f6dc9a; display: block; }
+  .feat i { font-style: normal; font-size: 18px; color: #b4a88f; }
+
+  /* ── ซอง: พระเอกของภาพ ── */
+  .hero {
+    position: absolute; right: 26px; top: 172px; width: 560px; height: 776px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .hero::before {   /* แสงหลังซอง — ไล่วงรี ไม่ใช่กรวยสามเหลี่ยมแข็ง ๆ แบบเดิม */
+    content: ""; position: absolute; width: 600px; height: 600px; border-radius: 50%;
+    background: radial-gradient(circle, rgba(255,196,80,.42), rgba(255,150,40,.10) 46%, transparent 70%);
+    filter: blur(6px);
+  }
+  .hero img {
+    position: relative; max-width: 100%; max-height: 100%;
+    filter: drop-shadow(0 34px 46px rgba(0,0,0,.85)) drop-shadow(0 0 22px rgba(255,190,70,.30));
+    transform: rotate(-3deg);
+  }
+  .hero.empty::before { display: none; }
+  /* กล่องที่ {{HERO}} ส่งมา (ชื่อคลาส stage มาจากฝั่ง Python) */
+  .hero > .stage {
+    position: relative; display: flex; flex-direction: column; align-items: center;
+    width: 100%; height: 100%; justify-content: center;
+  }
+  .hero > .stage > img:first-child { max-height: 96%; }
+  /* ภาพสะท้อนบนพื้น — พลิกกลับ จางลง แล้วเฟดหาย ไม่ใช่ซองใบที่สอง */
+  .hero .refl {
+    max-height: 20%; margin-top: 4px; transform: scaleY(-1) rotate(3deg); opacity: .22;
+    filter: blur(2px); mask-image: linear-gradient(to bottom, #000, transparent 72%);
+    -webkit-mask-image: linear-gradient(to bottom, #000, transparent 72%);
+  }
+  /* ไม่มีรูปซอง → ให้คอลัมน์ซ้ายกินเต็มความกว้าง ไม่ทิ้งช่องว่างเปล่า */
+  .no-hero .head, .no-hero .feats { width: 900px; }
+  .no-hero .sub { max-width: 860px; }
+
+  /* กล่องรูปตู้จริงมุมขวาล่าง — เล็ก ๆ พอเป็นหลักฐานว่ามีตู้จริง */
+  .mach {
+    position: absolute; left: 52px; bottom: 168px; width: 150px; height: 150px;
+    border: 2px solid rgba(214,164,58,.5); background: url("{{MACHINE}}") center/cover no-repeat;
+    box-shadow: 0 14px 30px rgba(0,0,0,.7);
+  }
+  .no-machine .mach { display: none; }
+  /* มีรูปสินค้าแล้วไม่ต้องมีรูปตู้ — เคยทับข้อความจุดขายข้อสาม และภาพอ้างอิงก็ไม่มี
+     เหลือไว้ให้โผล่เฉพาะตอนไม่มีรูปสินค้า (.no-hero) เพื่อไม่ให้ภาพว่างเปล่า */
+  .poster:not(.no-hero) .mach { display: none; }
+  .no-hero .mach { left: auto; right: 56px; bottom: 190px; width: 260px; height: 260px; }
+
+  /* ── แถบท้าย ── */
+  .cta {
+    position: absolute; left: 0; right: 0; bottom: 0; height: 132px;
+    background: linear-gradient(90deg, #be202c 0%, #8d151f 58%, #6d1018 100%);
+    display: flex; align-items: center; padding: 0 56px; gap: 22px;
+  }
+  .cta .big { font-weight: 800; font-size: 38px; color: #fff; letter-spacing: .5px; }
+  .cta .small { font-size: 20px; color: #ffd9dc; margin-top: 4px; }
+  .cta .tags { margin-left: auto; text-align: right; font-size: 19px; color: #ffe2a8; line-height: 1.5; max-width: 330px; }
+  .cta::before {   /* เส้นทองคาดบนแถบ ให้ตัดกับพื้นดำชัด */
+    content: ""; position: absolute; top: 0; left: 0; right: 0; height: 4px;
+    background: linear-gradient(90deg, #d6a43a, #f6dc9a 50%, #d6a43a);
+  }
+  {{CONCEPT_CSS}}
+</style>
+</head>
+<body>
+<div class="poster {{WRAP_CLASS}} {{MACHINE_CLASS}} {{CONCEPT_CLASS}}">
+  <div class="glow"></div>
+  <div class="bg"></div>
+  <div class="vig"></div>
+
+  <div class="hero {{HERO_CLASS}}">{{HERO}}</div>
+  <div class="mach"></div>
+  <div class="edge"></div>
+
+  <div class="top">
+    <div class="logo"></div>
+    <div class="brand">DIVISION X CARD<small>ตู้กดการ์ดสะสมอัตโนมัติ ในห้างใกล้บ้านคุณ</small></div>
+    <div class="badge">ของแท้ 100%</div>
+  </div>
+
+  <div class="head">
+    <div class="kicker"><span>กดเองหน้าตู้ ลุ้นเองสด ๆ</span></div>
+    <h1>{{HEADLINE}}</h1>
+    <p class="sub">{{SUB}}</p>
+  </div>
+
+  <div class="feats">
+    <div class="feat">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#f6dc9a" stroke-width="2"><path d="M12 3l2.6 5.6L21 9.4l-4.5 4.3 1.1 6.1L12 17l-5.6 2.8 1.1-6.1L3 9.4l6.4-.8z"/></svg>
+      <div><b>ลุ้นทุกซอง</b><i>ของแท้จากผู้แทนจำหน่าย</i></div>
+    </div>
+    <div class="feat">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#f6dc9a" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>
+      <div><b>เปิด 24 ชั่วโมง</b><i>กดเองได้ ไม่ต้องต่อคิว</i></div>
+    </div>
+    <div class="feat">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#f6dc9a" stroke-width="2"><path d="M12 21s7-5.6 7-11a7 7 0 10-14 0c0 5.4 7 11 7 11z"/><circle cx="12" cy="10" r="2.6"/></svg>
+      <div><b>{{BRANCHES}} สาขาในห้าง</b><i>เช็กหน้าตู้สาขาใกล้บ้าน</i></div>
+    </div>
+  </div>
+
+  <div class="cta">
+    <div>
+      <div class="big">กดเองที่ตู้ — มาก่อนได้ก่อน</div>
+      <div class="small">ของหมดเร็วมาก เช็กหน้าตู้ก่อนไปได้เลย</div>
+    </div>
+    <div class="tags">{{TAGS}}</div>
+  </div>
+</div>
+</body>
+</html>
