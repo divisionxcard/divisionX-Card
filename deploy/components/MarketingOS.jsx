@@ -115,6 +115,34 @@ export default function MarketingOS() {
   const [briefing, setBriefing] = useState(new Set())   // id ที่กำลังสร้างบรีฟ
   const [brief, setBrief] = useState(null)              // { id, text } บรีฟที่เปิดดูอยู่
 
+  // โหลดรูปแนบทั้งชุดทีเดียว — เว้นจังหวะระหว่างไฟล์เพราะเบราว์เซอร์บล็อกการดาวน์โหลดรัว ๆ
+  // จากหน้าเดียวกัน (ไฟล์แรกผ่าน ที่เหลือเงียบ) ซึ่งดูเหมือนปุ่มพังทั้งที่โค้ดถูก
+  async function downloadAll(urls) {
+    if (downloading) return
+    setDownloading(true)
+    try {
+      for (const [i, u] of urls.entries()) {
+        await downloadOne(u, i)
+        await new Promise(r => setTimeout(r, 400))
+      }
+    } finally { setDownloading(false) }
+  }
+
+  async function downloadOne(url, i) {
+    const res = await fetch(url)
+    if (!res.ok) { setErr(`โหลดรูปไม่สำเร็จ: ${url.split("/").pop()}`); return }
+    const blob = await res.blob()
+    const objectUrl = URL.createObjectURL(blob)
+    const a = document.createElement("a")
+    a.href = objectUrl
+    const ext = (blob.type.split("/")[1] || "png").replace("jpeg", "jpg")
+    a.download = `ref-${i + 1}-${url.split("/").pop()?.split("?")[0] || `image.${ext}`}`
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
+    setTimeout(() => URL.revokeObjectURL(objectUrl), 10000)
+  }
+
   // ── ขอบรีฟสั่งทำภาพ ──
   // ก๊อปให้อัตโนมัติเลยตั้งแต่ได้ผล เพราะปลายทางคือเอาไปวางใน ChatGPT อยู่แล้ว
   // (ถ้าเบราว์เซอร์ไม่ให้เขียนคลิปบอร์ด ยังมีปุ่มก๊อปในกล่องให้กดเองอีกที)
@@ -123,7 +151,7 @@ export default function MarketingOS() {
     setBriefing(s => new Set(s).add(item.id))
     try {
       const r = await api("content/brief", { method: "POST", body: JSON.stringify({ id: item.id }) })
-      setBrief({ id: item.id, text: r.brief, by: r.generated_by })
+      setBrief({ id: item.id, text: r.brief, by: r.generated_by, download: r.download || [] })
       try { await navigator.clipboard?.writeText(r.brief) } catch { /* ไม่ให้เขียนคลิปบอร์ดก็ไม่เป็นไร */ }
     } catch (e) {
       setErr(e.message)
@@ -649,13 +677,22 @@ export default function MarketingOS() {
               onFocus={e => e.target.select()}
               className="flex-1 m-4 p-3 text-xs leading-relaxed border border-gray-200 rounded-xl
                          font-mono resize-none min-h-[45vh]" />
-            <div className="flex items-center gap-2 px-4 pb-4">
+            <div className="flex items-center flex-wrap gap-2 px-4 pb-4">
               <button onClick={() => navigator.clipboard?.writeText(brief.text)}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-violet-600 text-white text-sm">
                 <Copy size={14} /> ก๊อปอีกครั้ง
               </button>
+              {/* ⚠ ChatGPT เปิดลิงก์เองไม่ได้ ต้องอัปโหลดไฟล์เข้าแชต — ปุ่มนี้จึงจำเป็น
+                  ไม่ใช่ของเสริม รอบแรกที่ทดสอบจริงมันปฏิเสธไม่ยอมทำภาพเพราะได้แค่ลิงก์ */}
+              {brief.download?.length > 0 && (
+                <button onClick={() => downloadAll(brief.download)} disabled={downloading}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 text-white text-sm disabled:opacity-50">
+                  <Download size={14} />
+                  {downloading ? "กำลังโหลด…" : `ดาวน์โหลดรูปแนบ ${brief.download.length} ไฟล์`}
+                </button>
+              )}
               <span className="text-[11px] text-gray-400">
-                อย่าลืมแนบรูปซองตามลิงก์ท้ายบรีฟ — ไม่แนบแล้วมันจะวาดซองปลอมขึ้นมาเอง
+                ต้องลากไฟล์เข้าแชต ChatGPT ด้วย — วางแค่ลิงก์มันเปิดไม่ได้
               </span>
             </div>
           </div>

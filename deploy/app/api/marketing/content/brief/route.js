@@ -156,13 +156,24 @@ ${soldOut.length ? `- ห้ามใส่ในภาพเพราะขอ�
     ].filter(Boolean).join("\n")
   }
 
+  // ⚠️ ChatGPT เปิด URL เองไม่ได้ — ต้องเป็นไฟล์ที่ "อัปโหลดเข้าแชต" เท่านั้น
+  // รอบแรกที่ทดสอบจริง มันปฏิเสธไม่ยอมสร้างภาพเลยเพราะได้มาแค่ลิงก์ (ซึ่งถูกต้องแล้ว)
+  // บรีฟจึงต้องสั่งเป็นภาษาที่ตรงกับสิ่งที่คนต้องทำ ไม่ใช่แค่แปะลิงก์ไว้เฉย ๆ
+  const machineUrl = `${PUBLIC}/marketing/machine/machine-scene.jpg`
   const refLines = refs.length
-    ? refs.map(r => `- ซอง ${r.sku}: ${r.url}`).join("\n")
-    : "- (ไม่มีรูปซองในระบบสำหรับ SKU นี้ — แนบรูปถ่ายเองแทน)"
+    ? refs.map((r, i) => `${i + 1}. ซอง ${r.sku}`).join("\n")
+    : "1. (ไม่มีรูปซองในระบบสำหรับ SKU นี้ — ใช้รูปถ่ายเองแทน)"
+
+  const attach =
+    "📎 ก่อนสั่งทำภาพ ต้องอัปโหลดไฟล์รูปเข้าไปในแชตก่อน — วางแค่ลิงก์ใช้ไม่ได้\n" +
+    "(กดปุ่ม \"ดาวน์โหลดรูปแนบ\" ในหน้า /marketing แล้วลากไฟล์ทั้งหมดเข้าแชต)\n\n" +
+    "รูปที่ต้องแนบ:\n" + refLines + `\n${refs.length + 1}. รูปตู้ DivisionX จริง\n\n` +
+    "ถ้ายังไม่ได้แนบครบ อย่าเพิ่งสร้างภาพ — เพราะจะกลายเป็นวาดซองขึ้นมาเองซึ่งผิดจากของจริง"
 
   return NextResponse.json({
     ok: true,
-    brief: `${brief}\n\nรูปที่ต้องแนบเข้า ChatGPT (สำคัญที่สุด — ไม่แนบแล้วมันจะวาดซองปลอมขึ้นมาเอง):\n${refLines}\n- รูปตู้จริง: ${PUBLIC}/marketing/machine/machine-scene.jpg`,
+    brief: `${brief}\n\n${attach}`,
+    download: [...refs.map(r => r.url), machineUrl],
     refs,
     facts: { branches, top: top.map(([sku, v]) => ({ sku, revenue: Math.round(v) })), sold_out: soldOut },
     generated_by: process.env.GEMINI_API_KEY ? "gemini" : "template",
