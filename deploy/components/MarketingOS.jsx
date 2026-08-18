@@ -1098,6 +1098,11 @@ export default function MarketingOS() {
 
                   <div className="flex-1 min-w-0">
                   <div className="flex items-center flex-wrap gap-2 text-xs text-gray-500 mb-2">
+                    {/* เลขแคปชั่น — ต้องเห็นตลอด เวลาคุยกับผู้ตรวจหรือแจ้งแก้จะได้อ้างตัวเดียวกัน
+                        select-all เพื่อให้ดับเบิลคลิกแล้วคัดลอกได้ทันที */}
+                    <span className="px-2 py-0.5 rounded bg-gray-900 text-white font-mono font-medium select-all">
+                      #{item.id}
+                    </span>
                     <span className="px-2 py-0.5 rounded bg-gray-100 font-medium text-gray-700">
                       {PLATFORM_LABEL[item.platform] || item.platform}
                     </span>
@@ -1395,10 +1400,12 @@ export default function MarketingOS() {
                     )}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1.5 text-xs">
+                        <span className="px-2 py-0.5 rounded bg-gray-900 text-white font-mono font-medium select-all">
+                          #{item.id}
+                        </span>
                         <span className="px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">
                           {PLATFORM_LABEL[item.platform] || item.platform}
                         </span>
-                        <span className="text-gray-300">#{item.id}</span>
                         {item.source_sku && <span className="text-gray-400">{item.source_sku}</span>}
                       </div>
 
