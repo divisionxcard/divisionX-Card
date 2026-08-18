@@ -468,6 +468,10 @@ def load_content_rules():
         "audience": v.get("audience"), "tone": v.get("tone"),
         "catchphrases": v.get("catchphrases", []),
         "hard_rules": v.get("rules", []),
+        # ด่านตรวจคำเว่อร์ — แยกจาก hard_rules เพราะเป็นคนละเรื่อง
+        # hard_rules คือรูปแบบการเขียน (ยาวเท่าไหร่ แฮชแท็กกี่อัน)
+        # overclaim คือ "พูดเกินจริงไหม" ซึ่งเป็นความเสี่ยงต่อชื่อเสียง ไม่ใช่เรื่องความสวยงาม
+        "overclaim": v.get("overclaim", {}),
         "example_good": v.get("example"),
         "formats": [{"key": f.get("key"), "label": f.get("label")}
                     for f in v.get("content_formats", [])],
@@ -515,7 +519,9 @@ def query_content_for_review(limit=10, include_reviewed=False):
         "items": items,
         "note": ("ตรวจทีละชิ้นแล้วบันทึกผลด้วย review_content — pass ถ้าโพสต์ได้เลย · "
                  "fix ถ้าควรแก้ (ต้องบอกจุดที่แก้ได้จริง ไม่ใช่คำติลอย ๆ) · drop ถ้าไม่ควรใช้ชิ้นนี้ · "
-                 "recent_published มีไว้เทียบว่าซ้ำแนวเดิมไหม ไม่ใช่ตัวอย่างให้เลียนแบบ"),
+                 "recent_published มีไว้เทียบว่าซ้ำแนวเดิมไหม ไม่ใช่ตัวอย่างให้เลียนแบบ · "
+                 "⚠ ตรวจ rules.overclaim ทุกชิ้นด้วย — คำโฆษณาเกินจริงคือความเสี่ยงที่ย้อนกลับมาเป็นดราม่า "
+                 "และแก้ไม่ได้หลังโพสต์ ต่างจากคำผิดที่แค่ดูไม่เรียบร้อย"),
     }
 
 
