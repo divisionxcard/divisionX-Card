@@ -1,0 +1,22 @@
+{
+  "name": "divisionx-remotion",
+  "version": "1.0.0",
+  "private": true,
+  "description": "ทำวิดีโอสั้นสำหรับโพสต์ (Reels/TikTok) ด้วยโค้ด — แยก node_modules จาก deploy/ เพื่อไม่ให้ Vercel ต้องติดตั้งตาม",
+  "scripts": {
+    "studio": "remotion studio",
+    "render": "remotion render",
+    "compositions": "remotion compositions src/index.ts",
+    "upgrade": "remotion upgrade"
+  },
+  "dependencies": {
+    "@remotion/cli": "^4.0.0",
+    "remotion": "^4.0.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.1",
+    "typescript": "^5.4.0"
+  }
+}
