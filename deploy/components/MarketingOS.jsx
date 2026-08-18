@@ -110,6 +110,43 @@ export default function MarketingOS() {
   const [notice, setNotice] = useState("")   // ข้อความบอกว่าสั่งงาน async ไปแล้ว
   const [preview, setPreview] = useState(null)   // url ภาพที่กำลังดูเต็มจอ
   const [downloading, setDownloading] = useState(false)
+  const [proofing, setProofing] = useState(new Set())   // id ที่กำลังตรวจปรู๊ฟอยู่
+  const [proof, setProof] = useState({})                // id → ผลตรวจ
+
+  // ── ตรวจปรู๊ฟตัวอักษรบนภาพ ──
+  // ซอยภาพเป็น 3 แถบซ้อนกันแล้วขยาย 2 เท่าก่อนส่ง — ตัวหนังสือไทยบนภาพ 1080px
+  // เล็กเกินกว่าโมเดลจะแยกวรรณยุกต์ออก ส่งภาพเต็มไปจะได้ผลมั่วกว่าไม่ตรวจเลย
+  // ทำในเบราว์เซอร์เพราะ canvas ทำได้อยู่แล้ว ไม่ต้องลงไลบรารีภาพบนเซิร์ฟเวอร์
+  async function proofImage(item) {
+    if (proofing.has(item.id)) return
+    setProofing(s => new Set(s).add(item.id))
+    setProof(p => ({ ...p, [item.id]: null }))
+    try {
+      const blob = await (await fetch(item.media_url)).blob()
+      const bmp = await createImageBitmap(blob)
+      const bands = [[0, 0.4], [0.3, 0.72], [0.62, 1]]
+      const tiles = bands.map(([a, b]) => {
+        const sy = Math.floor(bmp.height * a)
+        const sh = Math.floor(bmp.height * (b - a))
+        const cv = document.createElement("canvas")
+        cv.width = bmp.width * 2
+        cv.height = sh * 2
+        const ctx = cv.getContext("2d")
+        ctx.imageSmoothingQuality = "high"
+        ctx.drawImage(bmp, 0, sy, bmp.width, sh, 0, 0, cv.width, cv.height)
+        return cv.toDataURL("image/jpeg", 0.9)
+      })
+      const r = await api("content/proof", {
+        method: "POST",
+        body: JSON.stringify({ tiles, caption: item.caption || "" }),
+      })
+      setProof(p => ({ ...p, [item.id]: r }))
+    } catch (e) {
+      setProof(p => ({ ...p, [item.id]: { verdict: "fix", problems: [], error: e.message } }))
+    } finally {
+      setProofing(s => { const n = new Set(s); n.delete(item.id); return n })
+    }
+  }
 
   // ── ดาวน์โหลดรูปที่ดูอยู่ ──
   // ⚠ ใช้ <a download> กับ URL ของ Supabase ตรง ๆ ไม่ได้ผล — เบราว์เซอร์เมิน attribute
@@ -893,6 +930,43 @@ export default function MarketingOS() {
                           </>
                         )}
                       </div>
+                    )}
+
+                    {/* ตรวจปรู๊ฟตัวอักษรบนภาพ — ใช้กับภาพที่ทำจากที่อื่น (ChatGPT) ได้ด้วย
+                        ซอยภาพ + ขยายในเบราว์เซอร์ก่อนส่ง เพราะตัวหนังสือไทยเล็กเกินกว่าจะอ่านจากภาพเต็ม */}
+                    {item.media_url && (
+                      <>
+                        <button
+                          disabled={proofing.has(item.id)}
+                          onClick={() => proofImage(item)}
+                          title="อ่านตัวอักษรบนภาพแล้วเทียบกับแคปชั่นที่อนุมัติ"
+                          className="w-full sm:w-36 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg
+                                     bg-amber-500 text-white text-[11px] font-medium disabled:opacity-50">
+                          <Check size={12} />
+                          {proofing.has(item.id) ? "กำลังตรวจ…" : "ตรวจตัวอักษร"}
+                        </button>
+                        {proof[item.id] && (
+                          <div className={`w-full sm:w-36 text-[10px] rounded-lg px-2 py-1.5 leading-relaxed
+                            ${proof[item.id].verdict === "pass"
+                              ? "bg-emerald-50 text-emerald-800 border border-emerald-200"
+                              : "bg-rose-50 text-rose-800 border border-rose-200"}`}>
+                            {proof[item.id].error ? (
+                              <span>{proof[item.id].error}</span>
+                            ) : proof[item.id].verdict === "pass" ? (
+                              <span>ไม่พบที่ผิด — แต่ตัวตรวจจับได้ราวครึ่งเดียว ซูมอ่านพาดหัวเองอีกที</span>
+                            ) : (
+                              <>
+                                <b>เจอ {proof[item.id].problems.length} จุด</b>
+                                {proof[item.id].problems.map((p, i) => (
+                                  <div key={i} className="mt-1">
+                                    “{p.found}” → “{p.should_be}”
+                                  </div>
+                                ))}
+                              </>
+                            )}
+                          </div>
+                        )}
+                      </>
                     )}
 
                     {/* ทางหลัก — โปสเตอร์จากเทมเพลต · ฟรี ตัวอักษรไทยถูก ตัวเลขมาจาก DB
