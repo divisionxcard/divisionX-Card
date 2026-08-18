@@ -112,6 +112,25 @@ export default function MarketingOS() {
   const [downloading, setDownloading] = useState(false)
   const [proofing, setProofing] = useState(new Set())   // id ที่กำลังตรวจปรู๊ฟอยู่
   const [proof, setProof] = useState({})                // id → ผลตรวจ
+  const [briefing, setBriefing] = useState(new Set())   // id ที่กำลังสร้างบรีฟ
+  const [brief, setBrief] = useState(null)              // { id, text } บรีฟที่เปิดดูอยู่
+
+  // ── ขอบรีฟสั่งทำภาพ ──
+  // ก๊อปให้อัตโนมัติเลยตั้งแต่ได้ผล เพราะปลายทางคือเอาไปวางใน ChatGPT อยู่แล้ว
+  // (ถ้าเบราว์เซอร์ไม่ให้เขียนคลิปบอร์ด ยังมีปุ่มก๊อปในกล่องให้กดเองอีกที)
+  async function makeBrief(item) {
+    if (briefing.has(item.id)) return
+    setBriefing(s => new Set(s).add(item.id))
+    try {
+      const r = await api("content/brief", { method: "POST", body: JSON.stringify({ id: item.id }) })
+      setBrief({ id: item.id, text: r.brief, by: r.generated_by })
+      try { await navigator.clipboard?.writeText(r.brief) } catch { /* ไม่ให้เขียนคลิปบอร์ดก็ไม่เป็นไร */ }
+    } catch (e) {
+      setErr(e.message)
+    } finally {
+      setBriefing(s => { const n = new Set(s); n.delete(item.id); return n })
+    }
+  }
 
   // ── ตรวจปรู๊ฟตัวอักษรบนภาพ ──
   // ซอยภาพเป็น 3 แถบซ้อนกันแล้วขยาย 2 เท่าก่อนส่ง — ตัวหนังสือไทยบนภาพ 1080px
@@ -609,6 +628,40 @@ export default function MarketingOS() {
       {/* ── ดูภาพเต็มจอ ──
           โปสเตอร์เป็น 1080×1080 แต่ในการ์ดย่อเหลือ 144px ตรวจอะไรไม่ได้เลย
           ต้องเปิดดูเต็ม ๆ ก่อนอนุมัติ ไม่งั้นตัวหนังสือเพี้ยน/ตกขอบก็ไม่รู้ */}
+      {/* กล่องบรีฟ — ให้เลือกข้อความได้ทั้งก้อนและก๊อปซ้ำได้ ไม่ต้องลากเมาส์เอง */}
+      {brief && (
+        <div onClick={() => setBrief(null)}
+          className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4">
+          <div onClick={e => e.stopPropagation()}
+            className="bg-white rounded-2xl max-w-2xl w-full max-h-[85vh] flex flex-col overflow-hidden">
+            <div className="flex items-center gap-2 p-4 border-b border-gray-100">
+              <Sparkles size={16} className="text-violet-600" />
+              <span className="text-sm font-semibold text-gray-800">บรีฟสั่งทำภาพ · คอนเทนต์ #{brief.id}</span>
+              <span className="text-[11px] text-gray-400">
+                {brief.by === "gemini" ? "เขียนโดย AI" : "ประกอบจากข้อมูลจริง"} · ก๊อปให้แล้ว
+              </span>
+              <button onClick={() => setBrief(null)}
+                className="ml-auto w-8 h-8 rounded-lg hover:bg-gray-100 text-gray-500 flex items-center justify-center">
+                <X size={16} />
+              </button>
+            </div>
+            <textarea readOnly value={brief.text}
+              onFocus={e => e.target.select()}
+              className="flex-1 m-4 p-3 text-xs leading-relaxed border border-gray-200 rounded-xl
+                         font-mono resize-none min-h-[45vh]" />
+            <div className="flex items-center gap-2 px-4 pb-4">
+              <button onClick={() => navigator.clipboard?.writeText(brief.text)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-violet-600 text-white text-sm">
+                <Copy size={14} /> ก๊อปอีกครั้ง
+              </button>
+              <span className="text-[11px] text-gray-400">
+                อย่าลืมแนบรูปซองตามลิงก์ท้ายบรีฟ — ไม่แนบแล้วมันจะวาดซองปลอมขึ้นมาเอง
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
+
       {preview && (
         <div onClick={() => setPreview(null)}
           className="fixed inset-0 z-50 bg-black/85 flex items-center justify-center p-4 cursor-zoom-out">
@@ -931,6 +984,18 @@ export default function MarketingOS() {
                         )}
                       </div>
                     )}
+
+                    {/* บรีฟสั่งทำภาพ — ก๊อปไปวางใน ChatGPT ได้เลย
+                        อยู่เหนือปุ่มสร้างโปสเตอร์เพราะเป็นทางที่เจ้าของใช้จริงมากกว่า */}
+                    <button
+                      disabled={briefing.has(item.id)}
+                      onClick={() => makeBrief(item)}
+                      title="สร้างบรีฟพร้อมข้อเท็จจริงจากฐานข้อมูล สำหรับเอาไปให้ ChatGPT ออกแบบภาพ"
+                      className="w-full sm:w-36 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg
+                                 bg-violet-600 text-white text-[11px] font-medium disabled:opacity-50">
+                      <Sparkles size={12} />
+                      {briefing.has(item.id) ? "กำลังเขียน…" : "บรีฟทำรูป"}
+                    </button>
 
                     {/* ตรวจปรู๊ฟตัวอักษรบนภาพ — ใช้กับภาพที่ทำจากที่อื่น (ChatGPT) ได้ด้วย
                         ซอยภาพ + ขยายในเบราว์เซอร์ก่อนส่ง เพราะตัวหนังสือไทยเล็กเกินกว่าจะอ่านจากภาพเต็ม */}
