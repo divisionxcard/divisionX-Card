@@ -168,6 +168,20 @@ function buildPrompt(voice, idea, content, sku, recent = [], format = null, craf
   const craftText = craftBlock(craft, format, content.platform)
   const craftPart = craftText ? `\n━━━ หลักการเขียนเชิงวิชาชีพ ━━━\n${craftText}\n` : ""
 
+  // ด่านคำเว่อร์ — ต้องอยู่ใน prompt ของ "คนเขียน" ด้วย ไม่ใช่แค่ตอนผู้ตรวจอ่าน
+  // เดิมบล็อก overclaim มีไว้ให้ผู้ตรวจฝ่ายเดียว (dvx_data.load_content_rules) คนเขียนไม่เคยเห็น
+  // ผลคือทุกชิ้นถูกเขียนผิดก่อนแล้วค่อยจับทีหลังเสมอ — ตรวจคิว 18 ส.ค. 2026 เจอ 11 จาก 13 ชิ้น
+  const oc = voice.overclaim
+  const saferLines = Object.entries(oc?.safer || {})
+    .map(([bad, good]) => `- แทนที่จะพูดว่า "${bad}" → "${good}"`).join("\n")
+  const overclaimPart = oc?.banned?.length
+    ? `\n━━━ ห้ามเด็ดขาด — คำโฆษณาเกินจริง ━━━\n` +
+      `${oc.why || ""}\n` +
+      oc.banned.map((b, i) => `${i + 1}. ${b}`).join("\n") +
+      (saferLines ? `\n\nใช้คำนี้แทน:\n${saferLines}` : "") +
+      (oc.gray_area ? `\n\nเส้นแบ่ง: ${oc.gray_area}` : "") + "\n"
+    : ""
+
   const system = `คุณเป็นนักเขียนคอนเทนต์มืออาชีพที่เขียนให้ ${voice.brand}
 สโลแกน: "${voice.slogan}" · กลุ่มเป้าหมาย: ${voice.audience}
 โทนเสียง: ${voice.tone}
@@ -180,7 +194,7 @@ ${phrases}
 
 กฎเข้ม:
 ${rules}
-${craftPart}${example}
+${overclaimPart}${craftPart}${example}
 ตอบกลับเป็น "ตัวแคปชั่นล้วน ๆ" เท่านั้น ห้ามมีคำอธิบาย ห้ามมีหัวข้อ ห้ามครอบด้วยเครื่องหมายคำพูด`
 
   const facts = [
