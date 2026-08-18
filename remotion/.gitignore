@@ -1,2 +1,5 @@
 node_modules/
 out/
+# ฟุตเทจดิบ — ใหญ่และมีอยู่ใน Video/ อยู่แล้ว ไม่ต้องเก็บซ้ำใน git
+public/*.mp4
+public/*.MOV
