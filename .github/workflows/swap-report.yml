@@ -1,0 +1,56 @@
+name: Swap Report (ย้อนหลัง)
+
+# รายงานการเปลี่ยนสินค้าหน้าตู้ย้อนหลัง → Telegram กลุ่มแอดมิน
+#
+# ทำไมต้องรันบน GitHub ไม่ใช่บนเครื่อง: token ของบอทแอดมิน (TELEGRAM_BOT_TOKEN /
+# TELEGRAM_ADMIN_CHAT_ID) อยู่ใน GitHub Secrets ที่เดียว ไม่ได้อยู่ใน .env.local
+# (ในเครื่องมีแค่บอทการตลาด TELEGRAM_MKT_* ซึ่งเป็นคนละกลุ่ม)
+#
+# ไม่มี schedule — เรียกเองเมื่อต้องการเท่านั้น
+
+on:
+  workflow_dispatch:
+    inputs:
+      since:
+        description: 'วันที่เริ่ม (YYYY-MM-DD เวลาไทย)'
+        required: true
+      until:
+        description: 'วันที่สิ้นสุด (เว้นว่าง = ถึงปัจจุบัน)'
+        required: false
+      machines:
+        description: 'เจาะจงตู้ คั่นด้วย comma (เว้นว่าง = ทุกตู้)'
+        required: false
+      platforms:
+        description: 'แบรนด์ (ค่าเริ่มต้นเว้น vms เพราะแจ้งอัตโนมัติอยู่แล้ว)'
+        required: false
+        default: 'worldwide,vendos'
+      send:
+        description: 'ส่งเข้า Telegram จริง (false = แค่ดูใน log)'
+        type: boolean
+        required: true
+        default: false
+
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Report swaps
+        env:
+          SUPABASE_URL:           ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY:   ${{ secrets.SUPABASE_SERVICE_KEY }}
+          TELEGRAM_BOT_TOKEN:     ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_ADMIN_CHAT_ID: ${{ secrets.TELEGRAM_ADMIN_CHAT_ID }}
+        run: |
+          ARGS="--since ${{ inputs.since }}"
+          if [ -n "${{ inputs.until }}" ];     then ARGS="$ARGS --until ${{ inputs.until }}"; fi
+          if [ -n "${{ inputs.machines }}" ];  then ARGS="$ARGS --machines ${{ inputs.machines }}"; fi
+          if [ -n "${{ inputs.platforms }}" ]; then ARGS="$ARGS --platforms ${{ inputs.platforms }}"; fi
+          if [ "${{ inputs.send }}" = "true" ]; then ARGS="$ARGS --send"; fi
+          echo "รัน: report_swaps.py $ARGS"
+          python deploy/agents/report_swaps.py $ARGS
