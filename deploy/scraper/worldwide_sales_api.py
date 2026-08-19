@@ -158,8 +158,12 @@ def login() -> requests.Session:
 
 
 def fetch_machine_lookup(supabase) -> dict:
-    """Build {vendor_id: machine_id} for brand='worldwide' machines"""
-    res = supabase.table("machines").select("machine_id, config").eq("brand", "worldwide").execute()
+    """Build {vendor_id: machine_id} for brand='worldwide' machines
+
+    เฉพาะ status='active' — ตู้ที่ยกเลิกแล้วต้องไม่ถูกดึงยอดต่อ
+    """
+    res = (supabase.table("machines").select("machine_id, config")
+           .eq("brand", "worldwide").eq("status", "active").execute())
     lookup = {}
     for row in (res.data or []):
         cfg = row.get("config") or {}

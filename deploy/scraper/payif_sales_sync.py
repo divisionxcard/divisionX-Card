@@ -114,8 +114,12 @@ def api_get(s: requests.Session, path: str, params: dict | None = None):
 
 
 def fetch_payif_machines(supabase) -> dict:
-    """{shop_id(str): machine_id} จาก machines brand='payif'"""
-    res = supabase.table("machines").select("machine_id, config").eq("brand", "payif").execute()
+    """{shop_id(str): machine_id} จาก machines brand='payif' ที่ยัง active
+
+    ตู้ที่ยกเลิกแล้วต้องไม่ถูกดึงยอดต่อ
+    """
+    res = (supabase.table("machines").select("machine_id, config")
+           .eq("brand", "payif").eq("status", "active").execute())
     out = {}
     for row in (res.data or []):
         cfg = row.get("config") or {}

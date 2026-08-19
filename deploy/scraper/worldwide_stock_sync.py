@@ -112,8 +112,13 @@ def login() -> requests.Session:
 
 
 def fetch_worldwide_machines(supabase) -> list[dict]:
-    """List worldwide machines: [{machine_id, vendor_id}]"""
-    res = supabase.table("machines").select("machine_id, config").eq("brand", "worldwide").execute()
+    """List worldwide machines: [{machine_id, vendor_id}]
+
+    กรอง status='active' ด้วย — ตู้ที่ยกเลิกไปแล้วยังมีแถวอยู่ใน machines
+    (ลบไม่ได้ ยอดขายเก่าอ้าง FK อยู่) ถ้าไม่กรอง มันจะถูกดึงต่อทุกคืน
+    """
+    res = (supabase.table("machines").select("machine_id, config")
+           .eq("brand", "worldwide").eq("status", "active").execute())
     out = []
     for row in (res.data or []):
         cfg = row.get("config") or {}
