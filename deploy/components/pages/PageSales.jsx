@@ -208,17 +208,10 @@ function SalesSkuByMachine({ sales, machines, skus }) {
                             <Th align="right" style={{ color: "var(--dx-danger)" }}>กล่อง</Th>
                             <Th align="right">ซอง</Th>
                             <Th align="right">ยอดขาย</Th>
-                            <Th align="left" style={{ width: 100 }}>สัดส่วน</Th>
                           </tr>
                         </thead>
                         <tbody>
                           {skuList.map((r, i) => {
-                            // โหมด SKU ไม่ได้เรียงตามตัวเลข แถวแรกจึงไม่ใช่ค่าสูงสุด
-                            // ถ้ายังใช้ skuList[0] เป็นตัวหาร แถบสัดส่วนจะเกิน 100% หรือเพี้ยน
-                            // และ r["sku"] ไม่มีอยู่จริง → NaN · โหมดนี้ให้วัดจากยอดขายแทน
-                            const metric = sortBy === "sku" ? "rev" : sortBy
-                            const maxVal = Math.max(...skuList.map(x => x[metric] || 0), 1)
-                            const pct = ((r[metric] || 0) / maxVal) * 100
                             // เหรียญกับพื้นเน้น = "3 อันดับแรก" ซึ่งมีความหมายเฉพาะตอนเรียงตามตัวเลข
                             // โหมด SKU เรียงตามลำดับการจัดของ ติดเหรียญให้ OP 01 จะสื่อผิดว่าขายดีสุด
                             const ranked = sortBy !== "sku"
@@ -250,15 +243,6 @@ function SalesSkuByMachine({ sales, machines, skus }) {
                                 <td className="dx-mono" style={{ padding: "8px 8px", textAlign: "right", fontSize: 11, fontWeight: 700, color: "var(--dx-success)" }}>
                                   {fmtB(r.rev)}
                                 </td>
-                                <td style={{ padding: "8px 12px" }}>
-                                  <div style={{ height: 3, background: "var(--dx-bg-page)", borderRadius: 2, overflow: "hidden" }}>
-                                    <div style={{
-                                      height: "100%", width: `${pct}%`,
-                                      background: "linear-gradient(90deg, var(--dx-cyan), var(--dx-cyan-bright))",
-                                      boxShadow: "0 0 6px var(--dx-glow)",
-                                    }}/>
-                                  </div>
-                                </td>
                               </tr>
                             )
                           })}
@@ -277,7 +261,6 @@ function SalesSkuByMachine({ sales, machines, skus }) {
                             <td className="dx-mono" style={{ padding: "8px 8px", textAlign: "right", fontSize: 10, color: "var(--dx-success)" }}>
                               {fmtB(machineTotal)}
                             </td>
-                            <td/>
                           </tr>
                         </tfoot>
                       </table>
