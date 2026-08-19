@@ -33,7 +33,10 @@ const mapHref = (q) => `https://www.google.com/maps/search/?api=1&query=${encode
 export default async function BranchesPage() {
   const BRANCHES = await getBranches()
   return (
-    <main style={{ minHeight: "100vh", background: "var(--dx-bg-page)", color: "var(--dx-text)", fontFamily: "var(--dx-font)" }}>
+    // พื้นหลังหน้าเป็นขาว (เจ้าของเลือก 2026-08-19) — ทับ --dx-bg-page เฉพาะหน้านี้
+    // ไม่แตะตัวแปรใน globals.css เพราะหน้าอื่นทั้งระบบยังใช้โทนกรมท่า
+    // การ์ด/แบนเนอร์/ชิปติดต่อ ยังเป็นกรมท่าเหมือนเดิม มีพื้นหลังของตัวเองอยู่แล้ว
+    <main style={{ minHeight: "100vh", background: "#FFFFFF", color: "var(--dx-text)", fontFamily: "var(--dx-font)" }}>
       <style dangerouslySetInnerHTML={{ __html: `
         .bx-wrap{max-width:1080px;margin:0 auto;padding:28px 18px 60px;}
         .bx-hero{position:relative;text-align:center;padding:0;border-radius:20px;overflow:hidden;
@@ -90,7 +93,10 @@ export default async function BranchesPage() {
         .bx-line{background:#06C755;color:#fff;border-radius:6px;font-size:11px;font-weight:800;padding:2px 7px;}
         a.bx-chip{text-decoration:none;color:var(--dx-text);transition:border-color .15s, box-shadow .15s;cursor:pointer;}
         a.bx-chip:hover{border-color:var(--dx-border-glow);box-shadow:0 0 14px var(--dx-glow-soft);}
-        .bx-count{color:var(--dx-text-muted);font-size:12px;margin-top:14px;}
+        /* บรรทัดเดียวในหน้าที่วางบนพื้นหลังหน้าตรง ๆ ไม่มีกล่องของตัวเอง
+           พอพื้นเปลี่ยนเป็นขาว --dx-text-muted (#7A8BA8) เหลือคอนทราสต์ 3.45:1 ต่ำกว่าเกณฑ์ 4.5:1
+           จึงตรึงเป็นเทาน้ำเงินเข้มแทน (5.98:1) — ใกล้เคียงกับที่เคยได้บนพื้นกรมท่า (5.25:1) */
+        .bx-count{color:#55647E;font-size:12px;margin-top:14px;}
       `}} />
 
       <div className="bx-wrap">
