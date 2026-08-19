@@ -2,7 +2,7 @@
 type: worklog
 date: 2026-08-19
 tags: [payif, pf01, scraper, machine-stock, data-integrity]
-commits: []
+commits: [e6623e0]
 status: ✅ แก้แล้ว — ล้างแถวค้าง 5 ช่อง + อุดช่องโหว่ทั้ง 3 แบรนด์
 ---
 

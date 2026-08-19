@@ -2,7 +2,7 @@
 type: worklog
 date: 2026-08-19
 tags: [marketing, image, openai, gpt-image, api, bugfix]
-commits: []
+commits: [5767858]
 status: ✅ แก้ 4 บั๊กแล้ว · ทดสอบจริงผ่านทั้งซองและตัวอักษรไทย
 ---
 
