@@ -12,6 +12,40 @@ import { fmt, fmtB, getLastNDays, fmtDayLabel, today, buildBrandMap, ksherFeePct
 import { Badge, KpiCard, SectionTitle } from "../shared/dx-components"
 import { authFetch } from "../../lib/authFetch"
 
+// ลำดับ SKU ตามที่เจ้าของใช้จริงเวลาจัดของ — เรียงตามค่าย แล้วตามเลขชุด
+// ไม่ใช่เรียงตามตัวอักษร เพราะเวลาเทียบกับใบจัดของต้องไล่ตามลำดับนี้
+//
+// ⚠️ ค่าในลิสต์ต้องเป็น sku_id จริงเท่านั้น ห้ามใช้ชื่อที่แสดงบนหน้าจอ — สองอันนี้ต่างกัน:
+//     'PKM Ghost'      แสดงว่า "Pokemon M5 Abyss Eye"  (เปลี่ยนชื่อแล้ว id เดิม)
+//     'YGH The Revals' แสดงว่า "Yu-Gi-Oh The Rivals"   (id ยังติดคำสะกดผิด)
+//    ใส่ผิดจะไม่ error แต่ SKU นั้นจะตกไปท้ายตารางเงียบ ๆ
+// SKU ที่ไม่อยู่ในลิสต์ (เช่น 'YGH The Heroes' หรือชุดใหม่ที่เพิ่งเพิ่ม) จะไปต่อท้าย
+// เรียงตามยอดขาย — ไม่หายไปไหน
+const SKU_ORDER = [
+  "OP 01", "OP 02", "OP 03", "OP 04", "OP 05", "OP 06", "OP 07", "OP 08",
+  "OP 09", "OP 10", "OP 11", "OP 12", "OP 13", "OP 14", "OP 15", "OP 16",
+  "PRB 01", "PRB 02",
+  "EB 01", "EB 02", "EB 03", "EB 04",
+  // Dragon Ball
+  "FB 01", "FB 02", "FB 03", "FB 04", "FB 05", "FB 06", "FB 07", "FB 08", "FB 09", "B29",
+  // Naruto
+  "NRT Jin - 1", "NRT Jin - 2", "NRT Series - 01", "NRT Series - 02",
+  // Pokemon
+  "PKM Dream EX", "PKM Ghost", "PKM Ninja",
+  // Solo Leveling
+  "SLL UA 51",
+  // Yu-Gi-Oh
+  "YGH Chaos Origins", "YGH The Revals", "YGH UT01",
+  // Mobile Legends
+  "MLBB HOD - 02",
+  // Transformers
+  "TF Overdrive 01",
+  // My Little Pony
+  "MLP SEA02", "MLP BP-01",
+]
+const SKU_RANK = new Map(SKU_ORDER.map((id, i) => [id, i]))
+const skuRank = (id) => SKU_RANK.has(id) ? SKU_RANK.get(id) : Number.MAX_SAFE_INTEGER
+
 // ─────────────────────────────────────────────
 // SALES: SKU × Machine breakdown
 // ─────────────────────────────────────────────
@@ -78,7 +112,7 @@ function SalesSkuByMachine({ sales, machines, skus }) {
             </div>
           )}
           <div style={{ display: "flex", gap: 4 }}>
-            {[{ v: "rev", l: "ยอดขาย" }, { v: "qty", l: "จำนวน" }].map(t => (
+            {[{ v: "sku", l: "SKU" }, { v: "rev", l: "ยอดขาย" }, { v: "qty", l: "จำนวน" }].map(t => (
               <button key={t.v} onClick={() => setSortBy(t.v)}
                 className={`dx-chip ${sortBy === t.v ? "dx-chip-active" : ""}`}
                 style={{ padding: "5px 10px", fontSize: 11 }}>{t.l}</button>
@@ -95,7 +129,15 @@ function SalesSkuByMachine({ sales, machines, skus }) {
               const s = skus.find(sk => sk.sku_id === skuId)
               return { sku_id: skuId, series: s?.series || "OP", name: s?.name || skuId, ...v }
             })
-            .sort((a, b) => sortBy === "rev" ? b.rev - a.rev : b.qty - a.qty)
+            .sort((a, b) => {
+              if (sortBy === "sku") {
+                const d = skuRank(a.sku_id) - skuRank(b.sku_id)
+                // SKU ที่ไม่อยู่ในลิสต์ได้ rank เท่ากันหมด → ตัดสินด้วยยอดขายแทน
+                // ไม่งั้นลำดับจะสลับไปมาทุกครั้งที่ re-render
+                return d !== 0 ? d : b.rev - a.rev
+              }
+              return sortBy === "rev" ? b.rev - a.rev : b.qty - a.qty
+            })
           const machineTotal = skuList.reduce((a, r) => a + r.rev, 0)
           const machineTotalPack = skuList.reduce((a, r) => a + r.packQty, 0)
           const machineTotalBox = skuList.reduce((a, r) => a + r.boxQty, 0)
@@ -171,15 +213,23 @@ function SalesSkuByMachine({ sales, machines, skus }) {
                         </thead>
                         <tbody>
                           {skuList.map((r, i) => {
-                            const maxVal = skuList[0]?.[sortBy] || 1
-                            const pct = (r[sortBy] / maxVal) * 100
+                            // โหมด SKU ไม่ได้เรียงตามตัวเลข แถวแรกจึงไม่ใช่ค่าสูงสุด
+                            // ถ้ายังใช้ skuList[0] เป็นตัวหาร แถบสัดส่วนจะเกิน 100% หรือเพี้ยน
+                            // และ r["sku"] ไม่มีอยู่จริง → NaN · โหมดนี้ให้วัดจากยอดขายแทน
+                            const metric = sortBy === "sku" ? "rev" : sortBy
+                            const maxVal = Math.max(...skuList.map(x => x[metric] || 0), 1)
+                            const pct = ((r[metric] || 0) / maxVal) * 100
+                            // เหรียญกับพื้นเน้น = "3 อันดับแรก" ซึ่งมีความหมายเฉพาะตอนเรียงตามตัวเลข
+                            // โหมด SKU เรียงตามลำดับการจัดของ ติดเหรียญให้ OP 01 จะสื่อผิดว่าขายดีสุด
+                            const ranked = sortBy !== "sku"
                             return (
                               <tr key={r.sku_id} style={{
                                 borderBottom: "1px solid var(--dx-border)",
-                                background: i < 3 ? "rgba(255,200,87,0.03)" : "transparent",
+                                background: ranked && i < 3 ? "rgba(255,200,87,0.03)" : "transparent",
                               }}>
                                 <td style={{ padding: "8px 12px", textAlign: "center", fontSize: 13 }}>
-                                  {i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉"
+                                  {!ranked ? <span className="dx-mono" style={{ fontSize: 10, color: "var(--dx-text-muted)" }}>{i + 1}</span>
+                                    : i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉"
                                     : <span className="dx-mono" style={{ fontSize: 10, color: "var(--dx-text-muted)" }}>{i + 1}</span>}
                                 </td>
                                 <td className="dx-mono" style={{ padding: "8px 8px", fontSize: 11, fontWeight: 600, color: "var(--dx-text)" }}>
