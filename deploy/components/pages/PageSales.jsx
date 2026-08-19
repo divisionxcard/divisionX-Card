@@ -138,6 +138,9 @@ function SalesSkuByMachine({ sales, machines, skus }) {
               }
               return sortBy === "rev" ? b.rev - a.rev : b.qty - a.qty
             })
+          // โหมด SKU เรียงตามลำดับการจัดของ ไม่ได้เรียงตามตัวเลข
+          // → ทั้งแถบสัดส่วนและเหรียญ 🥇🥈🥉 ใช้ความหมายไม่ได้ ซ่อนทั้งคู่เฉพาะโหมดนี้
+          const ranked = sortBy !== "sku"
           const machineTotal = skuList.reduce((a, r) => a + r.rev, 0)
           const machineTotalPack = skuList.reduce((a, r) => a + r.packQty, 0)
           const machineTotalBox = skuList.reduce((a, r) => a + r.boxQty, 0)
@@ -208,13 +211,15 @@ function SalesSkuByMachine({ sales, machines, skus }) {
                             <Th align="right" style={{ color: "var(--dx-danger)" }}>กล่อง</Th>
                             <Th align="right">ซอง</Th>
                             <Th align="right">ยอดขาย</Th>
+                            {ranked && <Th align="left" style={{ width: 100 }}>สัดส่วน</Th>}
                           </tr>
                         </thead>
                         <tbody>
                           {skuList.map((r, i) => {
-                            // เหรียญกับพื้นเน้น = "3 อันดับแรก" ซึ่งมีความหมายเฉพาะตอนเรียงตามตัวเลข
-                            // โหมด SKU เรียงตามลำดับการจัดของ ติดเหรียญให้ OP 01 จะสื่อผิดว่าขายดีสุด
-                            const ranked = sortBy !== "sku"
+                            // แถบวัดเทียบกับค่าสูงสุดในตู้นั้น — โหมดที่เรียงมากไปน้อย
+                            // แถวแรกคือค่าสูงสุดอยู่แล้ว แต่หาเองไม่ต้องพึ่งลำดับ ปลอดภัยกว่า
+                            const maxVal = ranked ? Math.max(...skuList.map(x => x[sortBy] || 0), 1) : 1
+                            const pct = ranked ? ((r[sortBy] || 0) / maxVal) * 100 : 0
                             return (
                               <tr key={r.sku_id} style={{
                                 borderBottom: "1px solid var(--dx-border)",
@@ -243,6 +248,17 @@ function SalesSkuByMachine({ sales, machines, skus }) {
                                 <td className="dx-mono" style={{ padding: "8px 8px", textAlign: "right", fontSize: 11, fontWeight: 700, color: "var(--dx-success)" }}>
                                   {fmtB(r.rev)}
                                 </td>
+                                {ranked && (
+                                  <td style={{ padding: "8px 12px" }}>
+                                    <div style={{ height: 3, background: "var(--dx-bg-page)", borderRadius: 2, overflow: "hidden" }}>
+                                      <div style={{
+                                        height: "100%", width: `${pct}%`,
+                                        background: "linear-gradient(90deg, var(--dx-cyan), var(--dx-cyan-bright))",
+                                        boxShadow: "0 0 6px var(--dx-glow)",
+                                      }}/>
+                                    </div>
+                                  </td>
+                                )}
                               </tr>
                             )
                           })}
@@ -261,6 +277,7 @@ function SalesSkuByMachine({ sales, machines, skus }) {
                             <td className="dx-mono" style={{ padding: "8px 8px", textAlign: "right", fontSize: 10, color: "var(--dx-success)" }}>
                               {fmtB(machineTotal)}
                             </td>
+                            {ranked && <td/>}
                           </tr>
                         </tfoot>
                       </table>
