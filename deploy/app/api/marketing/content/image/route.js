@@ -62,7 +62,7 @@ async function localRef(rel) {
 
 // ── ประกอบ prompt ─────────────────────────────────────────────────────────
 // โครง: บทบาท → แนวคิด → สไตล์แบรนด์ → ข้อเท็จจริง (ห้ามแต่ง) → ข้อความที่ต้องใส่ → ข้อห้าม
-function buildPrompt(style, concept, facts, mode) {
+function buildPrompt(style, concept, facts, mode, hasRefs = false) {
   const wantsText = mode !== "art"
   const p = []
 
@@ -92,6 +92,11 @@ function buildPrompt(style, concept, facts, mode) {
   p.push("FACTS (the only numbers and names you may use):\n" + facts.join("\n"))
   p.push(style.facts_rule)
 
+  // ⚠️ คำสั่งห้ามวาดสินค้าใหม่ — ต้องอยู่ในพรอมต์ทุกครั้งที่แนบรูปอ้างอิง
+  // เดิมคีย์นี้มีอยู่ใน image_style.json แต่ไม่มีใครเรียก (dead config) มาตลอด
+  // ซึ่งเป็นประโยคเดียวกับที่ทำให้รอบสั่ง ChatGPT ด้วยมือได้ซองจริง ส่วน API ได้ซองที่โมเดลวาดเอง
+  if (hasRefs && style.with_reference) p.push("REFERENCE IMAGES: " + style.with_reference)
+
   if (wantsText) {
     p.push(style.thai_rule)
   } else {
@@ -102,7 +107,12 @@ function buildPrompt(style, concept, facts, mode) {
     )
   }
 
-  p.push("STRICT CONSTRAINTS: " + (style.negative || []).join("; ") + ".")
+  // ⚠️ ห้ามยัด negative_no_text เข้าโหมดที่ต้องการตัวอักษร — เคยพลาดมาแล้ว (ดู _negative_note)
+  const nos = [
+    ...(style.negative_always || []),
+    ...(wantsText ? [] : (style.negative_no_text || [])),
+  ]
+  p.push("STRICT CONSTRAINTS: " + nos.join("; ") + ".")
   return p.join("\n\n")
 }
 
@@ -118,6 +128,7 @@ async function askOpenAI(style, prompt, refs) {
   const size = style.openai_size || "1024x1024"
   const quality = style.openai_quality || "high"
   let lastErr = ""
+  const attempts = []            // ไล่ให้เห็นว่าลองโมเดลไหนไปบ้างและพังเพราะอะไร
 
   for (const model of models) {
     try {
@@ -129,9 +140,19 @@ async function askOpenAI(style, prompt, refs) {
         fd.append("prompt", prompt)
         fd.append("size", size)
         fd.append("quality", quality)
-        if (style.openai_input_fidelity) fd.append("input_fidelity", style.openai_input_fidelity)
+        // gpt-image-2 ห้ามส่ง input_fidelity — เอกสารระบุตรง ๆ ว่ามันประมวลผลรูปอ้างอิงที่
+        // fidelity สูงเสมออยู่แล้ว และ API จะไม่ยอมให้เปลี่ยน (ส่งไปแล้วโดนปฏิเสธ)
+        // ตัวดัก error ด้านล่างจับเฉพาะข้อความที่มีคำว่า model/not found/unsupported
+        // error เรื่องพารามิเตอร์จึงหลุดออกไปเป็น throw ทันที ไม่ fallback = ยิงไม่ติดเงียบ ๆ
+        if (style.openai_input_fidelity && !/^gpt-image-2/.test(model)) {
+          fd.append("input_fidelity", style.openai_input_fidelity)
+        }
         refs.forEach((r, i) => {
-          const ext = r.mimeType.includes("png") ? "png" : "jpg"
+          // ตั้งนามสกุลตามชนิดไฟล์จริง — รูปซองใน Supabase เป็น WebP
+          // เดิมตั้งเป็น .jpg ให้ทุกอย่างที่ไม่ใช่ png ทำให้ชื่อไฟล์ขัดกับไบต์ข้างใน
+          const ext = /png/.test(r.mimeType) ? "png"
+            : /webp/.test(r.mimeType) ? "webp"
+            : /jpe?g/.test(r.mimeType) ? "jpg" : "png"
           fd.append("image[]", new Blob([r.buf], { type: r.mimeType }), `ref${i}.${ext}`)
         })
         res = await fetch(`${OPENAI_BASE}/images/edits`, {
@@ -153,20 +174,28 @@ async function askOpenAI(style, prompt, refs) {
       if (!res.ok) {
         const msg = json?.error?.message || `HTTP ${res.status}`
         lastErr = `${model}: ${msg}`
+        attempts.push(lastErr)
         // ชื่อโมเดลผิด/ถูกปลด → ลองตัวถัดไป · error อื่นให้หยุดเลย ไม่ต้องเผาเงินซ้ำ
+        // ⚠️ เงื่อนไขนี้กว้างกว่าที่ตั้งใจ — คำว่า "model" โผล่ในข้อความ error แทบทุกแบบ
+        //    ("... for this model") ทำให้ error เรื่องพารามิเตอร์ถูกกลืนแล้วเลื่อนโมเดลเงียบ ๆ
+        //    เคยทำให้เข้าใจผิดว่าทดสอบ gpt-image-2 อยู่ ทั้งที่จริงตกไปใช้ gpt-image-1.5
+        //    จึงเก็บ attempts ไว้คืนออกไปด้วยเสมอ จะได้รู้ว่าภาพที่ได้มาจากโมเดลไหนจริง ๆ
         if (/model|not found|does not exist|unsupported/i.test(msg) && res.status === 400) continue
         if (res.status === 404) continue
-        throw Object.assign(new Error(msg), { status: res.status, json })
+        throw Object.assign(new Error(msg), { status: res.status, json, attempts })
       }
       const b64 = json?.data?.[0]?.b64_json
-      if (!b64) { lastErr = `${model}: ไม่มีภาพกลับมา`; continue }
-      return { buf: Buffer.from(b64, "base64"), mime: "image/png", model }
+      if (!b64) { lastErr = `${model}: ไม่มีภาพกลับมา`; attempts.push(lastErr); continue }
+      // usage บอกต้นทุนจริงต่อภาพ — เอกสาร OpenAI ไม่มีสูตรคิด input token ของ gpt-image-2
+      // ทางเดียวที่จะรู้ราคาจริงคืออ่านจากตรงนี้
+      return { buf: Buffer.from(b64, "base64"), mime: "image/png", model, attempts, usage: json.usage || null }
     } catch (e) {
       if (e.status) throw e
-      lastErr = `${models[0]}: ${String(e.message || e).slice(0, 160)}`
+      lastErr = `${model}: ${String(e.message || e).slice(0, 160)}`
+      attempts.push(lastErr)
     }
   }
-  throw new Error(`ลองครบทุกโมเดลแล้วไม่สำเร็จ — ${lastErr}`)
+  throw Object.assign(new Error(`ลองครบทุกโมเดลแล้วไม่สำเร็จ — ${lastErr}`), { attempts })
 }
 
 // ── Gemini (ทางสำรอง) ─────────────────────────────────────────────────────
@@ -285,7 +314,7 @@ export async function POST(req) {
     }
 
     const mode = body.mode || style.poster_mode || "full"
-    const prompt = buildPrompt(style, concept, facts, mode)
+    const prompt = buildPrompt(style, concept, facts, mode, refs.length > 0)
 
     let out
     try {
@@ -343,9 +372,16 @@ export async function POST(req) {
         concept: concept ? { key: concept.key, label: concept.label } : null,
         references: refs.length,
         bytes: out.buf.length,
+        // ถ้าโมเดลแรกพัง มันจะเลื่อนไปตัวถัดไปเงียบ ๆ — ต้องคืนออกมาให้เห็น
+        // ไม่งั้นจะเข้าใจผิดว่ากำลังทดสอบโมเดลที่ตั้งไว้ ทั้งที่ได้ภาพจากตัวสำรอง
+        fell_back_from: out.attempts?.length ? out.attempts : undefined,
+        usage: out.usage || undefined,
       },
     })
   } catch (err) {
-    return NextResponse.json({ error: err.message }, { status: 500 })
+    return NextResponse.json({
+      error: err.message,
+      attempts: err.attempts?.length ? err.attempts : undefined,
+    }, { status: 500 })
   }
 }

@@ -18,13 +18,15 @@
   "_identity_note": "อัตลักษณ์แบรนด์ — ฟ้านีออนไฟฟ้า + สายฟ้า + โครเมียม บนกรมท่า (ไม่ใช่ดำ-ทอง) · ตรงกับที่ใช้ในงานออกแบบชิ้นอื่นของแบรนด์",
   "style": "Premium trading-card retail brand visual. Deep navy blue background (#0B1B3A to #12264F gradient), electric neon blue accents (#00C2FF), sharp lightning-bolt motifs, brushed chrome metallic edges with subtle reflections. Dramatic studio lighting with rim light. Clean, high contrast, modern, slightly futuristic. Square 1:1 composition with the subject centered and breathing room around it.",
 
-  "_negative_note": "ข้อห้าม — 2 กลุ่ม (1) เรื่องคุณภาพ เช่นตัวหนังสือมั่ว ซึ่งโมเดลชอบใส่มาเองแล้วสะกดผิด (2) เรื่องกฎหมาย ห้ามวาดตัวละคร/โลโก้ลิขสิทธิ์ขึ้นใหม่ เพราะเราเป็นแค่ผู้ขายต่อ ใช้รูปสินค้าจริงที่เราขายได้ แต่วาดตัวละครขึ้นเองเป็นงานลิขสิทธิ์ของค่าย",
-  "negative": [
-    "no text, no letters, no words, no typography, no watermark, no logo",
+  "_negative_note": "⚠️ ต้องแยก 2 ชุด ห้ามรวมกลับเป็นก้อนเดียว — 19 ส.ค. 2026 พบว่าเดิมรวมกันแล้วส่งทุกโหมด ทำให้โหมด full ได้พรอมต์ที่บอก 'วาดตัวอักษรไทยให้ตรงเป๊ะ' แล้วต่อท้ายด้วย 'no text, no letters' ในพรอมต์เดียวกัน = สั่งขัดกันเอง · negative_always ใช้ได้ทุกโหมด (กฎหมาย+คุณภาพ) · negative_no_text ใช้เฉพาะโหมด art ที่ให้เทมเพลตวางตัวอักษรเอง",
+  "negative_always": [
     "do not draw or invent any anime/manga characters",
     "do not recreate copyrighted card artwork or brand logos",
     "no people's faces",
     "not cluttered, not busy, no random objects"
+  ],
+  "negative_no_text": [
+    "no text, no letters, no words, no typography, no watermark, no logo"
   ],
 
   "_reference_note": "ตอนมีรูปซองจริงแนบไป — ต้องสั่งชัดว่า 'ใช้ตามที่ให้มา ห้ามวาดใหม่' ไม่งั้นโมเดลจะ 'ปรับปรุง' หน้าซองจนกลายเป็นของปลอม",
