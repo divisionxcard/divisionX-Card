@@ -428,5 +428,15 @@ def main():
 
     save_to_supabase(all_records)
 
+    # Layer 5: ลบช่องที่ VMS เลิกส่งแล้ว — หลัง save เสมอ
+    # ตู้ chukes ยังไม่เคยเจอเคสนี้ แต่เป็นช่องโหว่เดียวกับที่ทำให้ pf01 ค้างข้อมูลเก่าเดือนกว่า
+    # ใส่ไว้ทั้ง 3 แบรนด์เลย จะได้ไม่ต้องรอให้พังก่อนแล้วค่อยมาไล่หาทีหลัง
+    try:
+        from stock_reconcile import reconcile_from_records
+        reconcile_from_records(supabase, all_records)
+    except Exception as e:
+        print(f"⚠️  reconcile ช่องที่หายไปไม่สำเร็จ: {e}")
+
+
 if __name__ == "__main__":
     main()

@@ -264,6 +264,13 @@ def main():
         except Exception as e:
             print(f"⚠️  slot_refill_events tracking failed: {e}")
         save_to_supabase(supabase, all_records)
+        # ลบช่องที่หลังบ้านเลิกส่งแล้ว — ต้องอยู่หลัง save เสมอ
+        # (ก่อน save จะยังไม่มีแถวใหม่ให้เทียบ · ก่อน track จะทำให้ไม่มีบันทึกว่าของหายไป)
+        try:
+            from stock_reconcile import reconcile_from_records
+            reconcile_from_records(supabase, all_records)
+        except Exception as e:
+            print(f"⚠️  reconcile ช่องที่หายไปไม่สำเร็จ: {e}")
 
 
 if __name__ == "__main__":

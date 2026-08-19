@@ -285,6 +285,12 @@ def main():
         except Exception as e:
             print(f"⚠️  slot_refill_events tracking failed: {e}")
         save_to_supabase(supabase, all_records)
+        # ลบช่องที่หลังบ้านเลิกส่งแล้ว (ดู stock_reconcile.py — เจอที่ pf01 ก่อน แต่เป็นช่องโหว่ร่วมทุกแบรนด์)
+        try:
+            from stock_reconcile import reconcile_from_records
+            reconcile_from_records(supabase, all_records)
+        except Exception as e:
+            print(f"⚠️  reconcile ช่องที่หายไปไม่สำเร็จ: {e}")
 
 
 if __name__ == "__main__":
