@@ -36,8 +36,28 @@ export default async function BranchesPage() {
     // พื้นหลังหน้าเป็นขาว (เจ้าของเลือก 2026-08-19) — ทับ --dx-bg-page เฉพาะหน้านี้
     // ไม่แตะตัวแปรใน globals.css เพราะหน้าอื่นทั้งระบบยังใช้โทนกรมท่า
     // การ์ด/แบนเนอร์/ชิปติดต่อ ยังเป็นกรมท่าเหมือนเดิม มีพื้นหลังของตัวเองอยู่แล้ว
-    <main style={{ minHeight: "100vh", background: "#FFFFFF", color: "var(--dx-text)", fontFamily: "var(--dx-font)" }}>
+    // สีพื้นย้ายไปอยู่ใน .bx-page เพราะเป็นพื้นหลายชั้น (แสงฟ้า + จุดไข่ปลา) เขียนใน inline style ไม่ไหว
+    <main className="bx-page" style={{ minHeight: "100vh", color: "var(--dx-text)", fontFamily: "var(--dx-font)" }}>
       <style dangerouslySetInnerHTML={{ __html: `
+        /* ══ พื้นหลังหน้า — ขาว + แสงฟ้าเรืองด้านบน + จุดไข่ปลา ══
+           ทำด้วย CSS ล้วน ไม่โหลดไฟล์ภาพเพิ่มสักไบต์ · หน้านี้ลูกค้าเปิดจากเน็ตในห้าง
+           เคยตัดโลโก้ 25 KB กับภาพ hero 147 KB ออกไปแล้ว จะเอาลายพื้นหลังมาใส่คืนไม่ได้
+
+           ชั้นที่ 1 แสงฟ้า — จุดศูนย์กลางอยู่เหนือขอบบนของหน้า (50% -60px) แสงจึงไล่ลงมา
+             เหมือนออกมาจากแบนเนอร์ ทำให้แบนเนอร์กรมท่าไม่ลอยโดดบนพื้นขาว
+             ไม่ใช้ background-attachment:fixed เพราะแสงต้องอยู่กับหัวหน้า ไม่ใช่ตามจอไปตลอด
+           ชั้นที่ 2 จุดไข่ปลา — ตาราง 24px จุดละ 1px ทึบ 12%
+             ⚠️ 12% คือเพดาน ห้ามเพิ่ม — ตัวหนังสือท้ายหน้า (.bx-count) วางบนพื้นนี้ตรง ๆ
+             วัดกรณีแย่สุด (ตัวหนังสือทับจุดพอดี): 12% ได้ 4.66:1 ผ่านเกณฑ์ 4.5:1 แบบเฉียด
+             ถ้าดันเป็น 18% เหลือ 4.07:1 ตกเกณฑ์ทันที · บนพื้นที่แสงฟ้าเข้มสุดได้ 4.89:1 */
+        .bx-page{
+          background-color:#FFFFFF;
+          background-image:
+            radial-gradient(1200px 500px at 50% -60px, rgba(0,168,222,.20), rgba(0,168,222,0) 70%),
+            radial-gradient(circle at 1px 1px, rgba(10,22,40,.12) 1px, transparent 0);
+          background-size:100% 100%, 24px 24px;
+          background-repeat:no-repeat, repeat;
+        }
         .bx-wrap{max-width:1080px;margin:0 auto;padding:28px 18px 60px;}
         .bx-hero{position:relative;text-align:center;padding:0;border-radius:20px;overflow:hidden;
           background:radial-gradient(120% 130% at 50% -20%, rgba(0,212,255,.18), rgba(0,212,255,0) 60%), var(--dx-bg-surface);
