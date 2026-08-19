@@ -144,15 +144,81 @@ def track_refill_events(supabase, platform: str, current_records: list[dict],
     if not events:
         print(f"  📥 slot_tracking ({platform}): ไม่มีการเติม/สลับ")
         return
+    # ถอดคีย์ที่ขึ้นต้นด้วย _ ออกก่อน insert — เป็นข้อมูลสำหรับแจ้งเตือน ไม่ใช่คอลัมน์ใน DB
+    rows = [{k: v for k, v in e.items() if not k.startswith("_")} for e in events]
     try:
-        for i in range(0, len(events), 100):
-            supabase.table("slot_refill_events").insert(events[i:i + 100]).execute()
+        for i in range(0, len(rows), 100):
+            supabase.table("slot_refill_events").insert(rows[i:i + 100]).execute()
         n_refill = sum(1 for e in events if e["change_type"] == "refill")
         n_swap = sum(1 for e in events if e["change_type"].startswith("swap"))
         print(f"  📥 slot_tracking ({platform}): บันทึก {len(events)} events "
               f"(refill={n_refill}, swap={n_swap})")
     except Exception as e:
         print(f"  ⚠️  slot_tracking: insert slot_refill_events ไม่ได้: {e}")
+
+    # ── 5. แจ้งเตือน Telegram เมื่อมีการเปลี่ยนสินค้า ────────────────────
+    # ⚠️ เฉพาะ platform ที่ไม่ใช่ vms — ฝั่ง vms แจ้งอยู่แล้วผ่าน slot_products_history
+    #    ใน vms_stock_sync.py ถ้าแจ้งที่นี่ด้วยจะได้ข้อความซ้ำสองครั้งต่อการเปลี่ยน 1 ครั้ง
+    #
+    # เดิมมีแต่ฝั่ง vms ทำให้ตู้ WorldWide 7 ตู้กับ Payif 1 ตู้ไม่เคยแจ้งเตือนเลย
+    # แอดมินเปลี่ยนของที่ wwv06 วันที่ 18 ส.ค. 2026 แล้วไม่มีข้อความเข้า — เคสที่ทำให้เจอบั๊กนี้
+    if platform != "vms":
+        try:
+            _alert_swaps(supabase, platform, events, synced_at)
+        except Exception as e:
+            # แจ้งเตือนพลาดต้องไม่ทำให้ sync ล้ม — ข้อมูลบันทึกไปแล้ว
+            print(f"  ⚠️  slot_tracking: แจ้งเตือน Telegram ไม่สำเร็จ: {e}")
+
+
+def _alert_swaps(supabase, platform, events, synced_at):
+    """ส่ง Telegram เมื่อมีสินค้าเข้า/ออกจากตู้ · 1 ข้อความต่อตู้ต่อรอบ sync"""
+    swaps = [e for e in events if e["change_type"].startswith("swap")]
+    if not swaps:
+        return
+
+    by_machine: dict[str, dict[str, list]] = {}
+    for e in swaps:
+        side = "out" if e["change_type"] == "swap_out" else "in"
+        m = by_machine.setdefault(e["machine_id"], {"out": [], "in": []})
+        m[side].append(e)
+
+    # ชื่อตู้ไว้ขึ้นหัวข้อความ — ไม่มีก็ใช้ machine_id
+    names = {}
+    try:
+        res = supabase.table("machines").select("machine_id,name").execute()
+        names = {r["machine_id"]: r.get("name") for r in (res.data or [])}
+    except Exception:
+        pass
+
+    from telegram_alert import alert_product_swaps
+
+    for mid, sides in by_machine.items():
+        # ⚠️ กรอง "เปลี่ยนชื่อ" ออก — ไม่ใช่การเปลี่ยนสินค้าจริง
+        # เกิดจริง 12-13 ส.ค. 2026 ที่ wwv06: แอดมินแก้คำสะกดในหลังบ้าน WW
+        # (The Revals→The Rivals · Pokemon Ghost→Pokemon M5 Abyss Eye)
+        # ตัวตรวจจับเทียบด้วยชื่อสินค้า เลยนับเป็นสลับของทั้งที่ sku_id เดิม
+        out_skus = {e.get("sku_id") for e in sides["out"] if e.get("sku_id")}
+        in_skus = {e.get("sku_id") for e in sides["in"] if e.get("sku_id")}
+        renamed = out_skus & in_skus
+
+        real_out = [e for e in sides["out"] if e.get("sku_id") not in renamed]
+        real_in = [e for e in sides["in"] if e.get("sku_id") not in renamed]
+        if not real_out and not real_in:
+            print(f"  🔕 {mid}: swap {len(swaps)} รายการเป็นการแก้ชื่อสินค้า ไม่ใช่เปลี่ยนของ — ไม่แจ้งเตือน")
+            continue
+
+        alert_product_swaps(
+            machine_id=mid,
+            machine_name=names.get(mid),
+            removed=[{"product_name": e.get("product_name"), "sku_id": e.get("sku_id"),
+                      "qty_left": e.get("qty_before"), "slots": e.get("_slots") or []}
+                     for e in real_out],
+            added=[{"product_name": e.get("product_name"), "sku_id": e.get("sku_id"),
+                    "qty": e.get("qty_after"), "slots": e.get("_slots") or []}
+                   for e in real_in],
+            platform=platform,
+            synced_at=synced_at,
+        )
 
 
 def _build_vms_events(current_records, prev_by_slot, sold_by_slot,
@@ -221,6 +287,9 @@ def _build_ww_events(current_records, prev_rows, sold_by_sku,
         return rec.get("sku_id") or rec.get("product_name")
 
     # รวมยอดต่อ (machine, sku_key, is_box)
+    # เก็บเลขช่องไว้ด้วย — SKU เดียวอยู่ได้หลายช่อง (เช่น MLP BP-01 อยู่ช่อง 030+031)
+    # เขียนลงคอลัมน์ slot_number ไม่ได้เพราะเป็นช่องเดียว แต่แจ้งเตือนต้องบอกให้ครบ
+    # ไม่งั้นแอดมินได้ข้อความว่า "เปลี่ยนของ" แล้วต้องไปเดินหาเองว่าช่องไหน
     def aggregate(rows):
         agg = {}
         for r in rows:
@@ -231,9 +300,11 @@ def _build_ww_events(current_records, prev_rows, sold_by_sku,
             isbox = _isbox(r.get("product_name"))
             k = (mid, sk, isbox)
             a = agg.setdefault(k, {"qty": 0, "cap": 0, "sku_id": r.get("sku_id"),
-                                   "product_name": r.get("product_name")})
+                                   "product_name": r.get("product_name"), "slots": set()})
             a["qty"] += r.get("remain") or 0
             a["cap"] += r.get("max_capacity") or 0
+            if r.get("slot_number"):
+                a["slots"].add(str(r["slot_number"]))
         return agg
 
     prev_agg = aggregate(prev_rows)
@@ -262,10 +333,14 @@ def _build_ww_events(current_records, prev_rows, sold_by_sku,
         sold = sold_assigned.get(k, 0)
         info = c or p
         prev_synced = prev_synced_by_machine[mid].isoformat()
+        # _slots ขึ้นต้นด้วย _ = ใช้ในหน่วยความจำเท่านั้น ถูกถอดออกก่อน insert
+        # (คอลัมน์ slot_number เก็บได้ช่องเดียว ส่วนนี่อาจมีหลายช่อง)
+        slots = sorted((c or {}).get("slots") or (p or {}).get("slots") or set())
         common = {**base, "machine_id": mid, "slot_number": None,
                   "sku_id": info.get("sku_id"), "is_box": isbox,
                   "product_name": info.get("product_name"),
-                  "capacity": (c or p).get("cap"), "prev_synced_at": prev_synced}
+                  "capacity": (c or p).get("cap"), "prev_synced_at": prev_synced,
+                  "_slots": slots}
 
         if p and c:
             qty_added = (after - before) + sold

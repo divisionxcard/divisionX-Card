@@ -52,6 +52,10 @@ jobs:
           VENDOS_PASSWORD:      ${{ secrets.VENDOS_PASSWORD }}
           SUPABASE_URL:         ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          # ต้องมี 2 ตัวนี้ ไม่งั้นการแจ้งเตือน "เปลี่ยนสินค้าหน้าตู้" เงียบ
+          # (worldwide-stock-sync.yml ส่งไว้อยู่แล้ว ขาดแค่ไฟล์นี้)
+          TELEGRAM_BOT_TOKEN:     ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_ADMIN_CHAT_ID: ${{ secrets.TELEGRAM_ADMIN_CHAT_ID }}
         run: python deploy/scraper/payif_stock_sync.py
 
       - name: Telegram alert on failure

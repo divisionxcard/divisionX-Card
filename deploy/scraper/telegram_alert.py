@@ -185,6 +185,59 @@ def alert_stock_low(items):
     return send_message(ADMIN_CHAT_ID, text)
 
 
+def alert_product_swaps(machine_id, machine_name, removed, added,
+                        platform=None, synced_at=None):
+    """ตู้ WorldWide / Payif — แจ้งเมื่อมีสินค้าเข้าหรือออกจากตู้
+
+    ทำไมต้องมีตัวนี้แยกจาก alert_slot_changes_batch:
+      ตัวนั้นผูกกับ slot_products_history (มีปุ่มยืนยันที่อ้าง history_id)
+      ซึ่งมีข้อมูลเฉพาะตู้ VMS · ตู้ WW/Payif ไม่มีแถวในตารางนั้นเลย ปุ่มจะกดไม่ได้
+      และตัวนั้นคิดเป็น "ช่องนี้เปลี่ยนจาก A เป็น B" ส่วนฝั่ง WW รวมยอดต่อ SKU
+      สินค้าตัวเดียวอยู่ได้หลายช่อง จึงเล่าเป็น "ออกอะไร เข้าอะไร" แทน
+
+    removed: [{product_name, sku_id, qty_left, slots}]
+    added:   [{product_name, sku_id, qty, slots}]
+    """
+    if not removed and not added:
+        return None
+
+    def slot_txt(slots):
+        if not slots:
+            return ""
+        return " ช่อง <code>" + _esc(", ".join(str(s) for s in slots)) + "</code>"
+
+    label = machine_name if machine_name else f"ตู้ {machine_id}"
+    parts = [f"🔄 <b>เปลี่ยนสินค้าหน้าตู้</b>\n<b>{_esc(label)}</b>\n"]
+
+    if removed:
+        parts.append(f"\n<b>เอาออก {len(removed)} รายการ</b>")
+        for r in removed:
+            left = r.get("qty_left") or 0
+            # ของที่ยังเหลือตอนถอด = อาจถูกยกกลับมา ต้องเห็นชัดว่าไม่ใช่ของหมดพอดี
+            warn = f" · <b>เหลือ {left}</b> ⚠️" if left else " · หมดพอดี"
+            parts.append(f"\n➖ {_esc(r.get('product_name') or r.get('sku_id') or '—')}"
+                         f"{slot_txt(r.get('slots'))}{warn}")
+
+    if added:
+        parts.append(f"\n\n<b>ใส่เข้า {len(added)} รายการ</b>")
+        for a in added:
+            parts.append(f"\n➕ {_esc(a.get('product_name') or a.get('sku_id') or '—')}"
+                         f"{slot_txt(a.get('slots'))} · เริ่มที่ {a.get('qty') or 0}")
+
+    # sku_id ว่าง = ตัวจับคู่ชื่อยังไม่รู้จักสินค้านี้ → ยอดขายจะหายทั้งแถว ต้องรีบแก้
+    unmapped = [x.get("product_name") for x in added if not x.get("sku_id")]
+    if unmapped:
+        parts.append("\n\n⚠️ <b>ยังจับคู่ SKU ไม่ได้</b> — ยอดขายของตัวนี้จะไม่เข้าระบบ\n")
+        parts.append(", ".join(_esc(u or "—") for u in unmapped))
+
+    if synced_at:
+        parts.append(f"\n\n<i>ตรวจพบจากการซิงค์ {_esc(str(synced_at)[:16])}</i>")
+
+    buttons = [[{"text": "📋 ดูสต็อกหน้าตู้", "url": PAGESLOTS_URL}]]
+    return send_message(ADMIN_CHAT_ID, "".join(parts),
+                        reply_markup={"inline_keyboard": buttons})
+
+
 if __name__ == "__main__":
     # Smoke test (run python telegram_alert.py)
     import sys
