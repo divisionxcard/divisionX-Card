@@ -1,0 +1,59 @@
+{
+  "_comment": "องค์ประกอบตกแต่งภาพแยกตามค่ายการ์ด · ผูกกับคอลัมน์ skus.franchise",
+
+  "_why": "20 ส.ค. 2026 เจ้าของทักว่าโปสเตอร์ Dragonball FB-09 ออกมาเป็นธีมเดินเรือ (สมอ คลื่น เข็มทิศ นกนางนวล) ซึ่งเป็นธีม One Piece · สาเหตุมาจาก 2 ที่พร้อมกัน: route.js ฮาร์ดโค้ดคำว่า 'One Piece nautical theme' ไว้ในทุกพรอมต์ และ poster_concepts ตั้ง default เป็น treasure (ล่าสมบัติ One Piece) · คอลัมน์ franchise มีอยู่แล้วแต่ไม่เคยถูกใช้",
+
+  "_rule": "⚠️ ห้ามใส่ตัวละคร โลโก้ค่าย หรือสัญลักษณ์ลิขสิทธิ์ (โปเกบอล ดราก้อนบอล 7 ลูก ธงโจรสลัด ฯลฯ) ลงในลิสต์นี้เด็ดขาด — เราเป็นผู้ขายต่อ ใช้รูปถ่ายสินค้าจริงได้ แต่วาดงานลิขสิทธิ์ขึ้นเองไม่ได้ · ให้บรรยายเป็น 'บรรยากาศ/พื้นผิว/แสง' เท่านั้น",
+
+  "_machine_note": "ตัวตู้จริงพิมพ์ลายเดินเรือ (คลื่นขาว สมอทอง ดาว นกนางนวล) อันนั้นเป็นของจริงบนตัวตู้ ไม่ใช่ธีมของโปสเตอร์ — ถ้าตู้อยู่ในเฟรมก็วาดตามจริงได้ แต่ห้ามลามไปเป็นกรอบหรือพื้นหลังของทั้งใบเวลาสินค้าไม่ใช่ One Piece",
+
+  "default": "Clean electric-blue energy field, lightning arcs, brushed chrome edges, deep navy ground. No franchise-specific ornament.",
+
+  "franchises": {
+    "OP": {
+      "label": "One Piece",
+      "mood": "ผจญภัยทางทะเล ล่าสมบัติ",
+      "decor": "Ocean wave crests in white foam, weathered rope coils, a brass compass rose, distant seagulls, aged treasure-map parchment texture, warm gold accents against deep navy"
+    },
+    "DB": {
+      "label": "Dragon Ball",
+      "mood": "พลังระเบิด ต่อสู้ดุเดือด",
+      "decor": "Explosive energy aura radiating outward, streaking speed lines, crackling orange and electric-blue power flares, shattered rock fragments suspended mid-air, scorched battlefield ground, dramatic backlit dust"
+    },
+    "PKM": {
+      "label": "Pokemon",
+      "mood": "สดใส ผจญภัย เป็นมิตร",
+      "decor": "Bright playful palette, elemental sparks of electricity and leaves, soft lens flares, rolling grass field bokeh, cheerful daylight tone — lighter and friendlier than the other franchises"
+    },
+    "YGH": {
+      "label": "Yu-Gi-Oh",
+      "mood": "ลึกลับ ศาสตร์โบราณ ดวลไพ่",
+      "decor": "Ancient carved stone tablets, gold ornamental filigree, mystic glyph textures, purple-violet arcane glow, dueling arena spotlight from above, floating dust motes"
+    },
+    "NRT": {
+      "label": "Naruto",
+      "mood": "นินจา ความเร็ว หมู่บ้านซ่อนใบไม้",
+      "decor": "Ink brush strokes on washi paper, swirling leaves caught in wind, paper talisman seals, shuriken silhouettes in motion blur, muted earth tones with a single hot accent"
+    },
+    "SL": {
+      "label": "Solo Leveling",
+      "mood": "มืด ทรงพลัง เงาทหาร",
+      "decor": "Deep shadow gradients, a violet-black rift portal glow, cold blue rim light, monolithic gate architecture, drifting embers of dark energy"
+    },
+    "MLBB": {
+      "label": "Mobile Legends",
+      "mood": "อีสปอร์ต แข่งขัน",
+      "decor": "Esports arena atmosphere, neon HUD frame elements, hexagonal grid overlay, stage spotlights, competitive high-contrast glow"
+    },
+    "TF": {
+      "label": "Transformers",
+      "mood": "จักรกล โลหะ",
+      "decor": "Brushed metal plating with panel seams, exposed gears and pistons, circuit trace patterns, hard industrial rim light, sparks off steel"
+    },
+    "MLP": {
+      "label": "My Little Pony",
+      "mood": "สดใส น่ารัก แฟนตาซี",
+      "decor": "Pastel rainbow gradients, soft cloud forms, glittering sparkle particles, gentle flower motifs, bright airy daylight — the softest palette in the set"
+    }
+  }
+}

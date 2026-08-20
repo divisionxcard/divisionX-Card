@@ -63,7 +63,7 @@ async function localRef(rel) {
 
 // ── ประกอบ prompt ─────────────────────────────────────────────────────────
 // โครง: บทบาท → แนวคิด → สไตล์แบรนด์ → ข้อเท็จจริง (ห้ามแต่ง) → ข้อความที่ต้องใส่ → ข้อห้าม
-function buildPrompt(style, concept, facts, mode, hasRefs = false, idea = null, brandRules = []) {
+function buildPrompt(style, concept, facts, mode, hasRefs = false, idea = null, brandRules = [], fr = null) {
   const wantsText = mode !== "art"
   const p = []
 
@@ -84,20 +84,46 @@ function buildPrompt(style, concept, facts, mode, hasRefs = false, idea = null, 
       brandRules.map((r, i) => `${i + 1}. ${r}`).join("\n"))
   }
 
+  // ⚠️ คอนเซปต์ค่าเริ่มต้นคือ treasure = "ล่าสมบัติ One Piece" ซึ่งผูกกับค่าย OP ทั้งก้อน
+  //    ทั้ง label ("ล่าสมบัติ One Piece") mood และ decor (คลื่น สมอ เข็มทิศ เชือก)
+  //    ตอนแรกแก้โดยตัดแค่ decor — ไม่พอ เพราะชื่อคอนเซปต์เองก็พาโมเดลไปทางเดิม
+  //    ถ้าค่ายไม่ตรง ให้เหลือแค่ทิศทางสี ไม่ส่งชื่อ/อารมณ์/ลายไปเลย
   if (concept) {
-    p.push(
-      `POSTER CONCEPT: ${concept.label} — ${concept.mood}.\n` +
-      `Visual elements to include: ${(concept.decor || []).join(", ")}.\n` +
+    const conceptIsOnePiece = /one piece|ล่าสมบัติ/i.test(
+      `${concept.label || ""} ${concept.mood || ""} ${(concept.decor || []).join(" ")}`)
+    const conceptFits = !fr || !conceptIsOnePiece || fr.label === "One Piece"
+    const palette =
       `Colour direction: background ${concept.palette?.bg}, primary accent ${concept.palette?.accent}, ` +
       `secondary accent ${concept.palette?.accent2}.`
-    )
+    p.push(conceptFits
+      ? `POSTER CONCEPT: ${concept.label} — ${concept.mood}.\n` +
+        ((concept.decor || []).length ? `Visual elements to include: ${concept.decor.join(", ")}.\n` : "") +
+        palette
+      : palette)
   }
 
   p.push(`BRAND STYLE: ${style.style}`)
   p.push(
-    "BRAND WORLD: the real vending machine is navy blue wrapped with white ocean waves, " +
-    "a gold anchor, stars and seagulls — a One Piece nautical theme. Gold is a genuine brand colour."
+    // ⚠️ 20 ส.ค. 2026 — ประโยคนี้เคยเขียนว่า "a One Piece nautical theme" ลอย ๆ
+    //    ผลคือโปสเตอร์ Dragonball FB-09 ออกมามีสมอ คลื่น เข็มทิศ นกนางนวลเต็มใบ
+    //    ลายเดินเรือเป็นลายที่พิมพ์อยู่บน "ตัวตู้จริง" ไม่ใช่ธีมของโปสเตอร์
+    //    ต้องผูกไว้กับตัวตู้เท่านั้น ห้ามให้ลามเป็นกรอบ/พื้นหลังของทั้งใบ
+    "BRAND WORLD: the physical vending machine itself is navy blue, wrapped with white ocean " +
+    "waves, a gold anchor, stars and seagulls. That nautical artwork belongs to the machine's " +
+    "own body panels only — when the machine is in frame, draw it that way. It is NOT the " +
+    "poster's theme and must never spread into the frame, border, or background. " +
+    "Gold is a genuine brand colour."
   )
+
+  // ตกแต่งตามค่ายของสินค้าที่โพสต์นี้พูดถึง — จาก skus.franchise (tasks/franchise_style.json)
+  // เดิมไม่มีขั้นนี้ ทุกโพสต์จึงได้ลายเดินเรือเหมือนกันหมดไม่ว่าจะขาย Dragon Ball หรือ Pokemon
+  if (fr?.decor) {
+    p.push(
+      `FRANCHISE ATMOSPHERE — this post is about ${fr.label}:\n${fr.decor}\n` +
+      "Use this to set the mood, ornament and lighting of the whole poster. " +
+      "Do not mix in motifs belonging to a different franchise."
+    )
+  }
 
   // ข้อเท็จจริง — ส่วนที่ทำให้ต่างจากการเปิด ChatGPT ทำมือ
   p.push("FACTS (the only numbers and names you may use):\n" + facts.join("\n"))
@@ -320,7 +346,7 @@ export async function POST(req) {
     let sku = null
     if (skuId) {
       const { data } = await db.from("skus")
-        .select("sku_id,name,image_url,image_url_box").eq("sku_id", skuId).maybeSingle()
+        .select("sku_id,name,franchise,image_url,image_url_box").eq("sku_id", skuId).maybeSingle()
       sku = data
     }
 
@@ -362,17 +388,24 @@ export async function POST(req) {
     // ล้มแล้วไม่ทำให้ทั้งงานล้ม — planVisual คืน null แล้วเราวาดต่อแบบเดิม
     const artCfg = await loadJson("art_direction.json")
     const brandRules = artCfg?.rules || []
+
+    // ธีมตามค่ายของสินค้า — ถ้าโพสต์ไม่ผูกกับ SKU ไหนเลยก็ใช้ค่ากลางที่ไม่มีลายค่ายใด
+    const frCfg = await loadJson("franchise_style.json")
+    const fr = sku?.franchise ? (frCfg?.franchises || {})[sku.franchise] : null
+    const frBlock = fr || (frCfg?.default ? { label: "แบรนด์กลาง", decor: frCfg.default } : null)
+
     const idea = await planVisual({
       caption,
       format: content.content_format,
       sku: sku?.name,
+      franchise: fr?.label,
       rules: brandRules,
     })
 
     const prompt = buildPrompt(
       style, concept, facts, mode, refs.length > 0,
       idea ? ideaToPrompt(idea) : null,
-      brandRules,
+      brandRules, frBlock,
     )
 
     let out

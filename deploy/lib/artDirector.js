@@ -63,7 +63,7 @@ Reply as JSON with exactly these keys:
  * @param {string[]} [o.rules] กฎออกแบบจาก tasks/art_direction.json
  * @returns {Promise<object|null>} null = ล้มเหลว ให้ผู้เรียกไปต่อโดยไม่มีไอเดียภาพ
  */
-export async function planVisual({ caption, format, sku, rules = [] }) {
+export async function planVisual({ caption, format, sku, franchise, rules = [] }) {
   const key = process.env.OPENAI_API_KEY
   if (!key || !caption?.trim()) return null
 
@@ -77,6 +77,9 @@ export async function planVisual({ caption, format, sku, rules = [] }) {
   const user = [
     format ? `รูปแบบโพสต์: ${format}` : null,
     sku ? `สินค้าที่โยงถึง: ${sku}` : null,
+    // บอกค่ายให้ตัวคิดรู้ตั้งแต่แรก ไม่งั้นมันจะเสนอไอเดียกลาง ๆ ที่ไปได้กับทุกค่าย
+    // แล้วตัววาดค่อยไปหยิบลายผิดค่ายมาใส่ทีหลัง (เคสจริง: Dragon Ball ได้สมอกับคลื่น)
+    franchise ? `ค่ายการ์ด: ${franchise} — องค์ประกอบภาพต้องเข้ากับค่ายนี้ ห้ามหยิบสัญลักษณ์ของค่ายอื่นมาปน` : null,
     `\nแคปชั่นที่อนุมัติแล้ว:\n${caption.trim()}`,
   ].filter(Boolean).join("\n")
 
