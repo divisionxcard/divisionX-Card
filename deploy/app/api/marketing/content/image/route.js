@@ -109,12 +109,14 @@ function buildPrompt(style, concept, facts, mode, hasRefs = false, idea = null, 
   if (hasRefs && style.with_reference) {
     p.push(
       "REFERENCE IMAGES: " + style.with_reference + "\n" +
-      // เกิดจริง 20 ส.ค. 2026: โมเดลแปะลายน้ำ "DIVISION X CARD" ลงบนหน้าซองทั้งสองใบ
-      // with_reference เดิมพูดถึงแค่ห้าม "redraw/restyle/alter" ซึ่งมันตีความว่าการ
-      // เพิ่มของทับไม่ใช่การแก้ของเดิม ต้องเขียนห้ามการวางทับตรง ๆ
-      "Do not overlay, stamp, or print anything onto the product surface — no logo, " +
-      "no watermark, no brand mark, no sticker, no glow outline drawn on the packaging itself. " +
-      "The pack must look exactly as photographed, untouched."
+      // ⚠️ 20 ส.ค. 2026 — เคยเข้าใจผิดว่าโมเดลแปะลายน้ำ "DIVISION X CARD" ลงบนซองเอง
+      //    ที่จริง **รูปต้นทางของเรามีลายน้ำอยู่แล้ว** (ซีรีส์ OP กับ EB มีทุกใบ · FB/MLP/MLBB สะอาด)
+      //    โมเดลแค่ลอกมาตามที่สั่ง
+      //    เคยเขียนห้าม "overlay อะไรลงบนซอง" ซึ่งขัดกับคำสั่งให้ลอกให้เหมือน → ถอดออก
+      //    คำสั่งที่ถูกต้องคือห้าม *เพิ่มของที่ไม่มีในรูปต้นฉบับ* ไม่ใช่ห้ามลอกของที่มี
+      "Reproduce the pack exactly as it appears in the reference photo, including any " +
+      "watermark or marking already printed on that photo. Do not ADD anything that is not " +
+      "already there — no new logo, sticker, price tag, badge, or glow drawn onto the packaging."
     )
   }
 
