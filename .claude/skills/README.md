@@ -13,6 +13,7 @@
 | [dvx-sync](dvx-sync/SKILL.md) | sync ข้อมูลจากตู้ · backfill ย้อนหลัง · แก้ GitHub Actions |
 | [dvx-web](dvx-web/SKILL.md) | แก้หน้าเว็บ · เพิ่มหน้า · Print/PDF · API route · dev server มีปัญหา |
 | [dvx-content](dvx-content/SKILL.md) | ระบบเขียนคอนเทนต์ · ปรับโทน/หลักการเขียน · คอนเทนต์ซ้ำ · หน้า /marketing |
+| [dvx-image](dvx-image/SKILL.md) | ภาพโปสเตอร์ · ภาพไม่ตรงหัวข้อ · ตัวอักษรไทยเพี้ยน · ซองการ์ดผิด · ธีมผิดค่าย · แก้ prompt ตัวสร้างภาพ |
 
 ## หลักที่ใช้เขียนสกิลชุดนี้
 
