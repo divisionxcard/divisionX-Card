@@ -17,6 +17,7 @@ import { NextResponse } from "next/server"
 import { readFile } from "fs/promises"
 import path from "path"
 import { requireAdmin } from "../../../../../lib/apiAuth"
+import { planVisual, ideaToPrompt } from "../../../../../lib/artDirector"
 
 const SB_URL = process.env.NEXT_PUBLIC_SUPABASE_URL
 const SB_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -62,7 +63,7 @@ async function localRef(rel) {
 
 // ── ประกอบ prompt ─────────────────────────────────────────────────────────
 // โครง: บทบาท → แนวคิด → สไตล์แบรนด์ → ข้อเท็จจริง (ห้ามแต่ง) → ข้อความที่ต้องใส่ → ข้อห้าม
-function buildPrompt(style, concept, facts, mode, hasRefs = false) {
+function buildPrompt(style, concept, facts, mode, hasRefs = false, idea = null, brandRules = []) {
   const wantsText = mode !== "art"
   const p = []
 
@@ -72,6 +73,16 @@ function buildPrompt(style, concept, facts, mode, hasRefs = false) {
     "in the style of high-energy Thai retail advertising — layered, dramatic lighting, " +
     "strong focal hierarchy. Not a plain product photo, not a minimal web card."
   )
+
+  // กฎออกแบบที่ถอดจากงานจริงของแบรนด์ — tasks/art_direction.json
+  // ⚠️ ต้องอยู่ *ก่อน* ไอเดียภาพ — ทดสอบ 20 ส.ค. 2026 วางกฎไว้ท้ายแล้วกฎกินไอเดีย
+  //    (กฎข้อ "สินค้าต้องกินพื้นที่ ≥60%" ทำให้ภาพกลับไปเป็นซองลอยเฉย ๆ
+  //     ทั้งที่ตัวคิดเสนอให้เล่าเป็นสองโลกของนักสะสมพร้อมมือคนจัดเด็ค/แฟ้มสะสม)
+  //    โมเดลให้น้ำหนักกับสิ่งที่อยู่ท้ายพรอมต์มากกว่า จึงต้องให้ไอเดียปิดท้าย
+  if (brandRules.length) {
+    p.push("BRAND DESIGN RULES (obey unless they clash with THE ONE IDEA below):\n" +
+      brandRules.map((r, i) => `${i + 1}. ${r}`).join("\n"))
+  }
 
   if (concept) {
     p.push(
@@ -95,10 +106,32 @@ function buildPrompt(style, concept, facts, mode, hasRefs = false) {
   // ⚠️ คำสั่งห้ามวาดสินค้าใหม่ — ต้องอยู่ในพรอมต์ทุกครั้งที่แนบรูปอ้างอิง
   // เดิมคีย์นี้มีอยู่ใน image_style.json แต่ไม่มีใครเรียก (dead config) มาตลอด
   // ซึ่งเป็นประโยคเดียวกับที่ทำให้รอบสั่ง ChatGPT ด้วยมือได้ซองจริง ส่วน API ได้ซองที่โมเดลวาดเอง
-  if (hasRefs && style.with_reference) p.push("REFERENCE IMAGES: " + style.with_reference)
+  if (hasRefs && style.with_reference) {
+    p.push(
+      "REFERENCE IMAGES: " + style.with_reference + "\n" +
+      // เกิดจริง 20 ส.ค. 2026: โมเดลแปะลายน้ำ "DIVISION X CARD" ลงบนหน้าซองทั้งสองใบ
+      // with_reference เดิมพูดถึงแค่ห้าม "redraw/restyle/alter" ซึ่งมันตีความว่าการ
+      // เพิ่มของทับไม่ใช่การแก้ของเดิม ต้องเขียนห้ามการวางทับตรง ๆ
+      "Do not overlay, stamp, or print anything onto the product surface — no logo, " +
+      "no watermark, no brand mark, no sticker, no glow outline drawn on the packaging itself. " +
+      "The pack must look exactly as photographed, untouched."
+    )
+  }
 
   if (wantsText) {
     p.push(style.thai_rule)
+    // ⚠️ ปิดช่องที่โมเดลเติมข้อความเอง — ทดสอบ 19 ส.ค. 2026 พบว่ามันแถมป้ายไทย
+    // ที่ไม่ได้อยู่ใน FACTS มา 2 บรรทัด รอบนั้นบังเอิญเขียนถูกและตรงเนื้อหา
+    // แต่แปลว่าข้อความที่ไม่เคยผ่านด่านตรวจคำเว่อร์ขึ้นภาพได้ (ดู content_voice.json → overclaim)
+    // facts_rule เดิมพูดถึงแค่ "ตัวเลข" ไม่ได้ห้ามคำ จึงต้องเขียนย้ำเป็นข้อห้ามเด็ดขาด
+    p.push(
+      "TEXT LOCK — read carefully:\n" +
+      "The ONLY text allowed anywhere in this image is the exact strings listed under FACTS above, " +
+      "copied character-for-character. Do NOT add any other word, label, badge, tagline, caption, " +
+      "bullet point, price, sticker, button, or watermark — not in Thai, not in English, not anywhere, " +
+      "however small or decorative. If a layout area looks empty, leave it empty or fill it with " +
+      "artwork and lighting. An extra invented word makes the whole poster unusable."
+    )
   } else {
     p.push(
       "IMPORTANT: render NO text of any kind. No letters, no words, no numbers, no logos. " +
@@ -113,6 +146,13 @@ function buildPrompt(style, concept, facts, mode, hasRefs = false) {
     ...(wantsText ? [] : (style.negative_no_text || [])),
   ]
   p.push("STRICT CONSTRAINTS: " + nos.join("; ") + ".")
+
+  // ไอเดียภาพปิดท้ายพรอมต์ — โมเดลให้น้ำหนักกับสิ่งที่อยู่ท้ายสุดมากที่สุด
+  // ถ้าวางไว้ต้น ๆ กฎแบรนด์ 29 ข้อที่ตามมาจะกลบจนภาพกลับไปเป็นซองวางบนแท่นเหมือนเดิม
+  if (idea) {
+    p.push(idea + "\n\nThis idea outranks every stylistic preference above. " +
+      "If a brand rule would flatten it into a plain product shot, follow the idea.")
+  }
   return p.join("\n\n")
 }
 
@@ -314,7 +354,24 @@ export async function POST(req) {
     }
 
     const mode = body.mode || style.poster_mode || "full"
-    const prompt = buildPrompt(style, concept, facts, mode, refs.length > 0)
+
+    // ── ขั้นคิดไอเดียภาพ (ก่อนวาด) ──
+    // ค่าใช้จ่ายหลักหลักสตางค์ต่อครั้ง เทียบกับค่าวาด $0.17 → คุ้มมากถ้าช่วยให้ไม่ต้องวาดซ้ำ
+    // ล้มแล้วไม่ทำให้ทั้งงานล้ม — planVisual คืน null แล้วเราวาดต่อแบบเดิม
+    const artCfg = await loadJson("art_direction.json")
+    const brandRules = artCfg?.rules || []
+    const idea = await planVisual({
+      caption,
+      format: content.content_format,
+      sku: sku?.name,
+      rules: brandRules,
+    })
+
+    const prompt = buildPrompt(
+      style, concept, facts, mode, refs.length > 0,
+      idea ? ideaToPrompt(idea) : null,
+      brandRules,
+    )
 
     let out
     try {
@@ -376,6 +433,15 @@ export async function POST(req) {
         // ไม่งั้นจะเข้าใจผิดว่ากำลังทดสอบโมเดลที่ตั้งไว้ ทั้งที่ได้ภาพจากตัวสำรอง
         fell_back_from: out.attempts?.length ? out.attempts : undefined,
         usage: out.usage || undefined,
+        // ไอเดียภาพที่คิดได้ — คืนออกมาให้เห็นว่าภาพนี้ตั้งใจสื่ออะไร
+        // ถ้าภาพออกมาไม่ตรงใจ จะได้รู้ว่าพลาดที่ขั้นคิด หรือขั้นวาด
+        idea: idea ? {
+          big_idea: idea.big_idea,
+          visual_device: idea.visual_device,
+          why_it_works: idea.why_it_works,
+          model: idea._model,
+        } : null,
+        brand_rules_applied: brandRules.length,
       },
     })
   } catch (err) {
