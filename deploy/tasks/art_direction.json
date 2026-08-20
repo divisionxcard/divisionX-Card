@@ -32,11 +32,11 @@
     "Headline weight is capped at 700 (Sarabun Bold / IBM Plex Sans Thai 700). Do not propose concepts that depend on a heavier display weight.",
     "Keep the logo in the same corner across every piece within a set.",
     "Convey premium through material (chrome, foil, rim light, depth), never through adjectives placed in the image.",
-    "Reject any concept that needs explanatory text inside the image to make sense."
+    "Reject any concept that needs explanatory text inside the image to make sense.",
+    "The brand LINE ID is exactly '@divisionxcard' — all lowercase. Never render any other spelling or capitalisation."
   ],
   "_open_questions_note": "คำถามที่ยังไม่มีคำตอบ อยู่ในหัวข้อ 'ยังไม่รู้' ของไฟล์ wiki · ห้ามเดาแล้วเขียนเป็นกฎที่นี่",
   "open_questions": [
-    "LINE ID ตัวจริงคืออันไหน — เพจใช้ 3 แบบ (@Divisonxcard 31 ครั้ง · @divisionxcard 4 · @DIVISIONXCARD 1) ต้องรู้ก่อนวาดงานชิ้นแรก",
     "ไฟล์ฟอนต์พาดหัวที่ใช้บนแบนเนอร์อยู่ไหน — ไม่มีในรีโป ทั้งเว็บและโปสเตอร์ตันที่น้ำหนัก 700 ถ้าไม่ได้ต้องหา display Thai น้ำหนัก 800+ มาแทน",
     "ขอไฟล์โลโก้โปร่งใส (PNG/SVG) — logo.png ปัจจุบัน alpha 255 ทั้งใบ มุมเป็นดำทึบ แต่เจ้าของมีเวอร์ชันโปร่งใสอยู่นอกรีโป (เห็นบน branches-hero)",
     "จะสลับ poster_mode จาก full เป็น art ไหม — art แก้ปัญหา AI สะกดไทยผิดได้ แต่ image_style.json:35 ระบุว่า full คือแบบที่เจ้าของชอบ ห้ามสลับเองโดยไม่ถาม",
@@ -51,5 +51,6 @@
     "กลไกซองสุ่มเข้าข่ายนโยบาย gambling/gaming ของ Meta หรือไม่ — ยังไม่มีใครอ่านเอกสารจริง (ที่อ้างกันมาเป็นบล็อกเอเจนซี่) และเพจเคยใช้คำแบบ 'รับประกัน 100%' แล้วไม่เคยโดนบล็อก",
     "จะสร้างไฟล์ token กลาง (json/ts) แล้ว inject ตอนเรนเดอร์เมื่อไหร่ — poster_tpl_*.html เรนเดอร์นอก Next.js อ่าน CSS var จาก globals.css ไม่ได้โดยหลักการ ตอนนี้กรมท่า 7 ค่า ฟ้า 5 ค่ากระจาย 6 ไฟล์",
     "จะเก็บ docs/ (ref-images + poster-samples ~62 MB) ไว้ที่ไหน — untracked อยู่บนเครื่องเดียว หายได้ แต่ไม่ควรยัดเข้า git history ควรย้ายไป Drive/Storage แล้ว commit แค่ไฟล์ย่อ+ลิงก์"
-  ]
+  ],
+  "_line_id_note": "LINE ID ตัวจริงคือ @divisionxcard (เจ้าของยืนยัน 20 ส.ค. 2026) · โพสต์เก่าบนเพจ 31 โพสต์สะกดผิดเป็น @Divisonxcard (ตกตัว i) ซึ่งพาลูกค้าไปผิดที่"
 }

@@ -130,7 +130,7 @@ export default async function ProductsPage() {
 
         <footer className="pr-foot">
           <a className="pr-chip" href="https://lin.ee/9cMKVRm" target="_blank" rel="noopener noreferrer">
-            <span className="pr-line">LINE</span> แอดรับแจ้งของใหม่ · @Divisionxcard
+            <span className="pr-line">LINE</span> แอดรับแจ้งของใหม่ · @divisionxcard
           </a>
           <div className="pr-cta">
             <a className="pr-chip" href="/branches">📍 ดูสาขาใกล้คุณ</a>

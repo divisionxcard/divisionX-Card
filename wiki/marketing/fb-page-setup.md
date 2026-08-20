@@ -72,7 +72,7 @@ DivisionX Card — ตู้จำหน่ายการ์ดเกมอั�
 - [ ] กรอก About (สั้น+ยาว) + เบอร์ + เว็บไซต์
 - [ ] ตั้งปุ่ม CTA = เว็บไซต์ /products
 - [ ] โพสต์ + ปักหมุด pinned post
-- [ ] เปิด Messenger auto-reply: "ทักได้เลยครับ 🎴 หรือแอดไลน์ @Divisionxcard รับแจ้งของใหม่"
+- [ ] เปิด Messenger auto-reply: "ทักได้เลยครับ 🎴 หรือแอดไลน์ @divisionxcard รับแจ้งของใหม่"
 
 ## 🔗 เกี่ยวข้อง
 [[fb-cover]] · [[facebook-content-plan]] · [[reference_brand_visual_identity]] · [[project_marketing_assignment]]

@@ -17,7 +17,7 @@ const STEPS = [
 const TIPS = [
   { ic: "⏰", t: "เปิดตามเวลาห้าง", d: "กดเองได้ ไม่ต้องต่อคิว ทั้ง 11 สาขา" },
   { ic: "✨", t: "ลุ้นการ์ดหายาก", d: "มีการ์ดระดับแรร์ซ่อนอยู่เพียบ ลุ้นได้ทุกซอง" },
-  { ic: "💬", t: "มีปัญหา?", d: "ของไม่ออก/จ่ายเงินแล้วติดขัด ทักไลน์ @Divisionxcard ได้เลย" },
+  { ic: "💬", t: "มีปัญหา?", d: "ของไม่ออก/จ่ายเงินแล้วติดขัด ทักไลน์ @divisionxcard ได้เลย" },
 ]
 
 export default function HowToPage() {
@@ -117,7 +117,7 @@ export default function HowToPage() {
         </div>
 
         <footer className="ht-foot">
-          <a className="ht-chip" href="https://lin.ee/9cMKVRm" target="_blank" rel="noopener noreferrer"><span className="ht-line">LINE</span> @Divisionxcard</a>
+          <a className="ht-chip" href="https://lin.ee/9cMKVRm" target="_blank" rel="noopener noreferrer"><span className="ht-line">LINE</span> @divisionxcard</a>
           <span className="ht-chip">📞 <a href="tel:0863863219">086-386-3219</a></span>
         </footer>
       </div>
