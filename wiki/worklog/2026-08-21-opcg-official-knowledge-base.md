@@ -2,7 +2,7 @@
 type: worklog
 date: 2026-08-21
 tags: [marketing, content, knowledge-base, one-piece, pdf-extraction, scraping]
-commits: []
+commits: [8b5a05a]
 status: ✅ สร้างคลังความรู้ทางการ 2 ไฟล์ + ต่อเข้าตัวเขียนคอนเทนต์แล้ว
 ---
 
