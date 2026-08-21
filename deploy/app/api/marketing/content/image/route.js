@@ -367,7 +367,7 @@ export async function POST(req) {
       sku ? `- Product shown: ${sku.name} (${sku.sku_id}) — an authentic sealed booster pack` : null,
       lines.length ? `- Headline text to place (Thai, copy exactly): "${lines[0]}"` : null,
       lines.length > 1 ? `- Supporting line (Thai, copy exactly): "${lines[1]}"` : null,
-      `- Trust badges to show: ของแท้ 100% · เปิดตามเวลาห้าง · ${branches} สาขา`,
+      `- Trust badges to show: ของแท้ 100% · ไม่มีวันหยุด · ${branches} สาขา`,
     ].filter(Boolean)
 
     // ── รูปอ้างอิง: ซองจริง + ตู้จริง ──
