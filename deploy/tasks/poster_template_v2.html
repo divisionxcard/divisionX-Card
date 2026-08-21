@@ -54,7 +54,9 @@
 
   /* ── แถบหัว ── */
   .top { position: absolute; top: 44px; left: 52px; right: 52px; display: flex; align-items: center; gap: 16px; }
-  .logo { width: 62px; height: 62px; border-radius: 14px; background: url("{{LOGO}}") center/contain no-repeat; }
+  /* เดิมมี border-radius:14px ไว้กันมุมกล่องดำของ logo.png ตัวเก่าโผล่
+     ตอนนี้ได้ไฟล์โปร่งใสจริงแล้ว ไม่มีกล่องให้ต้องซ่อน */
+  .logo { width: 62px; height: 62px; background: url("{{LOGO}}") center/contain no-repeat; }
   .brand { font-weight: 800; font-size: 27px; letter-spacing: 3px; color: #f4e6c4; }
   .brand small { display: block; font-weight: 400; font-size: 15px; letter-spacing: .6px; color: #9a8f79; margin-top: 3px; }
   .badge {

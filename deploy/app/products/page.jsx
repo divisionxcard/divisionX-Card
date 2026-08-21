@@ -91,7 +91,7 @@ export default async function ProductsPage() {
 
       <div className="pr-wrap">
         <header className="pr-hero">
-          <img className="pr-logo" src="/logo.png" alt="DivisionX Card" />
+          <img className="pr-logo" src="/logo-white.png" alt="DivisionX Card" />
           <h1 className="pr-title">สินค้า<b>ทั้งหมด</b></h1>
           <div className="pr-sub">สามารถกดซื้อได้แล้ววันนี้ ที่ตู้จำหน่ายการ์ด DivisionX Card ทั้ง 11 สาขา</div>
         </header>

@@ -76,7 +76,7 @@ export default function HowToPage() {
 
       <div className="ht-wrap">
         <header className="ht-hero">
-          <img className="ht-logo" src="/logo.png" alt="DivisionX Card" />
+          <img className="ht-logo" src="/logo-white.png" alt="DivisionX Card" />
           <h1 className="ht-title">วิธีการ<b>ซื้อ</b></h1>
           <div className="ht-sub">กดตู้ง่ายๆ แค่ 4 ขั้นตอน · ไม่ต้องต่อคิว</div>
         </header>

@@ -296,10 +296,19 @@ def build_html(content, sku_img, bg_img, branches, concept_key="", concept_css="
     machine_scene = _pub("machine/machine-scene.jpg") or _pub("machine/machine-scene.png")
 
     # โลโก้จริงจาก deploy/public — ดีกว่าวาดกล่องตัวอักษร X เอง
+    #
+    # ⚠️ ใช้ logo-mark-white.png (เฉพาะตรา DC · ขาว · พื้นโปร่งใส) ไม่ใช่ logo.png
+    #    logo.png ตัวเก่าไม่โปร่งใสจริง (alpha 255 ทั้งใบ) และมีคำว่า DIVISION X CARD ติดมาด้วย
+    #    เทมเพลตจึงต้องครอบหน้าต่างด้วยพิกัดฮาร์ดโค้ดเพื่อตัดคำนั้นออก + ใช้ mix-blend-mode
+    #    เพื่อให้กล่องขาวหายไปบนพื้นเข้ม — เป็น workaround ทั้งคู่
+    #    เจ้าของส่งไฟล์โปร่งใสจริงมาให้ 21 ส.ค. 2026 จึงเลิกใช้ workaround ได้
+    #    ถอยกลับไป logo.png ได้ถ้าจำเป็น แต่ต้องเอาการครอบในเทมเพลตกลับมาด้วย
     logo = ""
-    lp = ROOT / "public" / "logo.png"
-    if lp.exists():
-        logo = data_uri(lp.read_bytes(), "image/png")
+    for cand in ("logo-mark-white.png", "logo.png"):
+        lp = ROOT / "public" / cand
+        if lp.exists():
+            logo = data_uri(lp.read_bytes(), "image/png")
+            break
     reg = data_uri((FONT_DIR / "Sarabun-Regular.ttf").read_bytes(), "font/ttf")
     bold = data_uri((FONT_DIR / "Sarabun-Bold.ttf").read_bytes(), "font/ttf")
 
