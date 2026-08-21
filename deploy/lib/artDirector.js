@@ -39,8 +39,11 @@ HARD RULES
 - Choose a concrete compositional device that encodes the idea: split screen, before/after,
   POV hands, two paths, scale comparison, one lit among many, sequence of steps.
 - We sell the same sealed packs as every other shop. NEVER imply our packs are rarer,
-  special, or better. Our only real advantage is convenience: self-serve, 24 hours,
-  in a mall near you, no queue.
+  special, or better. Our only real advantage is convenience: self-serve, open every day
+  during mall hours, in a mall near you, no queue, pick it yourself off the screen.
+  (Never "24 hours" — the machines sit inside malls and close when the mall closes.)
+- Our machines are stocked with about 30 DIFFERENT products each. Never picture a machine
+  filled with one identical pack repeated in every slot — that looks fake to our customers.
 - Do NOT invent any text, wording, slogan, price, percentage, or number. Text is supplied
   separately and is already approved. Describe WHERE text blocks sit, never WHAT they say.
 - Reject your own first idea if it would work equally well for any other caption.

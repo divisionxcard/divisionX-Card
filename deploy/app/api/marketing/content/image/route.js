@@ -149,7 +149,15 @@ function buildPrompt(style, concept, facts, mode, hasRefs = false, idea = null, 
           "glass front, six shelves of hanging card packs in numbered slots, a touchscreen on the " +
           "right, and a 'PUSH & PICK' collection flap at the bottom. If the machine appears in this " +
           "poster, match that real hardware: the real shelf layout, the real slot rails, the real " +
-          "front panel. Do not invent a different machine or a generic snack vending machine."
+          "front panel. Do not invent a different machine or a generic snack vending machine.\n" +
+          // ตู้จริงมีสินค้า 28-38 ชนิดต่อตู้ ไม่มีชนิดไหนเกิน 13% ของช่อง
+          // เคยได้ภาพที่เป็นซองเดียวกันเต็มตู้ เจ้าของบอกว่า "ดูไม่น่าเชื่อถือ" — ถูกต้อง
+          "IMPORTANT — the machine is stocked with MANY DIFFERENT products: roughly 30 distinct " +
+          "card packs from several franchises across about 55 slots, so each shelf shows a mix of " +
+          "clearly different pack designs and colors, and no single product ever fills a whole " +
+          "shelf or the whole cabinet. Never draw the same pack repeated in every slot — a machine " +
+          "stocked with one identical product looks fake. If the poster highlights one specific " +
+          "product, show it in only a few slots among the varied rest."
         : "")
     )
   }
@@ -363,7 +371,10 @@ export async function POST(req) {
     const facts = [
       `- Brand name: DivisionX Card (logo wordmark "DC")`,
       `- Number of branches (real, from database): ${branches}`,
-      `- Business: self-service trading-card vending machines inside Thai shopping malls, open 24 hours`,
+      // ⚠️ ห้ามเขียนว่า open 24 hours ตรงนี้อีก — ตู้อยู่ในห้าง เปิด-ปิดตามเวลาห้าง
+      //    เคยหลุดออกโปสเตอร์มาแล้ว 2 รอบ (ดู wiki/worklog/2026-08-21-24hour-claim-regression.md)
+      `- Business: self-service trading-card vending machines inside Thai shopping malls, ` +
+        `open every day during mall hours`,
       sku ? `- Product shown: ${sku.name} (${sku.sku_id}) — an authentic sealed booster pack` : null,
       lines.length ? `- Headline text to place (Thai, copy exactly): "${lines[0]}"` : null,
       lines.length > 1 ? `- Supporting line (Thai, copy exactly): "${lines[1]}"` : null,
