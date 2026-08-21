@@ -63,7 +63,7 @@ async function localRef(rel) {
 
 // ── ประกอบ prompt ─────────────────────────────────────────────────────────
 // โครง: บทบาท → แนวคิด → สไตล์แบรนด์ → ข้อเท็จจริง (ห้ามแต่ง) → ข้อความที่ต้องใส่ → ข้อห้าม
-function buildPrompt(style, concept, facts, mode, hasRefs = false, idea = null, brandRules = [], fr = null) {
+function buildPrompt(style, concept, facts, mode, hasRefs = false, idea = null, brandRules = [], fr = null, hasMachineRef = false) {
   const wantsText = mode !== "art"
   const p = []
 
@@ -142,7 +142,15 @@ function buildPrompt(style, concept, facts, mode, hasRefs = false, idea = null, 
       //    คำสั่งที่ถูกต้องคือห้าม *เพิ่มของที่ไม่มีในรูปต้นฉบับ* ไม่ใช่ห้ามลอกของที่มี
       "Reproduce the pack exactly as it appears in the reference photo, including any " +
       "watermark or marking already printed on that photo. Do not ADD anything that is not " +
-      "already there — no new logo, sticker, price tag, badge, or glow drawn onto the packaging."
+      "already there — no new logo, sticker, price tag, badge, or glow drawn onto the packaging." +
+      // บอกให้ชัดว่ารูปไหนคือรูปอะไร ไม่งั้นโมเดลอาจเอาลายตู้ไปแปะบนซอง หรือกลับกัน
+      (hasMachineRef
+        ? "\n\nOne of the reference photos is our ACTUAL vending machine — a navy cabinet with a " +
+          "glass front, six shelves of hanging card packs in numbered slots, a touchscreen on the " +
+          "right, and a 'PUSH & PICK' collection flap at the bottom. If the machine appears in this " +
+          "poster, match that real hardware: the real shelf layout, the real slot rails, the real " +
+          "front panel. Do not invent a different machine or a generic snack vending machine."
+        : "")
     )
   }
 
@@ -375,12 +383,6 @@ export async function POST(req) {
         hint: concept.blocked_why,
       }, { status: 422 })
     }
-    // ตู้จริงใส่เฉพาะแนวที่ต้องใช้ตู้ — ไม่งั้นเปลือง token และทำให้ภาพรก
-    if (["machine_luck", "real_machine"].includes(conceptKey)) {
-      const m = await localRef("machine/machine-hero.jpg")
-      if (m) refs.push(m)
-    }
-
     const mode = body.mode || style.poster_mode || "full"
 
     // ── ขั้นคิดไอเดียภาพ (ก่อนวาด) ──
@@ -402,10 +404,28 @@ export async function POST(req) {
       rules: brandRules,
     })
 
+    // ── รูปตู้จริง — ต้องตัดสินใจ *หลัง* ได้ไอเดียแล้ว ──
+    // เดิมแนบเฉพาะตอน concept เป็น machine_luck/real_machine แต่หน้าเว็บไม่เคยส่ง concept มา
+    // มันจึงตกไปที่ default ทุกครั้ง = โมเดลไม่เคยเห็นรูปตู้จริงเลยสักครั้ง วาดจากจินตนาการล้วน
+    // นั่นคือสาเหตุที่เจ้าของบอกว่า "ช่องกับกล่องหน้าตู้ยังไม่ใช่ของจริง"
+    //
+    // เกณฑ์ใหม่: แนบเมื่อไอเดียภาพพูดถึงตู้/ช่อง — ตรงกับสิ่งที่จะวาดจริง
+    // ไม่แนบพร่ำเพรื่อเพราะ gpt-image-2 ประมวลผลรูปอ้างอิงที่ fidelity สูงเสมอ ค่า input แพงขึ้นจริง
+    const MACHINE_WORDS = /ตู้|ช่อง|หน้าตู้|กด(เอง|ซอง)|machine|vending|kiosk|slot|dispenser/i
+    const ideaText = idea
+      ? `${idea.big_idea || ""} ${idea.subject || ""} ${idea.composition || ""} ${idea.visual_device || ""}`
+      : ""
+    const wantsMachine = ["machine_luck", "real_machine"].includes(conceptKey) ||
+                         MACHINE_WORDS.test(ideaText)
+    if (wantsMachine) {
+      const m = await localRef("machine/machine-hero.jpg")
+      if (m) refs.push(m)
+    }
+
     const prompt = buildPrompt(
       style, concept, facts, mode, refs.length > 0,
       idea ? ideaToPrompt(idea) : null,
-      brandRules, frBlock,
+      brandRules, frBlock, wantsMachine,
     )
 
     let out
@@ -463,6 +483,10 @@ export async function POST(req) {
         provider, model: out.model, mode,
         concept: concept ? { key: concept.key, label: concept.label } : null,
         references: refs.length,
+        // เห็นชัดว่ารอบนี้แนบรูปตู้จริงไปด้วยไหม — ถ้าภาพออกมาตู้ยังเพี้ยนทั้งที่แนบแล้ว
+        // แปลว่าปัญหาอยู่ที่โมเดล ไม่ใช่ที่เราลืมแนบ
+        machine_ref: wantsMachine,
+        franchise: frBlock?.label || null,
         bytes: out.buf.length,
         // ถ้าโมเดลแรกพัง มันจะเลื่อนไปตัวถัดไปเงียบ ๆ — ต้องคืนออกมาให้เห็น
         // ไม่งั้นจะเข้าใจผิดว่ากำลังทดสอบโมเดลที่ตั้งไว้ ทั้งที่ได้ภาพจากตัวสำรอง
