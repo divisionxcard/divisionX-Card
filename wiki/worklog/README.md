@@ -26,6 +26,7 @@ type: worklog-index
 - [[2026-06-11-kingpower-aot-plan-kb]] — วางแผน + KB โปรเจค King Power/AOT ลงตู้สนามบิน · แผนผัง 5 เฟส + สเปค Text File V9
 - [[2026-07-17-payif-sales-scraper]] — sales scraper ตู้ pf01 (ไอคอนสยาม) · `/cc_api/shop/order` param `ft_from_dt/ft_to_dt` · backfill 30 orders ฿6,641 · cron 00:15
 - [[2026-08-21-opcg-official-knowledge-base]] — คลังความรู้ One Piece ทางการ · กฎ 482 ข้อ + การ์ด 3,270 ใบ · ผสม pypdf+pdfplumber แก้ช่องว่างกลางคำไทย · ต่อเข้าตัวเขียนคอนเทนต์แล้ว
+- [[2026-08-21-24hour-claim-regression]] — "เปิด 24 ชม." กลับมารอบที่ 2 · แก้ 10 ไฟล์ + ใส่ลง overclaim.banned กันซ้ำ · คิว 27 ชิ้นติด 1 ชิ้น ยังไม่ได้โพสต์
 
 > ⚠️ ดัชนีข้างบนค้างอยู่ที่ ก.ค. 2026 — ไฟล์ worklog ของ ส.ค. มีอีก 42 ไฟล์ที่ยังไม่ได้ใส่ในรายการนี้
 > (ดูได้จากชื่อไฟล์ในโฟลเดอร์โดยตรง) ถ้าจะให้ดัชนีครบต้องไล่เติมย้อนหลัง
