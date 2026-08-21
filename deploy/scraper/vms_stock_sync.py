@@ -8,6 +8,9 @@ from datetime import datetime, timedelta
 from urllib.parse import urlparse
 from supabase import create_client
 
+# unit (กล่อง/ซอง) มาจากชื่อสินค้า — SKU เดียวขายทั้งสองแบบในตู้เดียวกัน
+from sales_unit import add_unit, upsert_sales  # noqa: E402
+
 # ── Image cache (memory) — กัน re-upload product_id เดิมหลายรอบใน run นี้ ──
 _image_cache: dict = {}
 # Cache lookup ใน Supabase Storage (1 list call ต่อ run · กัน list ซ้ำ)
@@ -213,9 +216,8 @@ def save_to_supabase(records: list[dict]):
     saved = 0
     for i in range(0, len(records), batch_size):
         batch = records[i:i+batch_size]
-        supabase.table("machine_stock").upsert(
-            batch, on_conflict="machine_id,slot_number"
-        ).execute()
+        upsert_sales(supabase, add_unit(batch, "product_name"),
+                     table="machine_stock", on_conflict="machine_id,slot_number")
         saved += len(batch)
     print(f"🎉 บันทึกสำเร็จ {saved} slots")
 

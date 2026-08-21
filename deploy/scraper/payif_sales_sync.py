@@ -42,6 +42,11 @@ UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
       "(KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36")
 
 # ── จำนวนซองต่อกล่อง (ตรงกับ VMS/WW scraper) ─────────────────
+# ตรวจกล่อง/ซองด้วยตัวกลาง sales_unit.unit_of — เดิมแต่ละไฟล์เขียนเงื่อนไขเอง
+# แล้วหลุดชื่อที่มีอักขระแปลกปน เช่น "PRB - 02 (ฺBox)" (มี U+0E3A ก่อนคำว่า Box)
+# ทำให้ 31 รายการนับเป็นซองเดี่ยว ได้ 1 แทนที่จะเป็น 10 ซอง
+from sales_unit import unit_of, add_unit, upsert_sales  # noqa: E402
+
 PACKS_PER_BOX = {
     "OP 01": 24, "OP 02": 24, "OP 03": 24, "OP 04": 24, "OP 05": 24,
     "OP 06": 24, "OP 07": 24, "OP 08": 24, "OP 09": 24, "OP 10": 24,
@@ -59,6 +64,8 @@ PACKS_PER_BOX = {
     "YGH The Heroes": 15, "YGH The Revals": 15, "YGH Chaos Origins": 30,
     # สินค้าใหม่ 2026-08-13 (ตอนนี้อยู่แค่ตู้ chukes) — เจ้าของยืนยันตัวเลขเอง
     "YGH UT01": 15, "TF Overdrive 01": 15, "MLP SEA02": 30, "MLP BP-01": 20,
+    "MLBB HOD - 02": 20,
+    "NRT Jin - 2": 10,
 }
 
 # format วันที่ของ Vendos (จาก static config.js)
@@ -75,7 +82,7 @@ def dec(m) -> float:
 
 
 def is_box(name: str) -> bool:
-    return bool(name) and "BOX" in name.upper().split()
+    return unit_of(name) == "box"
 
 
 def sold_at_iso(ts: str) -> str | None:
@@ -226,7 +233,7 @@ def save_to_supabase(supabase, records: list[dict]):
     for i in range(0, len(records), 100):
         batch = records[i:i + 100]
         # ignore_duplicates=True · กัน overwrite หลัง admin เปลี่ยนสินค้า slot (ตาม WW)
-        supabase.table("sales").upsert(batch, on_conflict="sale_key", ignore_duplicates=True).execute()
+        upsert_sales(supabase, add_unit(batch, "product_name_raw"))
         saved += len(batch)
     print(f"🎉 บันทึกทั้งหมด {saved} รายการ")
 

@@ -132,21 +132,39 @@ def resolve_machine(mid, machines):
 
 # ── ยอดขาย ──────────────────────────────────────────────────────────────
 def query_sales(days=1, date=None, from_date=None, to_date=None,
-                machine=None, group_by="machine", top=10):
-    """สรุปยอดขาย · group_by = machine | sku | day"""
+                machine=None, group_by="machine", top=10, unit=None):
+    """สรุปยอดขาย · group_by = machine | sku | day · unit = pack | box (ว่าง = รวมทั้งสอง)
+
+    SKU เดียวขายทั้ง "ยกกล่อง" และ "ทีละซอง" ในตู้เดียวกัน — sku_id เหมือนกันทั้งคู่
+    แยกได้จากชื่อสินค้าดิบเท่านั้น (คำว่า Box ต่อท้าย) เดิมฟังก์ชันนี้ไม่เคยส่งออกไป
+    รายงานและ MCP จึงเอากล่องกับซองมาบวกกันตรง ๆ โดยไม่มีใครรู้
+
+    ⚠️ quantity_sold ของรายการกล่องคือ "จำนวนซองในกล่อง" (24 หรือ 10) ไม่ใช่จำนวนกล่อง
+       ยอด packs รวมจึงถูกต้องอยู่แล้ว ตัวเลขที่เพิ่มมาคือ "แยกดูได้ว่าซื้อแบบไหน"
+    """
     if group_by not in ("machine", "sku", "day"):
         raise DvxError("group_by ต้องเป็น machine, sku หรือ day")
+    if unit not in (None, "", "pack", "box"):
+        raise DvxError("unit ต้องเป็น pack หรือ box")
     d1, d2 = resolve_range(days, date, from_date, to_date)
     machines = load_machines(active_only=False)
     mname = {m["machine_id"]: machine_label(m) for m in machines}
     morder = {m["machine_id"]: m.get("id") or 999 for m in machines}
     target = resolve_machine(machine, machines) if machine else None
 
-    q = ("sales?select=machine_id,sku_id,quantity_sold,grand_total,sold_at,transaction_id"
+    # ดึง product_name_raw มาด้วยเพื่อแยกกล่อง/ซอง — คำนวณจากชื่อ ไม่พึ่งคอลัมน์ unit
+    # (ใช้ได้ทันทีแม้ยังไม่ได้รัน migration 068 · คอลัมน์ในตารางมีไว้ให้ query ฝั่ง SQL)
+    q = ("sales?select=machine_id,sku_id,quantity_sold,grand_total,sold_at,transaction_id,"
+         "product_name_raw"
          f"&sold_at=gte.{utc_bound(d1)}&sold_at=lt.{utc_bound(d2, end=True)}")
     if target:
         q += f"&machine_id=eq.{target}"
     rows = sb_get(q)
+
+    for r in rows:
+        r["_unit"] = "box" if _is_box(r.get("product_name_raw")) else "pack"
+    if unit:
+        rows = [r for r in rows if r["_unit"] == unit]
 
     sku_name = {s["sku_id"]: (s.get("name") or s["sku_id"])
                 for s in sb_get("skus?select=sku_id,name")}
@@ -170,16 +188,27 @@ def query_sales(days=1, date=None, from_date=None, to_date=None,
                 "share_pct": round(a["revenue"] / total_rev * 100, 1) if total_rev else 0,
             })
     elif group_by == "sku":
-        agg = collections.defaultdict(lambda: {"revenue": 0.0, "packs": 0})
+        agg = collections.defaultdict(
+            lambda: {"revenue": 0.0, "packs": 0, "box_packs": 0, "box_revenue": 0.0, "box_orders": 0})
         for r in rows:
             a = agg[r.get("sku_id") or "(ไม่ระบุ)"]
-            a["revenue"] += float(r.get("grand_total") or 0)
-            a["packs"] += int(r.get("quantity_sold") or 0)
+            qty, rev = int(r.get("quantity_sold") or 0), float(r.get("grand_total") or 0)
+            a["revenue"] += rev
+            a["packs"] += qty
+            if r["_unit"] == "box":
+                a["box_packs"] += qty
+                a["box_revenue"] += rev
+                a["box_orders"] += 1
         ranked = sorted(agg.items(), key=lambda kv: kv[1]["revenue"], reverse=True)[:top]
         for rank, (sku, a) in enumerate(ranked, 1):
             breakdown.append({
                 "rank": rank, "sku_id": sku, "name": sku_name.get(sku, sku),
                 "revenue": round(a["revenue"]), "packs": a["packs"],
+                # แยกให้เห็นว่าที่ขายได้มาจากคนซื้อยกกล่องเท่าไหร่
+                "box_orders": a["box_orders"],
+                "packs_from_box": a["box_packs"],
+                "packs_single": a["packs"] - a["box_packs"],
+                "box_revenue": round(a["box_revenue"]),
             })
     else:  # day
         agg = collections.defaultdict(lambda: {"revenue": 0.0, "packs": 0})
@@ -195,14 +224,30 @@ def query_sales(days=1, date=None, from_date=None, to_date=None,
                 "revenue": round(a["revenue"]), "packs": a["packs"],
             })
 
+    by_unit = {}
+    for u in ("pack", "box"):
+        sub = [r for r in rows if r["_unit"] == u]
+        by_unit[u] = {
+            "orders": len(sub),
+            "packs": sum(int(r.get("quantity_sold") or 0) for r in sub),
+            "revenue": round(sum(float(r.get("grand_total") or 0) for r in sub)),
+        }
+    if total_rev:
+        by_unit["box"]["revenue_share_pct"] = round(by_unit["box"]["revenue"] / total_rev * 100, 1)
+
     return {
         "from": str(d1), "to": str(d2), "days": n_days,
         "machine": mname.get(target, target) if target else "ทุกตู้",
         "revenue": round(total_rev), "packs": total_qty, "transactions": txns,
         "revenue_per_day": round(total_rev / n_days) if n_days else 0,
+        "unit_filter": unit or "ทั้งหมด",
+        "by_unit": by_unit,
         "group_by": group_by, "breakdown": breakdown,
         "note": ("ยอดขาย sync วันละครั้งตอนเที่ยงคืน (ยอดเมื่อวาน) — "
                  "ถ้าถามวันนี้แล้วได้ 0 แปลว่ายังไม่ได้ sync"),
+        "unit_note": ("box = ซื้อยกกล่อง · pack = ซื้อทีละซอง · "
+                      "packs ของ box คือจำนวนซองในกล่อง ไม่ใช่จำนวนกล่อง "
+                      "(ยอด packs รวมจึงเทียบกันได้ตรง ๆ ไม่ต้องคูณเพิ่ม)"),
     }
 
 

@@ -18,6 +18,9 @@ from datetime import datetime, timedelta
 from bs4 import BeautifulSoup
 from supabase import create_client
 
+# unit (กล่อง/ซอง) มาจากชื่อสินค้า — SKU เดียวขายทั้งสองแบบในตู้เดียวกัน
+from sales_unit import add_unit, upsert_sales  # noqa: E402
+
 # ── Config ────────────────────────────────────────────────────
 WW_BASE      = "https://www.worldwidevending-vms.com"
 WW_USER      = os.environ["WW_USERNAME"]
@@ -190,9 +193,8 @@ def save_to_supabase(supabase, records: list[dict]):
     saved = 0
     for i in range(0, len(records), batch_size):
         batch = records[i:i + batch_size]
-        supabase.table("machine_stock").upsert(
-            batch, on_conflict="machine_id,slot_number"
-        ).execute()
+        upsert_sales(supabase, add_unit(batch, "product_name"),
+                     table="machine_stock", on_conflict="machine_id,slot_number")
         saved += len(batch)
     print(f"🎉 บันทึกสำเร็จ {saved} slots")
 

@@ -74,11 +74,15 @@ def list_machines(active_only: bool = True) -> dict:
 @server.tool(
     description="ยอดขาย — สรุปรายรับ/จำนวนซอง แยกตามตู้ ตาม SKU หรือไล่รายวัน "
                 "ระบุช่วงด้วย days (ย้อนหลังกี่วัน) หรือ date (วันเดียว) "
-                "หรือ from_date+to_date ทุกวันที่เป็นเวลาไทย",
+                "หรือ from_date+to_date ทุกวันที่เป็นเวลาไทย · "
+                "แยก 'ซื้อยกกล่อง' กับ 'ซื้อทีละซอง' ได้ด้วย unit=box|pack "
+                "และผลลัพธ์มี by_unit สรุปให้เสมอแม้ไม่ได้กรอง "
+                "ใช้ตอบคำถามแนว 'ขายแบบกล่องได้เท่าไหร่' 'ใครซื้อยกกล่องบ้าง'",
     annotations=READ_ONLY,
 )
 def get_sales(days: int = 1, date: str = "", from_date: str = "", to_date: str = "",
-              machine: str = "", group_by: str = "machine", top: int = 10) -> dict:
+              machine: str = "", group_by: str = "machine", top: int = 10,
+              unit: str = "") -> dict:
     """
     Args:
         days: ย้อนหลังกี่วันรวมวันนี้ (ใช้เมื่อไม่ระบุ date/from_date)
@@ -88,11 +92,16 @@ def get_sales(days: int = 1, date: str = "", from_date: str = "", to_date: str =
         machine: machine_id หรือคำค้นจากชื่อสาขา เช่น "ชลบุรี" (ว่าง = ทุกตู้)
         group_by: machine (แยกตามตู้) | sku (อันดับสินค้า) | day (ไล่รายวัน)
         top: จำนวนอันดับเมื่อ group_by=sku
+        unit: box (เฉพาะที่ซื้อยกกล่อง) | pack (เฉพาะซองเดี่ยว) | ว่าง = รวมทั้งสอง
+              ⚠️ packs ของรายการ box คือ "จำนวนซองในกล่อง" ไม่ใช่จำนวนกล่อง
+                 เอาไปบวกกับ pack ได้ตรง ๆ ไม่ต้องคูณ
+                 อยากรู้ "กี่กล่อง" ให้ดู by_unit.box.orders
     """
     try:
         return data.query_sales(days=days, date=date or None,
                                 from_date=from_date or None, to_date=to_date or None,
-                                machine=machine or None, group_by=group_by, top=top)
+                                machine=machine or None, group_by=group_by, top=top,
+                                unit=unit or None)
     except Exception as e:
         return _fail(e)
 
