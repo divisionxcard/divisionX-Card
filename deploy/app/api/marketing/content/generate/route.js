@@ -19,6 +19,7 @@ import { readFile } from "fs/promises"
 import path from "path"
 import Anthropic from "@anthropic-ai/sdk"
 import { requireAdmin } from "../../../../../lib/apiAuth"
+import { knowledgeBlock } from "../../../../../lib/opcgKnowledge"
 
 const db = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -154,7 +155,7 @@ function pickFormat(voice, recent) {
   return pool[Math.floor(Math.random() * pool.length)]
 }
 
-function buildPrompt(voice, idea, content, sku, recent = [], format = null, craft = null) {
+function buildPrompt(voice, idea, content, sku, recent = [], format = null, craft = null, knowledge = "") {
   const rules = voice.rules.map((r, i) => `${i + 1}. ${r}`).join("\n")
   const phrases = voice.catchphrases.map(p => `- "${p}"`).join("\n")
 
@@ -229,12 +230,15 @@ ${overclaimPart}${craftPart}${example}
     : ""
 
   // คำสั่งภาษาย้ำท้ายสุด — โมเดลให้น้ำหนักกับสิ่งที่อยู่ท้าย prompt มากกว่า
+  // ข้อมูลอ้างอิงจากเว็บทางการ — อยู่ใน user ไม่ใช่ system เพราะเป็น "ข้อมูลของงานชิ้นนี้"
+  // ไม่ใช่ตัวตนของคนเขียน · วางท้าย ๆ เพราะโมเดลให้น้ำหนักกับสิ่งที่อยู่ท้ายมากกว่า
+  // แต่ยังต้องอยู่ก่อนคำสั่งภาษา ไม่งั้นคำสั่งสุดท้ายจะถูกกลบ
   const user = `เขียนแคปชั่น 1 ชิ้นจากข้อมูลนี้:
 
 ${facts}
 ${fmt}${avoid}
 อย่าลอกหัวข้อข่าวมาตรง ๆ ให้เอาแก่นของเรื่องมาเล่าใหม่ในมุมของตู้ DivisionX
-${check}
+${knowledge}${check}
 ⚠️ เขียนเป็นภาษาไทยเท่านั้น`
 
   return { system, user }
@@ -497,14 +501,29 @@ export async function POST(req) {
     let sku = null
     const skuId = content.source_sku || idea?.related_sku
     if (skuId) {
-      const { data } = await db.from("skus").select("sku_id,name").eq("sku_id", skuId).maybeSingle()
+      const { data } = await db.from("skus")
+        .select("sku_id,name,franchise,set_code").eq("sku_id", skuId).maybeSingle()
       sku = data
     }
 
     const [voice, craft] = await Promise.all([loadVoice(), loadCraft()])
     const recent = await fetchRecent(voice.recent_captions_shown || 8)
     const format = pickFormat(voice, recent)
-    const prompt = buildPrompt(voice, idea, content, sku, recent, format, craft)
+
+    // ความรู้ทางการ One Piece — ใส่เฉพาะโพสต์ที่เกี่ยวกับ One Piece จริง ๆ
+    // ถ้าไฟล์หายหรือไม่มีอะไรตรง knowledgeBlock คืน "" เอง prompt จะไม่บวมฟรี
+    const topicText = [idea?.title, idea?.angle, content.source_reason].filter(Boolean).join(" ")
+    const isOnePiece = sku?.franchise === "OP" || /one\s*piece|วันพีซ|วันพีช/i.test(topicText)
+    let knowledge = ""
+    if (isOnePiece) {
+      try {
+        knowledge = await knowledgeBlock({
+          sku: sku?.sku_id, setCode: sku?.set_code, topic: topicText,
+        })
+      } catch { knowledge = "" }
+    }
+
+    const prompt = buildPrompt(voice, idea, content, sku, recent, format, craft, knowledge)
 
     // บังคับด้วย AI_PROVIDER ได้ ไม่งั้นเลือกตัวแรกที่พร้อมใช้
     const forced = (process.env.AI_PROVIDER || "").toLowerCase()
@@ -592,7 +611,7 @@ export async function POST(req) {
     if (recent.length && dup.score >= SIMILAR_LIMIT) {
       retried = true
       const altFormat = pickFormat(voice, [...recent, { format: format?.key }])
-      const harder = buildPrompt(voice, idea, content, sku, recent, altFormat, craft)
+      const harder = buildPrompt(voice, idea, content, sku, recent, altFormat, craft, knowledge)
       harder.user +=
         `\n\n⚠️ รอบที่แล้วคุณเขียนออกมาคล้ายโพสต์เก่าถึง ${Math.round(dup.score * 100)}%:\n` +
         `"${(dup.item?.caption || "").split("\n")[0].slice(0, 90)}"\n` +
