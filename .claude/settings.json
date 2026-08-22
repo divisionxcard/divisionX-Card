@@ -74,7 +74,15 @@
       "Bash(node -e \"const d=require\\('./.understand-anything/intermediate/batch-10.json'\\); console.log\\('nodes',d.nodes.length,'edges',d.edges.length\\); d.edges.forEach\\(e=>{if\\(e.source===e.target\\)throw new Error\\('self-edge'\\)}\\); console.log\\('valid, no self-edges'\\)\")",
       "Bash(node \"C:/Users/choog/.claude/plugins/marketplaces/understand-anything/understand-anything-plugin/skills/understand/extract-structure.mjs\" .understand-anything/tmp/ua-file-analyzer-input-15.json .understand-anything/tmp/ua-file-extract-results-15.json)",
       "Bash(node -e \"const d=require\\('./.understand-anything/intermediate/batch-12.json'\\); const ids=new Set\\(d.nodes.map\\(n=>n.id\\)\\); let bad=0; for\\(const e of d.edges\\){ if\\(!ids.has\\(e.source\\)\\){console.log\\('missing source',e.source\\);bad++} if\\(!ids.has\\(e.target\\)\\){console.log\\('missing target',e.target\\);bad++} if\\(e.source===e.target\\){console.log\\('self edge',e.source\\);bad++} } console.log\\('nodes',d.nodes.length,'edges',d.edges.length,'bad',bad\\);\")",
-      "Bash(python -c \"import json,sys; d=json.load\\(sys.stdin\\); b=[x for x in d['batches'] if x['batchIndex']==16][0]; print\\(json.dumps\\(b, ensure_ascii=False, indent=2\\)\\)\")"
+      "Bash(python -c \"import json,sys; d=json.load\\(sys.stdin\\); b=[x for x in d['batches'] if x['batchIndex']==16][0]; print\\(json.dumps\\(b, ensure_ascii=False, indent=2\\)\\)\")",
+      "Bash(node \"C:/Users/choog/AppData/Local/Temp/claude/c--Projects-divisionX-Card/a1e80a56-3de3-4abb-9e3a-d65830ab3f08/scratchpad/count.mjs\")",
+      "Bash(python -c ' *)",
+      "Bash(PYTHONIOENCODING=utf-8 py -3 -c ' *)",
+      "Bash(PYTHONIOENCODING=utf-8 py -3 deploy/agents/poster_render.py --id 25 --dry-run --out \"C:/Users/choog/AppData/Local/Temp/claude/c--Projects-divisionX-Card/a1e80a56-3de3-4abb-9e3a-d65830ab3f08/scratchpad/badge_check.png\")",
+      "Bash(grep -iv \"^\\\\s*//\")",
+      "Edit(/.claude/skills/dvx-image/**)",
+      "Bash(VMS_USERNAME=x VMS_PASSWORD=x VMS_URL=http://x WW_USERNAME=x WW_PASSWORD=x SUPABASE_URL=http://x SUPABASE_SERVICE_KEY=x PAYIF_USERNAME=x PAYIF_PASSWORD=x PYTHONIOENCODING=utf-8 py -3 -c ' *)",
+      "Bash(PYTHONIOENCODING=utf-8 py -3 -m py_compile deploy/agents/dvx_data.py deploy/mcp/dvx_mcp_server.py)"
     ]
   }
 }
