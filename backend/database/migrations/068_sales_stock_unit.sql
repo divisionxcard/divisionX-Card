@@ -63,7 +63,12 @@ UPDATE machine_stock
 CREATE INDEX IF NOT EXISTS idx_sales_unit_sold_at ON sales (unit, sold_at DESC);
 CREATE INDEX IF NOT EXISTS idx_machine_stock_unit ON machine_stock (machine_id, unit);
 
--- ── ตรวจผลหลังรัน ──
+-- ── ผลจริงหลังรัน (22 ส.ค. 2026) ──
 -- SELECT unit, count(*) AS รายการ, sum(quantity_sold) AS ซอง, sum(grand_total) AS บาท
 --   FROM sales GROUP BY unit;
--- คาดว่า box ≈ 691 รายการ · pack ≈ 27,952 รายการ (ณ 21 ส.ค. 2026)
+--
+--   sales         : box 582 · pack 28,239   (รวม 28,821)
+--   machine_stock : box 115 · pack 619      (รวม 734)
+--
+-- ตรวจแล้วไม่มีแถวไหนที่ unit ขัดกับชื่อสินค้าเลยสักแถว และ CHECK ปฏิเสธค่านอกเหนือ
+-- pack/box ได้จริง (ทดสอบด้วยการ PATCH เป็น 'carton' → 400 unit_check)
