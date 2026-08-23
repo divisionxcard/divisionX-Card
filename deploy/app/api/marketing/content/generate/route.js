@@ -20,6 +20,7 @@ import path from "path"
 import Anthropic from "@anthropic-ai/sdk"
 import { requireAdmin } from "../../../../../lib/apiAuth"
 import { knowledgeBlock } from "../../../../../lib/opcgKnowledge"
+import { pkmKnowledgeBlock } from "../../../../../lib/pkmKnowledge"
 
 const db = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -510,18 +511,22 @@ export async function POST(req) {
     const recent = await fetchRecent(voice.recent_captions_shown || 8)
     const format = pickFormat(voice, recent)
 
-    // ความรู้ทางการ One Piece — ใส่เฉพาะโพสต์ที่เกี่ยวกับ One Piece จริง ๆ
-    // ถ้าไฟล์หายหรือไม่มีอะไรตรง knowledgeBlock คืน "" เอง prompt จะไม่บวมฟรี
+    // ความรู้ทางการ — ใส่เฉพาะโพสต์ที่เกี่ยวกับค่ายนั้นจริง ๆ
+    // ถ้าไฟล์หายหรือไม่มีอะไรตรง บล็อกคืน "" เอง prompt จะไม่บวมฟรี
+    //
+    // ⚠️ Pokémon มีคำเตือนเรื่องภาษาฝังอยู่ในบล็อกเอง (ซองเราเป็นญี่ปุ่น ข้อมูลเป็นไทย)
+    //    ดู deploy/lib/pkmKnowledge.js — อย่าตัดคำเตือนนั้นออกเพื่อประหยัดที่ใน prompt
     const topicText = [idea?.title, idea?.angle, content.source_reason].filter(Boolean).join(" ")
-    const isOnePiece = sku?.franchise === "OP" || /one\s*piece|วันพีซ|วันพีช/i.test(topicText)
     let knowledge = ""
-    if (isOnePiece) {
-      try {
+    try {
+      if (sku?.franchise === "OP" || /one\s*piece|วันพีซ|วันพีช/i.test(topicText)) {
         knowledge = await knowledgeBlock({
           sku: sku?.sku_id, setCode: sku?.set_code, topic: topicText,
         })
-      } catch { knowledge = "" }
-    }
+      } else if (sku?.franchise === "PKM" || /pok[eé]mon|โปเกมอน|โปเกม่อน/i.test(topicText)) {
+        knowledge = await pkmKnowledgeBlock({ setCode: sku?.set_code, topic: topicText })
+      }
+    } catch { knowledge = "" }
 
     const prompt = buildPrompt(voice, idea, content, sku, recent, format, craft, knowledge)
 

@@ -256,16 +256,32 @@ def build_cards(codes):
             if n % 25 == 0:
                 log(f"     {n}/{len(ids)}")
             time.sleep(DELAY)
-        total += len(cards)
+        # การ์ดใบเดียวกันถูกลิสต์หลายครั้ง คนละ id แต่เลขการ์ดเดียวกัน (คนละการพิมพ์/อาร์ต)
+        # ยุบให้เหลือใบจริง แล้วนับที่เหลือเป็น printings — ไม่งั้นจะบอกจำนวนใบในชุดผิด
+        # (MA3 ดิบ 486 รายการ แต่เลขการ์ดไม่ซ้ำแค่ 250)
+        main, extra = [], {}
+        for c in cards:
+            key = c.get("collector_number") or c.get("name")
+            if key in extra:
+                extra[key] += 1
+            else:
+                extra[key] = 0
+                main.append(c)
+        for c in main:
+            c["printings"] = extra.get(c.get("collector_number") or c.get("name"), 0)
+
+        total += len(main)
         sets_out.append({
             "code": code,
             "name_th": meta.get("name_th"),
             "our_product": OUR_SETS.get(code, {}).get("our_sku"),
+            "jp_code": OUR_SETS.get(code, {}).get("jp_code"),
             "jp_equivalent": OUR_SETS.get(code, {}).get("jp"),
-            "card_count": len(cards),
-            "cards": cards,
+            "card_count": len(main),
+            "listed_entries": len(cards),
+            "cards": main,
         })
-        log(f"   เสร็จ {len(cards)} ใบ")
+        log(f"   เสร็จ {len(main)} ใบ (จากรายการดิบ {len(cards)})")
 
     doc = {
         "_source": {"name": "Pokémon Trading Card Game — เว็บทางการภาษาไทย",
