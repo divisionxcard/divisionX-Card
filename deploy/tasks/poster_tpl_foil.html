@@ -277,6 +277,9 @@
   .chip svg { flex: 0 0 auto; display: block }
   .tags { margin-left: auto; font-size: 20px; line-height: 1.3; font-weight: 400;
           color: #93D6F5; text-align: right; max-width: 290px }
+  /* ครอบคำทับศัพท์ที่พจนานุกรมไทยของ Chromium ตัดผิด ("พาวเวอร์" → "พา/วเวอร์")
+     รายการคำอยู่ที่ NO_BREAK_WORDS ใน deploy/agents/poster_render.py */
+  .nb { white-space: nowrap }
 </style>
 </head>
 <body>

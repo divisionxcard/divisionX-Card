@@ -294,6 +294,9 @@
               filter: drop-shadow(0 0 6px rgba(255,190,60,.75)) }
   .tags { margin-left: auto; text-align: right; max-width: 290px;
           font-size: 20px; line-height: 1.3; font-weight: 400; color: #8ECDEE }
+  /* ครอบคำทับศัพท์ที่พจนานุกรมไทยของ Chromium ตัดผิด ("พาวเวอร์" → "พา/วเวอร์")
+     รายการคำอยู่ที่ NO_BREAK_WORDS ใน deploy/agents/poster_render.py */
+  .nb { white-space: nowrap }
 </style>
 </head>
 <body>

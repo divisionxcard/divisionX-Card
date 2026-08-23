@@ -183,12 +183,47 @@ HILITE = re.compile(
 )
 
 
+# คำทับศัพท์ที่พจนานุกรมไทยของ Chromium ตัดผิด
+#
+# ไทยไม่มีช่องว่างระหว่างคำ เบราว์เซอร์จึงตัดบรรทัดด้วยพจนานุกรม ICU
+# คำที่ยืมมาจากอังกฤษไม่มีในพจนานุกรม มันเลยเดาเอง แล้วเดาผิด:
+#   "พาวเวอร์" → "พา / วเวอร์"    (เจอจริงบนโปสเตอร์ #25)
+#   "ลีดเดอร์" → "ลี / ดเดอร์"
+#
+# CSS แก้ไม่ได้ — เทมเพลตจดไว้แล้วว่า text-wrap:pretty กับ word-break:keep-all
+# ไม่ได้ผล (ดูคอมเมนต์ใน poster_tpl_stage.html) ทางที่ได้ผลคือห้ามตัดเป็นคำ ๆ ไป
+#
+# เติมคำใหม่ได้เรื่อย ๆ — ถ้าเห็นคำไหนถูกตัดกลางคำบนโปสเตอร์ ใส่เพิ่มตรงนี้
+NO_BREAK_WORDS = [
+    # ศัพท์เกมการ์ดที่ใช้บ่อยสุด
+    "พาวเวอร์", "ลีดเดอร์", "คาแรกเตอร์", "บล็อกเกอร์", "ทริกเกอร์", "เคาน์เตอร์",
+    "ดาเมจ", "เบนช์", "เทรนเนอร์", "อีเวนต์", "สเตจ", "แบทเทิล", "เอฟเฟกต์",
+    "รีเฟรช", "เอนด์เฟส", "เมนเฟส", "โปเกมอน", "โปเกเด็กซ์", "วิวัฒนาการ",
+    # คำที่ใช้ในโพสต์ขายบ่อย
+    "บูสเตอร์", "พาราเรล", "ซีเคร็ต", "โปรโมชั่น", "คอลเลกชัน", "ดิสเพลย์",
+]
+# ยาวก่อนสั้น กันคำสั้นไปตัดกลางคำยาว (เช่น "สเตจ" อยู่ใน "เอนด์เฟส"? ไม่ แต่กันไว้)
+NO_BREAK_WORDS.sort(key=len, reverse=True)
+
+
+def keep_words_whole(html):
+    """ครอบคำทับศัพท์ด้วย <span class="nb"> เพื่อห้ามเบราว์เซอร์ตัดกลางคำ
+
+    ทำ *หลัง* esc() แล้ว และก่อนแทนลงเทมเพลต — ตัวคำเป็นอักษรไทยล้วน
+    ไม่มีอักขระที่ต้อง escape จึงไม่ชนกับ &amp; ที่ esc() สร้างไว้
+    """
+    for w in NO_BREAK_WORDS:
+        if w in html:
+            html = html.replace(w, f'<span class="nb">{w}</span>')
+    return html
+
+
 def highlight(text):
     parts = HILITE.split(esc(text))
     out = ""
     for i, p in enumerate(parts):
         out += f"<em>{p}</em>" if i % 2 == 1 else p
-    return out
+    return keep_words_whole(out)
 
 
 def resolve_bg(content):
@@ -346,14 +381,14 @@ def build_html(content, sku_img, bg_img, branches, concept_key="", concept_css="
     if not sub:
         short = next((l for l in rest if len(l) <= BODY_MAX), "")
         if short:
-            body = f"<p>{esc(short)}</p>"
+            body = f"<p>{keep_words_whole(esc(short))}</p>"
 
     return (tpl
             .replace("{{LOGO}}", logo)
             .replace("{{FONT_REGULAR}}", reg)
             .replace("{{FONT_BOLD}}", bold)
             .replace("{{HEADLINE}}", head_html)
-            .replace("{{SUB}}", esc(sub))
+            .replace("{{SUB}}", keep_words_whole(esc(sub)))
             .replace("{{BODY}}", body)
             .replace("{{HERO}}", hero)
             # ⚠️ ผูกกับ hero_src ไม่ใช่ sku_img — ไม่งั้นตอนตกมาใช้รูปตู้เป็นตัวเอก

@@ -150,6 +150,9 @@
     background: linear-gradient(90deg, #d6a43a, #f6dc9a 50%, #d6a43a);
   }
   {{CONCEPT_CSS}}
+  /* ครอบคำทับศัพท์ที่พจนานุกรมไทยของ Chromium ตัดผิด ("พาวเวอร์" → "พา/วเวอร์")
+     รายการคำอยู่ที่ NO_BREAK_WORDS ใน deploy/agents/poster_render.py */
+  .nb { white-space: nowrap }
 </style>
 </head>
 <body>

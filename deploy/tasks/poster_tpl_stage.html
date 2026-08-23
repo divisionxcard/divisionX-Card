@@ -300,6 +300,9 @@
          background: linear-gradient(180deg, transparent, rgba(255,206,130,.5), transparent) }
   .tags { margin-left: auto; text-align: right; max-width: 310px;
           font-size: 18px; line-height: 1.28; font-weight: 400; color: #7FB6DE }
+  /* ครอบคำทับศัพท์ที่พจนานุกรมไทยของ Chromium ตัดผิด ("พาวเวอร์" → "พา/วเวอร์")
+     รายการคำอยู่ที่ NO_BREAK_WORDS ใน deploy/agents/poster_render.py */
+  .nb { white-space: nowrap }
 </style>
 </head>
 <body>
