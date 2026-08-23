@@ -348,7 +348,7 @@
    "code": "MA5",
    "name_th": "การ์ดชุดเสริม \"เงามืดคุกคาม\"",
    "our_product": "PKM Ninja + PKM Ghost",
-   "jp_equivalent": "รวม M4 ニンジャスピナー กับ M5 アビスアイ เข้าด้วยกัน",
+   "jp_equivalent": "ไทยรวม 拡張パック ニンジャスピナー (M4 · 5 ใบ/ซอง) กับ 拡張パック アビスアイ (M5 · 5 ใบ/ซอง) เข้าเป็นชุดเดียว",
    "card_count": 238,
    "cards": [
     {
@@ -12152,13 +12152,14 @@
      "pokedex": "No.491",
      "image_url": "https://asia.pokemon-card.com/th/card-img/th00014478.png"
     }
-   ]
+   ],
+   "jp_code": "M4 + M5"
   },
   {
    "code": "MA3",
    "name_th": "การ์ดชุดเสริมไฮคลาส \"วิวัฒนาการเมก้า ดรีมex\"",
    "our_product": "PKM Dream EX",
-   "jp_equivalent": "M2a ハイクラスパック MEGA ドリームex",
+   "jp_equivalent": "ハイクラスパック MEGA ドリームex · 10 ใบ/ซอง",
    "card_count": 486,
    "cards": [
     {
@@ -37921,7 +37922,8 @@
      "pokedex": "No.149",
      "image_url": "https://asia.pokemon-card.com/th/card-img/th00013294.png"
     }
-   ]
+   ],
+   "jp_code": "M2a"
   }
  ],
  "_fields": {
@@ -37930,5 +37932,6 @@
   "set_mark": "รหัสชุดจากสัญลักษณ์บนการ์ด (ไลน์ไทย)",
   "types": "ชนิดพลังงานของโปเกมอน · cost ของท่าต่อสู้ก็ใช้ชื่อเดียวกัน",
   "image_url": "⚠️ รูปลิขสิทธิ์ Pokémon ห้ามเอาไปทำภาพโพสต์"
- }
+ },
+ "_pack_confirmed": "ยืนยันจากรูปซองจริงที่เจ้าของส่งมา 24 ส.ค. 2026 ครบทั้ง 3 ซอง — ทุกซองเป็นภาษาญี่ปุ่น มี「ポケモンカードゲーム MEGA」ที่มุมซ้ายบน และแก้ skus.set_code/language ในฐานข้อมูลเป็น M2a/M4/M5 · JA แล้ว"
 }
