@@ -63,7 +63,36 @@ async function localRef(rel) {
 
 // ── ประกอบ prompt ─────────────────────────────────────────────────────────
 // โครง: บทบาท → แนวคิด → สไตล์แบรนด์ → ข้อเท็จจริง (ห้ามแต่ง) → ข้อความที่ต้องใส่ → ข้อห้าม
-function buildPrompt(style, concept, facts, mode, hasRefs = false, idea = null, brandRules = [], fr = null, hasMachineRef = false) {
+// ── หาว่าแคปชั่นพูดถึงสาขาไหน ──
+//
+// 24 ส.ค. 2026 — เจ้าของถามว่าควรให้ Hermes ไปค้นข้อมูลสถานที่จริงบนเน็ตก่อนบรีฟไหม
+// ตรวจแล้วพบว่าเรามีข้อมูลที่แม่นกว่าเน็ตอยู่แล้วใน `machines.config.branch`
+// — ชั้นจริง + จุดสังเกตจริงที่คนไปติดตั้งตู้จดไว้เอง เช่น "ชั้น 6 หน้าร้าน Karun Thai Tea"
+// ซึ่งไม่มีทางหาเจอในอินเทอร์เน็ต แต่ข้อมูลชุดนี้ไม่เคยถูกส่งเข้าบรีฟเลยสักครั้ง
+// บรีฟรู้แค่ตัวเลข "12 สาขา" → โปสเตอร์ #35 จึงวาดตู้ไว้นอกห้างริมถนนหน้าไอคอนสยาม
+const norm = (s) => (s || "").toLowerCase().replace(/\s+/g, "")
+
+// ชื่อที่คนเขียนเป็นอักษรโรมันบ่อย — ชื่อไทยจับได้เองจาก display_name อยู่แล้ว
+const BRANCH_ALIASES = {
+  "ไอคอนสยาม": ["iconsiam", "icon siam"],
+  "เดอะมอลล์บางกะปิ": ["the mall bangkapi"],
+  "ซีคอนบางแค": ["seacon bangkae"],
+}
+
+/** @returns {object|null} สาขาที่แคปชั่นเอ่ยถึง — null = โพสต์ไม่ได้ระบุสาขา */
+function matchBranch(machines, text) {
+  const hay = norm(text)
+  if (!hay) return null
+  for (const m of machines || []) {
+    const b = m.config?.branch
+    if (!b?.display_name) continue
+    const keys = [b.display_name, ...(BRANCH_ALIASES[b.display_name] || [])]
+    if (keys.some(k => hay.includes(norm(k)))) return { ...b, machine_id: m.machine_id }
+  }
+  return null
+}
+
+function buildPrompt(style, concept, facts, mode, hasRefs = false, idea = null, brandRules = [], fr = null, hasMachineRef = false, branch = null) {
   const wantsText = mode !== "art"
   const p = []
 
@@ -124,7 +153,15 @@ function buildPrompt(style, concept, facts, mode, hasRefs = false, idea = null, 
     "Polished indoor floor, warm mall ceiling lighting, softly blurred storefronts, " +
     "escalators or walkways behind. Never outdoors, never a street or sidewalk, never a " +
     "night sky, never a parking lot, never floating in an empty void or studio backdrop. " +
-    "If a landmark is referenced it is the mall's INTERIOR, not its exterior facade."
+    "If a landmark is referenced it is the mall's INTERIOR, not its exterior facade." +
+    // จุดสังเกตจริงของสาขานั้น ถ้าแคปชั่นเอ่ยชื่อห้างมา — ของจริงจากฐานข้อมูล ไม่ใช่ของที่โมเดลเดา
+    (branch
+      ? `\nTHIS POST NAMES A REAL BRANCH — draw THAT spot, not a generic mall: ` +
+        `${branch.display_name}${branch.floor ? `, ${branch.floor}` : ""}` +
+        `${branch.landmark ? `, จุดที่ตู้ตั้งอยู่คือ ${branch.landmark}` : ""}. ` +
+        `Use those neighbouring shops and that floor's character as the background. ` +
+        `Do not invent a different location for this branch.`
+      : "")
   )
 
   // จาก #35 — ถือซองเรียงเป็นพัดได้ (เจ้าของชอบองค์ประกอบนี้) แต่ลายบนซอง
@@ -376,7 +413,7 @@ export async function POST(req) {
     if (!content) return NextResponse.json({ error: `ไม่พบรายการ id=${id}` }, { status: 404 })
 
     // ── ข้อเท็จจริงจากฐานข้อมูล — ไม่ให้โมเดลเดาเอง ──
-    const { data: machines } = await db.from("machines").select("machine_id").eq("status", "active")
+    const { data: machines } = await db.from("machines").select("machine_id,config").eq("status", "active")
     const branches = (machines || []).length
 
     const skuId = content.source_sku || content.idea?.related_sku
@@ -484,10 +521,14 @@ export async function POST(req) {
       if (m) refs.push(m)
     }
 
+    // แคปชั่นเอ่ยชื่อห้างไหน → ส่งชั้น+จุดสังเกตจริงของสาขานั้นเข้าบรีฟ
+    const branch = matchBranch(machines, `${caption} ${content.idea?.title || ""}`)
+    if (branch) console.log(`[image] แคปชั่นอ้างถึงสาขา ${branch.display_name} (${branch.machine_id})`)
+
     const prompt = buildPrompt(
       style, concept, facts, mode, refs.length > 0,
       idea ? ideaToPrompt(idea) : null,
-      brandRules, frBlock, wantsMachine,
+      brandRules, frBlock, wantsMachine, branch,
     )
 
     let out
