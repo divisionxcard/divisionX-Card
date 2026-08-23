@@ -58,16 +58,28 @@ def missing_unit_column(err):
 _warned = False
 
 
-def upsert_sales(supabase, batch, table="sales", on_conflict="sale_key"):
-    """upsert รายการขาย — ถ้าฐานข้อมูลยังไม่มีคอลัมน์ unit ให้ถอยไปบันทึกแบบเดิม
+def upsert_sales(supabase, batch, table="sales", on_conflict="sale_key",
+                 ignore_duplicates=True):
+    """upsert — ถ้าฐานข้อมูลยังไม่มีคอลัมน์ unit ให้ถอยไปบันทึกแบบเดิม
 
     ทำแบบนี้เพื่อให้ลำดับ deploy ไม่สำคัญ: push โค้ดก่อนรัน migration ก็ไม่พัง
     ซิงค์กลางคืนรันจาก origin/main ถ้าพังคือข้อมูลวันนั้นหายทั้งวัน
+
+    ⚠️⚠️ ignore_duplicates ต่างกันตามตาราง — ห้ามใช้ค่าเดียวกันทั้งสองที่
+
+      sales          = True  ตั้งใจ · กันเขียนทับ product_name/sku_id ของประวัติเก่า
+                             หลังแอดมินเปลี่ยนสินค้าในช่อง (แถวเก่าต้องคงชื่อ ณ ตอนขาย)
+      machine_stock  = False ต้องอัปเดต · แถวคือ "สภาพช่องตอนนี้" ไม่ใช่ประวัติ
+
+    เคสจริง 24 ส.ค. 2026: ตัวช่วยนี้เคยฮาร์ดโค้ด True แล้วเอาไปใช้กับ machine_stock ด้วย
+    ทุกช่องมีอยู่แล้ว upsert จึงถูกข้ามทั้งหมด — ไม่มี error, workflow ขึ้นเขียว,
+    log พิมพ์ว่า "บันทึกสำเร็จ 240 slots" แต่ข้อมูลค้างอยู่ที่เดิม 3 วัน
+    จนแอดมินไปนับของหน้าตู้เองแล้วเทียบกับรายงานถึงรู้
     """
     global _warned
     try:
         return supabase.table(table).upsert(
-            batch, on_conflict=on_conflict, ignore_duplicates=True).execute()
+            batch, on_conflict=on_conflict, ignore_duplicates=ignore_duplicates).execute()
     except Exception as e:
         if not missing_unit_column(e):
             raise
@@ -76,4 +88,5 @@ def upsert_sales(supabase, batch, table="sales", on_conflict="sale_key"):
             print("   บันทึกแบบไม่มี unit ไปก่อน · รัน migration แล้วค่อยเติมย้อนหลังจากชื่อสินค้าได้")
             _warned = True
         return supabase.table(table).upsert(
-            strip_unit(batch), on_conflict=on_conflict, ignore_duplicates=True).execute()
+            strip_unit(batch), on_conflict=on_conflict,
+            ignore_duplicates=ignore_duplicates).execute()

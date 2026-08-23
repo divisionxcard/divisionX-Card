@@ -193,7 +193,8 @@ def save_to_supabase(supabase, records: list[dict]):
     for i in range(0, len(records), 100):
         batch = records[i:i + 100]
         upsert_sales(supabase, add_unit(batch, "product_name"),
-                     table="machine_stock", on_conflict="machine_id,slot_number")
+                     table="machine_stock", on_conflict="machine_id,slot_number",
+                     ignore_duplicates=False)   # ต้องอัปเดตของเดิม ไม่ใช่ข้าม
         saved += len(batch)
     print(f"🎉 บันทึกสำเร็จ {saved} slots")
 
