@@ -21,6 +21,24 @@ export function thaiDay(input) {
 /** 'YYYY-MM' ของวันนี้ตามเวลาไทย */
 export const thaiMonthNow = () => thaiDay(new Date()).slice(0, 7)
 
+/**
+ * 'DD/MM HH:mm' ตามเวลาไทย — ใช้กับป้ายบอกเวลา sync ล่าสุด
+ *
+ * ⚠️ ห้ามเอา ISO string มา .slice() แล้วโชว์ตรง ๆ — นั่นคือเวลา UTC
+ *    เคสจริง 24 ส.ค. 2026: ป้ายเขียน 'VMS · 2026-08-23 18:07' ขณะที่นาฬิกาบนหน้าจอ
+ *    เขียน '24 ส.ค. 01:10' ต่างกัน 7 ชม.พอดี เจ้าของเลยนึกว่าซิงค์ไม่อัปเดต
+ *    ทั้งที่อัปเดตไปแล้วจริง ๆ
+ */
+export function thaiDateTime(input, { withYear = false } = {}) {
+  if (!input) return null
+  const t = input instanceof Date ? input.getTime() : new Date(input).getTime()
+  if (Number.isNaN(t)) return null
+  const d = new Date(t + TH_OFFSET_MS)
+  const iso = d.toISOString()
+  const [y, m, day] = iso.slice(0, 10).split("-")
+  return `${day}/${m}${withYear ? `/${y}` : ""} ${iso.slice(11, 16)} น.`
+}
+
 /** ขอบเดือนตามเวลาไทย → ISO (UTC) ที่เอาไปเทียบกับคอลัมน์ timestamptz ได้ตรง ๆ */
 export function monthRange(month) {
   const [y, m] = month.split("-").map(Number)

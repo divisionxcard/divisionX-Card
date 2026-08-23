@@ -7,6 +7,7 @@ import {
 import { fmt, getSkuSeries, compareSkuForRefillReport } from "../shared/helpers"
 import { SKU_SERIES_ORDER } from "../shared/constants"
 import { KpiCard, SectionTitle } from "../shared/dx-components"
+import { thaiDateTime } from "../../lib/thaiDate"
 
 export default function PageRefillPrep({ machines, machineStock, machineAssignments, transfers, stockOut, skus, profile, session, profiles, onAddStockOut, onUpdateStockOut, onDeleteStockOut }) {
   const userId = session?.user?.id
@@ -429,7 +430,7 @@ ${machineBlocks}
 
       {/* Header */}
       <SectionTitle
-        pill={lastSync ? `VMS · ${lastSync.slice(0, 10)} ${lastSync.slice(11, 16)}` : "Refill Prep"}
+        pill={lastSync ? `VMS · ${thaiDateTime(lastSync)}` : "Refill Prep"}
         title={<>เตรียมของเติมตู้
           {isAdmin && activeUserId !== userId && (
             <span style={{ marginLeft: 10, fontSize: 16, fontWeight: 400, color: "var(--dx-text-muted)" }}>

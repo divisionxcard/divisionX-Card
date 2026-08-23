@@ -9,6 +9,7 @@ import { fmt, sortSkus } from "../shared/helpers"
 import { SectionTitle } from "../shared/dx-components"
 import RestockSessionPanel from "./RestockSessionPanel"
 import { authFetch } from "../../lib/authFetch"
+import { thaiDateTime } from "../../lib/thaiDate"
 
 export default function PageMachineStockView({ machines, machineStock, skus, onRefresh, profile }) {
   const [selectedMachine, setSelectedMachine] = useState("all")
@@ -115,7 +116,7 @@ export default function PageMachineStockView({ machines, machineStock, skus, onR
   return (
     <div style={{ padding: 24, display: "flex", flexDirection: "column", gap: 20 }}>
       <SectionTitle
-        pill={lastSync ? `VMS · ${lastSync.slice(0, 10)} ${lastSync.slice(11, 16)}` : "VMS · Live"}
+        pill={lastSync ? `VMS · ${thaiDateTime(lastSync)}` : "VMS · Live"}
         title="สต็อกหน้าตู้ (VMS)"
         subtitle="ข้อมูลคงเหลือจริงที่หน้าตู้ขาย ดึงจากระบบ VMS"
         actions={
