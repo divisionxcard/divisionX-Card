@@ -350,18 +350,29 @@ def build_faq(only=None):
             continue
         items = []
         for block in html.split("faqResult_listItem")[1:]:
-            def pick(cls):
-                m = re.search(rf'faqResult_{cls}"[^>]*>(.*?)</[a-z]+>', block, re.S)
+            # ⚠️ คำถามกับคำตอบใช้ class เดียวกัน (faqResult_text) ต่างกันแค่อยู่คนละ div
+            #    ถ้าไม่หั่นก่อน จะได้คำถามซ้ำสองครั้งแล้วคำตอบหายหมด (เคยพลาดมาแล้ว)
+            head, _, tail = block.partition("faqResult_answer")
+
+            def first_text(s):
+                m = re.search(r'class="faqResult_text"[^>]*>(.*?)</p>', s, re.S)
                 return txt(m.group(1)) if m else None
-            q = pick("text")
+
+            def pick(cls):
+                m = re.search(rf'class="faqResult_{cls}"[^>]*>(.*?)</[a-z0-9]+>', head, re.S)
+                return txt(m.group(1)) if m else None
+
+            q = first_text(head)
             if not q:
                 continue
+            related = sorted(set(re.findall(r'faqResult_relatedItem"[^>]*>\s*<img[^>]*alt="([^"]+)"', tail)))
             items.append({k: v for k, v in {
                 "no": pick("number"),
                 "about": pick("title"),
                 "date": pick("date"),
                 "question": q,
-                "answer": pick("answer"),
+                "answer": first_text(tail),
+                "related_cards": related or None,
             }.items() if v})
         if items:
             out.append({"code": s["code"], "label": s["label"], "count": len(items),
