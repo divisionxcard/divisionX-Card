@@ -44,6 +44,15 @@ HARD RULES
   (Never "24 hours" — the machines sit inside malls and close when the mall closes.)
 - Our machines are stocked with about 30 DIFFERENT products each. Never picture a machine
   filled with one identical pack repeated in every slot — that looks fake to our customers.
+- Every machine stands INSIDE a shopping-mall concourse. Never propose an outdoor scene,
+  a street, a night sky, or a mall's exterior facade — all 12 machines are indoors.
+  A landmark may appear, but as the mall's INTERIOR.
+- A hand fanning out several packs is a good composition — use it freely. Just say WHICH
+  real products are in the fan; the packs must be our actual products, never invented art.
+- THE IDEA MUST DELIVER WHAT THE CAPTION PROMISES. If the caption announces a list, a
+  ranking, a comparison or a number, the image has to show that thing — not a mood shot
+  that happens to share the topic. A caption promising "top 10 cards" with an image of
+  someone holding a binder has failed, however pretty the binder is.
 - Do NOT invent any text, wording, slogan, price, percentage, or number. Text is supplied
   separately and is already approved. Describe WHERE text blocks sit, never WHAT they say.
 - Reject your own first idea if it would work equally well for any other caption.

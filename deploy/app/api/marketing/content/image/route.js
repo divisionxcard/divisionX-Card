@@ -115,6 +115,27 @@ function buildPrompt(style, concept, facts, mode, hasRefs = false, idea = null, 
     "Gold is a genuine brand colour."
   )
 
+  // ⚠️ 24 ส.ค. 2026 — บรีฟเดิมบอกแค่ว่าตู้หน้าตายังไง ไม่เคยบอกว่ามันตั้งอยู่ที่ไหน
+  //    ผลคือโปสเตอร์ #35 วาดตู้ตั้งอยู่ "นอกห้าง" ริมถนนตอนกลางคืนหน้าไอคอนสยาม
+  //    ทั้งที่แคปชั่นเขียนว่า "เดินห้างชิล ๆ แวะมากดตรงนี้" — ขัดกันเองต่อหน้า
+  //    ตู้ทั้ง 12 ตู้อยู่ในห้างทั้งหมด ไม่มีตู้ไหนอยู่นอกอาคารเลยสักตู้
+  p.push(
+    "SETTING — non-negotiable: every machine stands INSIDE a Thai shopping-mall concourse. " +
+    "Polished indoor floor, warm mall ceiling lighting, softly blurred storefronts, " +
+    "escalators or walkways behind. Never outdoors, never a street or sidewalk, never a " +
+    "night sky, never a parking lot, never floating in an empty void or studio backdrop. " +
+    "If a landmark is referenced it is the mall's INTERIOR, not its exterior facade."
+  )
+
+  // จาก #35 — ถือซองเรียงเป็นพัดได้ (เจ้าของชอบองค์ประกอบนี้) แต่ลายบนซอง
+  // ต้องเป็นซองจริงของเรา ไม่ใช่ลายที่โมเดลแต่งขึ้นเอง
+  p.push(
+    "PACKS IN HAND: a hand may hold several packs fanned out — that composition is welcome. " +
+    "But every pack must be one of the REAL products from the reference photos, copied " +
+    "faithfully. Never invent pack artwork, never invent a card game that is not ours. " +
+    "If several packs are shown they should be different real products, each recognisable."
+  )
+
   // ตกแต่งตามค่ายของสินค้าที่โพสต์นี้พูดถึง — จาก skus.franchise (tasks/franchise_style.json)
   // เดิมไม่มีขั้นนี้ ทุกโพสต์จึงได้ลายเดินเรือเหมือนกันหมดไม่ว่าจะขาย Dragon Ball หรือ Pokemon
   if (fr?.decor) {
@@ -382,9 +403,39 @@ export async function POST(req) {
     ].filter(Boolean)
 
     // ── รูปอ้างอิง: ซองจริง + ตู้จริง ──
+    //
+    // ⚠️ 24 ส.ค. 2026 — เดิมแนบรูปซองเฉพาะตอนที่คอนเทนต์ผูกกับ SKU
+    //    โพสต์แนวบรรยากาศ (เช่น #35 "ไปเดินไอคอนสยามทีไร...") ไม่ผูก SKU
+    //    โมเดลจึงไม่มีซองจริงให้ลอกเลย แล้วแต่งลายซองขึ้นเอง → เจ้าของบอกว่า "ไม่เนียน"
+    //
+    //    ถ้าไม่มี SKU ให้หยิบซองขายดีจริงมา 3 ตัวเป็นตัวอย่างแทน
+    //    เลือกจากยอดขาย 30 วันจริง ไม่ใช่สุ่ม — จะได้เป็นของที่ลูกค้าเห็นในตู้จริง ๆ
     const refs = []
     const packRef = await fetchRef(sku?.image_url || sku?.image_url_box)
-    if (packRef) refs.push(packRef)
+    if (packRef) {
+      refs.push(packRef)
+    } else {
+      const { data: topSkus } = await db.from("skus")
+        .select("sku_id,name,image_url,image_url_box")
+        .eq("is_active", true).not("image_url", "is", null).limit(24)
+      // เรียงตามยอดขาย 30 วัน แล้วเอา 3 ตัวแรกที่มีรูป
+      const since = new Date(Date.now() - 30 * 864e5).toISOString()
+      const { data: recent } = await db.from("sales")
+        .select("sku_id,quantity_sold").gte("sold_at", since).limit(5000)
+      const sold = {}
+      for (const r of recent || []) sold[r.sku_id] = (sold[r.sku_id] || 0) + (r.quantity_sold || 0)
+      const picked = (topSkus || [])
+        .sort((a, b) => (sold[b.sku_id] || 0) - (sold[a.sku_id] || 0))
+        .slice(0, 3)
+      for (const s of picked) {
+        const r = await fetchRef(s.image_url || s.image_url_box)
+        if (r) refs.push(r)
+      }
+      if (picked.length) {
+        facts.push(`- Real products available to show in the scene: ` +
+          picked.map(s => s.name).join(" · "))
+      }
+    }
     const conceptsCfg = await loadJson("poster_concepts.json")
     const conceptKey = body.concept || conceptsCfg?.default || ""
     const concept = (conceptsCfg?.concepts || []).find(c => c.key === conceptKey) || null
