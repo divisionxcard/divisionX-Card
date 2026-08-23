@@ -3,7 +3,7 @@ DivisionX Card — VMS Machine Stock Sync
 ดึงสต็อกหน้าตู้ผ่าน VMS REST API (ไม่ใช้ Playwright)
 """
 
-import os, requests
+import os, re, requests
 from datetime import datetime, timedelta
 from urllib.parse import urlparse
 from supabase import create_client
@@ -105,8 +105,10 @@ def map_product_to_sku(product_name: str) -> str | None:
     """แปลงชื่อสินค้า VMS เป็น SKU ID เช่น 'One Piece OP - 01 Pack' → 'OP 01'"""
     if not product_name:
         return None
-    name = product_name.lower().strip()
-    import re
+    # ยุบช่องว่างซ้ำก่อนเทียบ — หลังบ้านบางตู้พิมพ์ 'Pokemon  Dream EX' (เว้นสองครั้ง)
+    # แล้ว substring map ที่เขียนด้วยช่องว่างเดียวจะไม่ติด → sku_id เป็น null แบบเงียบ ๆ
+    # (payif ทำแบบนี้อยู่แล้ว ไฟล์อื่นตกไป)
+    name = re.sub(r"\s+", " ", product_name.lower().strip())
     # B29 standalone (Dragonball special, ไม่มี prefix) — check ก่อน
     if re.search(r'\bb29\b', name):
         return "B29"

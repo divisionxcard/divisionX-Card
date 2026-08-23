@@ -70,6 +70,9 @@ def map_name_to_sku(name: str) -> str | None:
         ("serie 1",       "NRT Series - 01"),
         ("serie1",        "NRT Series - 01"),
         ("dream",         "PKM Dream EX"),
+        # "MAGA EX" คือคำที่หลังบ้านพิมพ์ผิดจาก MEGA — เจอในรายการขายจริง 13 รายการ
+        # ไฟล์ฝั่ง VMS มีคำนี้อยู่แล้ว payif ตกไป (ดู vms_stock_sync.py)
+        ("maga ex",       "PKM Dream EX"),
         ("ninja",         "PKM Ninja"),
         ("ghost",         "PKM Ghost"),
         # 2026-08-13 หลังบ้าน WW เปลี่ยนชื่อชุดนี้เป็น "Pokemon M5 Abyss Eye"

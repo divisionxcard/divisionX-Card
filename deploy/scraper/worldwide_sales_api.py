@@ -79,7 +79,9 @@ def map_goods_to_sku(goods_name: str) -> str | None:
     m = re.search(r'\b(OP|EB|PRB|FB)\s*[-]?\s*(\d+)', upper)
     if m:
         return f"{m.group(1)} {m.group(2).zfill(2)}"
-    lower = goods_name.lower().strip()
+    # ยุบช่องว่างซ้ำก่อนเทียบ — substring map เขียนด้วยช่องว่างเดียว
+    # ถ้าหลังบ้านพิมพ์เว้นสองครั้งจะแมปไม่ติดแล้ว sku_id เป็น null แบบเงียบ ๆ
+    lower = re.sub(r"\s+", " ", goods_name.lower().strip())
     # Naruto Jin — "naruto jin - 1" / "naruto jin2" (เลขเดี่ยว ไม่ zero-pad ตาม sku เดิม)
     # ต้องมาก่อน direct map ข้างล่าง ไม่งั้น Jin-2 จะโดน "naruto jin - 1" กลืน
     m = re.search(r'naruto\s*jin\s*[-–]?\s*(\d+)', lower)

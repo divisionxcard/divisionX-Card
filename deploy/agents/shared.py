@@ -15,7 +15,10 @@ def map_product_to_sku(product_name: str) -> str | None:
     """
     if not product_name:
         return None
-    name = product_name.lower().strip()
+    # ยุบช่องว่างซ้ำก่อนเทียบ — หลังบ้านบางตู้พิมพ์ 'Pokemon  Dream EX' (เว้นสองครั้ง)
+    # แล้ว substring map ที่เขียนด้วยช่องว่างเดียวจะไม่ติด → sku_id เป็น null แบบเงียบ ๆ
+    # (payif ทำแบบนี้อยู่แล้ว ไฟล์อื่นตกไป)
+    name = re.sub(r"\s+", " ", product_name.lower().strip())
 
     # B29 standalone (Dragonball special, ไม่มี prefix) — check ก่อน
     if re.search(r'\bb29\b', name):
