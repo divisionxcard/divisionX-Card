@@ -19,19 +19,49 @@ tags: [knowledge-base, research, hermes]
 
 อ้างอิงของที่ทำเสร็จแล้ว: [[opcg_rules]] · [[pkm_cards]] (ดู `deploy/tasks/`)
 
-## คิวงาน — เรียงตามจำนวน SKU ที่ขายจริง
+## คิวงาน — ปรับใหม่ 24 ส.ค. 05:00 น.
 
-ทำทีละค่าย ค่ายไหนมีไฟล์ `.md` แล้วคือเสร็จแล้ว ให้ข้ามไปตัวถัดไป
+**scraper ดึงจากเว็บทางการได้แล้ว 4 ค่าย** ข้อมูลชุดนั้นเชื่อถือได้กว่าการค้นเว็บ
+เพราะมาจากฐานข้อมูลของผู้ผลิตเอง → **ห้ามเขียนไฟล์ .md ทับค่ายพวกนี้**
+
+| ค่าย | SKU | สถานะ | ไฟล์ข้อมูลจริง |
+|---|---|---|---|
+| Dragon Ball Fusion World | 9 | ✅ scraper (เว็บทางการภาษาไทย) | `deploy/tasks/dbfw_cards.json` |
+| Naruto (KAYOU) | 4 | ✅ scraper | `deploy/tasks/kayou_cards.json` |
+| My Little Pony (KAYOU) | 2 | ✅ scraper | `deploy/tasks/kayou_cards.json` |
+| Yu-Gi-Oh OCG | 4 | ✅ scraper (Konami DB) | `deploy/tasks/ygo_cards.json` |
+
+### เหลือให้ Hermes ทำ — เรียงตามลำดับ
+
+ค่ายพวกนี้ **ไม่มีเว็บทางการให้ดึง** ยืนยันแล้วว่า kayouofficial.com มีแค่ 4 IP
+(Naruto · My Little Pony · KPop Demon Hunters · tokidoki) ไม่มี MLBB ไม่มี Transformers
 
 | ลำดับ | ค่าย | SKU | ไฟล์ | สถานะ |
 |---|---|---|---|---|
-| 1 | Dragon Ball Fusion World | 9 | `dragonball.md` | ⬜ |
-| 2 | Naruto (Kayou?) | 4 | `naruto.md` | ⬜ |
-| 3 | Yu-Gi-Oh | 4 | `yugioh.md` | ⬜ |
-| 4 | My Little Pony | 2 | `mlp.md` | ⬜ |
-| 5 | Mobile Legends (MLBB) | 1 | `mlbb.md` | ⬜ |
-| 6 | Solo Leveling (Union Arena?) | 1 | `solo-leveling.md` | ⬜ |
-| 7 | Transformers | 1 | `transformers.md` | ⬜ |
+| 1 | Mobile Legends (MLBB Hand of Destiny 02) | 1 | `mlbb.md` | ⬜ |
+| 2 | Transformers (TF Overdrive 01) | 1 | `transformers.md` | ⬜ |
+| 3 | Solo Leveling (Union Arena UA51BT) | 1 | `solo-leveling.md` | ⬜ |
+
+ทำครบ 3 ตัวแล้วให้ตอบว่า ค้นครบทุกค่ายแล้ว แล้วหยุด
+
+### สิ่งที่ต้องเน้นเป็นพิเศษสำหรับ 3 ค่ายนี้
+
+- **ระดับความหายากมีอะไรบ้าง** เรียงจากหายากสุด
+- **อัตราออกการ์ดต่อซอง/กล่อง** ถ้าหาได้
+- **จำนวนใบต่อซอง และซองต่อกล่อง** — ระวัง ตัวเลขจากร้านค้าปลีกขัดกับ DB เรา
+  (TF: ร้านบอก 10 ซอง/กล่อง แต่ DB เราใส่ 15) **ห้ามสรุปว่าอันไหนถูก** ให้รายงานทั้งสองค่า
+- ธีมของชุด ตัวละครเด่น
+
+### บทเรียนจากไฟล์แรก (dragonball.md) — อย่าทำซ้ำ
+
+ไฟล์นั้นมีข้อผิดพลาดที่ต้องเลี่ยง:
+- เขียนว่า Akira Toriyama "เป็นผู้สร้างการ์ด/Live action" — ไม่จริง
+- อ้างบล็อกร้านค้า (neokyo, samuraisword, totalcards) เป็นแหล่งข้อเท็จจริงเรื่องความหายาก
+  ทั้งที่ระดับจริงจากเว็บ Bandai คือ C / UC / R / SR / SCR / L / PR
+- อ้างราคาการ์ดพร้อมชื่อแหล่งที่สะกดมั่ว ("pregragecards")
+
+**กฎเพิ่ม:** ถ้าข้อเท็จจริงไหนมาจากบล็อกร้านค้าหรือเว็บชุมชน **ต้องเขียนกำกับว่า
+"(ยังไม่ยืนยันจากผู้ผลิต)"** ทุกครั้ง · ห้ามใส่ราคาการ์ดถ้าไม่มีแหล่งที่ตรวจสอบได้
 
 ## SKU จริงในระบบ
 
