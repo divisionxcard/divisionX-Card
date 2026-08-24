@@ -66,6 +66,48 @@ def fetch(url, timeout=25):
         return r.read().decode("utf-8", "ignore")
 
 
+def item_age_days(published):
+    """อายุข่าวเป็นวัน — คืน None ถ้าอ่านวันที่ไม่ได้
+
+    RSS ใช้ RFC 822 ("Wed, 29 Jul 2026 07:00:00 GMT")
+    Atom/YouTube ใช้ ISO 8601 ("2026-07-29T07:00:00+00:00")
+    รองรับทั้งสองแบบ เพราะเราดึงทั้ง Google News (RSS) และ YouTube (Atom)
+    """
+    s = (published or "").strip()
+    if not s:
+        return None
+    try:
+        from email.utils import parsedate_to_datetime
+        d = parsedate_to_datetime(s)
+    except Exception:
+        try:
+            d = datetime.fromisoformat(s.replace("Z", "+00:00"))
+        except Exception:
+            return None
+    if d.tzinfo is None:
+        d = d.replace(tzinfo=timezone.utc)
+    return (datetime.now(timezone.utc) - d).total_seconds() / 86400
+
+
+def freshness(age):
+    """(คำอธิบายอายุ, คะแนนโบนัส) — ข่าวสดควรได้เปรียบข่าวเก่า
+
+    เจ้าของทักว่าคอนเทนต์ไปเกาะกระแสที่ผ่านไปแล้ว เพราะตัวเก็บไม่เคยดูวันที่เลย
+    ทั้งที่ตัวอ่าน RSS ดึง published มาตั้งแต่แรก แค่ไม่มีใครเอาไปใช้
+    """
+    if age is None:
+        return "ไม่รู้วันที่", 0.0
+    if age < 1:
+        return "วันนี้", 2.0
+    if age < 3:
+        return f"{int(age)} วันที่แล้ว", 1.5
+    if age < 7:
+        return f"{int(age)} วันที่แล้ว", 0.8
+    if age < 14:
+        return f"{int(age)} วันที่แล้ว", 0.0
+    return f"{int(age)} วันที่แล้ว", -1.0
+
+
 def clean(s):
     """ถอด CDATA / tag / entity ออกจากข้อความใน RSS"""
     s = re.sub(r"<!\[CDATA\[(.*?)\]\]>", r"\1", s or "", flags=re.S)
@@ -120,17 +162,25 @@ def build_keywords():
 
 
 def score_item(text, keywords):
-    """คืน (คะแนน, แฟรนไชส์ที่ตรง) — คะแนนสูง = เกี่ยวกับเรามาก"""
+    """คืน (คะแนน, แฟรนไชส์ที่ตรง, จำนวนคำหัวข้อที่ตรง)
+
+    ⚠️ ตัวที่สามสำคัญ — ถ้าเป็น 0 แปลว่าข่าวนี้ **ไม่ได้พูดถึงการ์ดเลย**
+    ได้คะแนนมาจากคำบอกเจตนาล้วน ("ราคา" "งาน" "เปิดตัว") ซึ่งบทความอะไรก็มีได้
+
+    เคสจริง 24 ส.ค. 2026: "ตลาดตู้ถ่ายรูปไทยโตพันล้าน" กับ "Monchhichi ตุ๊กตาลิง"
+    หลุดเข้ามาเป็นไอเดียคอนเทนต์ เพราะเนื้อข่าวมีคำว่าราคา/สะสม
+    """
     low = (text or "").lower()
-    score, hit_franchise = 0.0, None
+    score, hit_franchise, topic_hits = 0.0, None, 0
     for w, fr in keywords.items():
         if w in low:
             score += 2.0 if fr else 0.7
+            topic_hits += 1
             hit_franchise = hit_franchise or fr
     for w, weight in INTENT_WORDS.items():
         if w in low:
             score += weight
-    return round(score, 2), hit_franchise
+    return round(score, 2), hit_franchise, topic_hits
 
 
 def angle_for(franchise, title):
@@ -152,18 +202,40 @@ def angle_for(franchise, title):
 
 
 # ── แหล่ง 1: ข่าว ────────────────────────────────────────────────────────
+def google_news_url(q, max_age_days):
+    """คำค้น Google News + ตัวกรองอายุฝั่งเซิร์ฟเวอร์
+
+    when:Nd ให้ Google กรองให้เลย ประหยัดกว่าดึงมาทั้งหมดแล้วค่อยทิ้ง
+    (ทดสอบจริง: คำค้นเดียวกัน ไม่ใส่ได้ 37 ชิ้น · ใส่ when:7d เหลือ 5 ชิ้นที่สดจริง)
+    แต่ยังกรองซ้ำฝั่งเราอีกชั้น เพราะ Google ไม่รับประกันว่าจะเชื่อฟังเสมอ
+    """
+    if max_age_days and max_age_days > 0:
+        q = f"{q} when:{int(max_age_days)}d"
+    return ("https://news.google.com/rss/search?q="
+            + urllib.parse.quote(q) + "&hl=th&gl=TH&ceid=TH:th")
+
+
 def collect_news(cfg, keywords):
     ideas = []
+    max_age = cfg.get("max_age_days", 14)
     for q in cfg.get("news_queries", []):
-        url = ("https://news.google.com/rss/search?q="
-               + urllib.parse.quote(q) + "&hl=th&gl=TH&ceid=TH:th")
         try:
-            items = rss_items(fetch(url))
+            items = rss_items(fetch(google_news_url(q, max_age)))
         except Exception as e:
             log(f"  ⚠️  ข่าว '{q}' ดึงไม่ได้: {type(e).__name__}")
             continue
+        dropped = off_topic = 0
         for it in items[: cfg.get("max_per_source", 8)]:
-            sc, fr = score_item(f"{it['title']} {it['summary']}", keywords)
+            age = item_age_days(it.get("published"))
+            if max_age and age is not None and age > max_age:
+                dropped += 1
+                continue
+            sc, fr, topic_hits = score_item(f"{it['title']} {it['summary']}", keywords)
+            if not topic_hits:
+                off_topic += 1
+                continue
+            when, bonus = freshness(age)
+            sc = round(sc + bonus, 2)
             if sc < cfg.get("min_score", 1.0):
                 continue
             ideas.append({
@@ -172,9 +244,13 @@ def collect_news(cfg, keywords):
                 "summary": (it["summary"] or "")[:600] or None,
                 "url": it["url"], "score": sc,
                 "angle": angle_for(fr, it["title"]),
-                "relevance": f"ตรงคำค้น «{q}»" + (f" · แฟรนไชส์ {fr} ที่เราขาย" if fr else ""),
+                "relevance": f"ข่าว{when} · ตรงคำค้น «{q}»"
+                             + (f" · แฟรนไชส์ {fr} ที่เราขาย" if fr else ""),
                 "external_key": f"news:{it['url'][:180]}",
             })
+        if dropped or off_topic:
+            log(f"  🗓️  ข่าว '{q}' ทิ้ง {dropped} ชิ้นเก่าเกิน {max_age} วัน"
+                f" · {off_topic} ชิ้นไม่เกี่ยวกับการ์ด")
     return ideas
 
 
@@ -184,29 +260,46 @@ def collect_news(cfg, keywords):
 # สิ่งที่ทำได้โดยไม่ผิด ToS และไม่ต้องรออนุมัติ คือดักจาก "ข่าวที่พูดถึงกระแส TikTok"
 # ส่วนคลิปที่เห็นเองให้วางลิงก์บนหน้าเว็บ (ระบบดึงชื่อ/ผู้โพสต์ผ่าน oEmbed ให้)
 def collect_tiktok(cfg, keywords):
+    """กระแสไวรัลหมดอายุเร็วกว่าข่าวทั่วไป — กรองวันที่เข้มกว่า
+
+    เจ้าของทักว่าเจอไอเดียจาก TikTok ที่เป็นข่าวเก่ามาก ทำให้คอนเทนต์
+    ตามหลังกระแส · ใช้ tiktok_max_age_days แยกจากข่าวปกติ (ตั้งไว้สั้นกว่า)
+    """
     ideas = []
+    max_age = cfg.get("tiktok_max_age_days", cfg.get("max_age_days", 14))
     for q in cfg.get("tiktok_queries", []):
-        url = ("https://news.google.com/rss/search?q="
-               + urllib.parse.quote(q) + "&hl=th&gl=TH&ceid=TH:th")
         try:
-            items = rss_items(fetch(url))
+            items = rss_items(fetch(google_news_url(q, max_age)))
         except Exception as e:
             log(f"  ⚠️  TikTok '{q}' ดึงไม่ได้: {type(e).__name__}")
             continue
+        dropped = off_topic = 0
         for it in items[: cfg.get("max_per_source", 8)]:
-            sc, fr = score_item(f"{it['title']} {it['summary']}", keywords)
+            age = item_age_days(it.get("published"))
+            if max_age and age is not None and age > max_age:
+                dropped += 1
+                continue
+            sc, fr, topic_hits = score_item(f"{it['title']} {it['summary']}", keywords)
+            if not topic_hits:
+                off_topic += 1
+                continue
+            when, bonus = freshness(age)
+            sc = round(sc + 0.5 + bonus, 2)   # กระแสไวรัลมีอายุสั้น ดันขึ้นมาหน่อย
             if sc < cfg.get("min_score", 1.0):
                 continue
             ideas.append({
                 "source": "tiktok", "source_label": f"กระแส TikTok · {q}", "subtype": q,
                 "title": it["title"][:300],
                 "summary": (it["summary"] or "")[:600] or None,
-                "url": it["url"], "score": sc + 0.5,   # กระแสไวรัลมีอายุสั้น ดันขึ้นมาหน่อย
+                "url": it["url"], "score": sc,
                 "angle": "ทำคลิปสั้นเกาะกระแสนี้ — เปิดซองที่ตู้ ตัดต่อสไตล์ TikTok",
-                "relevance": f"ข่าวที่พูดถึงกระแส TikTok · ตรงคำค้น «{q}»"
+                "relevance": f"กระแส{when} · ตรงคำค้น «{q}»"
                              + (f" · แฟรนไชส์ {fr}" if fr else ""),
                 "external_key": f"tt:{it['url'][:180]}",
             })
+        if dropped or off_topic:
+            log(f"  🗓️  TikTok '{q}' ทิ้ง {dropped} ชิ้นเก่าเกิน {max_age} วัน"
+                f" · {off_topic} ชิ้นไม่เกี่ยวกับการ์ด")
     return ideas
 
 
@@ -225,7 +318,7 @@ def collect_youtube(cfg, keywords):
             log(f"  ⚠️  ช่อง {label} ดึงไม่ได้: {type(e).__name__}")
             continue
         for it in items[: cfg.get("max_per_source", 8)]:
-            sc, fr = score_item(f"{it['title']} {it['summary']}", keywords)
+            sc, fr, _ = score_item(f"{it['title']} {it['summary']}", keywords)
             ideas.append({
                 "source": "youtube", "source_label": f"YouTube · {label}", "subtype": label,
                 "title": it["title"][:300],
