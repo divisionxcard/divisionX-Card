@@ -484,6 +484,15 @@ export async function POST(req) {
       `- Trust badges to show: ของแท้ 100% · ไม่มีวันหยุด · ${branches} สาขา`,
     ].filter(Boolean)
 
+    // เดาค่ายครั้งเดียว ใช้ทั้งประกาศในบรีฟ · เลือกรูปอ้างอิง · และตัวคิดไอเดียภาพ
+    //
+    // ⚠️ ต้องประกาศตรงนี้ ก่อนบล็อก facts ด้านล่างที่ใช้มัน
+    //    เคยวางไว้ใต้บล็อกนั้นแล้วเว็บพังด้วย "Cannot access before initialization"
+    //    (temporal dead zone — const ถูกใช้ก่อนบรรทัดที่ประกาศ)
+    //    node --check จับไม่ได้เพราะเป็น error ตอนรัน ไม่ใช่ syntax
+    const wantFr = sku?.franchise
+      || detectFranchise(caption, content.idea?.title, content.source_reason)
+
     // ประกาศค่ายให้ชัดที่สุด — เคสจริง 24 ส.ค. 2026 โพสต์ #PokemonTCG
     // ได้ซอง One Piece ไปทั้งสามซอง เพราะไม่มีใครบอกโมเดลว่าโพสต์นี้เรื่องอะไร
     if (wantFr) {
@@ -501,12 +510,6 @@ export async function POST(req) {
     //
     //    ถ้าไม่มี SKU ให้หยิบซองขายดีจริงมา 3 ตัวเป็นตัวอย่างแทน
     //    เลือกจากยอดขาย 30 วันจริง ไม่ใช่สุ่ม — จะได้เป็นของที่ลูกค้าเห็นในตู้จริง ๆ
-    // เดาค่ายครั้งเดียว ใช้ทั้งการเลือกรูปอ้างอิงและการบรีฟตัวคิดไอเดียภาพ
-    // ⚠️ ต้องอยู่นอกบล็อก else ด้านล่าง — ก่อนหน้านี้ตัวคิดไอเดียดูแต่ sku?.franchise
-    //    พอคอนเทนต์ไม่ผูก SKU มันเลยไม่รู้ว่าโพสต์นี้เรื่องค่ายอะไร
-    const wantFr = sku?.franchise
-      || detectFranchise(caption, content.idea?.title, content.source_reason)
-
     const refs = []
     const packRef = await fetchRef(sku?.image_url || sku?.image_url_box)
     if (packRef) {
