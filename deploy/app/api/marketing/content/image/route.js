@@ -481,7 +481,7 @@ export async function POST(req) {
       sku ? `- Product shown: ${sku.name} (${sku.sku_id}) — an authentic sealed booster pack` : null,
       lines.length ? `- Headline text to place (Thai, copy exactly): "${lines[0]}"` : null,
       lines.length > 1 ? `- Supporting line (Thai, copy exactly): "${lines[1]}"` : null,
-      `- Trust badges to show: ของแท้ 100% · ไม่มีวันหยุด · ${branches} สาขา`,
+      // ป้ายความน่าเชื่อถือ — ใส่ทีหลังเพราะต้องรู้ค่ายก่อน (ดู pickBadges)
     ].filter(Boolean)
 
     // เดาค่ายครั้งเดียว ใช้ทั้งประกาศในบรีฟ · เลือกรูปอ้างอิง · และตัวคิดไอเดียภาพ
@@ -492,6 +492,41 @@ export async function POST(req) {
     //    node --check จับไม่ได้เพราะเป็น error ตอนรัน ไม่ใช่ syntax
     const wantFr = sku?.franchise
       || detectFranchise(caption, content.idea?.title, content.source_reason)
+
+    // ── ป้ายความน่าเชื่อถือ 3 ช่อง ──
+    //
+    // ⚠️ 25 ส.ค. 2026 — เดิมเป็นข้อความตายตัว "ของแท้ 100% · ไม่มีวันหยุด · N สาขา"
+    //    ทุกใบได้สามคำนี้เหมือนกันหมด ไม่ว่าเนื้อหาจะเป็นเรื่องอะไร (เจ้าของทัก)
+    //
+    // ช่อง 1 ตรึงไว้ที่ "ของแท้ 100%" — จริงเสมอ ขายซองปิดผนึกอย่างเดียว
+    // ช่อง 2 เปลี่ยนตามรูปแบบโพสต์ (แก้คำได้ที่ image_style.json ไม่ต้องแตะโค้ด)
+    // ช่อง 3 จำนวนสาขา หรือจำนวนตู้ที่มีค่ายนั้นอยู่จริง (นับจาก machine_stock)
+    //
+    // ⚠️ ทุกคำต้องพิสูจน์ได้ — ป้ายคือคำสัญญา ไม่ใช่คำโปรย
+    //    "ไม่มีวันหยุด" ตรวจแล้วจริง (มียอดขายครบ 34/34 วันล่าสุด)
+    const badgeCfg = style.trust_badges || {}
+    const pool = badgeCfg.by_format?.[content.content_format] || badgeCfg.fallback || []
+    const mid = pool.length
+      ? pool[Math.abs(Number(content.id) || 0) % pool.length]
+      : "ไม่มีวันหยุด"
+
+    let third = `${branches} สาขา`
+    if (wantFr) {
+      // นับตู้ที่มีค่ายนี้อยู่จริงตอนนี้ — ตัวเลขนี้หนักแน่นกว่าจำนวนสาขารวม
+      try {
+        const { data: frSkus } = await db.from("skus")
+          .select("sku_id").eq("is_active", true).eq("franchise", wantFr)
+        const ids = (frSkus || []).map(s => s.sku_id)
+        if (ids.length) {
+          const { data: st } = await db.from("machine_stock")
+            .select("machine_id,sku_id").in("sku_id", ids)
+          const n = new Set((st || []).map(r => r.machine_id)).size
+          if (n) third = `มีใน ${n} ตู้`
+        }
+      } catch { /* นับไม่ได้ก็ใช้จำนวนสาขาตามเดิม */ }
+    }
+    facts.push(`- Trust badges to show (exactly these three, in this order): ` +
+      `${badgeCfg.anchor || "ของแท้ 100%"} · ${mid} · ${third}`)
 
     // ประกาศค่ายให้ชัดที่สุด — เคสจริง 24 ส.ค. 2026 โพสต์ #PokemonTCG
     // ได้ซอง One Piece ไปทั้งสามซอง เพราะไม่มีใครบอกโมเดลว่าโพสต์นี้เรื่องอะไร
