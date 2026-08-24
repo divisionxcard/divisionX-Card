@@ -13,10 +13,10 @@
   "our_set_code": "set_code ในตาราง skus ของเรา — ตั้งกันเอง ไม่ตรงกับรหัสทางการ",
   "expected_count": "จำนวนแบบที่ทางการประกาศ ใช้ตรวจว่าดึงมาครบไหม"
  },
- "_todo_db_fixes": [
-  "skus.language ของ 4 SKU นี้บันทึกเป็น EN แต่ของจริงเป็นซองญี่ปุ่น ควรเป็น JA",
-  "set_code ควรเปลี่ยนเป็นรหัสทางการ: CHAOS→CORI · HEROES→LOCH · REVALS→LOCR",
-  "ชื่อ 'The Revals' สะกดผิด ที่ถูกคือ 'The Rivals' (หลังบ้านตู้ก็สะกดผิดตาม)"
+ "_db_notes": [
+  "✅ แก้แล้ว 24 ส.ค. 2026 — skus.language ของทั้ง 4 SKU เป็น JA (ยืนยันจากรูปซองจริง 3 ใบ: มี 対象年齢9才以上 และเครดิต ©スタジオ・ダイス／集英社・テレビ東京・KONAMI · The Heroes ไม่มีรูปเพราะยังไม่เคยลงตู้ แต่เป็นชุดพี่น้องของ THE RIVALS ในไลน์ LIMIT OVER COLLECTION เดียวกัน และ Konami มีเฉพาะฉบับญี่ปุ่น)",
+  "⏸️ set_code ยังเป็นของเดิม (CHAOS/HEROES/REVALS) ไม่ใช่รหัสทางการ (CORI/LOCH/LOCR) — เจ้าของสั่งไม่ให้เปลี่ยน เพราะแอดมินคุ้นกับรหัสเดิม ดูเหตุผลเต็มที่ wiki/kb-research/kayou-sku-mapping-todo.md",
+  "ℹ️ sku_id 'YGH The Revals' สะกดผิด แต่ช่อง name ในฐานข้อมูลถูกแล้ว ('Yu-Gi-Oh The Rivals') — sku_id เป็นคีย์หลัก อย่าไปแก้"
  ],
  "_stats": {
   "sets": 4,
