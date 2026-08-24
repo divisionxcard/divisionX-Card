@@ -21,6 +21,7 @@ import Anthropic from "@anthropic-ai/sdk"
 import { requireAdmin } from "../../../../../lib/apiAuth"
 import { knowledgeBlock } from "../../../../../lib/opcgKnowledge"
 import { pkmKnowledgeBlock } from "../../../../../lib/pkmKnowledge"
+import { tcgKnowledgeBlock } from "../../../../../lib/tcgKnowledge"
 
 const db = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -525,6 +526,12 @@ export async function POST(req) {
         })
       } else if (sku?.franchise === "PKM" || /pok[eé]mon|โปเกมอน|โปเกม่อน/i.test(topicText)) {
         knowledge = await pkmKnowledgeBlock({ setCode: sku?.set_code, topic: topicText })
+      } else {
+        // Dragon Ball · Yu-Gi-Oh · Naruto · My Little Pony (ดู lib/tcgKnowledge.js)
+        // ตัวมันเช็คค่ายเองแล้วคืน "" ถ้าไม่เกี่ยว — ไม่ต้องดักซ้ำตรงนี้
+        knowledge = await tcgKnowledgeBlock({
+          franchise: sku?.franchise, setCode: sku?.set_code, topic: topicText,
+        })
       }
     } catch { knowledge = "" }
 
