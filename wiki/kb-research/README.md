@@ -38,9 +38,9 @@ tags: [knowledge-base, research, hermes]
 
 | ลำดับ | ค่าย | SKU | ไฟล์ | สถานะ |
 |---|---|---|---|---|
-| 1 | Mobile Legends (MLBB Hand of Destiny 02) | 1 | `mlbb.md` | ⬜ |
-| 2 | Transformers (TF Overdrive 01) | 1 | `transformers.md` | ⬜ |
-| 3 | Solo Leveling (Union Arena UA51BT) | 1 | `solo-leveling.md` | ⬜ |
+| 1 | Mobile Legends (MLBB Hand of Destiny 02) | 1 | `mlbb.md` | ✅ |
+|| 2 | Transformers (TF Overdrive 01) | 1 | `transformers.md` | ✅ |
+|| 3 | Solo Leveling (Union Arena UA51BT) | 1 | `solo-leveling.md` | ✅ |
 
 ทำครบ 3 ตัวแล้วให้ตอบว่า ค้นครบทุกค่ายแล้ว แล้วหยุด
 
