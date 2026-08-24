@@ -243,6 +243,14 @@ def collect_internal(cfg, skus):
     """สัญญาณจากยอดขายจริง — แหล่งที่คู่แข่งลอกไม่ได้ เพราะเป็นข้อมูลของเราเอง"""
     sig = cfg.get("internal_signals", {})
     today = data.th_today().isoformat()
+    # กุญแจกันซ้ำของสัญญาณ "แนวโน้ม" ใช้รายสัปดาห์ ไม่ใช่รายวัน
+    #
+    # เดิมต่อท้ายด้วย {today} ทุกตัว ผลคือตู้ที่ยอดตกติดกัน 9 วัน = ไอเดีย 9 แถว
+    # หัวข้อเดียวกันเป๊ะ (เคสจริง: "OP-09 ที่ ตู้ที่ 5 — หมดแล้ว" โผล่ 9 ครั้ง)
+    # ยอดตก/มาแรงเป็นเรื่องที่เปลี่ยนช้า บอกซ้ำทุกวันไม่ได้เพิ่มข้อมูลอะไร
+    # ส่วน restock ยังใช้รายวันเหมือนเดิม เพราะเป็นงานที่ต้องรีบทำวันนั้น
+    y, w, _ = data.th_today().isocalendar()
+    week = f"{y}W{w:02d}"
     sku_name = {s["sku_id"]: (s.get("name") or s["sku_id"]) for s in skus}
     ideas = []
 
@@ -270,7 +278,7 @@ def collect_internal(cfg, skus):
                 "angle": f"ทำคอนเทนต์ดัน {b['name']} ตอนกระแสกำลังขึ้น — โชว์ของในซอง/การ์ดเด่น",
                 "relevance": f"ข้อมูลขายจริงของเรา · โต {growth:.0f}%",
                 "related_sku": b["sku_id"],
-                "external_key": f"hot:{b['sku_id']}:{today}",
+                "external_key": f"hot:{b['sku_id']}:{week}",
             })
 
     # SKU ที่ยอดตก — ต้องกระตุ้น
@@ -290,7 +298,7 @@ def collect_internal(cfg, skus):
                 "angle": f"คอนเทนต์กระตุ้น {sku_name.get(sku, sku)} — รีวิวการ์ดเด่น หรือจัดโปรร่วมกับตัวขายดี",
                 "relevance": f"ข้อมูลขายจริงของเรา · ตก {drop:.0f}%",
                 "related_sku": sku,
-                "external_key": f"fall:{sku}:{today}",
+                "external_key": f"fall:{sku}:{week}",
             })
 
     # ของใกล้หมด/หมดแล้วแต่ขายดี — คอนเทนต์ "รีบมาก่อนหมด"
@@ -334,7 +342,7 @@ def collect_internal(cfg, skus):
                 "url": None, "score": round(3 + drop / 50, 2),
                 "angle": "คอนเทนต์เจาะสาขานี้ — โพสต์บอกทำเล/ของที่มี หรือยิงแอดรัศมีรอบห้าง",
                 "relevance": "ข้อมูลขายจริงของเรา · ระดับสาขา",
-                "external_key": f"mdrop:{mid}:{today}",
+                "external_key": f"mdrop:{mid}:{week}",
             })
 
     return ideas
@@ -343,6 +351,73 @@ def collect_internal(cfg, skus):
 # ── บันทึกลง DB ─────────────────────────────────────────────────────────
 FIELDS = ("status", "source", "source_label", "subtype", "title", "summary", "url",
           "angle", "relevance", "score", "related_sku", "external_key")
+
+
+def purge(cfg, dry_run=False):
+    """ลบไอเดียเก่าที่ไม่เคยถูกหยิบไปใช้ — กันตารางบวมและหัวข้อซ้ำสะสม
+
+    ⚠️ ห้ามแตะสองกลุ่มนี้เด็ดขาด:
+      1. status != 'new'          — โดยเฉพาะ 'picked' ที่ถูกเลือกไปทำคอนเทนต์แล้ว
+      2. แถวที่ marketing_content.idea_id ชี้มา — มี foreign key จริง ลบแล้วพัง
+         (เช็กจากตารางคอนเทนต์ตรง ๆ ไม่เชื่อแค่ status เผื่อสถานะไม่ตรงกับความจริง)
+
+    ตั้งค่าจำนวนวันที่ purge_after_days ใน idea_sources.json · ใส่ 0 หรือลบคีย์ทิ้ง = ไม่ลบ
+    """
+    days = cfg.get("purge_after_days", 0)
+    if not isinstance(days, int) or days <= 0:
+        return 0
+
+    cutoff = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
+    try:
+        old = data.sb_get(
+            f"marketing_ideas?select=id,title,source,created_at"
+            f"&status=eq.new&created_at=lt.{urllib.parse.quote(cutoff)}")
+        linked = {r["idea_id"] for r in data.sb_get("marketing_content?select=idea_id")
+                  if r.get("idea_id")}
+    except data.DvxError as e:
+        log(f"[purge] ⚠️ อ่านข้อมูลไม่ได้ ข้ามการลบรอบนี้: {e}")
+        return 0
+
+    ids = [r["id"] for r in old if r["id"] not in linked]
+    skipped = len(old) - len(ids)
+    if not ids:
+        log(f"[purge] ไม่มีไอเดียเก่าเกิน {days} วันที่ลบได้")
+        return 0
+
+    by_src = {}
+    for r in old:
+        if r["id"] in linked:
+            continue
+        by_src[r["source"]] = by_src.get(r["source"], 0) + 1
+    log(f"[purge] เก่าเกิน {days} วันและยังไม่ถูกใช้ {len(ids)} แถว "
+        f"({' · '.join(f'{k} {v}' for k, v in sorted(by_src.items(), key=lambda x: -x[1]))})")
+    if skipped:
+        log(f"[purge] ข้าม {skipped} แถวที่มีคอนเทนต์อ้างถึงอยู่")
+    if dry_run:
+        for r in old[:8]:
+            if r["id"] in linked:
+                continue
+            log(f"   จะลบ #{r['id']:<5} [{r['source']:<8}] {r['title'][:60]}")
+        log("\n── DRY RUN — ไม่ได้ลบจริง ──")
+        return 0
+
+    # ตัดเป็นก้อน — URL ยาวเกินไปถ้าใส่ id ทีเดียวเป็นพัน
+    deleted = 0
+    for i in range(0, len(ids), 100):
+        chunk = ids[i:i + 100]
+        req = urllib.request.Request(
+            f"{data.SB_URL}/rest/v1/marketing_ideas?id=in.({','.join(map(str, chunk))})",
+            headers={"apikey": data.SB_KEY, "Authorization": f"Bearer {data.SB_KEY}",
+                     "Prefer": "return=representation"},
+            method="DELETE")
+        try:
+            with urllib.request.urlopen(req, timeout=40) as r:
+                deleted += len(json.loads(r.read().decode("utf-8")))
+        except urllib.error.HTTPError as e:
+            log(f"[purge] ⚠️ ลบก้อนที่ {i // 100 + 1} ไม่สำเร็จ: HTTP {e.code} "
+                f"{e.read().decode('utf-8', 'ignore')[:150]}")
+    log(f"[purge] 🧹 ลบแล้ว {deleted} ไอเดีย")
+    return deleted
 
 
 def save(ideas, dry_run=False):
@@ -400,9 +475,17 @@ def main():
     ap = argparse.ArgumentParser(description="เก็บไอเดียคอนเทนต์จากข่าว/YouTube/ข้อมูลขาย")
     ap.add_argument("--dry-run", action="store_true", help="ดูอย่างเดียว ไม่เขียน DB")
     ap.add_argument("--only", choices=["news", "tiktok", "youtube", "internal"], help="เก็บเฉพาะแหล่งเดียว")
+    ap.add_argument("--purge-only", action="store_true", help="ลบของเก่าอย่างเดียว ไม่เก็บของใหม่")
     args = ap.parse_args()
 
     cfg = json.loads(SOURCES_FILE.read_text(encoding="utf-8-sig"))
+
+    # ลบของเก่าก่อนเก็บของใหม่ — ถ้าเก็บก่อนแล้วค่อยลบ ของที่เพิ่งเก็บจะโดนนับอายุผิด
+    # ในกรณีที่ purge_after_days ถูกตั้งไว้สั้นมาก
+    purge(cfg, dry_run=args.dry_run)
+    if args.purge_only:
+        return
+
     keywords, skus = build_keywords()
     log(f"[ideas] คำสำคัญจากสินค้าที่ขายจริง {len(keywords)} คำ")
 
