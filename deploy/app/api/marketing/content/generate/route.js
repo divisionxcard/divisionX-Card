@@ -22,6 +22,8 @@ import { requireAdmin } from "../../../../../lib/apiAuth"
 import { knowledgeBlock } from "../../../../../lib/opcgKnowledge"
 import { pkmKnowledgeBlock } from "../../../../../lib/pkmKnowledge"
 import { tcgKnowledgeBlock } from "../../../../../lib/tcgKnowledge"
+import { catalogueBlock } from "../../../../../lib/productCatalogue"
+import { detectFranchise } from "../../../../../lib/franchiseDetect"
 
 const db = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -535,7 +537,14 @@ export async function POST(req) {
       }
     } catch { knowledge = "" }
 
-    const prompt = buildPrompt(voice, idea, content, sku, recent, format, craft, knowledge)
+    // รายการสินค้าจริงทั้งหมด — กันตัวเขียนแต่งสินค้าที่เราไม่มีขึ้นมาเปรียบเทียบ
+    // (เคสจริง: แคปชั่นโปเกมอนพูดถึง "ซองคอลเลกชันคลาสสิก" ทั้งที่เรามีแต่ชุดใหม่ 3 ชุด)
+    const focusFr = sku?.franchise || detectFranchise(topicText, content.caption)
+    let catalogue = ""
+    try { catalogue = await catalogueBlock(db, { focus: focusFr }) } catch { catalogue = "" }
+
+    const prompt = buildPrompt(voice, idea, content, sku, recent, format, craft,
+                               catalogue + knowledge)
 
     // บังคับด้วย AI_PROVIDER ได้ ไม่งั้นเลือกตัวแรกที่พร้อมใช้
     const forced = (process.env.AI_PROVIDER || "").toLowerCase()
@@ -623,7 +632,8 @@ export async function POST(req) {
     if (recent.length && dup.score >= SIMILAR_LIMIT) {
       retried = true
       const altFormat = pickFormat(voice, [...recent, { format: format?.key }])
-      const harder = buildPrompt(voice, idea, content, sku, recent, altFormat, craft, knowledge)
+      const harder = buildPrompt(voice, idea, content, sku, recent, altFormat, craft,
+                                 catalogue + knowledge)
       harder.user +=
         `\n\n⚠️ รอบที่แล้วคุณเขียนออกมาคล้ายโพสต์เก่าถึง ${Math.round(dup.score * 100)}%:\n` +
         `"${(dup.item?.caption || "").split("\n")[0].slice(0, 90)}"\n` +
