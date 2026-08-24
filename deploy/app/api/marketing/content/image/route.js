@@ -93,6 +93,43 @@ function matchBranch(machines, text) {
   return null
 }
 
+// ── เลือกคอนเซปต์โปสเตอร์ให้เข้ากับรูปแบบโพสต์ ──
+//
+// ⚠️ 25 ส.ค. 2026 — เจ้าของบอกว่าโปสเตอร์ "หน้าตาซ้ำ ๆ" ทั้งที่แคปชั่นใช้ครบ 8 รูปแบบ
+//    ไล่ดูแล้วพบว่าหน้าเว็บ **ไม่เคยส่ง concept มาเลยสักครั้ง** (grep ไม่เจอ)
+//    ทุกใบจึงตกไปที่ค่าเริ่มต้น `treasure` เหมือนกันหมด — มี 10 คอนเซปต์ ใช้จริง 1
+//    ซ้ำร้าย treasure เป็นธีม One Piece โดยเฉพาะ (คลื่น สมอ เข็มทิศ)
+//    จึงเป็นเหตุผลที่โปสเตอร์ Dragon Ball เคยได้สมอกับนกนางนวล
+//
+// แต่ละรูปแบบโพสต์เข้ากับคอนเซปต์คนละชุด — เรียงตัวที่เข้าที่สุดไว้หน้า
+const FORMAT_CONCEPTS = {
+  news_hook: ["viral", "real_machine", "battle"],
+  question:  ["viral", "machine_luck", "real_machine"],
+  ranking:   ["battle", "luxury", "machine_luck"],
+  beginner:  ["real_machine", "machine_luck", "unbox"],
+  story:     ["unbox", "hidden_card", "real_machine"],
+  fomo:      ["machine_luck", "viral", "battle"],
+  compare:   ["battle", "luxury", "viral"],
+  behind:    ["real_machine", "machine_luck", "unbox"],
+}
+
+function pickConcept(cfg, { format, franchise, id }) {
+  const all = (cfg?.concepts || []).filter(c => c.available)
+  if (!all.length) return null
+  const byKey = Object.fromEntries(all.map(c => [c.key, c]))
+
+  let keys = FORMAT_CONCEPTS[format] || all.map(c => c.key)
+  // treasure ผูกกับ One Piece ทั้งก้อน — ค่ายอื่นห้ามใช้ ไม่งั้นได้สมอกับคลื่นผิดเรื่อง
+  keys = keys.filter(k => byKey[k] && (k !== "treasure" || franchise === "OP"))
+  if (franchise === "OP" && format === "story") keys = ["treasure", ...keys]
+  if (!keys.length) keys = all.map(c => c.key).filter(k => k !== "treasure")
+  if (!keys.length) return null
+
+  // ใช้ id เป็นตัวหมุน — คอนเทนต์ชิ้นเดิมได้คอนเซปต์เดิมทุกครั้งที่กดสร้างใหม่
+  // (ถ้าสุ่ม จะเทียบผลไม่ได้ว่าที่เปลี่ยนไปเพราะ prompt หรือเพราะคอนเซปต์)
+  return byKey[keys[Math.abs(Number(id) || 0) % keys.length]]
+}
+
 function buildPrompt(style, concept, facts, mode, hasRefs = false, idea = null, brandRules = [], fr = null, hasMachineRef = false, branch = null) {
   const wantsText = mode !== "art"
   const p = []
@@ -125,11 +162,18 @@ function buildPrompt(style, concept, facts, mode, hasRefs = false, idea = null, 
     const palette =
       `Colour direction: background ${concept.palette?.bg}, primary accent ${concept.palette?.accent}, ` +
       `secondary accent ${concept.palette?.accent2}.`
-    p.push(conceptFits
+    // ⚠️ ทุกคอนเซปต์มี layout กำหนดไว้ในไฟล์ตั้งแต่แรก แต่ไม่เคยมีใครอ่านเลย
+    //    โปสเตอร์จึงถูกจัดวางแบบเดียวกันหมด ต่อให้เปลี่ยนคอนเซปต์
+    //    ส่งเสมอแม้คอนเซปต์ไม่เข้ากับค่าย เพราะโครงจัดวางไม่ผูกกับธีมค่าย
+    //    diagonal_clash = แบ่งทแยงสองฝั่งปะทะกัน (กิมมิคแบบ VS)
+    const layoutLine = concept.layoutText
+      ? `\nLAYOUT — arrange the poster this way: ${concept.layoutText}`
+      : ""
+    p.push((conceptFits
       ? `POSTER CONCEPT: ${concept.label} — ${concept.mood}.\n` +
         ((concept.decor || []).length ? `Visual elements to include: ${concept.decor.join(", ")}.\n` : "") +
         palette
-      : palette)
+      : palette) + layoutLine)
   }
 
   p.push(`BRAND STYLE: ${style.style}`)
@@ -509,8 +553,16 @@ export async function POST(req) {
       }
     }
     const conceptsCfg = await loadJson("poster_concepts.json")
-    const conceptKey = body.concept || conceptsCfg?.default || ""
-    const concept = (conceptsCfg?.concepts || []).find(c => c.key === conceptKey) || null
+    // body.concept = ผู้ใช้เลือกเอง · ไม่เลือก = ระบบจับให้เข้ากับรูปแบบโพสต์+ค่าย
+    const concept = body.concept
+      ? (conceptsCfg?.concepts || []).find(c => c.key === body.concept) || null
+      : pickConcept(conceptsCfg, {
+          format: content.content_format, franchise: wantFr, id: content.id })
+    const conceptKey = concept?.key || ""
+    // แนบคำอธิบายโครงจัดวางไปกับคอนเซปต์ (layouts เป็น dict: key → คำอธิบายไทย)
+    if (concept?.layout) {
+      concept.layoutText = (conceptsCfg?.layouts || {})[concept.layout] || null
+    }
     if (concept && !concept.available) {
       return NextResponse.json({
         error: `แนวคิด "${concept.label}" ยังใช้ไม่ได้`,
