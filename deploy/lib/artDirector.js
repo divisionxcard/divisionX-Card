@@ -53,6 +53,16 @@ HARD RULES
   ranking, a comparison or a number, the image has to show that thing — not a mood shot
   that happens to share the topic. A caption promising "top 10 cards" with an image of
   someone holding a binder has failed, however pretty the binder is.
+- A COMPARISON MUST COMPARE DIFFERENT THINGS. If the caption asks the reader to choose
+  between two options ("A or B?", "new vs classic"), the two sides must show DIFFERENT
+  real products. Showing the same packs on both sides with different labels is a lie the
+  viewer spots instantly — it destroys trust faster than a plain product shot ever could.
+  If you only have reference photos of ONE product, do NOT build a split-screen; pick a
+  composition that works honestly with what you actually have.
+- THE POST'S CARD GAME IS FIXED. Whatever franchise the caption names is the ONLY one
+  allowed in frame. Never show packs from a different card game than the caption discusses —
+  a Pokémon caption with One Piece packs is the single most damaging error we can make,
+  because it proves nobody checked.
 - Do NOT invent any text, wording, slogan, price, percentage, or number. Text is supplied
   separately and is already approved. Describe WHERE text blocks sit, never WHAT they say.
 - Reject your own first idea if it would work equally well for any other caption.

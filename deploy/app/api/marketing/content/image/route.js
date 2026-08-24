@@ -18,6 +18,7 @@ import { readFile } from "fs/promises"
 import path from "path"
 import { requireAdmin } from "../../../../../lib/apiAuth"
 import { planVisual, ideaToPrompt } from "../../../../../lib/artDirector"
+import { detectFranchise, FRANCHISE_LABEL } from "../../../../../lib/franchiseDetect"
 
 const SB_URL = process.env.NEXT_PUBLIC_SUPABASE_URL
 const SB_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -439,6 +440,15 @@ export async function POST(req) {
       `- Trust badges to show: ของแท้ 100% · ไม่มีวันหยุด · ${branches} สาขา`,
     ].filter(Boolean)
 
+    // ประกาศค่ายให้ชัดที่สุด — เคสจริง 24 ส.ค. 2026 โพสต์ #PokemonTCG
+    // ได้ซอง One Piece ไปทั้งสามซอง เพราะไม่มีใครบอกโมเดลว่าโพสต์นี้เรื่องอะไร
+    if (wantFr) {
+      facts.unshift(
+        `- THIS POST IS ABOUT: ${FRANCHISE_LABEL[wantFr] || wantFr}. ` +
+        `Every card pack in the image must be from THIS card game only. ` +
+        `Showing packs from any other franchise is a hard failure.`)
+    }
+
     // ── รูปอ้างอิง: ซองจริง + ตู้จริง ──
     //
     // ⚠️ 24 ส.ค. 2026 — เดิมแนบรูปซองเฉพาะตอนที่คอนเทนต์ผูกกับ SKU
@@ -447,14 +457,30 @@ export async function POST(req) {
     //
     //    ถ้าไม่มี SKU ให้หยิบซองขายดีจริงมา 3 ตัวเป็นตัวอย่างแทน
     //    เลือกจากยอดขาย 30 วันจริง ไม่ใช่สุ่ม — จะได้เป็นของที่ลูกค้าเห็นในตู้จริง ๆ
+    // เดาค่ายครั้งเดียว ใช้ทั้งการเลือกรูปอ้างอิงและการบรีฟตัวคิดไอเดียภาพ
+    // ⚠️ ต้องอยู่นอกบล็อก else ด้านล่าง — ก่อนหน้านี้ตัวคิดไอเดียดูแต่ sku?.franchise
+    //    พอคอนเทนต์ไม่ผูก SKU มันเลยไม่รู้ว่าโพสต์นี้เรื่องค่ายอะไร
+    const wantFr = sku?.franchise
+      || detectFranchise(caption, content.idea?.title, content.source_reason)
+
     const refs = []
     const packRef = await fetchRef(sku?.image_url || sku?.image_url_box)
     if (packRef) {
       refs.push(packRef)
     } else {
-      const { data: topSkus } = await db.from("skus")
-        .select("sku_id,name,image_url,image_url_box")
-        .eq("is_active", true).not("image_url", "is", null).limit(24)
+      // ⚠️ 24 ส.ค. 2026 — เดิมหยิบ "3 SKU ขายดีที่สุด" โดยไม่ดูค่าย
+      //    ผลคือโพสต์โปเกมอน (#PokemonTCG) ได้ซอง One Piece ไปลอกทั้งสามซอง
+      //    เพราะ OP เป็น 22 จาก 47 SKU และครองอันดับขายดี
+      //    → ต้องกรองตามค่ายที่แคปชั่นพูดถึงก่อนเสมอ
+      let { data: topSkus } = await db.from("skus")
+        .select("sku_id,name,franchise,image_url,image_url_box")
+        .eq("is_active", true).not("image_url", "is", null).limit(60)
+      if (wantFr) {
+        const same = (topSkus || []).filter(s => s.franchise === wantFr)
+        // ถ้าค่ายนั้นไม่มีรูปซองเลย ยอมใช้ของทั้งหมดดีกว่าไม่มีรูปอ้างอิง
+        // แต่ต้องบอกโมเดลให้ชัดว่าอย่าเอาลายพวกนี้ไปใช้ (ดู facts ด้านล่าง)
+        if (same.length) topSkus = same
+      }
       // เรียงตามยอดขาย 30 วัน แล้วเอา 3 ตัวแรกที่มีรูป
       const since = new Date(Date.now() - 30 * 864e5).toISOString()
       const { data: recent } = await db.from("sales")
@@ -469,8 +495,17 @@ export async function POST(req) {
         if (r) refs.push(r)
       }
       if (picked.length) {
+        const sameFr = !wantFr || picked.every(s => s.franchise === wantFr)
         facts.push(`- Real products available to show in the scene: ` +
           picked.map(s => s.name).join(" · "))
+        if (wantFr && !sameFr) {
+          // ค่ายที่โพสต์พูดถึงไม่มีรูปซองในระบบ — เตือนตรง ๆ ดีกว่าปล่อยให้ลอกผิดค่าย
+          facts.push(`- ⚠️ WARNING: this post is about ${FRANCHISE_LABEL[wantFr] || wantFr} ` +
+            `but the reference photos are from a DIFFERENT card game. ` +
+            `Do NOT copy those pack designs. Show the machine, the mall, hands, ` +
+            `or packaging seen from behind/at an angle instead — never invent ` +
+            `${FRANCHISE_LABEL[wantFr] || wantFr} artwork.`)
+        }
       }
     }
     const conceptsCfg = await loadJson("poster_concepts.json")
@@ -492,7 +527,7 @@ export async function POST(req) {
 
     // ธีมตามค่ายของสินค้า — ถ้าโพสต์ไม่ผูกกับ SKU ไหนเลยก็ใช้ค่ากลางที่ไม่มีลายค่ายใด
     const frCfg = await loadJson("franchise_style.json")
-    const fr = sku?.franchise ? (frCfg?.franchises || {})[sku.franchise] : null
+    const fr = wantFr ? (frCfg?.franchises || {})[wantFr] : null
     const frBlock = fr || (frCfg?.default ? { label: "แบรนด์กลาง", decor: frCfg.default } : null)
 
     const idea = await planVisual({
