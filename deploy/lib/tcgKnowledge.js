@@ -20,6 +20,7 @@ let _dbfwCards = null
 let _dbfwFaq = null
 let _kayou = null
 let _ygo = null
+let _ua = null
 
 // ⚠️ path ต้องเขียนเป็นสตริงตรง ๆ ห้ามส่งชื่อไฟล์ผ่านตัวแปร — Next ไล่หาไฟล์ที่ต้องแพ็ก
 //    จากการอ่านโค้ด ถ้าเป็นตัวแปรมันมองไม่เห็นแล้วไฟล์จะหายตอน deploy
@@ -47,8 +48,14 @@ export function loadYgoCards() {
   return _ygo
 }
 
+export function loadUaCards() {
+  _ua ??= readFile(path.join(process.cwd(), "tasks", "ua_cards.json"), "utf-8")
+    .then(JSON.parse).catch(() => null)
+  return _ua
+}
+
 /** ค่ายที่ไฟล์นี้ดูแล — ใช้เช็คก่อนเรียก จะได้ไม่โหลดไฟล์ฟรี */
-export const TCG_FRANCHISES = new Set(["DB", "YGH", "NRT", "MLP"])
+export const TCG_FRANCHISES = new Set(["DB", "YGH", "NRT", "MLP", "SL"])
 
 // คำที่บอกว่าโพสต์นี้พูดถึงค่ายไหน เผื่อคอนเทนต์ไม่ได้ผูก SKU
 const HINTS = [
@@ -56,6 +63,7 @@ const HINTS = [
   ["YGH", /yu-?gi-?oh|ยูกิ|ยูกิโอ|遊戯王/i],
   ["NRT", /naruto|นารูโตะ|นินจา|อุซึมากิ/i],
   ["MLP", /my\s*little\s*pony|โพนี่|ลิตเติ้ลโพนี่/i],
+  ["SL", /solo\s*level|โซโล\s*เลเวล|ระดับข้าคือ|union\s*arena|ยูเนียน\s*อารีน่า/i],
 ]
 
 export function franchiseFromText(text) {
@@ -240,6 +248,45 @@ async function kayouBlock(franchise, topic, maxChars) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────
+// UNION ARENA — Solo Leveling
+// ─────────────────────────────────────────────────────────────────────────
+const UA_RARITY = { SR: 0, R: 1, U: 2, C: 3, AP: 4 }
+
+async function uaBlock(setCode, topic, maxChars) {
+  const data = await loadUaCards()
+  if (!data?.sets?.length) return ""
+  const code = String(setCode || "").toUpperCase().replace(/[^A-Z0-9]/g, "")
+  const set = data.sets.find(s =>
+    String(s.our_set_code).toUpperCase() === code || String(s.code).toUpperCase() === code)
+    || data.sets[0]
+
+  const rank = c => UA_RARITY[c.rarity] ?? 9
+  const top = [...set.cards].sort((a, b) => rank(a) - rank(b)).slice(0, 6)
+  const parts = [
+    `ชุด ${set.label} · การ์ด ${set.card_count} แบบ ` +
+    `(หน้าเว็บนับอาร์ตพาราเรลแยกเป็น ${set.listed_entries} รายการ)\n` +
+    top.map(c => `  ${c.code} ${c.name}` +
+      `${c.rarity ? ` [${c.rarity}]` : ""}${c.bp ? ` · BP ${c.bp}` : ""}` +
+      `${c.card_type ? ` · ${c.card_type}` : ""}`).join("\n"),
+  ]
+  // กฎทั่วไปของเกม — ลูกค้าที่ไม่เคยเล่นถามข้อพวกนี้บ่อยกว่ากฎเฉพาะการ์ด
+  const g = (data.general_faq || []).filter(x => x.answer && x.answer.length < 120).slice(0, 2)
+  if (g.length) {
+    parts.push("กฎพื้นฐานที่ทางการตอบไว้:\n" +
+      g.map(x => `  ถาม: ${x.question}\n  ตอบ: ${x.answer}`).join("\n"))
+  }
+
+  let body = parts.join("\n\n")
+  if (body.length > maxChars) body = body.slice(0, maxChars).replace(/\n[^\n]*$/, "")
+  return "\n━━━ ข้อมูลทางการ UNION ARENA (Solo Leveling) ━━━\n" + body +
+    `\n\nที่มา: เว็บทางการ Bandai ฉบับญี่ปุ่น · ดึงเมื่อ ${data?._source?.fetched_at || "-"}\n` +
+    "UNION ARENA เป็นเกมการ์ดที่เล่นแข่งได้จริง (ต่างจากการ์ดสะสมของ KAYOU)\n" +
+    "⚠️ ชุดนี้ขายเฉพาะในญี่ปุ่น ไม่มีฉบับไทยหรือเอเชีย — ชื่อการ์ดและกฎข้างบนเป็น" +
+    "**ภาษาญี่ปุ่น** ห้ามยกไปเขียนแคปชั่นตรง ๆ ให้เล่าเป็นชื่อตัวละครที่คนไทยรู้จัก" +
+    "จากอนิเมะแทน (เช่น ซองจินอู)\n"
+}
+
+// ─────────────────────────────────────────────────────────────────────────
 /**
  * ก้อนข้อมูลอ้างอิงสำหรับใส่ prompt — คืน "" ถ้าไม่มีอะไรเกี่ยว
  *
@@ -255,6 +302,7 @@ export async function tcgKnowledgeBlock({ franchise, setCode, topic = "", maxCha
     if (fr === "DB") return await dbBlock(setCode, topic, maxChars)
     if (fr === "YGH") return await ygoBlock(setCode, topic, maxChars)
     if (fr === "NRT" || fr === "MLP") return await kayouBlock(fr, topic, maxChars)
+    if (fr === "SL") return await uaBlock(setCode, topic, maxChars)
   } catch {
     return ""     // ไฟล์หายหรือรูปแบบเปลี่ยน — ปล่อยให้เขียนคอนเทนต์ต่อได้โดยไม่มีบล็อกนี้
   }
@@ -262,7 +310,7 @@ export async function tcgKnowledgeBlock({ franchise, setCode, topic = "", maxCha
 }
 
 export default {
-  loadDbfwCards, loadDbfwFaq, loadKayouCards, loadYgoCards,
+  loadDbfwCards, loadDbfwFaq, loadKayouCards, loadYgoCards, loadUaCards,
   TCG_FRANCHISES, franchiseFromText,
   notableDbCards, notableYgoCards, tcgKnowledgeBlock,
 }
