@@ -108,6 +108,16 @@ class SkuProfile:
         return normalize_sku_id(self.sku_id)
 
     @property
+    def has_cost(self) -> bool:
+        """ใส่ราคาทุนไว้หรือยัง
+
+        ⚠️ 24 ส.ค. 2026 — 11 จาก 47 SKU ยังมี cost_price = 0 (รวม OP 16 ที่ขายดี)
+        ถ้าไม่กันไว้ COGS จะเป็น 0 → margin ออกมา 100% → LLM เขียนว่า "สุขภาพดีมาก"
+        ซึ่งเป็นการยืนยันตัวเลขที่ไม่มีอยู่จริง อันตรายกว่าไม่บอกอะไรเลย
+        """
+        return self.cost_price > 0
+
+    @property
     def cogs_30d(self) -> float:
         """ต้นทุนขายตามทฤษฎี = qty × avg_cost"""
         return self.sales_qty_30d * self.cost_price
@@ -119,7 +129,7 @@ class SkuProfile:
 
     @property
     def gross_margin_pct(self) -> float:
-        if self.sales_revenue_30d == 0:
+        if self.sales_revenue_30d == 0 or not self.has_cost:
             return 0.0
         return (self.gross_profit_30d / self.sales_revenue_30d) * 100
 
@@ -135,7 +145,7 @@ class SkuProfile:
 
     @property
     def net_margin_pct(self) -> float:
-        if self.net_revenue_30d == 0:
+        if self.net_revenue_30d == 0 or not self.has_cost:
             return 0.0
         return (self.net_profit_30d / self.net_revenue_30d) * 100
 
@@ -380,6 +390,10 @@ SYSTEM_PROMPT = """คุณเป็น AI analyst ของระบบ Divisi
 4. ใช้ [[backlinks]] เชื่อมโยงตู้: [[chukes01]], [[chukes04]], [[wwv01]], ...
 5. ระบุ insight ที่ actionable — ไม่ใช่แค่ list ตัวเลข
 6. เมื่อพูดถึง "กำไร" → ใช้ net_margin_pct (หลังหัก Ksher) ไม่ใช่ gross_margin_pct
+7. ⚠️ ถ้าข้อมูลมี "cost_missing": true → **ห้ามพูดเรื่องกำไร/มาร์จิ้น/สุขภาพการเงินเลย**
+   เพราะยังไม่ได้ใส่ราคาทุนในระบบ ตัวเลขกำไรจึงไม่มีความหมาย
+   ให้เขียนแทนว่า "ยังประเมินกำไรไม่ได้ เพราะยังไม่ได้ใส่ราคาทุนของ SKU นี้"
+   แล้ววิเคราะห์เฉพาะยอดขาย ความเร็วขาย เทรนด์ และสต็อกแทน
 
 โครงสร้างรายงานที่ต้องการ:
 ## 📝 ภาพรวม
@@ -407,6 +421,9 @@ def call_ollama(profile: SkuProfile) -> str:
         "series": profile.series,
         "sell_price_baht": profile.sell_price,
         "cost_price_baht": profile.cost_price,
+        # ธงบอก LLM ตรง ๆ ว่าห้ามพูดเรื่องกำไร (ดูกฎข้อ 7 ใน SYSTEM_PROMPT)
+        # ถ้าไม่มีธงนี้ มันจะเห็น margin 0% แล้วเขียนว่า "ขาดทุน" ซึ่งผิดพอกัน
+        "cost_missing": not profile.has_cost,
         "stats_30d": {
             "sales_qty": profile.sales_qty_30d,
             "sales_revenue_gross_baht": round(profile.sales_revenue_30d, 2),
