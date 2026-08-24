@@ -3,7 +3,7 @@ type: worklog
 date: 2026-08-24
 tags: [knowledge-base, scraper, kayou, yugioh, dragonball, hermes]
 commits: [babdcb8, 84c922d, af73a5b, 7f47965]
-status: ✅ scraper เสร็จ 4 ค่าย 19/22 SKU · เหลือ MLBB/TF/Solo Leveling ให้ Hermes
+status: ✅ scraper 5 ค่าย 20/22 SKU · ต่อเข้าระบบเขียนคอนเทนต์แล้ว · เหลือ MLBB/TF ที่ไม่มีเว็บทางการ
 ---
 
 # คลังความรู้การ์ดค่ายที่เหลือ — จาก 2 ค่ายเป็น 6 ค่าย
@@ -128,9 +128,30 @@ regex จึงคว้าคำถามซ้ำสองครั้ง ถ�
 - 163 ใบไม่มีระดับความหายาก = Energy Marker กับการ์ดโปรโม ซึ่งไม่มีจริง
 - FP-024 ชื่อว่าง = ช่องว่างบนเว็บ Bandai เอง (ชื่อเป็น "-" รูปเป็น noimage)
 
+## ต่อยอด (บ่ายวันเดียวกัน)
+
+- **Solo Leveling (UNION ARENA UA51BT)** — 92 แบบ + Q&A 42 ข้อ + กฎทั่วไป 114 ข้อ → **ครบ 20/22 SKU**
+- **ต่อคลังทั้ง 5 ค่ายเข้าระบบเขียนคอนเทนต์** ผ่าน `lib/tcgKnowledge.js`
+  เดิมดึงข้อมูลมาแล้วแต่ไม่มีใครเรียกใช้ — route รู้จักแค่ One Piece กับ Pokemon
+
+### สาเหตุจริงที่ Hermes ค้นข้อมูลไม่แม่น — ไม่ใช่เพราะโมเดลฟรี
+
+ยิงทดสอบเองแล้วระบบตอบตรง ๆ ว่า
+
+> DuckDuckGo (ddgs) is a **search-only backend and cannot extract URL content**
+
+Hermes จึงเห็นแค่คำโปรย ~200 ตัวอักษรต่อผลลัพธ์ แล้วต้องเดาเนื้อหาที่เหลือเอง
+ซ้ำร้ายผลค้นเองก็แย่ — ค้น "Dragon Ball Fusion World official card list"
+ได้ **Mercari กับ TikTok** ไม่ใช่เว็บทางการ Bandai ที่มีอยู่จริง
+
+> เปลี่ยนโมเดลไม่ช่วย — โมเดลฉลาดแค่ไหนก็สรุปจากคำโปรย 3 บรรทัดให้แม่นไม่ได้
+
+แก้ด้วยของฟรีที่มีอยู่แล้ว: Hermes มี `browser_navigate` + `browser_snapshot`
+เขียนกฎบังคับลง `hermes/SOUL.md` ว่าต้องเปิดหน้าจริงก่อนสรุป · ห้ามพิมพ์ URL เอง ·
+เว็บทางการชนะบล็อกร้านค้า · และ**ให้อ่านคลังความรู้ใน `deploy/tasks/` ก่อนไปค้นเว็บ**
+
 ## ที่ยังค้าง
 
-- Solo Leveling (Union Arena UA51BT) ยังไม่ได้เขียน scraper — ง่ายแต่ได้ SKU เดียว
 - ยังไม่ผูก `sku_id` ให้ Kayou — รหัสของเขา (NRSA01/NRI01) ไม่ตรงกับ `set_code`
   ที่เราตั้งเอง (JIN01/SERIES01) **ต้องให้คนเทียบกล่องจริงก่อน ไม่เดา**
 - จุดที่ DB ควรแก้ (บันทึกไว้ใน `ygo_cards.json._todo_db_fixes` ยังไม่แตะข้อมูลจริง):
