@@ -38,11 +38,18 @@ tags: [knowledge-base, research, hermes]
 
 | ลำดับ | ค่าย | SKU | ไฟล์ | สถานะ |
 |---|---|---|---|---|
-| 1 | Mobile Legends (MLBB Hand of Destiny 02) | 1 | `mlbb.md` | ✅ |
-|| 2 | Transformers (TF Overdrive 01) | 1 | `transformers.md` | ✅ |
-|| 3 | Solo Leveling (Union Arena UA51BT) | 1 | `solo-leveling.md` | ✅ |
+| 1 | Mobile Legends (MLBB Hand of Destiny 02) | 1 | `mlbb.md` | ⏸️ พักไว้ |
+| 2 | Transformers (TF Overdrive 01) | 1 | `transformers.md` | ⏸️ พักไว้ |
+| 3 | Solo Leveling (Union Arena UA51BT) | 1 | `solo-leveling.md` | ✅ ทำ scraper แล้ว |
 
-ทำครบ 3 ตัวแล้วให้ตอบว่า ค้นครบทุกค่ายแล้ว แล้วหยุด
+**คิวนี้ปิดแล้ว** — cron ของ Hermes รันครบ 9 รอบและปิดตัวเองไปเมื่อ 24 ส.ค. 2026
+
+> [!note] MLBB กับ Transformers พักไว้ตั้งใจ
+> เจ้าของสั่ง 24 ส.ค. 2026 — **ยังไม่เน้นทำการตลาดสองค่ายนี้** ไม่ต้องลงแรงต่อ
+> ไฟล์ที่ Hermes ค้นไว้ยังอยู่ ใช้เป็นจุดตั้งต้นได้ถ้าวันหน้าจะทำ
+>
+> ถ้าจะทำต่อจริง สิ่งที่ขาดคือ **ใบสอดในกล่องจริง** (มีตารางความหายาก + อัตราออกการ์ด)
+> เพราะเว็บทางการ KAYOU ไม่มีสองไลน์นี้
 
 ### สิ่งที่ต้องเน้นเป็นพิเศษสำหรับ 3 ค่ายนี้
 
