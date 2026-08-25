@@ -51,6 +51,35 @@ def load_env():
     return f.exists()
 
 
+def db_vendor(brand):
+    """ดึง machine_id_vendor ของตู้แรกที่ยัง active จากตาราง machines
+
+    ใช้ค่าเดียวกับที่ scraper จริงใช้ จะได้สำรวจหน้าเดียวกับที่ระบบดึงอยู่
+    """
+    try:
+        import json as _j
+        import urllib.request as _u
+        env = {}
+        for ln in (HERE.parent / ".env.local").read_text(encoding="utf-8").splitlines():
+            if "=" in ln and not ln.strip().startswith("#"):
+                k, v = ln.split("=", 1)
+                env[k.strip()] = v.strip()
+        req = _u.Request(
+            f"{env['NEXT_PUBLIC_SUPABASE_URL']}/rest/v1/machines"
+            f"?select=machine_id,config&brand=eq.{brand}&status=eq.active",
+            headers={"apikey": env["SUPABASE_SERVICE_ROLE_KEY"],
+                     "Authorization": f"Bearer {env['SUPABASE_SERVICE_ROLE_KEY']}"})
+        rows = _j.load(_u.urlopen(req, timeout=30))
+        for r in rows:
+            v = (r.get("config") or {}).get("machine_id_vendor")
+            if v:
+                print(f"  ใช้ตู้ {r['machine_id']} (vendor id {v}) เป็นตัวอย่าง")
+                return v
+    except Exception as e:                                       # noqa: BLE001
+        print(f"  อ่าน vendor id จาก machines ไม่ได้: {str(e)[:90]}")
+    return None
+
+
 def show(label, obj, indent="    "):
     """โชว์คีย์ทั้งหมดของ record หนึ่งตัว พร้อมชี้ว่าตัวไหนน่าจะเป็นราคา"""
     if not isinstance(obj, dict):
@@ -113,16 +142,41 @@ def probe_ww():
         return
     print("  ✅ ล็อกอินผ่าน")
 
-    # หน้า view_inventory ไม่มีราคา → ไล่ลิงก์ในเมนูหาหน้าที่น่าจะมี
-    r = s.get(f"{base}/page/index.do", timeout=60)
-    links = sorted(set(re.findall(r'href=["\']([^"\']+\.do[^"\']*)["\']', r.text)))
-    print(f"  ลิงก์ในเมนู {len(links)} รายการ")
-    likely = [l for l in links if re.search(r"goods|product|price|commodity|sku|item", l, re.I)]
-    print("  หน้าที่น่าจะเกี่ยวกับสินค้า/ราคา:")
-    for l in (likely or links)[:18]:
-        print(f"    {l}")
-    if not likely:
-        print("    (ไม่เจอคำที่เกี่ยวกับสินค้าเลย — อาจต้องให้เจ้าของส่งลิงก์หน้าราคามาให้)")
+    # index.do ไม่มีลิงก์ (น่าจะเป็น frameset หรือเมนูสร้างด้วย JS)
+    # → ไล่หลายหน้า แล้วดึงทั้ง href และ URL ที่ฝังใน JS
+    seen = {}
+    for path in ("/sys/main.do",                    # ← เจ้าของยืนยันว่าหน้านี้คือหน้าหลัก
+                 "/page/index.do", "/page/main.do", "/page/left.do", "/page/menu.do",
+                 "/sys/index.do", "/page/top.do"):
+        try:
+            rr = s.get(f"{base}{path}", timeout=30)
+        except Exception:                                        # noqa: BLE001
+            continue
+        if rr.status_code != 200 or not rr.text.strip():
+            continue
+        found = set(re.findall(r'["\'](/[\w/.\-]+\.do)[^"\']*["\']', rr.text))
+        found |= set(re.findall(r'(?:href|src|url)\s*[=:]\s*["\']([^"\']+\.do)', rr.text))
+        seen[path] = (len(rr.text), found)
+        print(f"  {path:20} HTTP {rr.status_code}  {len(rr.text):>6} ตัวอักษร  "
+              f"เจอลิงก์ {len(found)}")
+
+    allp = sorted({p for _, (_, f) in seen.items() for p in f})
+    likely = [p for p in allp if re.search(r"goods|product|price|commodity|sku|item|cargo", p, re.I)]
+    print(f"\n  รวมลิงก์ที่เจอทั้งหมด {len(allp)} รายการ")
+    if likely:
+        print("  หน้าที่น่าจะเกี่ยวกับสินค้า/ราคา:")
+        for p in likely[:20]:
+            print(f"    {p}")
+    for p in allp[:24]:
+        print(f"    · {p}")
+
+    # ดูหน้า view_inventory ของตู้จริง ว่ามีคอลัมน์ราคาซ่อนอยู่ไหม
+    vid = os.environ.get("WW_SAMPLE_VENDOR") or db_vendor("worldwide")
+    if vid:
+        rr = s.get(f"{base}/page/view_inventory/{vid}.do", timeout=60)
+        heads = re.findall(r"<th[^>]*>(.*?)</th>", rr.text, re.S | re.I)
+        heads = [re.sub(r"<[^>]+>", "", h).strip() for h in heads]
+        print(f"\n  คอลัมน์ในตาราง view_inventory: {[h for h in heads if h][:14]}")
 
 
 # ── Vendos ────────────────────────────────────────────────────
@@ -145,17 +199,35 @@ def probe_vendos():
     print("  ✅ ล็อกอินผ่าน")
     s.headers.update({"Authorization": f"Bearer {tok}"})
 
-    shops = (s.get(f"{base}/cc_api/shop/list", timeout=30).json() or {}).get("data") or []
-    print(f"  ร้าน/ตู้ที่เห็น {len(shops) if isinstance(shops, list) else '?'}")
-    sid = None
-    if isinstance(shops, list) and shops:
-        show("ฟิลด์ของ 'ร้าน'", shops[0])
-        sid = shops[0].get("id") or shops[0].get("shop_id")
-    if sid:
-        st = (s.get(f"{base}/cc_api/shop/stock/{sid}", timeout=60).json() or {}).get("data") or []
-        print(f"\n  ช่องของร้าน {sid}: {len(st) if isinstance(st, list) else '?'}")
-        if isinstance(st, list) and st:
-            show("ฟิลด์ของ 'ช่อง'", st[0])
+    # /cc_api/shop/list ไม่มีข้อมูล → เอา shop_id จากตาราง machines เหมือนที่ scraper จริงทำ
+    sid = os.environ.get("VENDOS_SAMPLE_SHOP") or db_vendor("payif")
+    if not sid:
+        print("  ⏭  ไม่รู้ shop_id — ข้าม")
+        return
+    r = s.get(f"{base}/cc_api/shop/stock/{sid}", timeout=60)
+    j = r.json() or {}
+    st = j.get("data")
+    print(f"  /cc_api/shop/stock/{sid} → code={j.get('code')} "
+          f"{len(st) if isinstance(st, list) else type(st).__name__}")
+    if isinstance(st, list) and st:
+        show("ฟิลด์ของ 'ช่อง'", st[0])
+    # เจ้าของชี้หน้า /control_center/product-management → ลองเดา API ที่อยู่ข้างหลัง
+    for p in (f"/cc_api/shop/sales/{sid}",
+              "/cc_api/product/list", "/cc_api/product", "/cc_api/products",
+              f"/cc_api/product/list/{sid}", f"/cc_api/shop/product/{sid}",
+              f"/cc_api/shop/goods/{sid}", "/cc_api/goods/list"):
+        try:
+            rr = s.get(f"{base}{p}", timeout=30)
+            jj = rr.json() or {}
+            d = jj.get("data")
+            n = len(d) if isinstance(d, (list, dict)) else "?"
+            print(f"\n  {p} → code={jj.get('code')} · {n} รายการ")
+            if isinstance(d, dict) and d:
+                show("ตัวอย่าง", list(d.values())[0])
+            elif isinstance(d, list) and d:
+                show("ตัวอย่าง", d[0])
+        except Exception as e:                                   # noqa: BLE001
+            print(f"  {p} → {type(e).__name__}: {str(e)[:70]}")
 
 
 BRANDS = {"vms": ("VMS · ตู้ chukes", probe_vms),
