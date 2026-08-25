@@ -9,7 +9,16 @@
 // หน้าเว็บมีตัวคอยเช็กผลให้เอง (pollPoster ใน MarketingOS) — คนไม่ต้องกดรีเฟรช
 // ระหว่างรอจะเห็นอนิเมชั่นโหลด + ตัวเลขวินาทีเดินขึ้นในช่องรูป แล้วรูปโผล่เองเมื่อเสร็จ
 import { NextResponse } from "next/server"
+import { createClient } from "@supabase/supabase-js"
 import { requireAdmin } from "../../../../../lib/apiAuth"
+import { detectFranchise } from "../../../../../lib/franchiseDetect"
+import { topSkusByFranchise } from "../../../../../lib/skuPicker"
+
+const db = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY,
+  { auth: { autoRefreshToken: false, persistSession: false } }
+)
 
 const REPO = process.env.GH_REPO || "divisionxcard/divisionX-Card"
 const WORKFLOW = "poster-render.yml"
@@ -31,6 +40,32 @@ export async function POST(req) {
   const id = parseInt(body.id, 10)
   if (!id) return NextResponse.json({ error: "ต้องระบุ id" }, { status: 400 })
 
+  // ── หา SKU ที่จะเอารูปไปแปะ ──
+  //
+  // ⚠️ ไอเดียที่มาจากข่าวไม่มี source_sku (ยืนยันแล้ว #35 #36 #37 เป็น null)
+  //    เดิมเทมเพลตจึงไม่รู้ว่าจะแปะรูปอะไร ตกไปใช้รูปตู้ ไม่มีซองในภาพเลย
+  //    ตอนนี้เดาค่ายจากแคปชั่นแล้วหยิบซองขายดีของค่ายนั้น — ได้รูปจริงเป๊ะ 100%
+  //
+  //    ทำที่นี่ไม่ใช่ใน poster_render.py เพราะตัวเดาค่ายเป็น JS อยู่แล้ว
+  //    ถ้าไปเขียนซ้ำฝั่ง Python จะกลายเป็นสองสำเนาที่แก้ไม่พร้อมกัน
+  let sku = body.sku ? String(body.sku) : null
+  if (!sku) {
+    try {
+      const { data: c } = await db.from("marketing_content")
+        .select("caption,source_sku,source_reason,idea:marketing_ideas!marketing_content_idea_id_fkey(title)")
+        .eq("id", id).maybeSingle()
+      sku = c?.source_sku || null
+      if (!sku) {
+        const fr = detectFranchise(c?.caption, c?.idea?.title, c?.source_reason)
+        if (fr) {
+          const [pick] = await topSkusByFranchise(db, { franchise: fr, limit: 1 })
+          // ยอมใช้เฉพาะที่ตรงค่ายจริง — ถ้าค่ายนั้นไม่มีรูป ปล่อยว่างดีกว่าแปะผิดค่าย
+          if (pick?.franchise === fr) sku = pick.sku_id
+        }
+      }
+    } catch { /* อ่านไม่ได้ก็ปล่อยว่าง workflow จะใช้รูปตู้แทน */ }
+  }
+
   try {
     const res = await fetch(
       `https://api.github.com/repos/${REPO}/actions/workflows/${WORKFLOW}/dispatches`,
@@ -46,7 +81,7 @@ export async function POST(req) {
           ref: "main",
           inputs: {
             content_id: String(id),
-            ...(body.sku ? { sku: String(body.sku) } : {}),
+            ...(sku ? { sku } : {}),
           },
         }),
       }

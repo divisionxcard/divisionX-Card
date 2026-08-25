@@ -19,6 +19,7 @@ import path from "path"
 import { requireAdmin } from "../../../../../lib/apiAuth"
 import { planVisual, ideaToPrompt } from "../../../../../lib/artDirector"
 import { detectFranchise, FRANCHISE_LABEL } from "../../../../../lib/franchiseDetect"
+import { topSkusByFranchise } from "../../../../../lib/skuPicker"
 
 const SB_URL = process.env.NEXT_PUBLIC_SUPABASE_URL
 const SB_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -554,24 +555,10 @@ export async function POST(req) {
       //    ผลคือโพสต์โปเกมอน (#PokemonTCG) ได้ซอง One Piece ไปลอกทั้งสามซอง
       //    เพราะ OP เป็น 22 จาก 47 SKU และครองอันดับขายดี
       //    → ต้องกรองตามค่ายที่แคปชั่นพูดถึงก่อนเสมอ
-      let { data: topSkus } = await db.from("skus")
-        .select("sku_id,name,franchise,image_url,image_url_box")
-        .eq("is_active", true).not("image_url", "is", null).limit(60)
-      if (wantFr) {
-        const same = (topSkus || []).filter(s => s.franchise === wantFr)
-        // ถ้าค่ายนั้นไม่มีรูปซองเลย ยอมใช้ของทั้งหมดดีกว่าไม่มีรูปอ้างอิง
-        // แต่ต้องบอกโมเดลให้ชัดว่าอย่าเอาลายพวกนี้ไปใช้ (ดู facts ด้านล่าง)
-        if (same.length) topSkus = same
-      }
-      // เรียงตามยอดขาย 30 วัน แล้วเอา 3 ตัวแรกที่มีรูป
-      const since = new Date(Date.now() - 30 * 864e5).toISOString()
-      const { data: recent } = await db.from("sales")
-        .select("sku_id,quantity_sold").gte("sold_at", since).limit(5000)
-      const sold = {}
-      for (const r of recent || []) sold[r.sku_id] = (sold[r.sku_id] || 0) + (r.quantity_sold || 0)
-      const picked = (topSkus || [])
-        .sort((a, b) => (sold[b.sku_id] || 0) - (sold[a.sku_id] || 0))
-        .slice(0, 3)
+      //
+      // ตรรกะการเลือกอยู่ใน lib/skuPicker.js ตัวเดียว ใช้ร่วมกับ route โปสเตอร์เทมเพลต
+      // ห้ามก๊อปมาวางซ้ำที่นี่ — ถ้าแก้แล้วแก้ไม่ครบทั้งสองที่ ภาพจะผิดค่ายอีก
+      const picked = await topSkusByFranchise(db, { franchise: wantFr, limit: 3 })
       for (const s of picked) {
         const r = await fetchRef(s.image_url || s.image_url_box)
         if (r) refs.push(r)
