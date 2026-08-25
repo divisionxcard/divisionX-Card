@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js"
+import { fetchAll } from "./fetchAll"
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -393,13 +394,14 @@ export async function deleteClaim(id) {
 
 // ── Machine Stock (สต็อกหน้าตู้ จาก VMS) ─────────────────────
 export async function getMachineStock() {
-  const { data, error } = await supabase
+  // ⚠️ ต้องแบ่งหน้า — ตอนนี้ 735 แถว เพิ่มอีกราว 4 ตู้ก็ชนเพดาน 1000 ของ PostgREST
+  //    ถ้าชนแล้วหน้า "สต็อกหน้าตู้" จะขาดตู้ท้าย ๆ ไปเงียบ ๆ โดยไม่มี error
+  //    และรายงานเตรียมของเติมตู้จะสั่งของขาดตามไปด้วย (แก้ 25 ส.ค. 2026)
+  return fetchAll(() => supabase
     .from("machine_stock")
     .select("*")
     .order("machine_id")
-    .order("slot_number")
-  if (error) throw error
-  return data
+    .order("slot_number"))
 }
 
 // ── Machine Assignments (ผูกแอดมินกับตู้) ─────────────────────

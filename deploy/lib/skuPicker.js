@@ -11,6 +11,8 @@
 // ⚠️ ไฟล์กลาง ห้ามก๊อปตรรกะนี้ไปวางซ้ำ — โปรเจกต์นี้เคยเจ็บกับ SKU mapper
 //    ที่ถูกก๊อปไป 6 ไฟล์แล้วแก้ไม่ครบ จนยอดขายไปรวมกับ SKU ผิดตัวแบบเงียบ ๆ
 
+import { fetchAll } from "./fetchAll"
+
 /**
  * SKU ขายดีที่สุดของค่ายนั้น ที่มีรูปให้ใช้จริง
  *
@@ -43,8 +45,10 @@ export async function topSkusByFranchise(db, { franchise = null, limit = 1, need
     if (!list.length) return []
 
     const since = new Date(Date.now() - 30 * 864e5).toISOString()
-    const { data: recent } = await db.from("sales")
-      .select("sku_id,quantity_sold").gte("sold_at", since).limit(5000)
+    // ⚠️ เดิมใช้ .limit(5000) ซึ่ง **กันไม่ได้จริง** — PostgREST cap ที่ 1000 อยู่ดี
+    //    ผลคือจัดอันดับจากข้อมูล 21% แล้วได้อันดับผิดทุกอันดับ (แก้ 25 ส.ค. 2026)
+    const recent = await fetchAll(() => db.from("sales")
+      .select("sku_id,quantity_sold").gte("sold_at", since))
     const sold = {}
     for (const r of recent || []) {
       sold[r.sku_id] = (sold[r.sku_id] || 0) + (r.quantity_sold || 0)

@@ -13,6 +13,7 @@
 //   ต่อให้ภาพถูกค่ายแล้ว โพสต์ก็ยังสัญญาสิ่งที่ไม่มีอยู่จริง
 //   ต้องแก้ที่ตัวเขียน ไม่ใช่ตัวสร้างภาพ
 import { FRANCHISE_LABEL } from "./franchiseDetect"
+import { fetchAll } from "./fetchAll"
 
 // เรียงตามความสำคัญทางธุรกิจ — One Piece คือเครื่องยนต์หลัก
 const ORDER = ["OP", "DB", "PKM", "YGH", "NRT", "MLP", "SL", "MLBB", "TF"]
@@ -34,7 +35,10 @@ export async function catalogueBlock(db, { focus = null } = {}) {
       db.from("skus")
         .select("sku_id,name,franchise,set_code,language")
         .eq("is_active", true),
-      db.from("machine_stock").select("sku_id,machine_id"),
+      // ⚠️ ต้องแบ่งหน้า — machine_stock 735 แถวตอนนี้ เพิ่มอีก ~4 ตู้ก็ชน 1000
+      //    ถ้าชนแล้วจำนวนตู้ที่คอนเทนต์อ้างจะต่ำกว่าจริงโดยไม่มี error
+      fetchAll(() => db.from("machine_stock").select("sku_id,machine_id"))
+        .then(data => ({ data, error: null })),
     ])
     if (a.error) throw a.error
     skus = a.data || []

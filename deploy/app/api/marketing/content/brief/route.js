@@ -13,6 +13,7 @@ import { createClient } from "@supabase/supabase-js"
 import { NextResponse } from "next/server"
 import { requireAdmin } from "../../../../../lib/apiAuth"
 import { askGeminiText } from "../../../../../lib/geminiText"
+import { fetchAll } from "../../../../../lib/fetchAll"
 import { readFile } from "fs/promises"
 import path from "path"
 
@@ -32,10 +33,12 @@ async function loadJson(name) {
 // ── ข้อเท็จจริงจากฐานข้อมูล — ส่วนที่ทำให้ต่างจากการพิมพ์บรีฟเอง ──
 async function gatherFacts() {
   const since = new Date(Date.now() - 7 * 864e5).toISOString()
-  const [{ data: machines }, { data: sales }, { data: stock }, { data: skus }] = await Promise.all([
+  // ⚠️ sales 7 วัน ≈ 1,100 แถว และ machine_stock 735 แถว — ทั้งคู่ต้องแบ่งหน้า
+  //    เดิมไม่ได้แบ่ง → Top 3 ที่ส่งให้ AI คิดจากข้อมูลไม่ครบ (แก้ 25 ส.ค. 2026)
+  const [{ data: machines }, sales, stock, { data: skus }] = await Promise.all([
     db.from("machines").select("machine_id").eq("status", "active"),
-    db.from("sales").select("sku_id,quantity_sold,grand_total").gte("sold_at", since),
-    db.from("machine_stock").select("sku_id,remain").eq("is_occupied", true),
+    fetchAll(() => db.from("sales").select("sku_id,quantity_sold,grand_total").gte("sold_at", since)),
+    fetchAll(() => db.from("machine_stock").select("sku_id,remain").eq("is_occupied", true)),
     db.from("skus").select("sku_id,name,image_url").eq("is_active", true),
   ])
 
