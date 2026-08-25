@@ -135,9 +135,20 @@ def map_sku(product_name: str) -> str | None:
     if m: return f"EB {m.group(1).zfill(2)}"
     m = re.search(r'fb\s*[-–]?\s*(\d+)', key)
     if m: return f"FB {m.group(1).zfill(2)}"
+    # Naruto Jin — regex ต้องมาก่อน substring map ข้างล่าง ไม่งั้น "jin - 2" จะถูก
+    # "naruto jin - 1" กลืน (เคยเกิดจริงที่ payif)
+    m = re.search(r'naruto\s*jin\s*[-–]?\s*(\d+)', key)
+    if m: return f"NRT Jin - {int(m.group(1))}"
+    m = re.search(r'hand\s*of\s*destiny\s*[-–]?\s*(\d+)', key)
+    if m: return f"MLBB HOD - {m.group(1).zfill(2)}"
 
     # Naruto/Pokemon/SOLO — direct substring match (ไม่เป็น pattern prefix+number)
     # check series2 ก่อน series1 กัน prefix collision
+    #
+    # ⚠️ ต้องตรงกับ vms_stock_sync.map_product_to_sku() เสมอ
+    #    ไฟล์นี้คือทางสำรองตอน VMS Sales API ล่ม ถ้าลิสต์ตกรุ่นแล้ว API ล่มพร้อมกัน
+    #    ยอดขายของสินค้าที่ขาดจะหายทั้งแถว (worldwide/vms_sales ทิ้งแถวที่ map ไม่ติด)
+    #    รันเทียบได้ด้วย: py -3 deploy/scraper/test_sku_mapping.py
     for sub, sku in (
         # canonical names (หลัง admin rename) — check ก่อน
         ("naruto series - 02", "NRT Series - 02"),
@@ -152,6 +163,19 @@ def map_sku(product_name: str) -> str | None:
         ("naruto jin1",     "NRT Jin - 1"),
         ("pokemon maga ex", "PKM Dream EX"),
         ("solo leveling",   "SLL UA 51"),
+        # ── ตามให้ทันของที่เพิ่มไปแล้วใน vms_stock_sync (25 ส.ค. 2026) ──
+        # ตกหล่นมาตั้งแต่ มิ.ย. — ไฟล์นี้เป็นทางสำรองเลยไม่มีใครสังเกต
+        ("pokemon ghost",   "PKM Ghost"),
+        ("abyss",           "PKM Ghost"),   # หลังบ้าน WW เปลี่ยนชื่อเป็น "M5 Abyss Eye"
+        ("chaos origins",   "YGH Chaos Origins"),
+        ("limited over",    "YGH The Revals"),
+        ("the revals",      "YGH The Revals"),
+        ("the rivals",      "YGH The Revals"),   # ⚠ ตู้ chukes ยังสะกด "Revals" ต้องรับทั้งคู่
+        ("the heroes",      "YGH The Heroes"),
+        ("pony sea02",      "MLP SEA02"),
+        ("pony bp-01",      "MLP BP-01"),
+        ("overdrive",       "TF Overdrive 01"),
+        ("ut01",            "YGH UT01"),
     ):
         if sub in key:
             return sku
