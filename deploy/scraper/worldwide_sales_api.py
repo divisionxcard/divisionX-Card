@@ -49,6 +49,8 @@ PACKS_PER_BOX = {
     "SLL UA 51": 16,
     # WW ตู้ wwv03/04/05 (2026-06-03)
     "OP 16": 24, "PKM Ghost": 30,
+    # ชุดใหม่ 2026-08-24 — แอดมินตั้งเข้าตู้ wwv03/04/07 ก่อนใส่ของ
+    "OP 17": 24,
     "YGH The Heroes": 15, "YGH The Revals": 15, "YGH Chaos Origins": 30,
     # สินค้าใหม่ 2026-08-13 (ตอนนี้อยู่แค่ตู้ chukes) — เจ้าของยืนยันตัวเลขเอง
     "YGH UT01": 15, "TF Overdrive 01": 15, "MLP SEA02": 30, "MLP BP-01": 20,

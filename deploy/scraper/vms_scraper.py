@@ -46,6 +46,7 @@ PACKS_PER_BOX = {
     "MLBB HOD - 02": 20,
     "NRT Jin - 2": 10,
     "OP 16": 24,
+    "OP 17": 24,
 }
 
 # ── VMS Product Name → SKU ID Mapping ───────────────────────────

@@ -43,6 +43,7 @@ PACKS_PER_BOX = {
     "MLBB HOD - 02": 20,
     "NRT Jin - 2": 10,
     "OP 16": 24,
+    "OP 17": 24,
 }
 
 # Direct mapping สำหรับ SKU ที่ไม่มี pattern prefix+number (Naruto/Pokemon/SOLO)
