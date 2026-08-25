@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
-  "gitCommitHash": "5541bf37b3a8a1bc675e1536feac3a8ccfb1d2b3",
-  "generatedAt": "2026-08-07T16:01:26.718Z",
+  "gitCommitHash": "f0ea07383008062aaa2a8477e1786f088341892a",
+  "generatedAt": "2026-08-25T03:44:49.415Z",
   "files": {
     ".env.example": {
       "filePath": ".env.example",
@@ -25,22 +25,42 @@
     },
     ".github/workflows/idea-collector.yml": {
       "filePath": ".github/workflows/idea-collector.yml",
-      "contentHash": "e7bf0391af2ee5585c1abaa8e7eac35ca26da6d3324044a8ce0484e72462b160",
+      "contentHash": "d63c107f3afec3c45ae24a81828a0dad62c02201490148b96ddf98de6bb6eec4",
       "functions": [],
       "classes": [],
       "imports": [],
       "exports": [],
-      "totalLines": 65,
+      "totalLines": 89,
+      "hasStructuralAnalysis": true
+    },
+    ".github/workflows/marketing-autopost.yml": {
+      "filePath": ".github/workflows/marketing-autopost.yml",
+      "contentHash": "7c394b7224991a6ed7cdc13bc63b68e0b585158a3ccde48a78a2a2d405c3368b",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 70,
+      "hasStructuralAnalysis": true
+    },
+    ".github/workflows/marketing-metrics.yml": {
+      "filePath": ".github/workflows/marketing-metrics.yml",
+      "contentHash": "e636a397ac163e8d3cf0f9a24b93abb07de6766c7f18ce6030fa6ca40e41f94d",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 57,
       "hasStructuralAnalysis": true
     },
     ".github/workflows/marketing-reminders.yml": {
       "filePath": ".github/workflows/marketing-reminders.yml",
-      "contentHash": "26bd551861ce0af908bae9990d2ef5bc382811bb54e486869153d41850ad560e",
+      "contentHash": "f5f2e668ffabb6f959c80bbddeccfe629eb357d7ba5eaf73f5ddb35d9a484cdf",
       "functions": [],
       "classes": [],
       "imports": [],
       "exports": [],
-      "totalLines": 36,
+      "totalLines": 39,
       "hasStructuralAnalysis": true
     },
     ".github/workflows/payif-probe.yml": {
@@ -55,12 +75,12 @@
     },
     ".github/workflows/payif-stock-sync.yml": {
       "filePath": ".github/workflows/payif-stock-sync.yml",
-      "contentHash": "5e1f73b36309f1fd78aaa27b8744287918f997dae9d8d9cc0d321524906cc5fa",
+      "contentHash": "986e64f7a9f342202575fd87e21fea0d0f9825e711b0844194e3c4dc60d4278d",
       "functions": [],
       "classes": [],
       "imports": [],
       "exports": [],
-      "totalLines": 69,
+      "totalLines": 73,
       "hasStructuralAnalysis": true
     },
     ".github/workflows/payif-sync.yml": {
@@ -71,6 +91,16 @@
       "imports": [],
       "exports": [],
       "totalLines": 77,
+      "hasStructuralAnalysis": true
+    },
+    ".github/workflows/poster-render.yml": {
+      "filePath": ".github/workflows/poster-render.yml",
+      "contentHash": "3a2cf139589d488dbafb2d0107b6b7e0765aa1ffa8324a80348f3a76770c4260",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 71,
       "hasStructuralAnalysis": true
     },
     ".github/workflows/refill-recompute.yml": {
@@ -101,6 +131,16 @@
       "imports": [],
       "exports": [],
       "totalLines": 47,
+      "hasStructuralAnalysis": true
+    },
+    ".github/workflows/swap-report.yml": {
+      "filePath": ".github/workflows/swap-report.yml",
+      "contentHash": "15439297d8f17bdb83ffb120b21a5b283a4f1c6d579a331aa59f665a72a6d37f",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 57,
       "hasStructuralAnalysis": true
     },
     ".github/workflows/vms-stock-sync.yml": {
@@ -165,12 +205,12 @@
     },
     "AGENTS.md": {
       "filePath": "AGENTS.md",
-      "contentHash": "9b63c49a3a86be3cd45039e4cbe4a40c4cb2b52863437f58270314ceb77fbdae",
+      "contentHash": "238422df1be70bf8a906210cb507b3f4d306c5913abaf823f0e249b4417450e7",
       "functions": [],
       "classes": [],
       "imports": [],
       "exports": [],
-      "totalLines": 271,
+      "totalLines": 44,
       "hasStructuralAnalysis": true
     },
     "AUDIT_REPORT.md": {
@@ -1147,16 +1187,6 @@
       "totalLines": 25,
       "hasStructuralAnalysis": true
     },
-    "backend/database/migrations/043_revert_wwv02_vendor.sql": {
-      "filePath": "backend/database/migrations/043_revert_wwv02_vendor.sql",
-      "contentHash": "6108cd96df479cbe6220ff64a10768e198a8403c8d8d74115d283450f3070f01",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 1,
-      "hasStructuralAnalysis": true
-    },
     "backend/database/migrations/044_add_worldwide_wwv05.sql": {
       "filePath": "backend/database/migrations/044_add_worldwide_wwv05.sql",
       "contentHash": "671a237d49b3fe9b77c1073421df3de5bbbd20ce636a9cd0b58dff032139b8db",
@@ -1335,6 +1365,76 @@
       "imports": [],
       "exports": [],
       "totalLines": 41,
+      "hasStructuralAnalysis": true
+    },
+    "backend/database/migrations/062_marketing_content_format.sql": {
+      "filePath": "backend/database/migrations/062_marketing_content_format.sql",
+      "contentHash": "e40509603d1b8f60cbe7db4aed51f9afb8d4c2a4272d2deeadaa7b6271fb6d02",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 24,
+      "hasStructuralAnalysis": true
+    },
+    "backend/database/migrations/063_marketing_ideas_angles.sql": {
+      "filePath": "backend/database/migrations/063_marketing_ideas_angles.sql",
+      "contentHash": "900440cb771b49b7bb97e715da5cb318e5d0d1b09ce3d5777155254c02c11599",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 39,
+      "hasStructuralAnalysis": true
+    },
+    "backend/database/migrations/064_marketing_content_variants.sql": {
+      "filePath": "backend/database/migrations/064_marketing_content_variants.sql",
+      "contentHash": "60316633ef9d3466fec0aaa76e5add66d2fd780afba943b76f46f1a93de728ba",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 25,
+      "hasStructuralAnalysis": true
+    },
+    "backend/database/migrations/065_marketing_content_post_link.sql": {
+      "filePath": "backend/database/migrations/065_marketing_content_post_link.sql",
+      "contentHash": "b4a6e493688a48faf453e6ed43a4fd6365dd96d5195a3277d3b67bc4e3ef4a20",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 21,
+      "hasStructuralAnalysis": true
+    },
+    "backend/database/migrations/066_content_review.sql": {
+      "filePath": "backend/database/migrations/066_content_review.sql",
+      "contentHash": "7665d96a47ea6019112d5a48c97a69256d9d0d17e57c1f838be3c39dc6062b57",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 29,
+      "hasStructuralAnalysis": true
+    },
+    "backend/database/migrations/067_post_metrics.sql": {
+      "filePath": "backend/database/migrations/067_post_metrics.sql",
+      "contentHash": "9fb5c1877db816452a5d8118549fc2e5aca195443bd42492c0ee27aa2b7e87b3",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 54,
+      "hasStructuralAnalysis": true
+    },
+    "backend/database/migrations/068_sales_stock_unit.sql": {
+      "filePath": "backend/database/migrations/068_sales_stock_unit.sql",
+      "contentHash": "1ed503fe63a4545f99f395d6c758f98fce42eaf91c78f9b602bd172280d62769",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 75,
       "hasStructuralAnalysis": true
     },
     "backend/database/migrations/README.md": {
@@ -1778,6 +1878,23 @@
       "totalLines": 62,
       "hasStructuralAnalysis": true
     },
+    "deploy/agents/_console.py": {
+      "filePath": "deploy/agents/_console.py",
+      "contentHash": "3a95aa8e3ad231e6b41e8654b873b366b05e3fd1840263af3a3e582a72c66bdf",
+      "functions": [],
+      "classes": [],
+      "imports": [
+        {
+          "source": "sys",
+          "specifiers": [
+            "sys"
+          ]
+        }
+      ],
+      "exports": [],
+      "totalLines": 24,
+      "hasStructuralAnalysis": true
+    },
     "deploy/agents/content_suggester.py": {
       "filePath": "deploy/agents/content_suggester.py",
       "contentHash": "d6df33069043ba1c6925f8b10c3b2d9a1759da445dc867f5dd3a08e7e6aa09ed",
@@ -1914,9 +2031,211 @@
       "totalLines": 244,
       "hasStructuralAnalysis": true
     },
+    "deploy/agents/dbfw_kb.py": {
+      "filePath": "deploy/agents/dbfw_kb.py",
+      "contentHash": "677fe85e7b37034a05c0bbf8679fd5141be23a23437b038c8c459ce5aea44530",
+      "functions": [
+        {
+          "name": "log",
+          "params": [
+            "msg"
+          ],
+          "exported": true,
+          "lineCount": 2
+        },
+        {
+          "name": "fetch",
+          "params": [
+            "path",
+            "tries"
+          ],
+          "exported": true,
+          "lineCount": 13
+        },
+        {
+          "name": "txt",
+          "params": [
+            "s"
+          ],
+          "exported": true,
+          "lineCount": 10
+        },
+        {
+          "name": "list_series",
+          "params": [],
+          "exported": true,
+          "lineCount": 17
+        },
+        {
+          "name": "set_card_numbers",
+          "params": [
+            "category_id"
+          ],
+          "exported": true,
+          "lineCount": 15
+        },
+        {
+          "name": "_inner",
+          "params": [
+            "part"
+          ],
+          "exported": true,
+          "lineCount": 17
+        },
+        {
+          "name": "_cells",
+          "params": [
+            "html"
+          ],
+          "exported": true,
+          "lineCount": 11
+        },
+        {
+          "name": "_side",
+          "params": [
+            "body",
+            "side"
+          ],
+          "exported": true,
+          "lineCount": 4
+        },
+        {
+          "name": "parse_detail",
+          "params": [
+            "html",
+            "card_no"
+          ],
+          "exported": true,
+          "lineCount": 42
+        },
+        {
+          "name": "card_detail",
+          "params": [
+            "card_no"
+          ],
+          "exported": true,
+          "lineCount": 10
+        },
+        {
+          "name": "load_our_sets",
+          "params": [],
+          "exported": true,
+          "lineCount": 19
+        },
+        {
+          "name": "build_cards",
+          "params": [
+            "only"
+          ],
+          "exported": true,
+          "lineCount": 89
+        },
+        {
+          "name": "build_faq",
+          "params": [
+            "only"
+          ],
+          "exported": true,
+          "lineCount": 65
+        },
+        {
+          "name": "main",
+          "params": [],
+          "exported": true,
+          "lineCount": 14
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "argparse",
+          "specifiers": [
+            "argparse"
+          ]
+        },
+        {
+          "source": "datetime",
+          "specifiers": [
+            "dt"
+          ]
+        },
+        {
+          "source": "html",
+          "specifiers": [
+            "H"
+          ]
+        },
+        {
+          "source": "json",
+          "specifiers": [
+            "json"
+          ]
+        },
+        {
+          "source": "pathlib",
+          "specifiers": [
+            "pathlib"
+          ]
+        },
+        {
+          "source": "re",
+          "specifiers": [
+            "re"
+          ]
+        },
+        {
+          "source": "sys",
+          "specifiers": [
+            "sys"
+          ]
+        },
+        {
+          "source": "time",
+          "specifiers": [
+            "time"
+          ]
+        },
+        {
+          "source": "urllib.error",
+          "specifiers": [
+            "urllib.error"
+          ]
+        },
+        {
+          "source": "urllib.parse",
+          "specifiers": [
+            "urllib.parse"
+          ]
+        },
+        {
+          "source": "urllib.request",
+          "specifiers": [
+            "urllib.request"
+          ]
+        }
+      ],
+      "exports": [
+        "log",
+        "fetch",
+        "txt",
+        "list_series",
+        "set_card_numbers",
+        "_inner",
+        "_cells",
+        "_side",
+        "parse_detail",
+        "card_detail",
+        "load_our_sets",
+        "build_cards",
+        "build_faq",
+        "main"
+      ],
+      "totalLines": 422,
+      "hasStructuralAnalysis": true
+    },
     "deploy/agents/dvx_data.py": {
       "filePath": "deploy/agents/dvx_data.py",
-      "contentHash": "b74fb49d06783c650aa7c9d52d56690017e5d15bd5e42639843047f26da0da05",
+      "contentHash": "75adb22527acd5192eb123918c1c958f70154fef09d8479b2f3e0c1e9446f226",
       "functions": [
         {
           "name": "sb_get",
@@ -2002,10 +2321,11 @@
             "to_date",
             "machine",
             "group_by",
-            "top"
+            "top",
+            "unit"
           ],
           "exported": true,
-          "lineCount": 73
+          "lineCount": 118
         },
         {
           "name": "_is_box",
@@ -2033,6 +2353,121 @@
           ],
           "exported": true,
           "lineCount": 72
+        },
+        {
+          "name": "_clip",
+          "params": [
+            "text",
+            "n"
+          ],
+          "exported": true,
+          "lineCount": 4
+        },
+        {
+          "name": "_th_stamp",
+          "params": [
+            "iso"
+          ],
+          "exported": true,
+          "lineCount": 9
+        },
+        {
+          "name": "query_marketing_ideas",
+          "params": [
+            "status",
+            "limit",
+            "source",
+            "sku"
+          ],
+          "exported": true,
+          "lineCount": 45
+        },
+        {
+          "name": "query_content_queue",
+          "params": [
+            "status",
+            "limit"
+          ],
+          "exported": true,
+          "lineCount": 42
+        },
+        {
+          "name": "load_content_rules",
+          "params": [],
+          "exported": true,
+          "lineCount": 20
+        },
+        {
+          "name": "query_content_for_review",
+          "params": [
+            "limit",
+            "include_reviewed"
+          ],
+          "exported": true,
+          "lineCount": 45
+        },
+        {
+          "name": "save_content_review",
+          "params": [
+            "content_id",
+            "verdict",
+            "notes",
+            "reviewer"
+          ],
+          "exported": true,
+          "lineCount": 32
+        },
+        {
+          "name": "_iso_z",
+          "params": [
+            "dt"
+          ],
+          "exported": true,
+          "lineCount": 5
+        },
+        {
+          "name": "query_post_plan",
+          "params": [
+            "days",
+            "include_unscheduled"
+          ],
+          "exported": true,
+          "lineCount": 43
+        },
+        {
+          "name": "query_post_performance",
+          "params": [
+            "days",
+            "min_sample"
+          ],
+          "exported": true,
+          "lineCount": 101
+        },
+        {
+          "name": "_th_datetime",
+          "params": [
+            "iso"
+          ],
+          "exported": true,
+          "lineCount": 9
+        },
+        {
+          "name": "_parse_th_when",
+          "params": [
+            "when"
+          ],
+          "exported": true,
+          "lineCount": 9
+        },
+        {
+          "name": "schedule_content",
+          "params": [
+            "content_id",
+            "when",
+            "force"
+          ],
+          "exported": true,
+          "lineCount": 52
         }
       ],
       "classes": [
@@ -2082,6 +2517,12 @@
           ]
         },
         {
+          "source": "urllib.parse",
+          "specifiers": [
+            "urllib.parse"
+          ]
+        },
+        {
           "source": "datetime",
           "specifiers": [
             "datetime",
@@ -2110,9 +2551,22 @@
         "query_sales",
         "_is_box",
         "query_stock",
-        "query_restock_alerts"
+        "query_restock_alerts",
+        "_clip",
+        "_th_stamp",
+        "query_marketing_ideas",
+        "query_content_queue",
+        "load_content_rules",
+        "query_content_for_review",
+        "save_content_review",
+        "_iso_z",
+        "query_post_plan",
+        "query_post_performance",
+        "_th_datetime",
+        "_parse_th_when",
+        "schedule_content"
       ],
-      "totalLines": 342,
+      "totalLines": 842,
       "hasStructuralAnalysis": true
     },
     "deploy/agents/dvx_query.py": {
@@ -2247,9 +2701,194 @@
       "totalLines": 43,
       "hasStructuralAnalysis": true
     },
+    "deploy/agents/idea_angles.py": {
+      "filePath": "deploy/agents/idea_angles.py",
+      "contentHash": "d7e06e0509ecca712e1e928c1617078ff39d9851ed4d1a3223f1ed11125e1e83",
+      "functions": [
+        {
+          "name": "load_env_file",
+          "params": [],
+          "exported": true,
+          "lineCount": 17
+        },
+        {
+          "name": "sb",
+          "params": [
+            "method",
+            "path",
+            "body"
+          ],
+          "exported": true,
+          "lineCount": 11
+        },
+        {
+          "name": "clean_summary",
+          "params": [
+            "s"
+          ],
+          "exported": true,
+          "lineCount": 10
+        },
+        {
+          "name": "build_prompt",
+          "params": [
+            "voice",
+            "idea",
+            "formats"
+          ],
+          "exported": true,
+          "lineCount": 34
+        },
+        {
+          "name": "is_daily_quota",
+          "params": [
+            "detail"
+          ],
+          "exported": true,
+          "lineCount": 3
+        },
+        {
+          "name": "ask_gemini",
+          "params": [
+            "prompt",
+            "model"
+          ],
+          "exported": true,
+          "lineCount": 28
+        },
+        {
+          "name": "ask_ollama",
+          "params": [
+            "prompt",
+            "voice"
+          ],
+          "exported": true,
+          "lineCount": 17
+        },
+        {
+          "name": "parse_angles",
+          "params": [
+            "text"
+          ],
+          "exported": true,
+          "lineCount": 19
+        },
+        {
+          "name": "main",
+          "params": [],
+          "exported": true,
+          "lineCount": 84
+        }
+      ],
+      "classes": [
+        {
+          "name": "QuotaOut",
+          "methods": [
+            "__init__"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 5
+        },
+        {
+          "name": "Router",
+          "methods": [
+            "__init__",
+            "label",
+            "ask"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 26
+        }
+      ],
+      "imports": [
+        {
+          "source": "argparse",
+          "specifiers": [
+            "argparse"
+          ]
+        },
+        {
+          "source": "json",
+          "specifiers": [
+            "json"
+          ]
+        },
+        {
+          "source": "os",
+          "specifiers": [
+            "os"
+          ]
+        },
+        {
+          "source": "pathlib",
+          "specifiers": [
+            "pathlib"
+          ]
+        },
+        {
+          "source": "re",
+          "specifiers": [
+            "re"
+          ]
+        },
+        {
+          "source": "sys",
+          "specifiers": [
+            "sys"
+          ]
+        },
+        {
+          "source": "time",
+          "specifiers": [
+            "time"
+          ]
+        },
+        {
+          "source": "urllib.error",
+          "specifiers": [
+            "urllib.error"
+          ]
+        },
+        {
+          "source": "urllib.parse",
+          "specifiers": [
+            "urllib.parse"
+          ]
+        },
+        {
+          "source": "urllib.request",
+          "specifiers": [
+            "urllib.request"
+          ]
+        },
+        {
+          "source": "_console",
+          "specifiers": [
+            "_console"
+          ]
+        }
+      ],
+      "exports": [
+        "load_env_file",
+        "sb",
+        "clean_summary",
+        "build_prompt",
+        "QuotaOut",
+        "is_daily_quota",
+        "ask_gemini",
+        "ask_ollama",
+        "Router",
+        "parse_angles",
+        "main"
+      ],
+      "totalLines": 348,
+      "hasStructuralAnalysis": true
+    },
     "deploy/agents/idea_collector.py": {
       "filePath": "deploy/agents/idea_collector.py",
-      "contentHash": "8a257103b46d2a76392e4ea5da48a152b9244554f098eeb717c8e4dee403381c",
+      "contentHash": "bf41d86e78da04434a39b34ae550065259c342fd55e0dd3f189b4f64798e3f21",
       "functions": [
         {
           "name": "log",
@@ -2267,6 +2906,22 @@
           ],
           "exported": true,
           "lineCount": 4
+        },
+        {
+          "name": "item_age_days",
+          "params": [
+            "published"
+          ],
+          "exported": true,
+          "lineCount": 21
+        },
+        {
+          "name": "freshness",
+          "params": [
+            "age"
+          ],
+          "exported": true,
+          "lineCount": 17
         },
         {
           "name": "clean",
@@ -2297,7 +2952,7 @@
             "keywords"
           ],
           "exported": true,
-          "lineCount": 12
+          "lineCount": 20
         },
         {
           "name": "angle_for",
@@ -2306,7 +2961,16 @@
             "title"
           ],
           "exported": true,
-          "lineCount": 7
+          "lineCount": 16
+        },
+        {
+          "name": "google_news_url",
+          "params": [
+            "q",
+            "max_age_days"
+          ],
+          "exported": true,
+          "lineCount": 11
         },
         {
           "name": "collect_news",
@@ -2315,7 +2979,7 @@
             "keywords"
           ],
           "exported": true,
-          "lineCount": 24
+          "lineCount": 37
         },
         {
           "name": "collect_tiktok",
@@ -2324,7 +2988,7 @@
             "keywords"
           ],
           "exported": true,
-          "lineCount": 25
+          "lineCount": 42
         },
         {
           "name": "collect_youtube",
@@ -2342,7 +3006,16 @@
             "skus"
           ],
           "exported": true,
-          "lineCount": 99
+          "lineCount": 107
+        },
+        {
+          "name": "purge",
+          "params": [
+            "cfg",
+            "dry_run"
+          ],
+          "exported": true,
+          "lineCount": 65
         },
         {
           "name": "save",
@@ -2357,7 +3030,7 @@
           "name": "main",
           "params": [],
           "exported": true,
-          "lineCount": 24
+          "lineCount": 32
         }
       ],
       "classes": [],
@@ -2440,19 +3113,23 @@
       "exports": [
         "log",
         "fetch",
+        "item_age_days",
+        "freshness",
         "clean",
         "rss_items",
         "build_keywords",
         "score_item",
         "angle_for",
+        "google_news_url",
         "collect_news",
         "collect_tiktok",
         "collect_youtube",
         "collect_internal",
+        "purge",
         "save",
         "main"
       ],
-      "totalLines": 418,
+      "totalLines": 603,
       "hasStructuralAnalysis": true
     },
     "deploy/agents/inspect_db.py": {
@@ -2500,6 +3177,942 @@
       ],
       "exports": [],
       "totalLines": 42,
+      "hasStructuralAnalysis": true
+    },
+    "deploy/agents/kayou_kb.py": {
+      "filePath": "deploy/agents/kayou_kb.py",
+      "contentHash": "f841e31565a2b5d25231eee6973ffc78a03c0d5b898927b8ce9e27b6d9c4c6f9",
+      "functions": [
+        {
+          "name": "log",
+          "params": [
+            "msg"
+          ],
+          "exported": true,
+          "lineCount": 2
+        },
+        {
+          "name": "fetch",
+          "params": [
+            "path",
+            "tries"
+          ],
+          "exported": true,
+          "lineCount": 12
+        },
+        {
+          "name": "_balanced",
+          "params": [
+            "s",
+            "start"
+          ],
+          "exported": true,
+          "lineCount": 11
+        },
+        {
+          "name": "list_ips",
+          "params": [],
+          "exported": true,
+          "lineCount": 4
+        },
+        {
+          "name": "list_series",
+          "params": [
+            "ip_id"
+          ],
+          "exported": true,
+          "lineCount": 3
+        },
+        {
+          "name": "_js_unescape",
+          "params": [
+            "s"
+          ],
+          "exported": true,
+          "lineCount": 8
+        },
+        {
+          "name": "parse_series",
+          "params": [
+            "html"
+          ],
+          "exported": true,
+          "lineCount": 11
+        },
+        {
+          "name": "clean_cards",
+          "params": [
+            "detail"
+          ],
+          "exported": true,
+          "lineCount": 26
+        },
+        {
+          "name": "build",
+          "params": [
+            "only_ip"
+          ],
+          "exported": true,
+          "lineCount": 95
+        },
+        {
+          "name": "main",
+          "params": [],
+          "exported": true,
+          "lineCount": 7
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "argparse",
+          "specifiers": [
+            "argparse"
+          ]
+        },
+        {
+          "source": "datetime",
+          "specifiers": [
+            "dt"
+          ]
+        },
+        {
+          "source": "json",
+          "specifiers": [
+            "json"
+          ]
+        },
+        {
+          "source": "pathlib",
+          "specifiers": [
+            "pathlib"
+          ]
+        },
+        {
+          "source": "re",
+          "specifiers": [
+            "re"
+          ]
+        },
+        {
+          "source": "sys",
+          "specifiers": [
+            "sys"
+          ]
+        },
+        {
+          "source": "time",
+          "specifiers": [
+            "time"
+          ]
+        },
+        {
+          "source": "urllib.error",
+          "specifiers": [
+            "urllib.error"
+          ]
+        },
+        {
+          "source": "urllib.request",
+          "specifiers": [
+            "urllib.request"
+          ]
+        }
+      ],
+      "exports": [
+        "log",
+        "fetch",
+        "_balanced",
+        "list_ips",
+        "list_series",
+        "_js_unescape",
+        "parse_series",
+        "clean_cards",
+        "build",
+        "main"
+      ],
+      "totalLines": 251,
+      "hasStructuralAnalysis": true
+    },
+    "deploy/agents/local_image.py": {
+      "filePath": "deploy/agents/local_image.py",
+      "contentHash": "5492a77fb3299d904f4aa9679684d57e801ad086a20c108499ac2465838ef295",
+      "functions": [
+        {
+          "name": "load_env",
+          "params": [],
+          "exported": true,
+          "lineCount": 11
+        },
+        {
+          "name": "get_pipe",
+          "params": [],
+          "exported": true,
+          "lineCount": 48
+        },
+        {
+          "name": "generate",
+          "params": [
+            "prompt",
+            "out",
+            "width",
+            "height",
+            "seed"
+          ],
+          "exported": true,
+          "lineCount": 19
+        },
+        {
+          "name": "main",
+          "params": [],
+          "exported": true,
+          "lineCount": 23
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "argparse",
+          "specifiers": [
+            "argparse"
+          ]
+        },
+        {
+          "source": "os",
+          "specifiers": [
+            "os"
+          ]
+        },
+        {
+          "source": "pathlib",
+          "specifiers": [
+            "pathlib"
+          ]
+        },
+        {
+          "source": "sys",
+          "specifiers": [
+            "sys"
+          ]
+        },
+        {
+          "source": "time",
+          "specifiers": [
+            "time"
+          ]
+        },
+        {
+          "source": "_console",
+          "specifiers": [
+            "_console"
+          ]
+        }
+      ],
+      "exports": [
+        "load_env",
+        "get_pipe",
+        "generate",
+        "main"
+      ],
+      "totalLines": 204,
+      "hasStructuralAnalysis": true
+    },
+    "deploy/agents/opcg_kb.py": {
+      "filePath": "deploy/agents/opcg_kb.py",
+      "contentHash": "99e98d6926523a9bc2d926c485a2f33b233ff2394f8d1052ee967fdd9b082ae8",
+      "functions": [
+        {
+          "name": "log",
+          "params": [
+            "msg"
+          ],
+          "exported": true,
+          "lineCount": 2
+        },
+        {
+          "name": "fetch",
+          "params": [
+            "path",
+            "data",
+            "tries"
+          ],
+          "exported": true,
+          "lineCount": 16
+        },
+        {
+          "name": "_base_seq",
+          "params": [
+            "chars"
+          ],
+          "exported": true,
+          "lineCount": 3
+        },
+        {
+          "name": "_protected",
+          "params": [
+            "ch"
+          ],
+          "exported": true,
+          "lineCount": 3
+        },
+        {
+          "name": "extract_rules_text",
+          "params": [
+            "pdf_bytes"
+          ],
+          "exported": true,
+          "lineCount": 84
+        },
+        {
+          "name": "_is_successor",
+          "params": [
+            "prev",
+            "cand"
+          ],
+          "exported": true,
+          "lineCount": 15
+        },
+        {
+          "name": "parse_rules",
+          "params": [
+            "text"
+          ],
+          "exported": true,
+          "lineCount": 67
+        },
+        {
+          "name": "extract_keywords",
+          "params": [
+            "parsed"
+          ],
+          "exported": true,
+          "lineCount": 21
+        },
+        {
+          "name": "current_rules_stamp",
+          "params": [],
+          "exported": true,
+          "lineCount": 8
+        },
+        {
+          "name": "check_stale",
+          "params": [],
+          "exported": true,
+          "lineCount": 16
+        },
+        {
+          "name": "build_rules",
+          "params": [],
+          "exported": true,
+          "lineCount": 43
+        },
+        {
+          "name": "txt",
+          "params": [
+            "s"
+          ],
+          "exported": true,
+          "lineCount": 5
+        },
+        {
+          "name": "list_series",
+          "params": [],
+          "exported": true,
+          "lineCount": 21
+        },
+        {
+          "name": "parse_cards",
+          "params": [
+            "html"
+          ],
+          "exported": true,
+          "lineCount": 59
+        },
+        {
+          "name": "load_our_sets",
+          "params": [],
+          "exported": true,
+          "lineCount": 17
+        },
+        {
+          "name": "build_cards",
+          "params": [],
+          "exported": true,
+          "lineCount": 73
+        },
+        {
+          "name": "main",
+          "params": [],
+          "exported": true,
+          "lineCount": 16
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "argparse",
+          "specifiers": [
+            "argparse"
+          ]
+        },
+        {
+          "source": "datetime",
+          "specifiers": [
+            "dt"
+          ]
+        },
+        {
+          "source": "difflib",
+          "specifiers": [
+            "difflib"
+          ]
+        },
+        {
+          "source": "html",
+          "specifiers": [
+            "H"
+          ]
+        },
+        {
+          "source": "io",
+          "specifiers": [
+            "io"
+          ]
+        },
+        {
+          "source": "json",
+          "specifiers": [
+            "json"
+          ]
+        },
+        {
+          "source": "pathlib",
+          "specifiers": [
+            "pathlib"
+          ]
+        },
+        {
+          "source": "re",
+          "specifiers": [
+            "re"
+          ]
+        },
+        {
+          "source": "sys",
+          "specifiers": [
+            "sys"
+          ]
+        },
+        {
+          "source": "time",
+          "specifiers": [
+            "time"
+          ]
+        },
+        {
+          "source": "urllib.error",
+          "specifiers": [
+            "urllib.error"
+          ]
+        },
+        {
+          "source": "urllib.parse",
+          "specifiers": [
+            "urllib.parse"
+          ]
+        },
+        {
+          "source": "urllib.request",
+          "specifiers": [
+            "urllib.request"
+          ]
+        }
+      ],
+      "exports": [
+        "log",
+        "fetch",
+        "_base_seq",
+        "_protected",
+        "extract_rules_text",
+        "_is_successor",
+        "parse_rules",
+        "extract_keywords",
+        "current_rules_stamp",
+        "check_stale",
+        "build_rules",
+        "txt",
+        "list_series",
+        "parse_cards",
+        "load_our_sets",
+        "build_cards",
+        "main"
+      ],
+      "totalLines": 569,
+      "hasStructuralAnalysis": true
+    },
+    "deploy/agents/opcg_preview.mjs": {
+      "filePath": "deploy/agents/opcg_preview.mjs",
+      "contentHash": "9d7adb4b9ba63119a3232b91f99387d5fe919263d949931fe487310b93020ff2",
+      "functions": [
+        {
+          "name": "arg",
+          "params": [
+            "name"
+          ],
+          "exported": false,
+          "lineCount": 4
+        },
+        {
+          "name": "isOnePiece",
+          "params": [
+            "sku",
+            "topic"
+          ],
+          "exported": false,
+          "lineCount": 1
+        },
+        {
+          "name": "env",
+          "params": [],
+          "exported": false,
+          "lineCount": 9
+        },
+        {
+          "name": "db",
+          "params": [
+            "query"
+          ],
+          "exported": false,
+          "lineCount": 8
+        },
+        {
+          "name": "loadContent",
+          "params": [
+            "limit",
+            "id"
+          ],
+          "exported": false,
+          "lineCount": 16
+        },
+        {
+          "name": "show",
+          "params": [],
+          "exported": false,
+          "lineCount": 12
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "fs/promises",
+          "specifiers": [
+            "readFile"
+          ]
+        },
+        {
+          "source": "path",
+          "specifiers": [
+            "path"
+          ]
+        },
+        {
+          "source": "../lib/opcgKnowledge.js",
+          "specifiers": [
+            "knowledgeBlock"
+          ]
+        }
+      ],
+      "exports": [],
+      "totalLines": 85,
+      "hasStructuralAnalysis": true
+    },
+    "deploy/agents/pkm_kb.py": {
+      "filePath": "deploy/agents/pkm_kb.py",
+      "contentHash": "0ce8d99e3248214b3c20dbda9153a2147a019130393a92ce24c80378d2814792",
+      "functions": [
+        {
+          "name": "log",
+          "params": [
+            "m"
+          ],
+          "exported": true,
+          "lineCount": 2
+        },
+        {
+          "name": "fetch",
+          "params": [
+            "path",
+            "tries"
+          ],
+          "exported": true,
+          "lineCount": 12
+        },
+        {
+          "name": "txt",
+          "params": [
+            "s"
+          ],
+          "exported": true,
+          "lineCount": 8
+        },
+        {
+          "name": "energy_names",
+          "params": [
+            "seg"
+          ],
+          "exported": true,
+          "lineCount": 3
+        },
+        {
+          "name": "list_sets",
+          "params": [],
+          "exported": true,
+          "lineCount": 14
+        },
+        {
+          "name": "set_card_ids",
+          "params": [
+            "code"
+          ],
+          "exported": true,
+          "lineCount": 18
+        },
+        {
+          "name": "parse_card",
+          "params": [
+            "h",
+            "card_id"
+          ],
+          "exported": true,
+          "lineCount": 95
+        },
+        {
+          "name": "build_cards",
+          "params": [
+            "codes"
+          ],
+          "exported": true,
+          "lineCount": 71
+        },
+        {
+          "name": "build_rules",
+          "params": [],
+          "exported": true,
+          "lineCount": 68
+        },
+        {
+          "name": "main",
+          "params": [],
+          "exported": true,
+          "lineCount": 23
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "argparse",
+          "specifiers": [
+            "argparse"
+          ]
+        },
+        {
+          "source": "datetime",
+          "specifiers": [
+            "dt"
+          ]
+        },
+        {
+          "source": "html",
+          "specifiers": [
+            "H"
+          ]
+        },
+        {
+          "source": "json",
+          "specifiers": [
+            "json"
+          ]
+        },
+        {
+          "source": "pathlib",
+          "specifiers": [
+            "pathlib"
+          ]
+        },
+        {
+          "source": "re",
+          "specifiers": [
+            "re"
+          ]
+        },
+        {
+          "source": "sys",
+          "specifiers": [
+            "sys"
+          ]
+        },
+        {
+          "source": "time",
+          "specifiers": [
+            "time"
+          ]
+        },
+        {
+          "source": "urllib.error",
+          "specifiers": [
+            "urllib.error"
+          ]
+        },
+        {
+          "source": "urllib.parse",
+          "specifiers": [
+            "urllib.parse"
+          ]
+        },
+        {
+          "source": "urllib.request",
+          "specifiers": [
+            "urllib.request"
+          ]
+        }
+      ],
+      "exports": [
+        "log",
+        "fetch",
+        "txt",
+        "energy_names",
+        "list_sets",
+        "set_card_ids",
+        "parse_card",
+        "build_cards",
+        "build_rules",
+        "main"
+      ],
+      "totalLines": 412,
+      "hasStructuralAnalysis": true
+    },
+    "deploy/agents/poster_render.py": {
+      "filePath": "deploy/agents/poster_render.py",
+      "contentHash": "0bf153c5ef6ca29011fcba9604157cada48978c68f132b69479f6102688a5a08",
+      "functions": [
+        {
+          "name": "load_env_file",
+          "params": [],
+          "exported": true,
+          "lineCount": 17
+        },
+        {
+          "name": "sb",
+          "params": [
+            "method",
+            "path",
+            "body",
+            "raw",
+            "ctype",
+            "base"
+          ],
+          "exported": true,
+          "lineCount": 20
+        },
+        {
+          "name": "data_uri",
+          "params": [
+            "raw",
+            "mime"
+          ],
+          "returnType": "str",
+          "exported": true,
+          "lineCount": 2
+        },
+        {
+          "name": "fetch_image",
+          "params": [
+            "url"
+          ],
+          "exported": true,
+          "lineCount": 16
+        },
+        {
+          "name": "clean",
+          "params": [
+            "s"
+          ],
+          "exported": true,
+          "lineCount": 2
+        },
+        {
+          "name": "esc",
+          "params": [
+            "s"
+          ],
+          "exported": true,
+          "lineCount": 2
+        },
+        {
+          "name": "split_caption",
+          "params": [
+            "caption"
+          ],
+          "exported": true,
+          "lineCount": 26
+        },
+        {
+          "name": "head_size",
+          "params": [
+            "text"
+          ],
+          "exported": true,
+          "lineCount": 10
+        },
+        {
+          "name": "keep_words_whole",
+          "params": [
+            "html"
+          ],
+          "exported": true,
+          "lineCount": 10
+        },
+        {
+          "name": "highlight",
+          "params": [
+            "text"
+          ],
+          "exported": true,
+          "lineCount": 6
+        },
+        {
+          "name": "resolve_bg",
+          "params": [
+            "content"
+          ],
+          "exported": true,
+          "lineCount": 41
+        },
+        {
+          "name": "load_concept",
+          "params": [
+            "key",
+            "avoid"
+          ],
+          "exported": true,
+          "lineCount": 44
+        },
+        {
+          "name": "build_html",
+          "params": [
+            "content",
+            "sku_img",
+            "bg_img",
+            "branches",
+            "concept_key",
+            "concept_css"
+          ],
+          "exported": true,
+          "lineCount": 103
+        },
+        {
+          "name": "render",
+          "params": [
+            "html",
+            "out_path"
+          ],
+          "exported": true,
+          "lineCount": 9
+        },
+        {
+          "name": "main",
+          "params": [],
+          "exported": true,
+          "lineCount": 87
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "argparse",
+          "specifiers": [
+            "argparse"
+          ]
+        },
+        {
+          "source": "base64",
+          "specifiers": [
+            "base64"
+          ]
+        },
+        {
+          "source": "json",
+          "specifiers": [
+            "json"
+          ]
+        },
+        {
+          "source": "os",
+          "specifiers": [
+            "os"
+          ]
+        },
+        {
+          "source": "pathlib",
+          "specifiers": [
+            "pathlib"
+          ]
+        },
+        {
+          "source": "random",
+          "specifiers": [
+            "random"
+          ]
+        },
+        {
+          "source": "re",
+          "specifiers": [
+            "re"
+          ]
+        },
+        {
+          "source": "sys",
+          "specifiers": [
+            "sys"
+          ]
+        },
+        {
+          "source": "urllib.parse",
+          "specifiers": [
+            "urllib.parse"
+          ]
+        },
+        {
+          "source": "urllib.request",
+          "specifiers": [
+            "urllib.request"
+          ]
+        },
+        {
+          "source": "_console",
+          "specifiers": [
+            "_console"
+          ]
+        }
+      ],
+      "exports": [
+        "load_env_file",
+        "sb",
+        "data_uri",
+        "fetch_image",
+        "clean",
+        "esc",
+        "split_caption",
+        "head_size",
+        "keep_words_whole",
+        "highlight",
+        "resolve_bg",
+        "load_concept",
+        "build_html",
+        "render",
+        "main"
+      ],
+      "totalLines": 525,
       "hasStructuralAnalysis": true
     },
     "deploy/agents/pull_model.py": {
@@ -2836,6 +4449,86 @@
       "totalLines": 442,
       "hasStructuralAnalysis": true
     },
+    "deploy/agents/report_swaps.py": {
+      "filePath": "deploy/agents/report_swaps.py",
+      "contentHash": "99bf14dba28317953484943a31bf6ebc48e8805a101442d9bde0b1b1e9d7c654",
+      "functions": [
+        {
+          "name": "sb_get",
+          "params": [
+            "path"
+          ],
+          "exported": true,
+          "lineCount": 14
+        },
+        {
+          "name": "th_date",
+          "params": [
+            "ts"
+          ],
+          "exported": true,
+          "lineCount": 3
+        },
+        {
+          "name": "main",
+          "params": [],
+          "exported": true,
+          "lineCount": 124
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "os",
+          "specifiers": [
+            "os"
+          ]
+        },
+        {
+          "source": "sys",
+          "specifiers": [
+            "sys"
+          ]
+        },
+        {
+          "source": "json",
+          "specifiers": [
+            "json"
+          ]
+        },
+        {
+          "source": "argparse",
+          "specifiers": [
+            "argparse"
+          ]
+        },
+        {
+          "source": "collections",
+          "specifiers": [
+            "collections"
+          ]
+        },
+        {
+          "source": "datetime",
+          "specifiers": [
+            "datetime"
+          ]
+        },
+        {
+          "source": "urllib.request",
+          "specifiers": [
+            "urllib.request"
+          ]
+        }
+      ],
+      "exports": [
+        "sb_get",
+        "th_date",
+        "main"
+      ],
+      "totalLines": 181,
+      "hasStructuralAnalysis": true
+    },
     "deploy/agents/requirements.txt": {
       "filePath": "deploy/agents/requirements.txt",
       "contentHash": "7e66b700ebb6422a6a431172f1eb1c464cb88d894ad80f458c1820082ba110e3",
@@ -2959,6 +4652,266 @@
       "totalLines": 24,
       "hasStructuralAnalysis": false
     },
+    "deploy/agents/scene_batch.py": {
+      "filePath": "deploy/agents/scene_batch.py",
+      "contentHash": "4d1ce914fc3f585e7c7501989dbb65da84cf7a3409ca5862d8ce4573b4c501ab",
+      "functions": [
+        {
+          "name": "sb_request",
+          "params": [
+            "method",
+            "path",
+            "data",
+            "ctype",
+            "base"
+          ],
+          "exported": true,
+          "lineCount": 11
+        },
+        {
+          "name": "env_supabase",
+          "params": [],
+          "exported": true,
+          "lineCount": 7
+        },
+        {
+          "name": "do_batch",
+          "params": [
+            "n",
+            "size"
+          ],
+          "exported": true,
+          "lineCount": 25
+        },
+        {
+          "name": "do_upload",
+          "params": [
+            "names"
+          ],
+          "exported": true,
+          "lineCount": 15
+        },
+        {
+          "name": "do_list",
+          "params": [],
+          "exported": true,
+          "lineCount": 11
+        },
+        {
+          "name": "main",
+          "params": [],
+          "exported": true,
+          "lineCount": 14
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "argparse",
+          "specifiers": [
+            "argparse"
+          ]
+        },
+        {
+          "source": "json",
+          "specifiers": [
+            "json"
+          ]
+        },
+        {
+          "source": "os",
+          "specifiers": [
+            "os"
+          ]
+        },
+        {
+          "source": "pathlib",
+          "specifiers": [
+            "pathlib"
+          ]
+        },
+        {
+          "source": "sys",
+          "specifiers": [
+            "sys"
+          ]
+        },
+        {
+          "source": "urllib.request",
+          "specifiers": [
+            "urllib.request"
+          ]
+        },
+        {
+          "source": "local_image",
+          "specifiers": [
+            "SCENES",
+            "generate",
+            "load_env"
+          ]
+        },
+        {
+          "source": "_console",
+          "specifiers": [
+            "_console"
+          ]
+        }
+      ],
+      "exports": [
+        "sb_request",
+        "env_supabase",
+        "do_batch",
+        "do_upload",
+        "do_list",
+        "main"
+      ],
+      "totalLines": 135,
+      "hasStructuralAnalysis": true
+    },
+    "deploy/agents/scene_for_content.py": {
+      "filePath": "deploy/agents/scene_for_content.py",
+      "contentHash": "1d75ee2196c7466034be97d7990d2bd1f920ae74cd12ae806e1b993b5ccc46b8",
+      "functions": [
+        {
+          "name": "sb",
+          "params": [
+            "method",
+            "path",
+            "body",
+            "raw",
+            "ctype",
+            "base"
+          ],
+          "exported": true,
+          "lineCount": 16
+        },
+        {
+          "name": "env_supabase",
+          "params": [],
+          "exported": true,
+          "lineCount": 6
+        },
+        {
+          "name": "ask_gemini",
+          "params": [
+            "prompt"
+          ],
+          "exported": true,
+          "lineCount": 25
+        },
+        {
+          "name": "ask_ollama",
+          "params": [
+            "prompt"
+          ],
+          "exported": true,
+          "lineCount": 13
+        },
+        {
+          "name": "clean_prompt",
+          "params": [
+            "txt"
+          ],
+          "exported": true,
+          "lineCount": 10
+        },
+        {
+          "name": "scene_prompt",
+          "params": [
+            "content"
+          ],
+          "exported": true,
+          "lineCount": 20
+        },
+        {
+          "name": "main",
+          "params": [],
+          "exported": true,
+          "lineCount": 38
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "argparse",
+          "specifiers": [
+            "argparse"
+          ]
+        },
+        {
+          "source": "json",
+          "specifiers": [
+            "json"
+          ]
+        },
+        {
+          "source": "os",
+          "specifiers": [
+            "os"
+          ]
+        },
+        {
+          "source": "pathlib",
+          "specifiers": [
+            "pathlib"
+          ]
+        },
+        {
+          "source": "re",
+          "specifiers": [
+            "re"
+          ]
+        },
+        {
+          "source": "sys",
+          "specifiers": [
+            "sys"
+          ]
+        },
+        {
+          "source": "time",
+          "specifiers": [
+            "time"
+          ]
+        },
+        {
+          "source": "urllib.error",
+          "specifiers": [
+            "urllib.error"
+          ]
+        },
+        {
+          "source": "urllib.request",
+          "specifiers": [
+            "urllib.request"
+          ]
+        },
+        {
+          "source": "local_image",
+          "specifiers": [
+            "generate",
+            "load_env"
+          ]
+        },
+        {
+          "source": "_console",
+          "specifiers": [
+            "_console"
+          ]
+        }
+      ],
+      "exports": [
+        "sb",
+        "env_supabase",
+        "ask_gemini",
+        "ask_ollama",
+        "clean_prompt",
+        "scene_prompt",
+        "main"
+      ],
+      "totalLines": 220,
+      "hasStructuralAnalysis": true
+    },
     "deploy/agents/seed_marketing_content.py": {
       "filePath": "deploy/agents/seed_marketing_content.py",
       "contentHash": "16190bd14cdeafc14cda04f2358f88761159eb2c1729a41ff2401ef0bc5a8737",
@@ -3065,7 +5018,7 @@
     },
     "deploy/agents/shared.py": {
       "filePath": "deploy/agents/shared.py",
-      "contentHash": "5ea67dcd5dc0d7fabaede70112615eacc617e1b8930deed5a5cd48de00cb5aa0",
+      "contentHash": "5d99aacaddcedca9c8ad79420550fb13f62799cba26edc3a0e2cae2ff17cbb29",
       "functions": [
         {
           "name": "map_product_to_sku",
@@ -3074,7 +5027,7 @@
           ],
           "returnType": "str | None",
           "exported": true,
-          "lineCount": 53
+          "lineCount": 69
         },
         {
           "name": "is_box_slot",
@@ -3146,12 +5099,12 @@
         "ksher_fee_pct",
         "calc_ksher_fee"
       ],
-      "totalLines": 106,
+      "totalLines": 122,
       "hasStructuralAnalysis": true
     },
     "deploy/agents/sku_profile_agent.py": {
       "filePath": "deploy/agents/sku_profile_agent.py",
-      "contentHash": "bcf8ea60110cf61384445e071482bdaa3c4bd649b9d816e1b68a212b55de9d8d",
+      "contentHash": "52ba2984c1a78993f9b9c07d268c9037c675c45a52f7a702311d9be308fb11ef",
       "functions": [
         {
           "name": "normalize_sku_id",
@@ -3224,7 +5177,7 @@
           ],
           "returnType": "str",
           "exported": true,
-          "lineCount": 66
+          "lineCount": 69
         },
         {
           "name": "render_live_profile",
@@ -3270,6 +5223,7 @@
           "name": "SkuProfile",
           "methods": [
             "slug",
+            "has_cost",
             "cogs_30d",
             "gross_profit_30d",
             "gross_margin_pct",
@@ -3297,7 +5251,7 @@
             "linked_discrepancies"
           ],
           "exported": true,
-          "lineCount": 71
+          "lineCount": 81
         }
       ],
       "imports": [
@@ -3398,7 +5352,7 @@
         "parse_args",
         "main"
       ],
-      "totalLines": 618,
+      "totalLines": 635,
       "hasStructuralAnalysis": true
     },
     "deploy/agents/trigger_workflow.py": {
@@ -3514,6 +5468,169 @@
         "main"
       ],
       "totalLines": 178,
+      "hasStructuralAnalysis": true
+    },
+    "deploy/agents/ua_kb.py": {
+      "filePath": "deploy/agents/ua_kb.py",
+      "contentHash": "def8e2e1cfc7bc283597d84d88cf4327390d503e5c79a1c22dbbae5b9d9fdb84",
+      "functions": [
+        {
+          "name": "log",
+          "params": [
+            "msg"
+          ],
+          "exported": true,
+          "lineCount": 2
+        },
+        {
+          "name": "txt",
+          "params": [
+            "s"
+          ],
+          "exported": true,
+          "lineCount": 7
+        },
+        {
+          "name": "fetch",
+          "params": [
+            "path",
+            "tries"
+          ],
+          "exported": true,
+          "lineCount": 12
+        },
+        {
+          "name": "find_series",
+          "params": [
+            "code"
+          ],
+          "exported": true,
+          "lineCount": 10
+        },
+        {
+          "name": "card_numbers",
+          "params": [
+            "series_id"
+          ],
+          "exported": true,
+          "lineCount": 13
+        },
+        {
+          "name": "parse_detail",
+          "params": [
+            "html",
+            "card_no"
+          ],
+          "exported": true,
+          "lineCount": 33
+        },
+        {
+          "name": "card_detail",
+          "params": [
+            "card_no"
+          ],
+          "exported": true,
+          "lineCount": 9
+        },
+        {
+          "name": "parse_faq",
+          "params": [
+            "html"
+          ],
+          "exported": true,
+          "lineCount": 26
+        },
+        {
+          "name": "build",
+          "params": [
+            "only"
+          ],
+          "exported": true,
+          "lineCount": 90
+        },
+        {
+          "name": "main",
+          "params": [],
+          "exported": true,
+          "lineCount": 7
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "argparse",
+          "specifiers": [
+            "argparse"
+          ]
+        },
+        {
+          "source": "datetime",
+          "specifiers": [
+            "dt"
+          ]
+        },
+        {
+          "source": "html",
+          "specifiers": [
+            "H"
+          ]
+        },
+        {
+          "source": "json",
+          "specifiers": [
+            "json"
+          ]
+        },
+        {
+          "source": "pathlib",
+          "specifiers": [
+            "pathlib"
+          ]
+        },
+        {
+          "source": "re",
+          "specifiers": [
+            "re"
+          ]
+        },
+        {
+          "source": "time",
+          "specifiers": [
+            "time"
+          ]
+        },
+        {
+          "source": "urllib.error",
+          "specifiers": [
+            "urllib.error"
+          ]
+        },
+        {
+          "source": "urllib.parse",
+          "specifiers": [
+            "urllib.parse"
+          ]
+        },
+        {
+          "source": "urllib.request",
+          "specifiers": [
+            "urllib.request"
+          ]
+        }
+      ],
+      "exports": [
+        "log",
+        "txt",
+        "fetch",
+        "find_series",
+        "card_numbers",
+        "parse_detail",
+        "card_detail",
+        "parse_faq",
+        "build",
+        "main"
+      ],
+      "totalLines": 278,
       "hasStructuralAnalysis": true
     },
     "deploy/agents/weekly_marketing_brief.py": {
@@ -3662,7 +5779,7 @@
     },
     "deploy/agents/weekly_sales_digest.py": {
       "filePath": "deploy/agents/weekly_sales_digest.py",
-      "contentHash": "4f8e48ddaf1664ea9632d71a4c274693f264440503325d16b05639d0ddf397ca",
+      "contentHash": "189f1eb519dc13d4a030aa70e5223779450c955d8d50cf55ec410955b841e797",
       "functions": [
         {
           "name": "thai_date",
@@ -3758,6 +5875,12 @@
             "datetime",
             "timedelta"
           ]
+        },
+        {
+          "source": "_console",
+          "specifiers": [
+            "_console"
+          ]
         }
       ],
       "exports": [
@@ -3769,7 +5892,136 @@
         "ai_insight",
         "main"
       ],
-      "totalLines": 200,
+      "totalLines": 201,
+      "hasStructuralAnalysis": true
+    },
+    "deploy/agents/ygo_kb.py": {
+      "filePath": "deploy/agents/ygo_kb.py",
+      "contentHash": "e21f10beef00e63645257d9266f4a75f20cef5ee67a906ad3b4d120f993651f4",
+      "functions": [
+        {
+          "name": "log",
+          "params": [
+            "msg"
+          ],
+          "exported": true,
+          "lineCount": 2
+        },
+        {
+          "name": "txt",
+          "params": [
+            "s"
+          ],
+          "exported": true,
+          "lineCount": 3
+        },
+        {
+          "name": "fetch",
+          "params": [
+            "url",
+            "tries"
+          ],
+          "exported": true,
+          "lineCount": 12
+        },
+        {
+          "name": "parse_row",
+          "params": [
+            "block"
+          ],
+          "exported": true,
+          "lineCount": 24
+        },
+        {
+          "name": "fetch_set",
+          "params": [
+            "pid"
+          ],
+          "exported": true,
+          "lineCount": 6
+        },
+        {
+          "name": "build",
+          "params": [
+            "only"
+          ],
+          "exported": true,
+          "lineCount": 72
+        },
+        {
+          "name": "main",
+          "params": [],
+          "exported": true,
+          "lineCount": 7
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "argparse",
+          "specifiers": [
+            "argparse"
+          ]
+        },
+        {
+          "source": "datetime",
+          "specifiers": [
+            "dt"
+          ]
+        },
+        {
+          "source": "html",
+          "specifiers": [
+            "H"
+          ]
+        },
+        {
+          "source": "json",
+          "specifiers": [
+            "json"
+          ]
+        },
+        {
+          "source": "pathlib",
+          "specifiers": [
+            "pathlib"
+          ]
+        },
+        {
+          "source": "re",
+          "specifiers": [
+            "re"
+          ]
+        },
+        {
+          "source": "time",
+          "specifiers": [
+            "time"
+          ]
+        },
+        {
+          "source": "urllib.error",
+          "specifiers": [
+            "urllib.error"
+          ]
+        },
+        {
+          "source": "urllib.request",
+          "specifiers": [
+            "urllib.request"
+          ]
+        }
+      ],
+      "exports": [
+        "log",
+        "txt",
+        "fetch",
+        "parse_row",
+        "fetch_set",
+        "build",
+        "main"
+      ],
+      "totalLines": 198,
       "hasStructuralAnalysis": true
     },
     "deploy/app/api/admin/users/route.js": {
@@ -3909,15 +6161,216 @@
       "totalLines": 50,
       "hasStructuralAnalysis": true
     },
+    "deploy/app/api/marketing/calendar/route.js": {
+      "filePath": "deploy/app/api/marketing/calendar/route.js",
+      "contentHash": "d805fd4d971dfc37181dffd07d74fe43187f1af180babdcc673fa31c266d77f7",
+      "functions": [
+        {
+          "name": "autoPostState",
+          "params": [
+            "r"
+          ],
+          "exported": false,
+          "lineCount": 13
+        },
+        {
+          "name": "GET",
+          "params": [
+            "req"
+          ],
+          "exported": true,
+          "lineCount": 59
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "@supabase/supabase-js",
+          "specifiers": [
+            "createClient"
+          ]
+        },
+        {
+          "source": "next/server",
+          "specifiers": [
+            "NextResponse"
+          ]
+        },
+        {
+          "source": "../../../../lib/apiAuth",
+          "specifiers": [
+            "requireAdmin"
+          ]
+        },
+        {
+          "source": "../../../../lib/thaiDate",
+          "specifiers": [
+            "thaiDay",
+            "thaiMonthNow",
+            "monthRange"
+          ]
+        }
+      ],
+      "exports": [
+        "GET"
+      ],
+      "totalLines": 99,
+      "hasStructuralAnalysis": true
+    },
+    "deploy/app/api/marketing/content/brief/route.js": {
+      "filePath": "deploy/app/api/marketing/content/brief/route.js",
+      "contentHash": "79f3600054ac5c8e9e30a6c67fd0c8791ab21ec238a37d638d484af2d19a069c",
+      "functions": [
+        {
+          "name": "loadJson",
+          "params": [
+            "name"
+          ],
+          "exported": false,
+          "lineCount": 4
+        },
+        {
+          "name": "gatherFacts",
+          "params": [],
+          "exported": false,
+          "lineCount": 31
+        },
+        {
+          "name": "askGemini",
+          "params": [
+            "prompt"
+          ],
+          "exported": false,
+          "lineCount": 8
+        },
+        {
+          "name": "POST",
+          "params": [
+            "req"
+          ],
+          "exported": true,
+          "lineCount": 108
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "@supabase/supabase-js",
+          "specifiers": [
+            "createClient"
+          ]
+        },
+        {
+          "source": "next/server",
+          "specifiers": [
+            "NextResponse"
+          ]
+        },
+        {
+          "source": "../../../../../lib/apiAuth",
+          "specifiers": [
+            "requireAdmin"
+          ]
+        },
+        {
+          "source": "../../../../../lib/geminiText",
+          "specifiers": [
+            "askGeminiText"
+          ]
+        },
+        {
+          "source": "../../../../../lib/fetchAll",
+          "specifiers": [
+            "fetchAll"
+          ]
+        },
+        {
+          "source": "fs/promises",
+          "specifiers": [
+            "readFile"
+          ]
+        },
+        {
+          "source": "path",
+          "specifiers": [
+            "path"
+          ]
+        }
+      ],
+      "exports": [
+        "POST"
+      ],
+      "totalLines": 185,
+      "hasStructuralAnalysis": true
+    },
     "deploy/app/api/marketing/content/generate/route.js": {
       "filePath": "deploy/app/api/marketing/content/generate/route.js",
-      "contentHash": "085c80851c85c43b45933bd2ca8a50108d8fc4be33cd47656067642253a7b6b8",
+      "contentHash": "f9aaa36bd09b7f560c9cbd457e3e7b5ae9c10680ba45863c12c80df7313d3bfc",
       "functions": [
         {
           "name": "loadVoice",
           "params": [],
           "exported": false,
           "lineCount": 4
+        },
+        {
+          "name": "loadCraft",
+          "params": [],
+          "exported": false,
+          "lineCount": 6
+        },
+        {
+          "name": "craftBlock",
+          "params": [
+            "craft",
+            "format",
+            "platform"
+          ],
+          "exported": false,
+          "lineCount": 35
+        },
+        {
+          "name": "cleanSummary",
+          "params": [
+            "s"
+          ],
+          "exported": false,
+          "lineCount": 10
+        },
+        {
+          "name": "normalize",
+          "params": [
+            "s"
+          ],
+          "exported": false,
+          "lineCount": 6
+        },
+        {
+          "name": "similarity",
+          "params": [
+            "a",
+            "b"
+          ],
+          "exported": false,
+          "lineCount": 12
+        },
+        {
+          "name": "closestRecent",
+          "params": [
+            "caption",
+            "recent"
+          ],
+          "exported": false,
+          "lineCount": 8
+        },
+        {
+          "name": "pickFormat",
+          "params": [
+            "voice",
+            "recent"
+          ],
+          "exported": false,
+          "lineCount": 13
         },
         {
           "name": "buildPrompt",
@@ -3928,7 +6381,7 @@
             "sku"
           ],
           "exported": false,
-          "lineCount": 44
+          "lineCount": 88
         },
         {
           "name": "ollamaHost",
@@ -3947,13 +6400,44 @@
           "lineCount": 20
         },
         {
+          "name": "sleep",
+          "params": [],
+          "exported": false,
+          "lineCount": 1
+        },
+        {
+          "name": "isTransient",
+          "params": [
+            "status",
+            "msg"
+          ],
+          "exported": false,
+          "lineCount": 3
+        },
+        {
+          "name": "isDailyQuota",
+          "params": [],
+          "exported": false,
+          "lineCount": 1
+        },
+        {
           "name": "askGemini",
           "params": [
             "voice",
             "prompt"
           ],
           "exported": false,
-          "lineCount": 50
+          "lineCount": 18
+        },
+        {
+          "name": "askGeminiOnce",
+          "params": [
+            "voice",
+            "prompt",
+            "model"
+          ],
+          "exported": false,
+          "lineCount": 65
         },
         {
           "name": "probeGemini",
@@ -3997,12 +6481,20 @@
           "lineCount": 5
         },
         {
+          "name": "fetchRecent",
+          "params": [
+            "limit"
+          ],
+          "exported": false,
+          "lineCount": 11
+        },
+        {
           "name": "POST",
           "params": [
             "req"
           ],
           "exported": true,
-          "lineCount": 120
+          "lineCount": 195
         }
       ],
       "classes": [],
@@ -4042,12 +6534,269 @@
           "specifiers": [
             "requireAdmin"
           ]
+        },
+        {
+          "source": "../../../../../lib/opcgKnowledge",
+          "specifiers": [
+            "knowledgeBlock"
+          ]
+        },
+        {
+          "source": "../../../../../lib/pkmKnowledge",
+          "specifiers": [
+            "pkmKnowledgeBlock"
+          ]
+        },
+        {
+          "source": "../../../../../lib/tcgKnowledge",
+          "specifiers": [
+            "tcgKnowledgeBlock"
+          ]
+        },
+        {
+          "source": "../../../../../lib/productCatalogue",
+          "specifiers": [
+            "catalogueBlock"
+          ]
+        },
+        {
+          "source": "../../../../../lib/franchiseDetect",
+          "specifiers": [
+            "detectFranchise"
+          ]
         }
       ],
       "exports": [
         "POST"
       ],
-      "totalLines": 364,
+      "totalLines": 683,
+      "hasStructuralAnalysis": true
+    },
+    "deploy/app/api/marketing/content/poster/route.js": {
+      "filePath": "deploy/app/api/marketing/content/poster/route.js",
+      "contentHash": "cae8ef0a5bebd649e2f81910b94ffde531dd0f25e7abc11476064a4aebc0f8e8",
+      "functions": [
+        {
+          "name": "POST",
+          "params": [
+            "req"
+          ],
+          "exported": true,
+          "lineCount": 89
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "next/server",
+          "specifiers": [
+            "NextResponse"
+          ]
+        },
+        {
+          "source": "@supabase/supabase-js",
+          "specifiers": [
+            "createClient"
+          ]
+        },
+        {
+          "source": "../../../../../lib/apiAuth",
+          "specifiers": [
+            "requireAdmin"
+          ]
+        },
+        {
+          "source": "../../../../../lib/franchiseDetect",
+          "specifiers": [
+            "detectFranchise"
+          ]
+        },
+        {
+          "source": "../../../../../lib/skuPicker",
+          "specifiers": [
+            "topSkusByFranchise"
+          ]
+        }
+      ],
+      "exports": [
+        "POST"
+      ],
+      "totalLines": 115,
+      "hasStructuralAnalysis": true
+    },
+    "deploy/app/api/marketing/content/proof/route.js": {
+      "filePath": "deploy/app/api/marketing/content/proof/route.js",
+      "contentHash": "e09e987394394de2d60a8988947067903d9de0220f3f3f89e17f451b05f8ec26",
+      "functions": [
+        {
+          "name": "loadVoice",
+          "params": [],
+          "exported": false,
+          "lineCount": 8
+        },
+        {
+          "name": "buildInstruction",
+          "params": [
+            "caption",
+            "phrases"
+          ],
+          "exported": false,
+          "lineCount": 28
+        },
+        {
+          "name": "POST",
+          "params": [
+            "req"
+          ],
+          "exported": true,
+          "lineCount": 86
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "next/server",
+          "specifiers": [
+            "NextResponse"
+          ]
+        },
+        {
+          "source": "../../../../../lib/apiAuth",
+          "specifiers": [
+            "requireAdmin"
+          ]
+        },
+        {
+          "source": "fs/promises",
+          "specifiers": [
+            "readFile"
+          ]
+        },
+        {
+          "source": "path",
+          "specifiers": [
+            "path"
+          ]
+        }
+      ],
+      "exports": [
+        "POST"
+      ],
+      "totalLines": 146,
+      "hasStructuralAnalysis": true
+    },
+    "deploy/app/api/marketing/content/publish-due/route.js": {
+      "filePath": "deploy/app/api/marketing/content/publish-due/route.js",
+      "contentHash": "7d6227482c59a829ea360a5397a6976a2414ae448fb4d34de5f285c0282fc8c1",
+      "functions": [
+        {
+          "name": "unauthorized",
+          "params": [],
+          "exported": false,
+          "lineCount": 3
+        },
+        {
+          "name": "POST",
+          "params": [
+            "req"
+          ],
+          "exported": true,
+          "lineCount": 69
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "@supabase/supabase-js",
+          "specifiers": [
+            "createClient"
+          ]
+        },
+        {
+          "source": "next/server",
+          "specifiers": [
+            "NextResponse"
+          ]
+        },
+        {
+          "source": "../../../../../lib/facebook",
+          "specifiers": [
+            "fbConfig"
+          ]
+        },
+        {
+          "source": "../../../../../lib/publishContent",
+          "specifiers": [
+            "publishOne"
+          ]
+        }
+      ],
+      "exports": [
+        "POST"
+      ],
+      "totalLines": 101,
+      "hasStructuralAnalysis": true
+    },
+    "deploy/app/api/marketing/content/publish/route.js": {
+      "filePath": "deploy/app/api/marketing/content/publish/route.js",
+      "contentHash": "9bd182217ae73f278b770a7c1aaae55ad908b6d5e963bfc046cbf709369c2cac",
+      "functions": [
+        {
+          "name": "GET",
+          "params": [
+            "req"
+          ],
+          "exported": true,
+          "lineCount": 18
+        },
+        {
+          "name": "POST",
+          "params": [
+            "req"
+          ],
+          "exported": true,
+          "lineCount": 26
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "@supabase/supabase-js",
+          "specifiers": [
+            "createClient"
+          ]
+        },
+        {
+          "source": "next/server",
+          "specifiers": [
+            "NextResponse"
+          ]
+        },
+        {
+          "source": "../../../../../lib/apiAuth",
+          "specifiers": [
+            "requireAdmin"
+          ]
+        },
+        {
+          "source": "../../../../../lib/facebook",
+          "specifiers": [
+            "checkPage",
+            "fbConfig"
+          ]
+        },
+        {
+          "source": "../../../../../lib/publishContent",
+          "specifiers": [
+            "publishOne"
+          ]
+        }
+      ],
+      "exports": [
+        "GET",
+        "POST"
+      ],
+      "totalLines": 68,
       "hasStructuralAnalysis": true
     },
     "deploy/app/api/marketing/content/route.js": {
@@ -4108,9 +6857,168 @@
       "totalLines": 158,
       "hasStructuralAnalysis": true
     },
+    "deploy/app/api/marketing/content/upload/route.js": {
+      "filePath": "deploy/app/api/marketing/content/upload/route.js",
+      "contentHash": "1bab0711f318b5d8044cc586fcb5a5b34754723255e6d1a69b52799f687f83b9",
+      "functions": [
+        {
+          "name": "POST",
+          "params": [
+            "req"
+          ],
+          "exported": true,
+          "lineCount": 70
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "@supabase/supabase-js",
+          "specifiers": [
+            "createClient"
+          ]
+        },
+        {
+          "source": "next/server",
+          "specifiers": [
+            "NextResponse"
+          ]
+        },
+        {
+          "source": "../../../../../lib/apiAuth",
+          "specifiers": [
+            "requireAdmin"
+          ]
+        }
+      ],
+      "exports": [
+        "POST"
+      ],
+      "totalLines": 93,
+      "hasStructuralAnalysis": true
+    },
+    "deploy/app/api/marketing/content/variants/route.js": {
+      "filePath": "deploy/app/api/marketing/content/variants/route.js",
+      "contentHash": "44135cc1c2f92c2cfc07552eecc056f7b6248bc9f1f9cfa14d1c132256a264b9",
+      "functions": [
+        {
+          "name": "loadJson",
+          "params": [
+            "name"
+          ],
+          "exported": false,
+          "lineCount": 5
+        },
+        {
+          "name": "buildPrompt",
+          "params": [
+            "voice",
+            "craft",
+            "content"
+          ],
+          "exported": false,
+          "lineCount": 34
+        },
+        {
+          "name": "parseVariants",
+          "params": [
+            "text"
+          ],
+          "exported": false,
+          "lineCount": 13
+        },
+        {
+          "name": "looksThai",
+          "params": [
+            "text"
+          ],
+          "exported": false,
+          "lineCount": 5
+        },
+        {
+          "name": "askClaude",
+          "params": [
+            "voice",
+            "prompt"
+          ],
+          "exported": false,
+          "lineCount": 10
+        },
+        {
+          "name": "askGemini",
+          "params": [
+            "voice",
+            "prompt"
+          ],
+          "exported": false,
+          "lineCount": 26
+        },
+        {
+          "name": "askOllama",
+          "params": [
+            "voice",
+            "prompt"
+          ],
+          "exported": false,
+          "lineCount": 20
+        },
+        {
+          "name": "POST",
+          "params": [
+            "req"
+          ],
+          "exported": true,
+          "lineCount": 96
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "@supabase/supabase-js",
+          "specifiers": [
+            "createClient"
+          ]
+        },
+        {
+          "source": "next/server",
+          "specifiers": [
+            "NextResponse"
+          ]
+        },
+        {
+          "source": "fs/promises",
+          "specifiers": [
+            "readFile"
+          ]
+        },
+        {
+          "source": "path",
+          "specifiers": [
+            "path"
+          ]
+        },
+        {
+          "source": "@anthropic-ai/sdk",
+          "specifiers": [
+            "Anthropic"
+          ]
+        },
+        {
+          "source": "../../../../../lib/apiAuth",
+          "specifiers": [
+            "requireAdmin"
+          ]
+        }
+      ],
+      "exports": [
+        "POST"
+      ],
+      "totalLines": 253,
+      "hasStructuralAnalysis": true
+    },
     "deploy/app/api/marketing/ideas/route.js": {
       "filePath": "deploy/app/api/marketing/ideas/route.js",
-      "contentHash": "1bc113b5da9e705482a79eb88ca9dec0beaceecfcaa56c77576f64d8aeb0f9f7",
+      "contentHash": "7420db3d424ced955d2f91d6bdde1966ffbcdfa8a5d062bb6f843e0091ac20ab",
       "functions": [
         {
           "name": "GET",
@@ -4134,7 +7042,7 @@
             "req"
           ],
           "exported": true,
-          "lineCount": 75
+          "lineCount": 90
         }
       ],
       "classes": [],
@@ -4163,7 +7071,64 @@
         "POST",
         "PATCH"
       ],
-      "totalLines": 256,
+      "totalLines": 271,
+      "hasStructuralAnalysis": true
+    },
+    "deploy/app/api/marketing/metrics-collect/route.js": {
+      "filePath": "deploy/app/api/marketing/metrics-collect/route.js",
+      "contentHash": "eafdcd1b242362474040bcabbe17b056c414865bd81f6c27f6d051475c135fd4",
+      "functions": [
+        {
+          "name": "graph",
+          "params": [
+            "path",
+            "params"
+          ],
+          "exported": false,
+          "lineCount": 11
+        },
+        {
+          "name": "insightsOf",
+          "params": [
+            "postId"
+          ],
+          "exported": false,
+          "lineCount": 10
+        },
+        {
+          "name": "POST",
+          "params": [
+            "req"
+          ],
+          "exported": true,
+          "lineCount": 97
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "@supabase/supabase-js",
+          "specifiers": [
+            "createClient"
+          ]
+        },
+        {
+          "source": "next/server",
+          "specifiers": [
+            "NextResponse"
+          ]
+        },
+        {
+          "source": "../../../../lib/facebook",
+          "specifiers": [
+            "fbConfig"
+          ]
+        }
+      ],
+      "exports": [
+        "POST"
+      ],
+      "totalLines": 162,
       "hasStructuralAnalysis": true
     },
     "deploy/app/api/marketing/metrics/route.js": {
@@ -4645,7 +7610,7 @@
     },
     "deploy/app/branches/page.jsx": {
       "filePath": "deploy/app/branches/page.jsx",
-      "contentHash": "e202635afee82b8fd0e3124f25ad6f99079914cf7bc6f6781b8955f065aed68f",
+      "contentHash": "8fcabec6b3b14afb647c59b80951191c4a114ab7811753a3ba708e5731d6bf10",
       "functions": [
         {
           "name": "getBranches",
@@ -4665,7 +7630,7 @@
           "name": "BranchesPage",
           "params": [],
           "exported": true,
-          "lineCount": 83
+          "lineCount": 142
         }
       ],
       "classes": [],
@@ -4680,7 +7645,7 @@
         "revalidate",
         "BranchesPage"
       ],
-      "totalLines": 116,
+      "totalLines": 175,
       "hasStructuralAnalysis": true
     },
     "deploy/app/design-system/page.jsx": {
@@ -4767,7 +7732,7 @@
     },
     "deploy/app/how-to/page.jsx": {
       "filePath": "deploy/app/how-to/page.jsx",
-      "contentHash": "eb94c36d6fbc5f72cd15ee6d12ce5f2669357fe2d5e4c81ca9a02486afe92e23",
+      "contentHash": "89d9d6b1ef9f6c5fd29ad6c6f026040045e5818c240d190d825a2cd8b6eb621b",
       "functions": [
         {
           "name": "HowToPage",
@@ -4815,6 +7780,32 @@
       "totalLines": 15,
       "hasStructuralAnalysis": true
     },
+    "deploy/app/marketing/layout.jsx": {
+      "filePath": "deploy/app/marketing/layout.jsx",
+      "contentHash": "e4a94cd75a1a8bf95158cd8598b94add666fb472075ff512fa60f5b763643e52",
+      "functions": [
+        {
+          "name": "MarketingLayout",
+          "params": [],
+          "exported": true,
+          "lineCount": 9
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "./theme",
+          "specifiers": [
+            "MarketingTheme"
+          ]
+        }
+      ],
+      "exports": [
+        "MarketingLayout"
+      ],
+      "totalLines": 20,
+      "hasStructuralAnalysis": true
+    },
     "deploy/app/marketing/page.jsx": {
       "filePath": "deploy/app/marketing/page.jsx",
       "contentHash": "bf094ff9330e04eae5859400b7da0d1663d0864c239cf380b3b89c917c0f0803",
@@ -4839,6 +7830,32 @@
         "MarketingPage"
       ],
       "totalLines": 9,
+      "hasStructuralAnalysis": true
+    },
+    "deploy/app/marketing/theme.jsx": {
+      "filePath": "deploy/app/marketing/theme.jsx",
+      "contentHash": "11dc4ddb2cb57ca814bc71f832803048daacc6a15e7bf6dd2010420edbb01474",
+      "functions": [
+        {
+          "name": "MarketingTheme",
+          "params": [],
+          "exported": true,
+          "lineCount": 8
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "react",
+          "specifiers": [
+            "useLayoutEffect"
+          ]
+        }
+      ],
+      "exports": [
+        "MarketingTheme"
+      ],
+      "totalLines": 19,
       "hasStructuralAnalysis": true
     },
     "deploy/app/page.jsx": {
@@ -4932,7 +7949,7 @@
     },
     "deploy/app/products/page.jsx": {
       "filePath": "deploy/app/products/page.jsx",
-      "contentHash": "9b9ac5b2f9b2ae6a1633916963fafd75512ef12276cb31c8933625b063287019",
+      "contentHash": "dd6cfce7ba5f5bd648987d0ee1c4b45ca4513782f945c9364c563c96172c9773",
       "functions": [
         {
           "name": "getSkus",
@@ -4964,7 +7981,7 @@
     },
     "deploy/components/DivisionXApp.jsx": {
       "filePath": "deploy/components/DivisionXApp.jsx",
-      "contentHash": "8c74018fe2ccdb4a74d0a6e0fedc80bb405fe4d32a21a6841c4d842717928d8d",
+      "contentHash": "a6e030b80ccd656af5ad5ee486a96da99862b3d917ca7cde55a722dd40c26c15",
       "functions": [
         {
           "name": "RealtimeClock",
@@ -5247,9 +8264,61 @@
       "totalLines": 889,
       "hasStructuralAnalysis": true
     },
+    "deploy/components/marketing/PostCalendar.jsx": {
+      "filePath": "deploy/components/marketing/PostCalendar.jsx",
+      "contentHash": "2ddb6a2d754f5a808b49719d39e46ab459b1048f937fa28adad354084ae804ca",
+      "functions": [
+        {
+          "name": "PostCalendar",
+          "params": [],
+          "exported": true,
+          "lineCount": 252
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "react",
+          "specifiers": [
+            "useState",
+            "useEffect",
+            "useCallback"
+          ]
+        },
+        {
+          "source": "lucide-react",
+          "specifiers": [
+            "CalendarIcon",
+            "ChevronLeft",
+            "ChevronRight",
+            "X",
+            "ExternalLink",
+            "ImageIcon",
+            "Check",
+            "Clock",
+            "Inbox"
+          ]
+        },
+        {
+          "source": "../../lib/thaiDate",
+          "specifiers": [
+            "thaiDay",
+            "thaiMonthNow",
+            "monthCells",
+            "shiftMonth",
+            "scheduleAt"
+          ]
+        }
+      ],
+      "exports": [
+        "PostCalendar"
+      ],
+      "totalLines": 283,
+      "hasStructuralAnalysis": true
+    },
     "deploy/components/MarketingOS.jsx": {
       "filePath": "deploy/components/MarketingOS.jsx",
-      "contentHash": "8b8640b9550995f02fb9eb403fe982673068fdffb709c8da3af37a12121d41f0",
+      "contentHash": "bf376e282cfe88966c7c42b98c0b3d6e80de876902971393f19b5a0054f0385c",
       "functions": [
         {
           "name": "baht",
@@ -5268,16 +8337,28 @@
           "lineCount": 9
         },
         {
+          "name": "ReviewNote",
+          "params": [],
+          "exported": false,
+          "lineCount": 13
+        },
+        {
           "name": "MarketingOS",
           "params": [],
           "exported": true,
-          "lineCount": 658
+          "lineCount": 1570
+        },
+        {
+          "name": "NavRail",
+          "params": [],
+          "exported": true,
+          "lineCount": 50
         },
         {
           "name": "Shell",
           "params": [],
-          "exported": false,
-          "lineCount": 23
+          "exported": true,
+          "lineCount": 29
         }
       ],
       "classes": [],
@@ -5287,7 +8368,8 @@
           "specifiers": [
             "useState",
             "useEffect",
-            "useCallback"
+            "useCallback",
+            "useRef"
           ]
         },
         {
@@ -5315,7 +8397,12 @@
             "Sparkles",
             "Music2",
             "Plus",
-            "ImageIcon"
+            "ImageIcon",
+            "Send",
+            "Copy",
+            "Maximize2",
+            "CalendarIcon",
+            "Download"
           ]
         },
         {
@@ -5343,12 +8430,20 @@
           "specifiers": [
             "KpiCard"
           ]
+        },
+        {
+          "source": "./marketing/PostCalendar",
+          "specifiers": [
+            "PostCalendar"
+          ]
         }
       ],
       "exports": [
-        "MarketingOS"
+        "MarketingOS",
+        "NavRail",
+        "Shell"
       ],
-      "totalLines": 741,
+      "totalLines": 1761,
       "hasStructuralAnalysis": true
     },
     "deploy/components/pages/EditStockInModal.jsx": {
@@ -5801,7 +8896,7 @@
     },
     "deploy/components/pages/PageMachineStockView.jsx": {
       "filePath": "deploy/components/pages/PageMachineStockView.jsx",
-      "contentHash": "0c472f200683f438ce09c6acfaee9894d1308c85fa915097fba66ef9f0054360",
+      "contentHash": "590e707ff78839da1b78280bc11512aca4a1bcd9e1eea43c38910f5a7801d59d",
       "functions": [
         {
           "name": "PageMachineStockView",
@@ -5867,12 +8962,18 @@
           "specifiers": [
             "authFetch"
           ]
+        },
+        {
+          "source": "../../lib/thaiDate",
+          "specifiers": [
+            "thaiDateTime"
+          ]
         }
       ],
       "exports": [
         "PageMachineStockView"
       ],
-      "totalLines": 710,
+      "totalLines": 711,
       "hasStructuralAnalysis": true
     },
     "deploy/components/pages/PageMyStock.jsx": {
@@ -5975,13 +9076,13 @@
     },
     "deploy/components/pages/PageRefillPrep.jsx": {
       "filePath": "deploy/components/pages/PageRefillPrep.jsx",
-      "contentHash": "080c195b6c81e021f200d6574dfe70812667c313184a377c54a73c33204c33ed",
+      "contentHash": "112bfd42c3a23834c6b4ad4677b2dcb28ae8a3183b2ad350c1e68bbe42eacde6",
       "functions": [
         {
           "name": "PageRefillPrep",
           "params": [],
           "exported": true,
-          "lineCount": 743
+          "lineCount": 738
         },
         {
           "name": "Th",
@@ -6041,7 +9142,8 @@
           "source": "../shared/helpers",
           "specifiers": [
             "fmt",
-            "getSkuSeries"
+            "getSkuSeries",
+            "compareSkuForRefillReport"
           ]
         },
         {
@@ -6056,23 +9158,37 @@
             "KpiCard",
             "SectionTitle"
           ]
+        },
+        {
+          "source": "../../lib/thaiDate",
+          "specifiers": [
+            "thaiDateTime"
+          ]
         }
       ],
       "exports": [
         "PageRefillPrep"
       ],
-      "totalLines": 857,
+      "totalLines": 853,
       "hasStructuralAnalysis": true
     },
     "deploy/components/pages/PageSales.jsx": {
       "filePath": "deploy/components/pages/PageSales.jsx",
-      "contentHash": "8fecde27faa6d377197bf3c18e564c2b7dfbfd1f09eded958cbc54628ba440a6",
+      "contentHash": "cacfe81b46bbc93f8afabdfab582457b3ba1ff9f662573e461df79bb4f4c99cf",
       "functions": [
+        {
+          "name": "skuRank",
+          "params": [
+            "id"
+          ],
+          "exported": false,
+          "lineCount": 1
+        },
         {
           "name": "SalesSkuByMachine",
           "params": [],
           "exported": false,
-          "lineCount": 252
+          "lineCount": 268
         },
         {
           "name": "PageSales",
@@ -6160,7 +9276,7 @@
       "exports": [
         "PageSales"
       ],
-      "totalLines": 513,
+      "totalLines": 564,
       "hasStructuralAnalysis": true
     },
     "deploy/components/pages/PageSlots.jsx": {
@@ -6750,7 +9866,7 @@
     },
     "deploy/components/shared/constants.js": {
       "filePath": "deploy/components/shared/constants.js",
-      "contentHash": "524f4d7fdf46b7bf2380f2f3fd041c44ad47cfb293a7b1adb4d6ac96aeb24c93",
+      "contentHash": "0287da2cbc3020b06b56f5bf1666cfb65a39adfc06b38425d8f8094df4b04238",
       "functions": [],
       "classes": [],
       "imports": [],
@@ -6760,9 +9876,10 @@
         "CHART_COLORS",
         "THAI_MONTHS",
         "SKU_SERIES_ORDER",
+        "REFILL_REPORT_SKU_ORDER",
         "UNIT_LABEL"
       ],
-      "totalLines": 40,
+      "totalLines": 79,
       "hasStructuralAnalysis": true
     },
     "deploy/components/shared/design-tokens.js": {
@@ -6836,7 +9953,7 @@
     },
     "deploy/components/shared/helpers.js": {
       "filePath": "deploy/components/shared/helpers.js",
-      "contentHash": "2015e9f4b21434b2340a3f34875fdaf13ab78451f5cef64b5e4a9e742825c6ce",
+      "contentHash": "8c5cdbee1325f9323fe46df42a05c6a9994afd733cc57842c0cddefc1e487912",
       "functions": [
         {
           "name": "fmt",
@@ -6875,6 +9992,15 @@
           ],
           "exported": true,
           "lineCount": 7
+        },
+        {
+          "name": "compareSkuForRefillReport",
+          "params": [
+            "a",
+            "b"
+          ],
+          "exported": true,
+          "lineCount": 5
         },
         {
           "name": "sortSkus",
@@ -6961,7 +10087,8 @@
           "source": "./constants",
           "specifiers": [
             "THAI_MONTHS",
-            "SKU_SERIES_ORDER"
+            "SKU_SERIES_ORDER",
+            "REFILL_REPORT_SKU_ORDER"
           ]
         }
       ],
@@ -6971,6 +10098,7 @@
         "today",
         "toBkkDate",
         "getSkuSeries",
+        "compareSkuForRefillReport",
         "sortSkus",
         "sortByDateThenSku",
         "fmtBoxPack",
@@ -6982,7 +10110,7 @@
         "calcKsherFee",
         "buildBrandMap"
       ],
-      "totalLines": 94,
+      "totalLines": 103,
       "hasStructuralAnalysis": true
     },
     "deploy/components/shared/KpiCard.jsx": {
@@ -7234,6 +10362,34 @@
       "totalLines": 50,
       "hasStructuralAnalysis": true
     },
+    "deploy/lib/artDirector.js": {
+      "filePath": "deploy/lib/artDirector.js",
+      "contentHash": "e1d63685edbf15c495a8b87e074bbb00d9e7bfded9b51c4812e56c4a0eeeb519",
+      "functions": [
+        {
+          "name": "planVisual",
+          "params": [],
+          "exported": true,
+          "lineCount": 57
+        },
+        {
+          "name": "ideaToPrompt",
+          "params": [
+            "idea"
+          ],
+          "exported": true,
+          "lineCount": 11
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [
+        "planVisual",
+        "ideaToPrompt"
+      ],
+      "totalLines": 158,
+      "hasStructuralAnalysis": true
+    },
     "deploy/lib/authFetch.js": {
       "filePath": "deploy/lib/authFetch.js",
       "contentHash": "b2a3e0b86f97acd63ea865feaab53117e9bec296a6e835ad12c92a87513df3e2",
@@ -7262,9 +10418,473 @@
       "totalLines": 14,
       "hasStructuralAnalysis": true
     },
+    "deploy/lib/facebook.js": {
+      "filePath": "deploy/lib/facebook.js",
+      "contentHash": "0841af581531e7e7ad6a9ad3c882629faf3cb91983057d869df513c40eafac90",
+      "functions": [
+        {
+          "name": "fbConfig",
+          "params": [],
+          "exported": true,
+          "lineCount": 6
+        },
+        {
+          "name": "explain",
+          "params": [
+            "err"
+          ],
+          "exported": false,
+          "lineCount": 18
+        },
+        {
+          "name": "graph",
+          "params": [
+            "path"
+          ],
+          "exported": false,
+          "lineCount": 31
+        },
+        {
+          "name": "checkPage",
+          "params": [],
+          "exported": true,
+          "lineCount": 8
+        },
+        {
+          "name": "publishToPage",
+          "params": [],
+          "exported": true,
+          "lineCount": 28
+        },
+        {
+          "name": "photoImage",
+          "params": [
+            "photoId"
+          ],
+          "exported": true,
+          "lineCount": 9
+        },
+        {
+          "name": "permalink",
+          "params": [
+            "postId"
+          ],
+          "exported": true,
+          "lineCount": 10
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [
+        "fbConfig",
+        "checkPage",
+        "publishToPage",
+        "photoImage",
+        "permalink"
+      ],
+      "totalLines": 150,
+      "hasStructuralAnalysis": true
+    },
+    "deploy/lib/fetchAll.js": {
+      "filePath": "deploy/lib/fetchAll.js",
+      "contentHash": "df164fd7aa70f2382adb0428a2d570df8c5a14bbb3a0dac6ca8080992b6be4af",
+      "functions": [
+        {
+          "name": "fetchAll",
+          "params": [
+            "build"
+          ],
+          "exported": true,
+          "lineCount": 10
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [
+        "fetchAll"
+      ],
+      "totalLines": 43,
+      "hasStructuralAnalysis": true
+    },
+    "deploy/lib/franchiseDetect.js": {
+      "filePath": "deploy/lib/franchiseDetect.js",
+      "contentHash": "23a764c959049a218082a90c8c1e0e899183e839d2f16dfc7b1af4a87309d6b7",
+      "functions": [
+        {
+          "name": "detectFranchise",
+          "params": [
+            "...texts"
+          ],
+          "exported": true,
+          "lineCount": 5
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [
+        "detectFranchise",
+        "FRANCHISE_LABEL"
+      ],
+      "totalLines": 51,
+      "hasStructuralAnalysis": true
+    },
+    "deploy/lib/geminiText.js": {
+      "filePath": "deploy/lib/geminiText.js",
+      "contentHash": "aaeae00f6ae7c89e4f8956e0314c1af659fe7e165fa31f72205ba19c99d038f6",
+      "functions": [
+        {
+          "name": "sleep",
+          "params": [],
+          "exported": false,
+          "lineCount": 1
+        },
+        {
+          "name": "isTransient",
+          "params": [
+            "status",
+            "msg"
+          ],
+          "exported": false,
+          "lineCount": 3
+        },
+        {
+          "name": "isDailyQuota",
+          "params": [],
+          "exported": false,
+          "lineCount": 1
+        },
+        {
+          "name": "once",
+          "params": [
+            "model",
+            "prompt",
+            "opts"
+          ],
+          "exported": false,
+          "lineCount": 37
+        },
+        {
+          "name": "askGeminiText",
+          "params": [
+            "prompt"
+          ],
+          "exported": true,
+          "lineCount": 19
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [
+        "GEMINI_CHAIN",
+        "askGeminiText"
+      ],
+      "totalLines": 88,
+      "hasStructuralAnalysis": true
+    },
+    "deploy/lib/opcgKnowledge.js": {
+      "filePath": "deploy/lib/opcgKnowledge.js",
+      "contentHash": "1224e263fd65a5da26c9e8c555761451b41f6c1ed50ac680201400462e19c065",
+      "functions": [
+        {
+          "name": "loadRules",
+          "params": [],
+          "exported": true,
+          "lineCount": 5
+        },
+        {
+          "name": "loadCards",
+          "params": [],
+          "exported": true,
+          "lineCount": 5
+        },
+        {
+          "name": "normCode",
+          "params": [
+            "s"
+          ],
+          "exported": false,
+          "lineCount": 3
+        },
+        {
+          "name": "padCode",
+          "params": [
+            "k"
+          ],
+          "exported": false,
+          "lineCount": 3
+        },
+        {
+          "name": "findSet",
+          "params": [
+            "cards",
+            "key"
+          ],
+          "exported": true,
+          "lineCount": 10
+        },
+        {
+          "name": "rank",
+          "params": [],
+          "exported": false,
+          "lineCount": 1
+        },
+        {
+          "name": "notableCards",
+          "params": [
+            "set"
+          ],
+          "exported": true,
+          "lineCount": 10
+        },
+        {
+          "name": "cardLine",
+          "params": [
+            "c"
+          ],
+          "exported": false,
+          "lineCount": 6
+        },
+        {
+          "name": "relevantRules",
+          "params": [
+            "rules",
+            "topic"
+          ],
+          "exported": true,
+          "lineCount": 33
+        },
+        {
+          "name": "mentionedKeywords",
+          "params": [
+            "rules",
+            "text"
+          ],
+          "exported": true,
+          "lineCount": 4
+        },
+        {
+          "name": "knowledgeBlock",
+          "params": [],
+          "exported": true,
+          "lineCount": 49
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "fs/promises",
+          "specifiers": [
+            "readFile"
+          ]
+        },
+        {
+          "source": "path",
+          "specifiers": [
+            "path"
+          ]
+        }
+      ],
+      "exports": [
+        "loadRules",
+        "loadCards",
+        "findSet",
+        "notableCards",
+        "relevantRules",
+        "mentionedKeywords",
+        "knowledgeBlock"
+      ],
+      "totalLines": 212,
+      "hasStructuralAnalysis": true
+    },
+    "deploy/lib/pkmKnowledge.js": {
+      "filePath": "deploy/lib/pkmKnowledge.js",
+      "contentHash": "224847ab2fc05ef50ee5227e7100d289b08c2f4aea9ca4a6c82ec57164e1fcab",
+      "functions": [
+        {
+          "name": "loadPkmCards",
+          "params": [],
+          "exported": true,
+          "lineCount": 5
+        },
+        {
+          "name": "loadPkmRules",
+          "params": [],
+          "exported": true,
+          "lineCount": 5
+        },
+        {
+          "name": "findPkmSet",
+          "params": [
+            "cards",
+            "setCode"
+          ],
+          "exported": true,
+          "lineCount": 6
+        },
+        {
+          "name": "notablePkmCards",
+          "params": [
+            "set"
+          ],
+          "exported": true,
+          "lineCount": 14
+        },
+        {
+          "name": "cardLine",
+          "params": [
+            "c"
+          ],
+          "exported": false,
+          "lineCount": 11
+        },
+        {
+          "name": "relevantPkmQa",
+          "params": [
+            "rules",
+            "topic"
+          ],
+          "exported": true,
+          "lineCount": 30
+        },
+        {
+          "name": "pkmKnowledgeBlock",
+          "params": [],
+          "exported": true,
+          "lineCount": 32
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "fs/promises",
+          "specifiers": [
+            "readFile"
+          ]
+        },
+        {
+          "source": "path",
+          "specifiers": [
+            "path"
+          ]
+        }
+      ],
+      "exports": [
+        "loadPkmCards",
+        "loadPkmRules",
+        "findPkmSet",
+        "notablePkmCards",
+        "relevantPkmQa",
+        "pkmKnowledgeBlock"
+      ],
+      "totalLines": 171,
+      "hasStructuralAnalysis": true
+    },
+    "deploy/lib/productCatalogue.js": {
+      "filePath": "deploy/lib/productCatalogue.js",
+      "contentHash": "d6972ace913e99b3a8916485ac563adab212e023106455dc5251833d8a2a04bd",
+      "functions": [
+        {
+          "name": "catalogueBlock",
+          "params": [
+            "db"
+          ],
+          "exported": true,
+          "lineCount": 62
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "./franchiseDetect",
+          "specifiers": [
+            "FRANCHISE_LABEL"
+          ]
+        },
+        {
+          "source": "./fetchAll",
+          "specifiers": [
+            "fetchAll"
+          ]
+        }
+      ],
+      "exports": [
+        "catalogueBlock"
+      ],
+      "totalLines": 95,
+      "hasStructuralAnalysis": true
+    },
+    "deploy/lib/publishContent.js": {
+      "filePath": "deploy/lib/publishContent.js",
+      "contentHash": "517e724ff83f9214cd534bdefb64a169ce82eed4f57fd2e36f87214629d9b466",
+      "functions": [
+        {
+          "name": "blockReason",
+          "params": [
+            "item"
+          ],
+          "exported": true,
+          "lineCount": 28
+        },
+        {
+          "name": "publishOne",
+          "params": [
+            "db",
+            "item"
+          ],
+          "exported": true,
+          "lineCount": 47
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "./facebook",
+          "specifiers": [
+            "publishToPage",
+            "permalink",
+            "photoImage"
+          ]
+        }
+      ],
+      "exports": [
+        "HOLE",
+        "blockReason",
+        "publishOne"
+      ],
+      "totalLines": 94,
+      "hasStructuralAnalysis": true
+    },
+    "deploy/lib/skuPicker.js": {
+      "filePath": "deploy/lib/skuPicker.js",
+      "contentHash": "8e54064694ca99e1f2475e273ca00c8cc9e6546f0aedb2b03c4f1730713434d1",
+      "functions": [
+        {
+          "name": "topSkusByFranchise",
+          "params": [
+            "db"
+          ],
+          "exported": true,
+          "lineCount": 34
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "./fetchAll",
+          "specifiers": [
+            "fetchAll"
+          ]
+        }
+      ],
+      "exports": [
+        "topSkusByFranchise"
+      ],
+      "totalLines": 65,
+      "hasStructuralAnalysis": true
+    },
     "deploy/lib/supabase.js": {
       "filePath": "deploy/lib/supabase.js",
-      "contentHash": "aed04a8c33843ba4f453b827d7ce4e3402de405461e6c478b064656265a1ba0d",
+      "contentHash": "eec155100a33fa08cba233d74ad67dc121382b00685f7608aacfbd4e3f442ca5",
       "functions": [
         {
           "name": "signIn",
@@ -7529,7 +11149,7 @@
           "name": "getMachineStock",
           "params": [],
           "exported": true,
-          "lineCount": 9
+          "lineCount": 10
         },
         {
           "name": "getMachineAssignments",
@@ -7793,6 +11413,12 @@
           "specifiers": [
             "createClient"
           ]
+        },
+        {
+          "source": "./fetchAll",
+          "specifiers": [
+            "fetchAll"
+          ]
         }
       ],
       "exports": [
@@ -7866,7 +11492,159 @@
         "updateRefillEventQty",
         "getLatestStockSyncedAt"
       ],
-      "totalLines": 1138,
+      "totalLines": 1140,
+      "hasStructuralAnalysis": true
+    },
+    "deploy/lib/tcgKnowledge.js": {
+      "filePath": "deploy/lib/tcgKnowledge.js",
+      "contentHash": "b5e4fc0f9a444c55d81fdcdc235553435e2eea448ca697543e0e813229ef4830",
+      "functions": [
+        {
+          "name": "loadDbfwCards",
+          "params": [],
+          "exported": true,
+          "lineCount": 5
+        },
+        {
+          "name": "loadDbfwFaq",
+          "params": [],
+          "exported": true,
+          "lineCount": 5
+        },
+        {
+          "name": "loadKayouCards",
+          "params": [],
+          "exported": true,
+          "lineCount": 5
+        },
+        {
+          "name": "loadYgoCards",
+          "params": [],
+          "exported": true,
+          "lineCount": 5
+        },
+        {
+          "name": "loadUaCards",
+          "params": [],
+          "exported": true,
+          "lineCount": 5
+        },
+        {
+          "name": "franchiseFromText",
+          "params": [
+            "text"
+          ],
+          "exported": true,
+          "lineCount": 4
+        },
+        {
+          "name": "notableDbCards",
+          "params": [
+            "set"
+          ],
+          "exported": true,
+          "lineCount": 10
+        },
+        {
+          "name": "dbCardLine",
+          "params": [
+            "c"
+          ],
+          "exported": false,
+          "lineCount": 13
+        },
+        {
+          "name": "dbFaqFor",
+          "params": [
+            "faq",
+            "setCode"
+          ],
+          "exported": false,
+          "lineCount": 9
+        },
+        {
+          "name": "dbBlock",
+          "params": [
+            "setCode",
+            "topic",
+            "maxChars"
+          ],
+          "exported": false,
+          "lineCount": 31
+        },
+        {
+          "name": "notableYgoCards",
+          "params": [
+            "set"
+          ],
+          "exported": true,
+          "lineCount": 8
+        },
+        {
+          "name": "ygoBlock",
+          "params": [
+            "setCode",
+            "topic",
+            "maxChars"
+          ],
+          "exported": false,
+          "lineCount": 26
+        },
+        {
+          "name": "kayouBlock",
+          "params": [
+            "franchise",
+            "topic",
+            "maxChars"
+          ],
+          "exported": false,
+          "lineCount": 39
+        },
+        {
+          "name": "uaBlock",
+          "params": [
+            "setCode",
+            "topic",
+            "maxChars"
+          ],
+          "exported": false,
+          "lineCount": 33
+        },
+        {
+          "name": "tcgKnowledgeBlock",
+          "params": [],
+          "exported": true,
+          "lineCount": 13
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "fs/promises",
+          "specifiers": [
+            "readFile"
+          ]
+        },
+        {
+          "source": "path",
+          "specifiers": [
+            "path"
+          ]
+        }
+      ],
+      "exports": [
+        "loadDbfwCards",
+        "loadDbfwFaq",
+        "loadKayouCards",
+        "loadYgoCards",
+        "loadUaCards",
+        "TCG_FRANCHISES",
+        "franchiseFromText",
+        "notableDbCards",
+        "notableYgoCards",
+        "tcgKnowledgeBlock"
+      ],
+      "totalLines": 317,
       "hasStructuralAnalysis": true
     },
     "deploy/lib/telegram.js": {
@@ -7960,9 +11738,84 @@
       "totalLines": 107,
       "hasStructuralAnalysis": true
     },
+    "deploy/lib/thaiDate.js": {
+      "filePath": "deploy/lib/thaiDate.js",
+      "contentHash": "92cefeb5b065da2f71b3c9ca3bb4fb3ab406ca1c37a16f3ea59b8184710e0e92",
+      "functions": [
+        {
+          "name": "thaiDay",
+          "params": [
+            "input"
+          ],
+          "exported": true,
+          "lineCount": 6
+        },
+        {
+          "name": "thaiMonthNow",
+          "params": [],
+          "exported": true,
+          "lineCount": 1
+        },
+        {
+          "name": "thaiDateTime",
+          "params": [
+            "input"
+          ],
+          "exported": true,
+          "lineCount": 9
+        },
+        {
+          "name": "monthRange",
+          "params": [
+            "month"
+          ],
+          "exported": true,
+          "lineCount": 6
+        },
+        {
+          "name": "monthCells",
+          "params": [
+            "month"
+          ],
+          "exported": true,
+          "lineCount": 10
+        },
+        {
+          "name": "shiftMonth",
+          "params": [
+            "month",
+            "by"
+          ],
+          "exported": true,
+          "lineCount": 5
+        },
+        {
+          "name": "scheduleAt",
+          "params": [
+            "day"
+          ],
+          "exported": true,
+          "lineCount": 2
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [
+        "TH_OFFSET_MS",
+        "thaiDay",
+        "thaiMonthNow",
+        "thaiDateTime",
+        "monthRange",
+        "monthCells",
+        "shiftMonth",
+        "scheduleAt"
+      ],
+      "totalLines": 75,
+      "hasStructuralAnalysis": true
+    },
     "deploy/mcp/dvx_mcp_server.py": {
       "filePath": "deploy/mcp/dvx_mcp_server.py",
-      "contentHash": "a688b9036ddbe83f28185d7528fc751c7ed54072bc3415718c8ba068f2265d8d",
+      "contentHash": "0cea050d62146db1f25118ae5bdb32a6afa85bc4d663f70f6b5c0d109863cb89",
       "functions": [
         {
           "name": "_fail",
@@ -7990,11 +11843,12 @@
             "to_date",
             "machine",
             "group_by",
-            "top"
+            "top",
+            "unit"
           ],
           "returnType": "dict",
           "exported": true,
-          "lineCount": 18
+          "lineCount": 24
         },
         {
           "name": "get_stock",
@@ -8012,6 +11866,79 @@
           "params": [
             "threshold_days",
             "min_velocity"
+          ],
+          "returnType": "dict",
+          "exported": true,
+          "lineCount": 11
+        },
+        {
+          "name": "get_marketing_ideas",
+          "params": [
+            "status",
+            "limit",
+            "source",
+            "sku"
+          ],
+          "returnType": "dict",
+          "exported": true,
+          "lineCount": 14
+        },
+        {
+          "name": "get_content_queue",
+          "params": [
+            "status",
+            "limit"
+          ],
+          "returnType": "dict",
+          "exported": true,
+          "lineCount": 10
+        },
+        {
+          "name": "get_content_for_review",
+          "params": [
+            "limit",
+            "include_reviewed"
+          ],
+          "returnType": "dict",
+          "exported": true,
+          "lineCount": 10
+        },
+        {
+          "name": "review_content",
+          "params": [
+            "content_id",
+            "verdict",
+            "notes"
+          ],
+          "returnType": "dict",
+          "exported": true,
+          "lineCount": 11
+        },
+        {
+          "name": "get_post_performance",
+          "params": [
+            "days"
+          ],
+          "returnType": "dict",
+          "exported": true,
+          "lineCount": 9
+        },
+        {
+          "name": "get_post_plan",
+          "params": [
+            "days",
+            "include_unscheduled"
+          ],
+          "returnType": "dict",
+          "exported": true,
+          "lineCount": 10
+        },
+        {
+          "name": "schedule_content",
+          "params": [
+            "content_id",
+            "when",
+            "force"
           ],
           "returnType": "dict",
           "exported": true,
@@ -8090,20 +12017,27 @@
         "get_sales",
         "get_stock",
         "get_restock_alerts",
+        "get_marketing_ideas",
+        "get_content_queue",
+        "get_content_for_review",
+        "review_content",
+        "get_post_performance",
+        "get_post_plan",
+        "schedule_content",
         "get_sync_status",
         "sync_data"
       ],
-      "totalLines": 232,
+      "totalLines": 371,
       "hasStructuralAnalysis": true
     },
     "deploy/mcp/README.md": {
       "filePath": "deploy/mcp/README.md",
-      "contentHash": "3fa7368fdb4b8fa9b3aecc05d35c0eebb2b9b0840e9ec54d688d16a7144c3cf8",
+      "contentHash": "9a44faa54ef079e34127285de1ecea845159611478c5c41090265fc1b2c275e3",
       "functions": [],
       "classes": [],
       "imports": [],
       "exports": [],
-      "totalLines": 103,
+      "totalLines": 130,
       "hasStructuralAnalysis": true
     },
     "deploy/next.config.js": {
@@ -8118,7 +12052,7 @@
     },
     "deploy/package.json": {
       "filePath": "deploy/package.json",
-      "contentHash": "61a5bff8ec366797e71aa7b2600c07df062b38875895ebb30d69224fdcfc52f9",
+      "contentHash": "79fda1a4db592174f8809e6ba054bdda5ae2a5a341f2f184453c346fc5474840",
       "functions": [],
       "classes": [],
       "imports": [],
@@ -8136,9 +12070,19 @@
       "totalLines": 7,
       "hasStructuralAnalysis": true
     },
+    "deploy/public/machine/README.md": {
+      "filePath": "deploy/public/machine/README.md",
+      "contentHash": "0cf7479e9b2086808bdbc123b540952b93d167edb8d2f13de8bbc80df9202201",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 14,
+      "hasStructuralAnalysis": true
+    },
     "deploy/scraper/marketing_reminder.py": {
       "filePath": "deploy/scraper/marketing_reminder.py",
-      "contentHash": "8a38be4e0da255ebd29c9406458d9196549bf52c1c1257d0434cb3ef41d7905f",
+      "contentHash": "fbc7090fd1812ff4d600d2c42f9ae36d9717308096d878b41cc175267965aea9",
       "functions": [
         {
           "name": "thai_now",
@@ -8155,19 +12099,25 @@
           "lineCount": 27
         },
         {
-          "name": "load_captions",
+          "name": "fetch_approved",
+          "params": [],
+          "exported": true,
+          "lineCount": 23
+        },
+        {
+          "name": "render_approved",
           "params": [
-            "slot",
-            "wd"
+            "rows",
+            "total"
           ],
           "exported": true,
-          "lineCount": 14
+          "lineCount": 29
         },
         {
           "name": "main",
           "params": [],
           "exported": true,
-          "lineCount": 48
+          "lineCount": 63
         }
       ],
       "classes": [],
@@ -8176,6 +12126,12 @@
           "source": "os",
           "specifiers": [
             "os"
+          ]
+        },
+        {
+          "source": "re",
+          "specifiers": [
+            "re"
           ]
         },
         {
@@ -8203,6 +12159,12 @@
           ]
         },
         {
+          "source": "urllib.parse",
+          "specifiers": [
+            "urllib.parse"
+          ]
+        },
+        {
           "source": "urllib.error",
           "specifiers": [
             "urllib.error"
@@ -8219,10 +12181,11 @@
       "exports": [
         "thai_now",
         "send",
-        "load_captions",
+        "fetch_approved",
+        "render_approved",
         "main"
       ],
-      "totalLines": 135,
+      "totalLines": 210,
       "hasStructuralAnalysis": true
     },
     "deploy/scraper/payif_probe.py": {
@@ -8304,7 +12267,7 @@
     },
     "deploy/scraper/payif_sales_sync.py": {
       "filePath": "deploy/scraper/payif_sales_sync.py",
-      "contentHash": "dc202ad135500ebaadc2cb45b40b620cd4870e807876a2d37dffdbe5fd229f4f",
+      "contentHash": "ffc2d5b783e6108e235bd158268cfc82642f653779f7acfda1381072d6818134",
       "functions": [
         {
           "name": "dec",
@@ -8357,7 +12320,7 @@
           ],
           "returnType": "dict",
           "exported": true,
-          "lineCount": 10
+          "lineCount": 14
         },
         {
           "name": "fetch_orders",
@@ -8454,6 +12417,14 @@
           "specifiers": [
             "map_name_to_sku"
           ]
+        },
+        {
+          "source": "sales_unit",
+          "specifiers": [
+            "unit_of",
+            "add_unit",
+            "upsert_sales"
+          ]
         }
       ],
       "exports": [
@@ -8470,12 +12441,12 @@
         "save_to_supabase",
         "main"
       ],
-      "totalLines": 303,
+      "totalLines": 316,
       "hasStructuralAnalysis": true
     },
     "deploy/scraper/payif_stock_sync.py": {
       "filePath": "deploy/scraper/payif_stock_sync.py",
-      "contentHash": "c0a7a9ea09a45104615dda63b99a9b2728c260a260102c4a3c816152edd008d1",
+      "contentHash": "36b07e1700065f56f80a6c426a7f154200de4c66104040c5c5674b531f1ec123",
       "functions": [
         {
           "name": "map_name_to_sku",
@@ -8484,7 +12455,7 @@
           ],
           "returnType": "str | None",
           "exported": true,
-          "lineCount": 47
+          "lineCount": 59
         },
         {
           "name": "login",
@@ -8509,7 +12480,7 @@
           ],
           "returnType": "list[dict]",
           "exported": true,
-          "lineCount": 10
+          "lineCount": 14
         },
         {
           "name": "fetch_slots",
@@ -8537,13 +12508,13 @@
             "records"
           ],
           "exported": true,
-          "lineCount": 11
+          "lineCount": 13
         },
         {
           "name": "main",
           "params": [],
           "exported": true,
-          "lineCount": 73
+          "lineCount": 80
         }
       ],
       "classes": [],
@@ -8584,6 +12555,13 @@
           "specifiers": [
             "create_client"
           ]
+        },
+        {
+          "source": "sales_unit",
+          "specifiers": [
+            "add_unit",
+            "upsert_sales"
+          ]
         }
       ],
       "exports": [
@@ -8596,7 +12574,7 @@
         "save_to_supabase",
         "main"
       ],
-      "totalLines": 258,
+      "totalLines": 286,
       "hasStructuralAnalysis": true
     },
     "deploy/scraper/requirements.txt": {
@@ -8609,9 +12587,78 @@
       "totalLines": 7,
       "hasStructuralAnalysis": false
     },
+    "deploy/scraper/sales_unit.py": {
+      "filePath": "deploy/scraper/sales_unit.py",
+      "contentHash": "bc37edce5f4e2bfa255086aa92065027405414b075d15f220675d4309c562e7a",
+      "functions": [
+        {
+          "name": "unit_of",
+          "params": [
+            "product_name"
+          ],
+          "exported": true,
+          "lineCount": 3
+        },
+        {
+          "name": "add_unit",
+          "params": [
+            "rows",
+            "name_key"
+          ],
+          "exported": true,
+          "lineCount": 12
+        },
+        {
+          "name": "strip_unit",
+          "params": [
+            "rows"
+          ],
+          "exported": true,
+          "lineCount": 5
+        },
+        {
+          "name": "missing_unit_column",
+          "params": [
+            "err"
+          ],
+          "exported": true,
+          "lineCount": 8
+        },
+        {
+          "name": "upsert_sales",
+          "params": [
+            "supabase",
+            "batch",
+            "table",
+            "on_conflict",
+            "ignore_duplicates"
+          ],
+          "exported": true,
+          "lineCount": 32
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "re",
+          "specifiers": [
+            "re"
+          ]
+        }
+      ],
+      "exports": [
+        "unit_of",
+        "add_unit",
+        "strip_unit",
+        "missing_unit_column",
+        "upsert_sales"
+      ],
+      "totalLines": 93,
+      "hasStructuralAnalysis": true
+    },
     "deploy/scraper/slot_tracking.py": {
       "filePath": "deploy/scraper/slot_tracking.py",
-      "contentHash": "0c8128ad196890e5b1e11f95b1e36bc8eccef2546d42ea1d2c174160d400bdea",
+      "contentHash": "3b197734a40e3a362ed5ba47947a1686400a030313777f703ddb40491df1ac2a",
       "functions": [
         {
           "name": "_isbox",
@@ -8650,7 +12697,18 @@
             "detected_by"
           ],
           "exported": true,
-          "lineCount": 106
+          "lineCount": 121
+        },
+        {
+          "name": "_alert_swaps",
+          "params": [
+            "supabase",
+            "platform",
+            "events",
+            "synced_at"
+          ],
+          "exported": true,
+          "lineCount": 49
         },
         {
           "name": "_build_vms_events",
@@ -8678,7 +12736,7 @@
           ],
           "returnType": "list[dict]",
           "exported": true,
-          "lineCount": 68
+          "lineCount": 77
         }
       ],
       "classes": [],
@@ -8696,10 +12754,11 @@
         "_parse_dt",
         "_identity",
         "track_refill_events",
+        "_alert_swaps",
         "_build_vms_events",
         "_build_ww_events"
       ],
-      "totalLines": 285,
+      "totalLines": 360,
       "hasStructuralAnalysis": true
     },
     "deploy/scraper/stock_low_alert.py": {
@@ -8740,9 +12799,47 @@
       "totalLines": 63,
       "hasStructuralAnalysis": true
     },
+    "deploy/scraper/stock_reconcile.py": {
+      "filePath": "deploy/scraper/stock_reconcile.py",
+      "contentHash": "ccedea4133598c546b46ba0ab30f7a937eaec7af57ee16191e2dd359d5a0a3b8",
+      "functions": [
+        {
+          "name": "reconcile_removed_slots",
+          "params": [
+            "supabase",
+            "machine_id",
+            "seen_slots",
+            "min_ratio",
+            "dry_run"
+          ],
+          "returnType": "int",
+          "exported": true,
+          "lineCount": 37
+        },
+        {
+          "name": "reconcile_from_records",
+          "params": [
+            "supabase",
+            "records",
+            "dry_run"
+          ],
+          "returnType": "int",
+          "exported": true,
+          "lineCount": 9
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [
+        "reconcile_removed_slots",
+        "reconcile_from_records"
+      ],
+      "totalLines": 71,
+      "hasStructuralAnalysis": true
+    },
     "deploy/scraper/telegram_alert.py": {
       "filePath": "deploy/scraper/telegram_alert.py",
-      "contentHash": "29fed7128025bf37c715b38d7492eb93c19be56315d455534fc519d5a358abc5",
+      "contentHash": "d89e2fb1d613c81a755adf9a61575339d14d08e88066e50b274f4d3ab4419969",
       "functions": [
         {
           "name": "_esc",
@@ -8819,6 +12916,19 @@
           ],
           "exported": true,
           "lineCount": 18
+        },
+        {
+          "name": "alert_product_swaps",
+          "params": [
+            "machine_id",
+            "machine_name",
+            "removed",
+            "added",
+            "platform",
+            "synced_at"
+          ],
+          "exported": true,
+          "lineCount": 51
         }
       ],
       "classes": [],
@@ -8867,14 +12977,75 @@
         "alert_slot_changes_batch",
         "alert_ship_fail",
         "alert_cron_fail",
-        "alert_stock_low"
+        "alert_stock_low",
+        "alert_product_swaps"
       ],
-      "totalLines": 194,
+      "totalLines": 247,
+      "hasStructuralAnalysis": true
+    },
+    "deploy/scraper/test_sku_mapping.py": {
+      "filePath": "deploy/scraper/test_sku_mapping.py",
+      "contentHash": "2fb4b4eaac68663adbdd899326024d3e6ec7e1c8da003f5959679a41cce600bf",
+      "functions": [
+        {
+          "name": "load",
+          "params": [
+            "path",
+            "fn"
+          ],
+          "exported": true,
+          "lineCount": 20
+        },
+        {
+          "name": "main",
+          "params": [],
+          "exported": true,
+          "lineCount": 36
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "contextlib",
+          "specifiers": [
+            "contextlib"
+          ]
+        },
+        {
+          "source": "io",
+          "specifiers": [
+            "io"
+          ]
+        },
+        {
+          "source": "pathlib",
+          "specifiers": [
+            "pathlib"
+          ]
+        },
+        {
+          "source": "re",
+          "specifiers": [
+            "re"
+          ]
+        },
+        {
+          "source": "sys",
+          "specifiers": [
+            "sys"
+          ]
+        }
+      ],
+      "exports": [
+        "load",
+        "main"
+      ],
+      "totalLines": 301,
       "hasStructuralAnalysis": true
     },
     "deploy/scraper/vms_sales_api.py": {
       "filePath": "deploy/scraper/vms_sales_api.py",
-      "contentHash": "9795306a17bf0742b26225d1287831b062f72f0c4cfab316de76478e2d245514",
+      "contentHash": "9cce38b6675e744a9c50a1e7240304c7e9d2e5a413c3ab05cac0271bcec7e0f3",
       "functions": [
         {
           "name": "map_product_to_sku",
@@ -8883,7 +13054,7 @@
           ],
           "returnType": "str | None",
           "exported": true,
-          "lineCount": 27
+          "lineCount": 30
         },
         {
           "name": "normalize",
@@ -8984,6 +13155,14 @@
           "specifiers": [
             "create_client"
           ]
+        },
+        {
+          "source": "sales_unit",
+          "specifiers": [
+            "unit_of",
+            "add_unit",
+            "upsert_sales"
+          ]
         }
       ],
       "exports": [
@@ -8996,12 +13175,12 @@
         "save_to_supabase",
         "main"
       ],
-      "totalLines": 333,
+      "totalLines": 365,
       "hasStructuralAnalysis": true
     },
     "deploy/scraper/vms_scraper.py": {
       "filePath": "deploy/scraper/vms_scraper.py",
-      "contentHash": "31c390efafa170595e1d4ecbe10bc441f2c62f9742449af18a3aae6e39eb9cd0",
+      "contentHash": "e8cb58ec92d24862b5fd24185a55eadad1503e7a5c6eec3cb61dfbae56dfb8c4",
       "functions": [
         {
           "name": "normalize",
@@ -9028,7 +13207,7 @@
           ],
           "returnType": "str | None",
           "exported": true,
-          "lineCount": 57
+          "lineCount": 81
         },
         {
           "name": "download_xlsx",
@@ -9056,7 +13235,7 @@
             "records"
           ],
           "exported": true,
-          "lineCount": 22
+          "lineCount": 20
         },
         {
           "name": "main",
@@ -9121,6 +13300,14 @@
           "specifiers": [
             "create_client"
           ]
+        },
+        {
+          "source": "sales_unit",
+          "specifiers": [
+            "unit_of",
+            "add_unit",
+            "upsert_sales"
+          ]
         }
       ],
       "exports": [
@@ -9132,12 +13319,12 @@
         "save_to_supabase",
         "main"
       ],
-      "totalLines": 374,
+      "totalLines": 408,
       "hasStructuralAnalysis": true
     },
     "deploy/scraper/vms_stock_sync.py": {
       "filePath": "deploy/scraper/vms_stock_sync.py",
-      "contentHash": "e1d63cb4827854203ecc863910037b7594012a9bce92ce262380c8bb76e3f11b",
+      "contentHash": "113319ec7a74d186a88c6daa59367434e85350556a9c9d024f2e2f24c1846979",
       "functions": [
         {
           "name": "cache_vms_image",
@@ -9157,7 +13344,7 @@
           ],
           "returnType": "str | None",
           "exported": true,
-          "lineCount": 56
+          "lineCount": 72
         },
         {
           "name": "login",
@@ -9199,7 +13386,7 @@
           "name": "main",
           "params": [],
           "exported": true,
-          "lineCount": 70
+          "lineCount": 79
         }
       ],
       "classes": [],
@@ -9208,6 +13395,12 @@
           "source": "os",
           "specifiers": [
             "os"
+          ]
+        },
+        {
+          "source": "re",
+          "specifiers": [
+            "re"
           ]
         },
         {
@@ -9234,6 +13427,13 @@
           "specifiers": [
             "create_client"
           ]
+        },
+        {
+          "source": "sales_unit",
+          "specifiers": [
+            "add_unit",
+            "upsert_sales"
+          ]
         }
       ],
       "exports": [
@@ -9245,12 +13445,12 @@
         "detect_slot_changes",
         "main"
       ],
-      "totalLines": 419,
+      "totalLines": 448,
       "hasStructuralAnalysis": true
     },
     "deploy/scraper/worldwide_sales_api.py": {
       "filePath": "deploy/scraper/worldwide_sales_api.py",
-      "contentHash": "fa0e3877c25f134e2899db6ff90e99c6456c4c787efc4b771a7bef82d1b45edc",
+      "contentHash": "85272d67d0956e4b046b1145b1b87e4b6aff015fdbff16ff1ccf61c72df7471f",
       "functions": [
         {
           "name": "map_goods_to_sku",
@@ -9259,7 +13459,7 @@
           ],
           "returnType": "str | None",
           "exported": true,
-          "lineCount": 54
+          "lineCount": 68
         },
         {
           "name": "is_box",
@@ -9293,7 +13493,7 @@
           ],
           "returnType": "dict",
           "exported": true,
-          "lineCount": 11
+          "lineCount": 15
         },
         {
           "name": "fetch_order_list_page",
@@ -9413,6 +13613,14 @@
           "specifiers": [
             "create_client"
           ]
+        },
+        {
+          "source": "sales_unit",
+          "specifiers": [
+            "unit_of",
+            "add_unit",
+            "upsert_sales"
+          ]
         }
       ],
       "exports": [
@@ -9429,12 +13637,12 @@
         "save_ship_fails",
         "main"
       ],
-      "totalLines": 493,
+      "totalLines": 522,
       "hasStructuralAnalysis": true
     },
     "deploy/scraper/worldwide_stock_sync.py": {
       "filePath": "deploy/scraper/worldwide_stock_sync.py",
-      "contentHash": "903fec6b4684783f5fe43adc97dbd67b67834c7f052942a52871e3ceb0341c07",
+      "contentHash": "866607c49b6574685a19805950599ca0f9607b23f4d135df31359ee13a7ecfef",
       "functions": [
         {
           "name": "map_goods_to_sku",
@@ -9443,7 +13651,7 @@
           ],
           "returnType": "str | None",
           "exported": true,
-          "lineCount": 49
+          "lineCount": 64
         },
         {
           "name": "login",
@@ -9459,7 +13667,7 @@
           ],
           "returnType": "list[dict]",
           "exported": true,
-          "lineCount": 10
+          "lineCount": 15
         },
         {
           "name": "fetch_inventory",
@@ -9493,7 +13701,7 @@
           "name": "main",
           "params": [],
           "exported": true,
-          "lineCount": 88
+          "lineCount": 94
         }
       ],
       "classes": [],
@@ -9546,6 +13754,13 @@
           "specifiers": [
             "create_client"
           ]
+        },
+        {
+          "source": "sales_unit",
+          "specifiers": [
+            "add_unit",
+            "upsert_sales"
+          ]
         }
       ],
       "exports": [
@@ -9557,7 +13772,7 @@
         "save_to_supabase",
         "main"
       ],
-      "totalLines": 274,
+      "totalLines": 303,
       "hasStructuralAnalysis": true
     },
     "deploy/scripts/backup-tables.js": {
@@ -9606,6 +13821,106 @@
       "totalLines": 25,
       "hasStructuralAnalysis": true
     },
+    "deploy/tasks/art_direction.json": {
+      "filePath": "deploy/tasks/art_direction.json",
+      "contentHash": "b376aaff915f1327afb667fdbc8a0a1cb84b2d34eaeb8caaa9e4f52be75c8358",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 56,
+      "hasStructuralAnalysis": true
+    },
+    "deploy/tasks/concept_css/battle.css": {
+      "filePath": "deploy/tasks/concept_css/battle.css",
+      "contentHash": "4a549728cfa95a30f74822d131e74c9903d3e3f1a1eb39acdcb8661ea749b24c",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 468,
+      "hasStructuralAnalysis": false
+    },
+    "deploy/tasks/concept_css/hidden_card.css": {
+      "filePath": "deploy/tasks/concept_css/hidden_card.css",
+      "contentHash": "3b6e4ad716e911e518528c208186cf5092d5da26560833994ed114a712017f9b",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 444,
+      "hasStructuralAnalysis": false
+    },
+    "deploy/tasks/concept_css/luxury.css": {
+      "filePath": "deploy/tasks/concept_css/luxury.css",
+      "contentHash": "7a7aeb47eb87e14907d7dec95b725bc8d328ce3504d2ce6c997206eb0396e62d",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 261,
+      "hasStructuralAnalysis": false
+    },
+    "deploy/tasks/concept_css/machine_luck.css": {
+      "filePath": "deploy/tasks/concept_css/machine_luck.css",
+      "contentHash": "312ffc189827fd6a9c221b4e447b358f3dcd60657cb3e41287deece08815fc4f",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 360,
+      "hasStructuralAnalysis": false
+    },
+    "deploy/tasks/concept_css/real_machine.css": {
+      "filePath": "deploy/tasks/concept_css/real_machine.css",
+      "contentHash": "c6307233f23698961c2f8e9ff4764c16d287ab19d140bc73f380417633cc4591",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 330,
+      "hasStructuralAnalysis": false
+    },
+    "deploy/tasks/concept_css/treasure.css": {
+      "filePath": "deploy/tasks/concept_css/treasure.css",
+      "contentHash": "c2274df8f5508af253dc0505f34190aad177ea83261c03d2e8fa019b12eaf879",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 353,
+      "hasStructuralAnalysis": false
+    },
+    "deploy/tasks/concept_css/unbox.css": {
+      "filePath": "deploy/tasks/concept_css/unbox.css",
+      "contentHash": "23d8e639a5716ad28542921e6431cebc5ee0bd3d476226a4afd161037a7804b2",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 416,
+      "hasStructuralAnalysis": false
+    },
+    "deploy/tasks/concept_css/viral.css": {
+      "filePath": "deploy/tasks/concept_css/viral.css",
+      "contentHash": "06969d7b6eafe680d6238e26c0b57189b872862437baa788e6dc3bbd2e111ce0",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 393,
+      "hasStructuralAnalysis": false
+    },
+    "deploy/tasks/content_craft.json": {
+      "filePath": "deploy/tasks/content_craft.json",
+      "contentHash": "5d4c013367fdf2984454b79aa7bdb715a8b2a7dd4bee42f8aaeeb52b80f7d0a7",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 161,
+      "hasStructuralAnalysis": true
+    },
     "deploy/tasks/content_queue.json": {
       "filePath": "deploy/tasks/content_queue.json",
       "contentHash": "5d07e085bbac34c4fc88c087dc68b67daaf678123b3b0b6291385410182841ef",
@@ -9618,22 +13933,72 @@
     },
     "deploy/tasks/content_voice.json": {
       "filePath": "deploy/tasks/content_voice.json",
-      "contentHash": "08a5313dda73054ed51c3186658f68c3fa1f847a5b55393c5728e51710eb0904",
+      "contentHash": "d7742ac906306124acb0c448ffbbb467ee8fcf2e2def2077c411b034fef749b3",
       "functions": [],
       "classes": [],
       "imports": [],
       "exports": [],
-      "totalLines": 35,
+      "totalLines": 122,
+      "hasStructuralAnalysis": true
+    },
+    "deploy/tasks/dbfw_cards.json": {
+      "filePath": "deploy/tasks/dbfw_cards.json",
+      "contentHash": "cbe1d052ef1a2a8ac9f68b2ec8e739545b8f4b44cbcdc53f02458191d8fe1e1d",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 40181,
+      "hasStructuralAnalysis": true
+    },
+    "deploy/tasks/dbfw_faq.json": {
+      "filePath": "deploy/tasks/dbfw_faq.json",
+      "contentHash": "bc34f3eadbace97ff54a6f4374872c10f4c09b269591d8777b4d33ded1ef010b",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 3830,
+      "hasStructuralAnalysis": true
+    },
+    "deploy/tasks/franchise_style.json": {
+      "filePath": "deploy/tasks/franchise_style.json",
+      "contentHash": "5b04c6fde5331f8632805090e2e36b881b115a60e01333d8a499e49478c8d936",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 60,
       "hasStructuralAnalysis": true
     },
     "deploy/tasks/idea_sources.json": {
       "filePath": "deploy/tasks/idea_sources.json",
-      "contentHash": "d5183154e9c0f09941ada3013b993ed973e689f25492cef671fa017149935eef",
+      "contentHash": "f4f4907882ac5ec27381ce8332344109c3f82db977089ee6286f732524789d57",
       "functions": [],
       "classes": [],
       "imports": [],
       "exports": [],
-      "totalLines": 35,
+      "totalLines": 42,
+      "hasStructuralAnalysis": true
+    },
+    "deploy/tasks/image_style.json": {
+      "filePath": "deploy/tasks/image_style.json",
+      "contentHash": "c460552b4c6ba26f01e953f173937240b93c98f65a17e06bffda4b6c897ca4ba",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 112,
+      "hasStructuralAnalysis": true
+    },
+    "deploy/tasks/kayou_cards.json": {
+      "filePath": "deploy/tasks/kayou_cards.json",
+      "contentHash": "590ce37021d7712cfab7dcf8602841686ab7c607d96cc4caf4e623d02f3ea289",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 30803,
       "hasStructuralAnalysis": true
     },
     "deploy/tasks/marketing_reminders.json": {
@@ -9644,6 +14009,409 @@
       "imports": [],
       "exports": [],
       "totalLines": 21,
+      "hasStructuralAnalysis": true
+    },
+    "deploy/tasks/opcg_cards.json": {
+      "filePath": "deploy/tasks/opcg_cards.json",
+      "contentHash": "867b5cd7f72974788de4dd2ca79cc8ee9a1fd79bddb5ac5803297eea142f29d8",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 69102,
+      "hasStructuralAnalysis": true
+    },
+    "deploy/tasks/opcg_rules.json": {
+      "filePath": "deploy/tasks/opcg_rules.json",
+      "contentHash": "445c6ff3cb35254c4c0c66db0e8fe083034f6becb655507ccbfe6fa15652348c",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 3650,
+      "hasStructuralAnalysis": true
+    },
+    "deploy/tasks/pkm_cards.json": {
+      "filePath": "deploy/tasks/pkm_cards.json",
+      "contentHash": "65885a43c6d76ae180bc1b55e5165154ae9ff8c5a6787efed85816163f4fc068",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 25003,
+      "hasStructuralAnalysis": true
+    },
+    "deploy/tasks/pkm_rules.json": {
+      "filePath": "deploy/tasks/pkm_rules.json",
+      "contentHash": "b6114b46853b99f9b2f23d6cb72f56e17af076c22ff3ffe16215a683d387bb0c",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 8946,
+      "hasStructuralAnalysis": true
+    },
+    "deploy/tasks/poster_concepts.json": {
+      "filePath": "deploy/tasks/poster_concepts.json",
+      "contentHash": "1017279f0577f64b141bd622105ed08ac168204d52eba8be11c9584c025e12a1",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 145,
+      "hasStructuralAnalysis": true
+    },
+    "deploy/tasks/poster_template_v2.html": {
+      "filePath": "deploy/tasks/poster_template_v2.html",
+      "contentHash": "350111d8e52c6cd511e7a1e5662d6eafa61414e2bd68869359e9b1d2a366f43c",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 205,
+      "hasStructuralAnalysis": false
+    },
+    "deploy/tasks/poster_template.html": {
+      "filePath": "deploy/tasks/poster_template.html",
+      "contentHash": "aa3e1638f7d4ae6ff7a10ed4963d291fef6f8625dd8e858822b558dedaf29101",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 645,
+      "hasStructuralAnalysis": false
+    },
+    "deploy/tasks/poster_tpl_foil.html": {
+      "filePath": "deploy/tasks/poster_tpl_foil.html",
+      "contentHash": "fd18cdf997bcb1838dcdbb8ec2400b612d971c05d71f80f4b051bb6b20d62187",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 371,
+      "hasStructuralAnalysis": false
+    },
+    "deploy/tasks/poster_tpl_hype.html": {
+      "filePath": "deploy/tasks/poster_tpl_hype.html",
+      "contentHash": "f8cc8f87d9916e9a500a20f1fe403bfb3f142f3d5913cd901fb544b02ed817b6",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 370,
+      "hasStructuralAnalysis": false
+    },
+    "deploy/tasks/poster_tpl_stage.html": {
+      "filePath": "deploy/tasks/poster_tpl_stage.html",
+      "contentHash": "cd2ed176cea5247aebd0252a1ff28fd301dd32eccb03d6ca7d27c628950e0d9f",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 364,
+      "hasStructuralAnalysis": false
+    },
+    "deploy/tasks/ua_cards.json": {
+      "filePath": "deploy/tasks/ua_cards.json",
+      "contentHash": "d905159ca88cde89ada4c7a7925531c5ad9f87f1501eea9608a450e1c4bf0964",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 2335,
+      "hasStructuralAnalysis": true
+    },
+    "deploy/tasks/ygo_cards.json": {
+      "filePath": "deploy/tasks/ygo_cards.json",
+      "contentHash": "468833557f5cfb21b9c24d90c2e5b9716671b010d8b6c666c0702761cc9066af",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 4476,
+      "hasStructuralAnalysis": true
+    },
+    "remotion/package.json": {
+      "filePath": "remotion/package.json",
+      "contentHash": "13435694e745a7c5eba82703b0d94882fd689be5fab71f01af90ad3cbd3181f4",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 23,
+      "hasStructuralAnalysis": true
+    },
+    "remotion/README.md": {
+      "filePath": "remotion/README.md",
+      "contentHash": "8a5c2c0dcceb13b2524e4c52e083058ac074213c17e6377108e9c429b712c1c7",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 57,
+      "hasStructuralAnalysis": true
+    },
+    "remotion/remotion.config.ts": {
+      "filePath": "remotion/remotion.config.ts",
+      "contentHash": "ff778e23deff6b5eaa5387d77940dcf7fcde9ef79231592746080338bad883b3",
+      "functions": [],
+      "classes": [],
+      "imports": [
+        {
+          "source": "@remotion/cli/config",
+          "specifiers": [
+            "Config"
+          ]
+        }
+      ],
+      "exports": [],
+      "totalLines": 6,
+      "hasStructuralAnalysis": true
+    },
+    "remotion/src/index.ts": {
+      "filePath": "remotion/src/index.ts",
+      "contentHash": "1c42a26cc15880c2af62d5b89cb19a9ed7927de1659343313a25f352a9eb7374",
+      "functions": [],
+      "classes": [],
+      "imports": [
+        {
+          "source": "remotion",
+          "specifiers": [
+            "registerRoot"
+          ]
+        },
+        {
+          "source": "./Root",
+          "specifiers": [
+            "RemotionRoot"
+          ]
+        }
+      ],
+      "exports": [],
+      "totalLines": 5,
+      "hasStructuralAnalysis": true
+    },
+    "remotion/src/PackHype.tsx": {
+      "filePath": "remotion/src/PackHype.tsx",
+      "contentHash": "840428c431011275906a7350e3eb262b78c12780f3bacff2f0d932f9ff088156",
+      "functions": [
+        {
+          "name": "useShake",
+          "params": [
+            "startFrame",
+            "strength",
+            "decay"
+          ],
+          "exported": false,
+          "lineCount": 10
+        },
+        {
+          "name": "WordReveal",
+          "params": [
+            "{\n  text, from, size, color = \"#fff\",\n}"
+          ],
+          "exported": false,
+          "lineCount": 27
+        },
+        {
+          "name": "LightSweep",
+          "params": [
+            "{ from, duration }"
+          ],
+          "exported": false,
+          "lineCount": 12
+        },
+        {
+          "name": "Flash",
+          "params": [
+            "{ at }"
+          ],
+          "exported": false,
+          "lineCount": 5
+        },
+        {
+          "name": "PackHype",
+          "params": [
+            "{ headline, sub, cta, packUrl, footage }"
+          ],
+          "exported": true,
+          "lineCount": 91
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "remotion",
+          "specifiers": [
+            "AbsoluteFill",
+            "Img",
+            "OffthreadVideo",
+            "Sequence",
+            "interpolate",
+            "random",
+            "spring",
+            "staticFile",
+            "useCurrentFrame",
+            "useVideoConfig"
+          ]
+        }
+      ],
+      "exports": [
+        "PackHype"
+      ],
+      "totalLines": 171,
+      "hasStructuralAnalysis": true
+    },
+    "remotion/src/PackReveal.tsx": {
+      "filePath": "remotion/src/PackReveal.tsx",
+      "contentHash": "4f593556b84f91070da7adb43d79ca38b97d9a6db8e2402d72e04e6d9ba15b3f",
+      "functions": [
+        {
+          "name": "PackReveal",
+          "params": [
+            "{ headline, sub, packUrl }"
+          ],
+          "exported": true,
+          "lineCount": 92
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "remotion",
+          "specifiers": [
+            "AbsoluteFill",
+            "Img",
+            "interpolate",
+            "spring",
+            "useCurrentFrame",
+            "useVideoConfig"
+          ]
+        }
+      ],
+      "exports": [
+        "PackReveal"
+      ],
+      "totalLines": 103,
+      "hasStructuralAnalysis": true
+    },
+    "remotion/src/Root.tsx": {
+      "filePath": "remotion/src/Root.tsx",
+      "contentHash": "9d42951d35e3a908b25b54077a9654d9f3505660afc0c6718221bc0e21f25399",
+      "functions": [
+        {
+          "name": "RemotionRoot",
+          "params": [],
+          "exported": true,
+          "lineCount": 39
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "remotion",
+          "specifiers": [
+            "Composition"
+          ]
+        },
+        {
+          "source": "./PackReveal",
+          "specifiers": [
+            "PackReveal"
+          ]
+        },
+        {
+          "source": "./PackHype",
+          "specifiers": [
+            "PackHype"
+          ]
+        }
+      ],
+      "exports": [
+        "RemotionRoot"
+      ],
+      "totalLines": 48,
+      "hasStructuralAnalysis": true
+    },
+    "remotion/tsconfig.json": {
+      "filePath": "remotion/tsconfig.json",
+      "contentHash": "2d2d494c64f01e969f423e502a586a453cecd0de77398a92f83e19331f0e9d2f",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 15,
+      "hasStructuralAnalysis": true
+    },
+    "scripts/check-py311.py": {
+      "filePath": "scripts/check-py311.py",
+      "contentHash": "2d2e0388a64c45e441798081229ee15721a147ac74bd2a22dab0a99f188c19c0",
+      "functions": [
+        {
+          "name": "ci_python_versions",
+          "params": [],
+          "exported": true,
+          "lineCount": 8
+        },
+        {
+          "name": "main",
+          "params": [],
+          "exported": true,
+          "lineCount": 28
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "ast",
+          "specifiers": [
+            "ast"
+          ]
+        },
+        {
+          "source": "pathlib",
+          "specifiers": [
+            "pathlib"
+          ]
+        },
+        {
+          "source": "re",
+          "specifiers": [
+            "re"
+          ]
+        },
+        {
+          "source": "sys",
+          "specifiers": [
+            "sys"
+          ]
+        }
+      ],
+      "exports": [
+        "ci_python_versions",
+        "main"
+      ],
+      "totalLines": 70,
+      "hasStructuralAnalysis": true
+    },
+    "scripts/fb-token.mjs": {
+      "filePath": "scripts/fb-token.mjs",
+      "contentHash": "8542e81299d540efae4d647dd9f77accbc60d7ce0d6a587b9893bde3ba61ed8f",
+      "functions": [
+        {
+          "name": "call",
+          "params": [
+            "path",
+            "params"
+          ],
+          "exported": false,
+          "lineCount": 12
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 94,
       "hasStructuralAnalysis": true
     },
     "scripts/trigger-ww-backfill.ps1": {
@@ -9668,12 +14436,12 @@
     },
     "wiki/_index.md": {
       "filePath": "wiki/_index.md",
-      "contentHash": "3c2286fc6d8c7b666bb3d98b7a5232e76a1615efe92119a01367140cf65df852",
+      "contentHash": "0906ec3f0ea0e6124fd80099e14e11d0756c20b1cd22b86568b1b84b2738cb7a",
       "functions": [],
       "classes": [],
       "imports": [],
       "exports": [],
-      "totalLines": 50,
+      "totalLines": 51,
       "hasStructuralAnalysis": true
     },
     "wiki/changes/_template-stock-reset.md": {
@@ -9776,6 +14544,16 @@
       "totalLines": 1,
       "hasStructuralAnalysis": true
     },
+    "wiki/integrations/hermes-tavily-architecture.md": {
+      "filePath": "wiki/integrations/hermes-tavily-architecture.md",
+      "contentHash": "f9ed61d47777693fde8876596f43b70c45020f07af044487e7ad77dcced5ad66",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 202,
+      "hasStructuralAnalysis": true
+    },
     "wiki/integrations/vendos-integration-plan.md": {
       "filePath": "wiki/integrations/vendos-integration-plan.md",
       "contentHash": "9e6a7df04923482ebbff6411b10081609f26bd14cfb38bd4d68d84034647c74a",
@@ -9784,6 +14562,66 @@
       "imports": [],
       "exports": [],
       "totalLines": 103,
+      "hasStructuralAnalysis": true
+    },
+    "wiki/kb-research/dragonball.md": {
+      "filePath": "wiki/kb-research/dragonball.md",
+      "contentHash": "c5df3b5243750e3ed5be2e29975c8ec3e8705ec3ad411e5add4d0f12edca0e2c",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 102,
+      "hasStructuralAnalysis": true
+    },
+    "wiki/kb-research/kayou-sku-mapping-todo.md": {
+      "filePath": "wiki/kb-research/kayou-sku-mapping-todo.md",
+      "contentHash": "6664df45c4e8d88cb339a335ac729077a7605a88b7aa22074297c66efffa70ab",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 60,
+      "hasStructuralAnalysis": true
+    },
+    "wiki/kb-research/mlbb.md": {
+      "filePath": "wiki/kb-research/mlbb.md",
+      "contentHash": "0f174de3333c55df4c908330bcf4754e7eb9f89798b15060f2a863380fcb2bf1",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 105,
+      "hasStructuralAnalysis": true
+    },
+    "wiki/kb-research/README.md": {
+      "filePath": "wiki/kb-research/README.md",
+      "contentHash": "88cfa2bc08599f3afc94fb086fb4a4d965e1ee7bdbe8eb27fd5f99d0452bca0e",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 103,
+      "hasStructuralAnalysis": true
+    },
+    "wiki/kb-research/solo-leveling.md": {
+      "filePath": "wiki/kb-research/solo-leveling.md",
+      "contentHash": "6f0950fe9421750651586760057865874d0d2f77ced7f0d4687271ff42be8943",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 180,
+      "hasStructuralAnalysis": true
+    },
+    "wiki/kb-research/transformers.md": {
+      "filePath": "wiki/kb-research/transformers.md",
+      "contentHash": "e75bcfd2a51e61099ae998dcbbf929a70a2fbe1b5c41fcf21267968439838b66",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 158,
       "hasStructuralAnalysis": true
     },
     "wiki/knowledge-base/01-frameworks.md": {
@@ -9798,12 +14636,12 @@
     },
     "wiki/knowledge-base/02-stories-examples.md": {
       "filePath": "wiki/knowledge-base/02-stories-examples.md",
-      "contentHash": "e15c30d526efcecf12b5a8cd704825aa1163c2b3bb94cd54a57609167d0bea11",
+      "contentHash": "8c556cb592852fdb6499a82b1af435c1e11a60fce5085088ef4268f65835c6f6",
       "functions": [],
       "classes": [],
       "imports": [],
       "exports": [],
-      "totalLines": 66,
+      "totalLines": 77,
       "hasStructuralAnalysis": true
     },
     "wiki/knowledge-base/03-stances-beliefs.md": {
@@ -9826,14 +14664,24 @@
       "totalLines": 62,
       "hasStructuralAnalysis": true
     },
-    "wiki/knowledge-base/index.md": {
-      "filePath": "wiki/knowledge-base/index.md",
-      "contentHash": "d59e1fbbe0f4d8f8ac277939debfb6d9cfefb7e6ec05f1d3bef3491b1bf35951",
+    "wiki/knowledge-base/05-visual-identity.md": {
+      "filePath": "wiki/knowledge-base/05-visual-identity.md",
+      "contentHash": "9999ec23ec8de65c868ed570892219c230c8b95fc62c0d0b49919c32ccf2d652",
       "functions": [],
       "classes": [],
       "imports": [],
       "exports": [],
-      "totalLines": 45,
+      "totalLines": 462,
+      "hasStructuralAnalysis": true
+    },
+    "wiki/knowledge-base/index.md": {
+      "filePath": "wiki/knowledge-base/index.md",
+      "contentHash": "4856d937f0f7dc410a5a2c5fce56dd3f52e49964ce3f8f3b61dd12762306f6c3",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 84,
       "hasStructuralAnalysis": true
     },
     "wiki/machines/chukes01.md": {
@@ -9858,12 +14706,12 @@
     },
     "wiki/machines/wwv02.md": {
       "filePath": "wiki/machines/wwv02.md",
-      "contentHash": "eb8ca537fea1edcc22ad3afc65b2f35ec746250b76318db879affb0bd7b3456d",
+      "contentHash": "a5fdc7864c2d066f3bb6ffa96a3b05119cdcc1703993a9d8077e697f981c03cd",
       "functions": [],
       "classes": [],
       "imports": [],
       "exports": [],
-      "totalLines": 42,
+      "totalLines": 48,
       "hasStructuralAnalysis": true
     },
     "wiki/machines/wwv03.md": {
@@ -9916,6 +14764,16 @@
       "totalLines": 41,
       "hasStructuralAnalysis": true
     },
+    "wiki/machines/wwv08.md": {
+      "filePath": "wiki/machines/wwv08.md",
+      "contentHash": "f3a0d2acaa73b256bd02478944c78fe9cd31974218e634f1541ace1c3e63b7c5",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 52,
+      "hasStructuralAnalysis": true
+    },
     "wiki/marketing/ai-content-intelligence-plan.md": {
       "filePath": "wiki/marketing/ai-content-intelligence-plan.md",
       "contentHash": "48632da7f05a7da645c5dca014b8e1b453773fcf6567369bb3d67f0b1d0ff92b",
@@ -9934,6 +14792,16 @@
       "imports": [],
       "exports": [],
       "totalLines": 52,
+      "hasStructuralAnalysis": true
+    },
+    "wiki/marketing/auto-posting-level3-setup.md": {
+      "filePath": "wiki/marketing/auto-posting-level3-setup.md",
+      "contentHash": "e5bbdd8d7f616273ebfae36e957973e50dae1ebcf4085d69f8eede93dad44cbb",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 220,
       "hasStructuralAnalysis": true
     },
     "wiki/marketing/auto-posting-plan.md": {
@@ -9964,6 +14832,16 @@
       "imports": [],
       "exports": [],
       "totalLines": 153,
+      "hasStructuralAnalysis": true
+    },
+    "wiki/marketing/brand-brief.md": {
+      "filePath": "wiki/marketing/brand-brief.md",
+      "contentHash": "15dcaa1fbe5cd0fcd26d52357d5f020cba0796b9c42869521c119d85af478b1f",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 288,
       "hasStructuralAnalysis": true
     },
     "wiki/marketing/chukes01-content-pack.md": {
@@ -10028,7 +14906,7 @@
     },
     "wiki/marketing/fb-cover.html": {
       "filePath": "wiki/marketing/fb-cover.html",
-      "contentHash": "e4746b12d1d2ea97243e160a5b76239c949e9a9698f64e8024f99bb435433528",
+      "contentHash": "0dd022794b660080453dcca236636bd63404c6f8d2d7a2565a45db02838d1063",
       "functions": [],
       "classes": [],
       "imports": [],
@@ -10038,7 +14916,7 @@
     },
     "wiki/marketing/fb-page-setup.md": {
       "filePath": "wiki/marketing/fb-page-setup.md",
-      "contentHash": "af20a1932f8c09a5e4528475c360df8bc5310a4589eacc5d284611e3ca2839b4",
+      "contentHash": "2c78802b39b329e16aa09b1e5cf9744defa9a07f5e9d9f9a0c9874facfe78f25",
       "functions": [],
       "classes": [],
       "imports": [],
@@ -10068,7 +14946,7 @@
     },
     "wiki/marketing/led-sign-mockup.html": {
       "filePath": "wiki/marketing/led-sign-mockup.html",
-      "contentHash": "22921f08615f74bddcae51d42e29a986220c5cc23dc4279279a61cc22dfce316",
+      "contentHash": "f52fb945d0b34a612f4ca700f878e4dd0300fcf51e7daafedd1f0cf6ce9bcfaa",
       "functions": [],
       "classes": [],
       "imports": [],
@@ -10078,7 +14956,7 @@
     },
     "wiki/marketing/qr-standee.html": {
       "filePath": "wiki/marketing/qr-standee.html",
-      "contentHash": "6075381852bdf779ad2758aab5e82427345c4dc38c6021e631d12f5fd2c7b651",
+      "contentHash": "c96a737d9f7767bf6c6ee2a239ac224c3a743700394e3062353f2b01b967d2d9",
       "functions": [],
       "classes": [],
       "imports": [],
@@ -10188,57 +15066,47 @@
     },
     "wiki/skus/EB01.md": {
       "filePath": "wiki/skus/EB01.md",
-      "contentHash": "858479157a03eb7c59105df3d3c5f77222d60012685876cd4c8fa05e33bb1cce",
+      "contentHash": "6896e87fb3ba5fb6c531a6773bc80cd097e4df8c9e9ee676567860a66389163b",
       "functions": [],
       "classes": [],
       "imports": [],
       "exports": [],
-      "totalLines": 76,
+      "totalLines": 71,
       "hasStructuralAnalysis": true
     },
     "wiki/skus/EB02.md": {
       "filePath": "wiki/skus/EB02.md",
-      "contentHash": "948215e3c591306677ae9132bc3d37cd9e7b7a37c204dd37686bf8de33873db8",
+      "contentHash": "bcc96e81e06f6e1a8425fb18d54186614c16cf1cb3aa3f0895313bcf385e7bd5",
       "functions": [],
       "classes": [],
       "imports": [],
       "exports": [],
-      "totalLines": 73,
+      "totalLines": 69,
       "hasStructuralAnalysis": true
     },
     "wiki/skus/EB03.md": {
       "filePath": "wiki/skus/EB03.md",
-      "contentHash": "f7ecc7df05ea92cab66013cb9737e0e84bf60385a4fb29a25b9c4e72c1789894",
+      "contentHash": "9c3617145bbd97179f5c4280af607e2c2417cfa0d833e29b52da5b33a3dc2923",
       "functions": [],
       "classes": [],
       "imports": [],
       "exports": [],
-      "totalLines": 81,
+      "totalLines": 82,
       "hasStructuralAnalysis": true
     },
     "wiki/skus/EB04.md": {
       "filePath": "wiki/skus/EB04.md",
-      "contentHash": "54f198c307e1fe1586d90029a7344f10c53640023ddb9510bcccd30bd0748b70",
+      "contentHash": "9ea302d17063e2c622f079ce1e8492aca26729d1798d6d83f8c5e5f978c110e6",
       "functions": [],
       "classes": [],
       "imports": [],
       "exports": [],
-      "totalLines": 81,
+      "totalLines": 82,
       "hasStructuralAnalysis": true
     },
     "wiki/skus/FB01.md": {
       "filePath": "wiki/skus/FB01.md",
-      "contentHash": "849074483612e914d66dae4e70012d8becc3b707c667a1086e3dd5f1c41952d8",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 80,
-      "hasStructuralAnalysis": true
-    },
-    "wiki/skus/FB02.md": {
-      "filePath": "wiki/skus/FB02.md",
-      "contentHash": "6b1dc315460a72fb304017f0d0df3cc35483c0f620e1ace68e343e44ae93a774",
+      "contentHash": "fcd456c4b8e1959781206da3bd2cdd4939c7afe596c406a943f498848fde5cbc",
       "functions": [],
       "classes": [],
       "imports": [],
@@ -10246,9 +15114,19 @@
       "totalLines": 81,
       "hasStructuralAnalysis": true
     },
+    "wiki/skus/FB02.md": {
+      "filePath": "wiki/skus/FB02.md",
+      "contentHash": "1da129f55ac358506dd22ee18358ee0242fc412624d706baaea92a9c9b44df8a",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 82,
+      "hasStructuralAnalysis": true
+    },
     "wiki/skus/FB03.md": {
       "filePath": "wiki/skus/FB03.md",
-      "contentHash": "9662a74251ca00c99961917380e54c63263407c013d7348431bbf372eaf21662",
+      "contentHash": "f2725aafe7e07f761b3fcd0c55fd88ba9e033f9b7a08e867c7acd1c1e794c5b5",
       "functions": [],
       "classes": [],
       "imports": [],
@@ -10258,7 +15136,7 @@
     },
     "wiki/skus/FB04.md": {
       "filePath": "wiki/skus/FB04.md",
-      "contentHash": "7f78049a6347abdbb80203ad2c0e2aa74dbb6f820adb282901740643f4799330",
+      "contentHash": "2c3667e85d2e4bdf15de825a90d99fd654ebb742b26f7a1805e17b522a9519b9",
       "functions": [],
       "classes": [],
       "imports": [],
@@ -10268,27 +15146,27 @@
     },
     "wiki/skus/FB05.md": {
       "filePath": "wiki/skus/FB05.md",
-      "contentHash": "e4fb610d8379ecf6ac5a14ef0132b8972d93e452059bb92349535a55ab690d1d",
+      "contentHash": "bd15694d2b302e8ae846b43c8c3e791c1528733123f8dc3fad0f6daa6a36a498",
       "functions": [],
       "classes": [],
       "imports": [],
       "exports": [],
-      "totalLines": 84,
+      "totalLines": 81,
       "hasStructuralAnalysis": true
     },
     "wiki/skus/FB06.md": {
       "filePath": "wiki/skus/FB06.md",
-      "contentHash": "1f0e08c6c25745312dc4314dac8e20f01601a8b32442c54adf516c819e569163",
+      "contentHash": "fbe854562714fb7f3a4d8a85cc77a69491f0bff0924dafa49e65c4ed3e641c5a",
       "functions": [],
       "classes": [],
       "imports": [],
       "exports": [],
-      "totalLines": 79,
+      "totalLines": 81,
       "hasStructuralAnalysis": true
     },
     "wiki/skus/FB07.md": {
       "filePath": "wiki/skus/FB07.md",
-      "contentHash": "2db95faed2a4f7622df12b55e047324f47691cd775b3335b82c4aab885b9f110",
+      "contentHash": "ca83b5b39c60c48630c85020ada208a2122d39117dffeed639504e60cee98630",
       "functions": [],
       "classes": [],
       "imports": [],
@@ -10298,7 +15176,77 @@
     },
     "wiki/skus/FB08.md": {
       "filePath": "wiki/skus/FB08.md",
-      "contentHash": "cf9460ceb1bb885bb441fa7f5af208760dd13c49be2ec73de2694ec41f73c707",
+      "contentHash": "68e9d97f5649edf7a731c3adbd90fc479d2dd7546e7c112271120061f2f1bb03",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 81,
+      "hasStructuralAnalysis": true
+    },
+    "wiki/skus/FB09.md": {
+      "filePath": "wiki/skus/FB09.md",
+      "contentHash": "1da245c7da86e39fcd07c9fa536fc994c9a3219ac72dfb11d2efed574c29abaa",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 81,
+      "hasStructuralAnalysis": true
+    },
+    "wiki/skus/MLBBHOD-02.md": {
+      "filePath": "wiki/skus/MLBBHOD-02.md",
+      "contentHash": "516175aea66f5196db93bf235aeefa107688974b9ef2afb78807ad4e43fe7f7f",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 78,
+      "hasStructuralAnalysis": true
+    },
+    "wiki/skus/MLPBP-01.md": {
+      "filePath": "wiki/skus/MLPBP-01.md",
+      "contentHash": "e97cb34438c3ee372c68c7907cfad730f3ea37c3374f10c8cac4ff0b7b8426ec",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 79,
+      "hasStructuralAnalysis": true
+    },
+    "wiki/skus/MLPSEA02.md": {
+      "filePath": "wiki/skus/MLPSEA02.md",
+      "contentHash": "15c53a412f79003c81b8bc85860d71dc7c7bd8ab04ea1a6c2afc6ae2006b04df",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 79,
+      "hasStructuralAnalysis": true
+    },
+    "wiki/skus/NRTJin-1.md": {
+      "filePath": "wiki/skus/NRTJin-1.md",
+      "contentHash": "d8534cb9fe20c44477747a16e3b7bbcf26c8872f19ebdb2d491da59de2708f62",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 81,
+      "hasStructuralAnalysis": true
+    },
+    "wiki/skus/NRTJin-2.md": {
+      "filePath": "wiki/skus/NRTJin-2.md",
+      "contentHash": "e39dbfbc2a0c97d283f35bd5f4854f3a6699b8353c1d56bfe1741dbe821ebd6c",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 75,
+      "hasStructuralAnalysis": true
+    },
+    "wiki/skus/NRTSeries-01.md": {
+      "filePath": "wiki/skus/NRTSeries-01.md",
+      "contentHash": "adcefe2a53f90a74b94da8e11048d59cf34d260fabc75e006df11ea0bc93c35e",
       "functions": [],
       "classes": [],
       "imports": [],
@@ -10306,39 +15254,9 @@
       "totalLines": 83,
       "hasStructuralAnalysis": true
     },
-    "wiki/skus/FB09.md": {
-      "filePath": "wiki/skus/FB09.md",
-      "contentHash": "90d8f365ee670e4071dc4d86e5a04559453b6573516ba790c2c2fc9f0a99fdd2",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 81,
-      "hasStructuralAnalysis": true
-    },
-    "wiki/skus/NRTJin-1.md": {
-      "filePath": "wiki/skus/NRTJin-1.md",
-      "contentHash": "1deb6493cf48ece85e7bda122367b8bf5d0f40719d41fc18884080dc9285de24",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 82,
-      "hasStructuralAnalysis": true
-    },
-    "wiki/skus/NRTSeries-01.md": {
-      "filePath": "wiki/skus/NRTSeries-01.md",
-      "contentHash": "8e9494365204ac2582bac27699b49a882d176430780260213b20d8fd2a8619d4",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 81,
-      "hasStructuralAnalysis": true
-    },
     "wiki/skus/NRTSeries-02.md": {
       "filePath": "wiki/skus/NRTSeries-02.md",
-      "contentHash": "a6ada8da837223033c8defdb1fe12b4f80ae0e5dbe78d63c7e6c6ddabfe8b38c",
+      "contentHash": "f48dde0c635fe5832d5c7bd194327a779b8cb580d64aca1b88d13d92af0f3f47",
       "functions": [],
       "classes": [],
       "imports": [],
@@ -10348,27 +15266,47 @@
     },
     "wiki/skus/OP01.md": {
       "filePath": "wiki/skus/OP01.md",
-      "contentHash": "c1bbd6d962eb2b89cc949dbc19a4c4ba2a1d2b03957eb98050301fa30bc0ac20",
+      "contentHash": "c845bd00bb6704a2a0a265695d8b63cc36dd06e3e0b3e78939ad5e2f13eac176",
       "functions": [],
       "classes": [],
       "imports": [],
       "exports": [],
-      "totalLines": 79,
+      "totalLines": 80,
       "hasStructuralAnalysis": true
     },
     "wiki/skus/OP02.md": {
       "filePath": "wiki/skus/OP02.md",
-      "contentHash": "3b9f5b7e053b6724f0457b78f05f6bc7906893b249c21e7964018198919c3ac4",
+      "contentHash": "2d1e3c7df29a8d05e855678924c6d6bdfa1bb1eaf88ebdb5c2d1ab8fdb64b061",
       "functions": [],
       "classes": [],
       "imports": [],
       "exports": [],
-      "totalLines": 80,
+      "totalLines": 74,
       "hasStructuralAnalysis": true
     },
     "wiki/skus/OP03.md": {
       "filePath": "wiki/skus/OP03.md",
-      "contentHash": "0b99f3338ea2124d93928588d6894e3238d630f4a9d793c736d069280f3022eb",
+      "contentHash": "fe01e275d105db62300e92c8c543778cf78d81e21dad075dcc7719ea2e55fa22",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 81,
+      "hasStructuralAnalysis": true
+    },
+    "wiki/skus/OP04.md": {
+      "filePath": "wiki/skus/OP04.md",
+      "contentHash": "03b68fbccb77b1800816ffb1c2caeeea9ede6431d182997b8d43ba2ea98b0e73",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 83,
+      "hasStructuralAnalysis": true
+    },
+    "wiki/skus/OP05.md": {
+      "filePath": "wiki/skus/OP05.md",
+      "contentHash": "3e327e4f8f2c08cadfb7d5e8bb972a49821e4cc7a1e31b338e2260f4f770b64f",
       "functions": [],
       "classes": [],
       "imports": [],
@@ -10376,39 +15314,19 @@
       "totalLines": 79,
       "hasStructuralAnalysis": true
     },
-    "wiki/skus/OP04.md": {
-      "filePath": "wiki/skus/OP04.md",
-      "contentHash": "31009cdbdba56bc5d05262c85c6f9d9a44f52dcbbe59e0cd6432b73c3a929b97",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 80,
-      "hasStructuralAnalysis": true
-    },
-    "wiki/skus/OP05.md": {
-      "filePath": "wiki/skus/OP05.md",
-      "contentHash": "e4f94aa3fab527cc1f54d1e8e3353520946d4aeb1881e621acb211ed0ab85d5a",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 80,
-      "hasStructuralAnalysis": true
-    },
     "wiki/skus/OP06.md": {
       "filePath": "wiki/skus/OP06.md",
-      "contentHash": "f1ccfc274c18ae42bdd7192e48ae86d614d026d37be5c1da99a20e2d6b95d975",
+      "contentHash": "3c37b42d3355c15967a3ba44c3e1ddbb7f9b7133fa66215cf270d9f0ba8d0767",
       "functions": [],
       "classes": [],
       "imports": [],
       "exports": [],
-      "totalLines": 59,
+      "totalLines": 56,
       "hasStructuralAnalysis": true
     },
     "wiki/skus/OP07.md": {
       "filePath": "wiki/skus/OP07.md",
-      "contentHash": "5a6bb5213dd0b80157dd38be32c9ed77a2567d432f24588f6fe6251f6101cde0",
+      "contentHash": "8a1beee146a1cb3a0638b1e4c2a092e672b5093200d8a79d2799448ca01ce630",
       "functions": [],
       "classes": [],
       "imports": [],
@@ -10418,27 +15336,27 @@
     },
     "wiki/skus/OP08.md": {
       "filePath": "wiki/skus/OP08.md",
-      "contentHash": "3e460d0569d715cbe7a432fcf59526e3f8d9d015f756cc3937548061ad2a6bb9",
+      "contentHash": "5e8bd61d1748589bcfc71fb7388bad30967263582eee9042a82fc243dc836831",
       "functions": [],
       "classes": [],
       "imports": [],
       "exports": [],
-      "totalLines": 83,
+      "totalLines": 84,
       "hasStructuralAnalysis": true
     },
     "wiki/skus/OP09.md": {
       "filePath": "wiki/skus/OP09.md",
-      "contentHash": "561b983baf2e11fc7898c119edf27210fc1976145d477030689fb6492ea7a2bd",
+      "contentHash": "0bf07475067947a3459d28dbabe7a3c27894374b9ecfcad39293a2443c809817",
       "functions": [],
       "classes": [],
       "imports": [],
       "exports": [],
-      "totalLines": 82,
+      "totalLines": 84,
       "hasStructuralAnalysis": true
     },
     "wiki/skus/OP10.md": {
       "filePath": "wiki/skus/OP10.md",
-      "contentHash": "9255a50170ab4226ead43e9486cc291fabb2d3c76081d85e06f892282f706978",
+      "contentHash": "6f28c9a59933d7be71a92a19e45b99f5975c00497b121b620ad3d343e5ecf8f0",
       "functions": [],
       "classes": [],
       "imports": [],
@@ -10448,27 +15366,7 @@
     },
     "wiki/skus/OP11.md": {
       "filePath": "wiki/skus/OP11.md",
-      "contentHash": "47c2d380a4f2c00ad24bf9ab5548537b94e6a80166690ffa35a606110b1bf702",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 80,
-      "hasStructuralAnalysis": true
-    },
-    "wiki/skus/OP12.md": {
-      "filePath": "wiki/skus/OP12.md",
-      "contentHash": "c75b85058a7e6a9270ce68a47f38095f8cbe818856ae8e19f417fa86905e0143",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 81,
-      "hasStructuralAnalysis": true
-    },
-    "wiki/skus/OP13.md": {
-      "filePath": "wiki/skus/OP13.md",
-      "contentHash": "37760e9ba43d59e5fc484b1cb80ddc590479894e99165f90428c6160660d9261",
+      "contentHash": "06f5436f0f0d10b23a81174c43bf7636477f78dc397b08c791f7e4243abd14c8",
       "functions": [],
       "classes": [],
       "imports": [],
@@ -10476,9 +15374,59 @@
       "totalLines": 82,
       "hasStructuralAnalysis": true
     },
+    "wiki/skus/OP12.md": {
+      "filePath": "wiki/skus/OP12.md",
+      "contentHash": "d973990c4152c8cfb9eee96d973fe4da32966cb490da0496165767a52d25dfc1",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 82,
+      "hasStructuralAnalysis": true
+    },
+    "wiki/skus/OP13.md": {
+      "filePath": "wiki/skus/OP13.md",
+      "contentHash": "14e5ac35b2282a0f5271412775bc5255446c5f0d614e567cedec24155c483f15",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 83,
+      "hasStructuralAnalysis": true
+    },
     "wiki/skus/OP14.md": {
       "filePath": "wiki/skus/OP14.md",
-      "contentHash": "b2076bd6cc0cdf69b6d6c1ad5684bbae0b7b5d254e07f53bf0e6c0acf1f59952",
+      "contentHash": "e0688cd37f1bbfc60a8b024cb3709d47d067e63fde4d4d333498a52e7b324785",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 81,
+      "hasStructuralAnalysis": true
+    },
+    "wiki/skus/OP15.md": {
+      "filePath": "wiki/skus/OP15.md",
+      "contentHash": "2524aec4a0bae76b45602b555a2ec432bb4c9ec4cd7e724067af6eaba45fd949",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 83,
+      "hasStructuralAnalysis": true
+    },
+    "wiki/skus/OP16.md": {
+      "filePath": "wiki/skus/OP16.md",
+      "contentHash": "a9d4e6a8e48d513dfb9229eaff48895e1bd40fa8f4811596b64a1b0ccaa6ff60",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 81,
+      "hasStructuralAnalysis": true
+    },
+    "wiki/skus/PKMDreamEX.md": {
+      "filePath": "wiki/skus/PKMDreamEX.md",
+      "contentHash": "9a0c71cdd058a4d898b7dc50b83eeafc149f60a6926b06cfa3253b30821faa53",
       "functions": [],
       "classes": [],
       "imports": [],
@@ -10486,59 +15434,19 @@
       "totalLines": 85,
       "hasStructuralAnalysis": true
     },
-    "wiki/skus/OP15.md": {
-      "filePath": "wiki/skus/OP15.md",
-      "contentHash": "88f8a5e2f4d9afa8211e58a1d0484590540ba81bdcf4380187d1bac3348a6f6c",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 82,
-      "hasStructuralAnalysis": true
-    },
-    "wiki/skus/OP16.md": {
-      "filePath": "wiki/skus/OP16.md",
-      "contentHash": "32d21993f328a6c85be2bbb23088964d8e75a15f3a975f1e24d3c4f10462c62a",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 80,
-      "hasStructuralAnalysis": true
-    },
-    "wiki/skus/PKMDreamEX.md": {
-      "filePath": "wiki/skus/PKMDreamEX.md",
-      "contentHash": "adf1346119ec96c037775fc99bb9d7dff500240bedf6eb7afbca0dfedcaf33fe",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 81,
-      "hasStructuralAnalysis": true
-    },
     "wiki/skus/PKMGhost.md": {
       "filePath": "wiki/skus/PKMGhost.md",
-      "contentHash": "b6d3bc5de921ee00dfcf1556eb23f46b462fad37671b66f464abfb647a3fa71f",
+      "contentHash": "89f9027d8374cb3e228cc61d47b08fa03f3d9468aa01af4722f02756b3baf494",
       "functions": [],
       "classes": [],
       "imports": [],
       "exports": [],
-      "totalLines": 77,
+      "totalLines": 74,
       "hasStructuralAnalysis": true
     },
     "wiki/skus/PKMNinja.md": {
       "filePath": "wiki/skus/PKMNinja.md",
-      "contentHash": "f707a8404967f9a5e5984beadd2d7ff71fa235ad099c776f1385f2343b3f9cbe",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 84,
-      "hasStructuralAnalysis": true
-    },
-    "wiki/skus/PRB01.md": {
-      "filePath": "wiki/skus/PRB01.md",
-      "contentHash": "7057b6d5b88898e1224b6dd12311d3252ee273521aa648f99ee2ca04066ff5e6",
+      "contentHash": "a92aa4764e91ca7fd5f1ad841e9f1d90fd064a990a819827097f8893cfe3bbbe",
       "functions": [],
       "classes": [],
       "imports": [],
@@ -10546,19 +15454,49 @@
       "totalLines": 81,
       "hasStructuralAnalysis": true
     },
-    "wiki/skus/PRB02.md": {
-      "filePath": "wiki/skus/PRB02.md",
-      "contentHash": "a6553e553fd3088b22fc2470199c97940ccedc7e23ff3a75e9e4dc771b7612c2",
+    "wiki/skus/PRB01.md": {
+      "filePath": "wiki/skus/PRB01.md",
+      "contentHash": "21b0e6740bef752c7277ff3a063e3eac4342526705dcdee81851c0cbfda3ed38",
       "functions": [],
       "classes": [],
       "imports": [],
       "exports": [],
-      "totalLines": 75,
+      "totalLines": 83,
+      "hasStructuralAnalysis": true
+    },
+    "wiki/skus/PRB02.md": {
+      "filePath": "wiki/skus/PRB02.md",
+      "contentHash": "bdb356f4de3a28fc7e03a5fac0ebdd6cddd8629967e208e952b7e4702a7e71e3",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 72,
       "hasStructuralAnalysis": true
     },
     "wiki/skus/SLLUA51.md": {
       "filePath": "wiki/skus/SLLUA51.md",
-      "contentHash": "c7330c2d336f31157b389023d75934ea159d5d723f05322654eb56a9c07935ba",
+      "contentHash": "977908da4c8c269ab2be959f6513a47cd4a2bcb544c6f1e83016729f26767c26",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 81,
+      "hasStructuralAnalysis": true
+    },
+    "wiki/skus/TFOverdrive01.md": {
+      "filePath": "wiki/skus/TFOverdrive01.md",
+      "contentHash": "79b141f4b23f19b53abb95e088c4d41d79636b9da0da005fbb58802a16d9c60b",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 78,
+      "hasStructuralAnalysis": true
+    },
+    "wiki/skus/YGHChaosOrigins.md": {
+      "filePath": "wiki/skus/YGHChaosOrigins.md",
+      "contentHash": "273bb2401a4aafaf5242cc0caa1cd4107bfeee42eb80aa509bce58f38823265d",
       "functions": [],
       "classes": [],
       "imports": [],
@@ -10566,19 +15504,9 @@
       "totalLines": 80,
       "hasStructuralAnalysis": true
     },
-    "wiki/skus/YGHChaosOrigins.md": {
-      "filePath": "wiki/skus/YGHChaosOrigins.md",
-      "contentHash": "73851ade4657e68d76bd132a5188091ae7e8f452ce87997865d03e99878f98e9",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 75,
-      "hasStructuralAnalysis": true
-    },
     "wiki/skus/YGHTheHeroes.md": {
       "filePath": "wiki/skus/YGHTheHeroes.md",
-      "contentHash": "07b1770e8e900e15ad300b69947c0c6125868060eb60a22f8ae08c33a8e58e20",
+      "contentHash": "31853e2a673c27e60bee7f3dadd8aca66deeb87b7ea954def656caaf0e79c2c4",
       "functions": [],
       "classes": [],
       "imports": [],
@@ -10588,12 +15516,22 @@
     },
     "wiki/skus/YGHTheRevals.md": {
       "filePath": "wiki/skus/YGHTheRevals.md",
-      "contentHash": "07d378f9a1593e8cb23fdec99087987d1fed38359f1bd6ea7664b8bb46219fdf",
+      "contentHash": "1d70982f16fa8d173ab097991e97d4163ee4708601bbef88054fb84a1187e867",
       "functions": [],
       "classes": [],
       "imports": [],
       "exports": [],
-      "totalLines": 79,
+      "totalLines": 81,
+      "hasStructuralAnalysis": true
+    },
+    "wiki/skus/YGHUT01.md": {
+      "filePath": "wiki/skus/YGHUT01.md",
+      "contentHash": "33e63ff23f8eb5fa45f4bfe1a0d2e4d787ff87a4f921e1c468fa7ecf5dd56e12",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 78,
       "hasStructuralAnalysis": true
     },
     "wiki/SLLUA51.md": {
@@ -11006,6 +15944,16 @@
       "totalLines": 68,
       "hasStructuralAnalysis": true
     },
+    "wiki/worklog/2026-08-07-marketing-loop-close.md": {
+      "filePath": "wiki/worklog/2026-08-07-marketing-loop-close.md",
+      "contentHash": "9b76c4ad0b662f6c1c4038dc092edbf80620a1c5dc75584d5f145bed565aae43",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 120,
+      "hasStructuralAnalysis": true
+    },
     "wiki/worklog/2026-08-07-wwv01-new-sku-mapping.md": {
       "filePath": "wiki/worklog/2026-08-07-wwv01-new-sku-mapping.md",
       "contentHash": "a566caeaedff5a4cfa9f888899e001cea52a51fa70474848462c7105877dc02d",
@@ -11016,14 +15964,454 @@
       "totalLines": 100,
       "hasStructuralAnalysis": true
     },
-    "wiki/worklog/README.md": {
-      "filePath": "wiki/worklog/README.md",
-      "contentHash": "52b371dbfbfb7ec70f64997817e1e347926c563453fccb64175d7806cf3f8611",
+    "wiki/worklog/2026-08-08-content-anti-repeat.md": {
+      "filePath": "wiki/worklog/2026-08-08-content-anti-repeat.md",
+      "contentHash": "269e5ec4adbe39df420a620f9f01eaac70881cfeee35bbf2ce3cdc116cc01b74",
       "functions": [],
       "classes": [],
       "imports": [],
       "exports": [],
-      "totalLines": 28,
+      "totalLines": 116,
+      "hasStructuralAnalysis": true
+    },
+    "wiki/worklog/2026-08-08-content-craft-skill.md": {
+      "filePath": "wiki/worklog/2026-08-08-content-craft-skill.md",
+      "contentHash": "3531c0f75a6967f79b121f80ed4fe01cf1c19bae3f9c3d8abc7c9090900d1cf5",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 152,
+      "hasStructuralAnalysis": true
+    },
+    "wiki/worklog/2026-08-08-content-image-gen.md": {
+      "filePath": "wiki/worklog/2026-08-08-content-image-gen.md",
+      "contentHash": "9505265c0a94221ecb7473fe9ef13999fd01ee1336053fc659a2c7fc9d6e2c19",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 66,
+      "hasStructuralAnalysis": true
+    },
+    "wiki/worklog/2026-08-08-marketing-bugfixes.md": {
+      "filePath": "wiki/worklog/2026-08-08-marketing-bugfixes.md",
+      "contentHash": "f38221bd2ca953e741e1758de94178a719c8432c6af081ecc90b96097c6811a4",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 72,
+      "hasStructuralAnalysis": true
+    },
+    "wiki/worklog/2026-08-08-poster-builder.md": {
+      "filePath": "wiki/worklog/2026-08-08-poster-builder.md",
+      "contentHash": "77f3c9403b5b891c390fe63d4f584c03d24e79750827cc59ff1e75b9278ce0e1",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 128,
+      "hasStructuralAnalysis": true
+    },
+    "wiki/worklog/2026-08-08-poster-concepts.md": {
+      "filePath": "wiki/worklog/2026-08-08-poster-concepts.md",
+      "contentHash": "8de0c5082af8f9d839892386556aca46a309088f1f07596b5ce3c594518f5205",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 81,
+      "hasStructuralAnalysis": true
+    },
+    "wiki/worklog/2026-08-08-thai-text-rendering.md": {
+      "filePath": "wiki/worklog/2026-08-08-thai-text-rendering.md",
+      "contentHash": "e6a3b28138d4762eed82507beb4ee1f9b916e0124f8668e246194c16747d83a3",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 67,
+      "hasStructuralAnalysis": true
+    },
+    "wiki/worklog/2026-08-09-free-image-path.md": {
+      "filePath": "wiki/worklog/2026-08-09-free-image-path.md",
+      "contentHash": "547661d3dc9a60ddd09459f3c7f5e452d1199c46db86bbfec88e9deca7502c79",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 65,
+      "hasStructuralAnalysis": true
+    },
+    "wiki/worklog/2026-08-09-idea-angles.md": {
+      "filePath": "wiki/worklog/2026-08-09-idea-angles.md",
+      "contentHash": "b07387f9c5f9c3a459d32ce7a8bb6feccd9d643a2fc480b86996a504c9f2f549",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 86,
+      "hasStructuralAnalysis": true
+    },
+    "wiki/worklog/2026-08-10-angle-picker-and-variants.md": {
+      "filePath": "wiki/worklog/2026-08-10-angle-picker-and-variants.md",
+      "contentHash": "d16de2ea4802f57686f1a95441208097f74daeb0a597f3c6509a56e697ffb0a4",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 136,
+      "hasStructuralAnalysis": true
+    },
+    "wiki/worklog/2026-08-10-facebook-auto-posting.md": {
+      "filePath": "wiki/worklog/2026-08-10-facebook-auto-posting.md",
+      "contentHash": "82464863157d9db08b7da9480a2ba3289607151805f218b13779e22e981fd603",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 138,
+      "hasStructuralAnalysis": true
+    },
+    "wiki/worklog/2026-08-10-marketing-ui-restructure.md": {
+      "filePath": "wiki/worklog/2026-08-10-marketing-ui-restructure.md",
+      "contentHash": "5e353ed0036288ff59b83b8688e4250c2ed13707dca88009c28255a7f4a12145",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 83,
+      "hasStructuralAnalysis": true
+    },
+    "wiki/worklog/2026-08-10-post-calendar.md": {
+      "filePath": "wiki/worklog/2026-08-10-post-calendar.md",
+      "contentHash": "5bdee43e7a5ce76294a831b4543f174978d7509b28acd5fa2425b755ccee793e",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 76,
+      "hasStructuralAnalysis": true
+    },
+    "wiki/worklog/2026-08-10-poster-quality-local-flux.md": {
+      "filePath": "wiki/worklog/2026-08-10-poster-quality-local-flux.md",
+      "contentHash": "df9e167a1db6d40d1ec19667be1036819c905eb46d14e6910eaa6dd827b509c2",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 180,
+      "hasStructuralAnalysis": true
+    },
+    "wiki/worklog/2026-08-11-branches-page.md": {
+      "filePath": "wiki/worklog/2026-08-11-branches-page.md",
+      "contentHash": "5b49c77b01e562eda37157110ad541d4954de1692923b37a7d2b5f0829f5dad2",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 152,
+      "hasStructuralAnalysis": true
+    },
+    "wiki/worklog/2026-08-13-product-name-audit.md": {
+      "filePath": "wiki/worklog/2026-08-13-product-name-audit.md",
+      "contentHash": "54c260701f2620069d315d42216b648b9a58378073c643bf986e00af4243f182",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 206,
+      "hasStructuralAnalysis": true
+    },
+    "wiki/worklog/2026-08-15-unpushed-commits-silent-revert.md": {
+      "filePath": "wiki/worklog/2026-08-15-unpushed-commits-silent-revert.md",
+      "contentHash": "0662f67fb59109bf27086c39893d1c5f8b2ecc8cf3bd3aebdb64bf3d79454d86",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 103,
+      "hasStructuralAnalysis": true
+    },
+    "wiki/worklog/2026-08-17-calendar-planning-autopost.md": {
+      "filePath": "wiki/worklog/2026-08-17-calendar-planning-autopost.md",
+      "contentHash": "6a9d7a84fd53bcda278b42513e30adbc6d7f207067da3e3a67fd42b03af3036c",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 140,
+      "hasStructuralAnalysis": true
+    },
+    "wiki/worklog/2026-08-17-content-review-gate.md": {
+      "filePath": "wiki/worklog/2026-08-17-content-review-gate.md",
+      "contentHash": "28f5cd90854caa372b8ae3d5570ef86476b856beb84dab7ab492acabac34c4c4",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 84,
+      "hasStructuralAnalysis": true
+    },
+    "wiki/worklog/2026-08-17-gemini-overload-resilience.md": {
+      "filePath": "wiki/worklog/2026-08-17-gemini-overload-resilience.md",
+      "contentHash": "2ed0a56069cd6002467adf92c75e8212ced7991933a72e0117f86b79d5060e62",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 76,
+      "hasStructuralAnalysis": true
+    },
+    "wiki/worklog/2026-08-17-hermes-agent-mcp.md": {
+      "filePath": "wiki/worklog/2026-08-17-hermes-agent-mcp.md",
+      "contentHash": "3d48f1ebb9b109389d67f5a120333de1d20e9d3dfcb132dc06d21c1616930bee",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 117,
+      "hasStructuralAnalysis": true
+    },
+    "wiki/worklog/2026-08-17-next-security-patch.md": {
+      "filePath": "wiki/worklog/2026-08-17-next-security-patch.md",
+      "contentHash": "e54de5184e88bafac588ca2d957dc1044502b02804f5b59efbde4a672ada845a",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 61,
+      "hasStructuralAnalysis": true
+    },
+    "wiki/worklog/2026-08-17-post-metrics-and-token-recovery.md": {
+      "filePath": "wiki/worklog/2026-08-17-post-metrics-and-token-recovery.md",
+      "contentHash": "fbdc992578da3dae5b6f5e232de55ba579ac61bae1038ae3f0e585a7a1cb09ea",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 127,
+      "hasStructuralAnalysis": true
+    },
+    "wiki/worklog/2026-08-18-poster-style-gap.md": {
+      "filePath": "wiki/worklog/2026-08-18-poster-style-gap.md",
+      "contentHash": "3bd6637543a3f46867b73c7388888d108c3fb806caeb5e242aab851667355657",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 62,
+      "hasStructuralAnalysis": true
+    },
+    "wiki/worklog/2026-08-18-poster-workflow-decision.md": {
+      "filePath": "wiki/worklog/2026-08-18-poster-workflow-decision.md",
+      "contentHash": "65ef0fcb01f83bb81ea8c821b77f10bb9229569655ac832fab330dc350691473",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 88,
+      "hasStructuralAnalysis": true
+    },
+    "wiki/worklog/2026-08-18-queue-audit-invented-numbers.md": {
+      "filePath": "wiki/worklog/2026-08-18-queue-audit-invented-numbers.md",
+      "contentHash": "5dce42d4bfed625071da55bf37da205299bf4fde8509f9e7bd604f185b141c5c",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 97,
+      "hasStructuralAnalysis": true
+    },
+    "wiki/worklog/2026-08-19-branches-white-background.md": {
+      "filePath": "wiki/worklog/2026-08-19-branches-white-background.md",
+      "contentHash": "36237ffe65c3ad4b75b15de0ba792d0e7cf29ee0cb3446f3f5c721a8205e2a86",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 75,
+      "hasStructuralAnalysis": true
+    },
+    "wiki/worklog/2026-08-19-image-api-four-bugs.md": {
+      "filePath": "wiki/worklog/2026-08-19-image-api-four-bugs.md",
+      "contentHash": "af20a1e044222b68bd180ac0e4b1fca5861605e3566590a2f99c3a349895f54e",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 101,
+      "hasStructuralAnalysis": true
+    },
+    "wiki/worklog/2026-08-19-pf01-stale-slots.md": {
+      "filePath": "wiki/worklog/2026-08-19-pf01-stale-slots.md",
+      "contentHash": "1bd84f9161adf82b93f479b8f87553f257f268ac0ad31490d65c7dd1a43ae380",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 99,
+      "hasStructuralAnalysis": true
+    },
+    "wiki/worklog/2026-08-19-retire-wwv02.md": {
+      "filePath": "wiki/worklog/2026-08-19-retire-wwv02.md",
+      "contentHash": "6e59e2e32dd980c53f053d5debeaeb532b101d23b3ef17bcc57bb0b2bb3a8b16",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 100,
+      "hasStructuralAnalysis": true
+    },
+    "wiki/worklog/2026-08-19-sales-sku-sort.md": {
+      "filePath": "wiki/worklog/2026-08-19-sales-sku-sort.md",
+      "contentHash": "ef5e4c51b11281964806aa06859dab3e65143d84af12d9be1c1de9d111b8fac4",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 75,
+      "hasStructuralAnalysis": true
+    },
+    "wiki/worklog/2026-08-19-slot-swap-alerts-missing.md": {
+      "filePath": "wiki/worklog/2026-08-19-slot-swap-alerts-missing.md",
+      "contentHash": "7a75a488af78c8c9f9e79634abf1fee6b6c3cecb221ef1afbcb1814470938eb1",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 108,
+      "hasStructuralAnalysis": true
+    },
+    "wiki/worklog/2026-08-20-art-director-wired.md": {
+      "filePath": "wiki/worklog/2026-08-20-art-director-wired.md",
+      "contentHash": "d68f0d341c0e15ef70f48adb2e7a70fd962a44030c4299f6c39e8b044a1b40bf",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 110,
+      "hasStructuralAnalysis": true
+    },
+    "wiki/worklog/2026-08-21-24hour-claim-regression.md": {
+      "filePath": "wiki/worklog/2026-08-21-24hour-claim-regression.md",
+      "contentHash": "288b80f17a6be40227f2842cc6a81791fe7a5c26faf1d882370b77d661e2fb37",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 100,
+      "hasStructuralAnalysis": true
+    },
+    "wiki/worklog/2026-08-21-opcg-official-knowledge-base.md": {
+      "filePath": "wiki/worklog/2026-08-21-opcg-official-knowledge-base.md",
+      "contentHash": "16357590e4fe507680399eee8e7ec0181d6ef459cfc25e41ba2ad05877710d6f",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 157,
+      "hasStructuralAnalysis": true
+    },
+    "wiki/worklog/2026-08-21-sales-box-pack-split.md": {
+      "filePath": "wiki/worklog/2026-08-21-sales-box-pack-split.md",
+      "contentHash": "eca95c814b8cbf7d1d1bc853fadceac725bd5bb2949c434044356e4b298533a0",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 127,
+      "hasStructuralAnalysis": true
+    },
+    "wiki/worklog/2026-08-22-pokemon-knowledge-base.md": {
+      "filePath": "wiki/worklog/2026-08-22-pokemon-knowledge-base.md",
+      "contentHash": "6a6115d7c283e55f3eca8c66fa2ed9220cf37d4ebf39c0e45e449983c0670140",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 103,
+      "hasStructuralAnalysis": true
+    },
+    "wiki/worklog/2026-08-24-branch-aware-image-brief.md": {
+      "filePath": "wiki/worklog/2026-08-24-branch-aware-image-brief.md",
+      "contentHash": "cebc03931f5f10b20065f6963a75c36f7bd9f5bca6128e5fe16ff5bb3a78636d",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 77,
+      "hasStructuralAnalysis": true
+    },
+    "wiki/worklog/2026-08-24-ideas-purge-and-dedup.md": {
+      "filePath": "wiki/worklog/2026-08-24-ideas-purge-and-dedup.md",
+      "contentHash": "6f8fbbbc586c090dfdea4c7f40b6f82fe4024dc382fb243e36726cd08f0ccd38",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 77,
+      "hasStructuralAnalysis": true
+    },
+    "wiki/worklog/2026-08-24-prb02-quantity-repair.md": {
+      "filePath": "wiki/worklog/2026-08-24-prb02-quantity-repair.md",
+      "contentHash": "83e25f85bc5093d3444c14d2d523934b8ac31553ed678a488b22c561310b26ec",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 77,
+      "hasStructuralAnalysis": true
+    },
+    "wiki/worklog/2026-08-24-stock-sync-silent-skip.md": {
+      "filePath": "wiki/worklog/2026-08-24-stock-sync-silent-skip.md",
+      "contentHash": "2ceab05e1928c057fba7ff44aea8e919d19307b5c7c20a3af560a975690f2c0a",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 100,
+      "hasStructuralAnalysis": true
+    },
+    "wiki/worklog/2026-08-24-tcg-knowledge-bases.md": {
+      "filePath": "wiki/worklog/2026-08-24-tcg-knowledge-bases.md",
+      "contentHash": "cad8506cfdd76f4f62401df30f46c39e7f4bb9ab1ac5be13537bb971b40bc325",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 189,
+      "hasStructuralAnalysis": true
+    },
+    "wiki/worklog/2026-08-25-limit-cap-and-mapper-drift.md": {
+      "filePath": "wiki/worklog/2026-08-25-limit-cap-and-mapper-drift.md",
+      "contentHash": "1ef206fe4635680ff8f78761c808cdd8bd49404e1217c828f6fb5ff269ff5d96",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 167,
+      "hasStructuralAnalysis": true
+    },
+    "wiki/worklog/2026-08-25-op17-missing-sku.md": {
+      "filePath": "wiki/worklog/2026-08-25-op17-missing-sku.md",
+      "contentHash": "66d639e732852fe5c961b77157605ad8604d769c7f86a236afe6cacc184bd426",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 185,
+      "hasStructuralAnalysis": true
+    },
+    "wiki/worklog/README.md": {
+      "filePath": "wiki/worklog/README.md",
+      "contentHash": "6b15a206bf5b5e10d8b3a7d8188ee3529d11ca15655d9df8db7e2766d8df00a9",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 37,
       "hasStructuralAnalysis": true
     }
   }
