@@ -24,6 +24,7 @@ import { authFetch } from "../../lib/authFetch"
 const SKU_ORDER = [
   "OP 01", "OP 02", "OP 03", "OP 04", "OP 05", "OP 06", "OP 07", "OP 08",
   "OP 09", "OP 10", "OP 11", "OP 12", "OP 13", "OP 14", "OP 15", "OP 16",
+  "OP 17",
   "PRB 01", "PRB 02",
   "EB 01", "EB 02", "EB 03", "EB 04",
   // Dragon Ball

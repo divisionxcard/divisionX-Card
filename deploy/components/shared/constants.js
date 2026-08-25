@@ -46,6 +46,7 @@ export const REFILL_REPORT_SKU_ORDER = [
   // ── One Piece ──
   "OP 01", "OP 02", "OP 03", "OP 04", "OP 05", "OP 06", "OP 07", "OP 08",
   "OP 09", "OP 10", "OP 11", "OP 12", "OP 13", "OP 14", "OP 15", "OP 16",
+  "OP 17",          // ลงตู้ wwv03/04/07 · 25 ส.ค. 2026
   "PRB 01", "PRB 02",
   "EB 01", "EB 02", "EB 03", "EB 04",
   // ── Dragon Ball ── (FB 10-15 ปิดใช้งานอยู่ · ใส่ไว้ให้ลำดับถูกถ้าเปิดกลับมา)
