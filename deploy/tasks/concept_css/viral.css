@@ -246,7 +246,15 @@ body.c-viral .plate {
   box-shadow: inset 0 0 0 3px var(--y), 0 6px 0 rgba(3,10,24,.5);
 }
 body.c-viral .plate .crop { width: 74px; height: 52px }
-body.c-viral .plate .crop img { width: 131.5px; left: -25.9px; top: -24.4px }
+/* ⚠️ ลบกฎครอปโลโก้ของเก่าออก 26 ส.ค. 2026
+   เดิม: .crop img { width: 131.5px; left: -25.9px; top: -24.4px }
+   ค่าพวกนี้เขียนไว้ตอนใช้ logo.png ที่มีคำว่า "DIVISION X CARD" อยู่ใต้ตรา DC
+   จึงต้องซูมแล้วเลื่อนให้เห็นเฉพาะตรา
+   แต่เทมเพลตหลักเปลี่ยนไปใช้ logo-mark-white.png (ตรา DC ล้วน พื้นโปร่ง) แล้ว
+   และเอากฎครอปของตัวเองออกไป — ไฟล์นี้ตกสำรวจ
+   ผลคือรูปกว้าง 131.5px อยู่ในกล่อง 74px ที่ .plate ตั้ง overflow:hidden
+   → **โลโก้ถูกตัดครึ่ง เห็นแค่ตัว D** (เห็นในโปสเตอร์ 26 ส.ค.)
+   ตอนนี้ใช้ค่าจากเทมเพลตหลัก (width:100% + object-fit:contain) ซึ่งพอดีอยู่แล้ว */
 body.c-viral .idn b {
   font-size: 25px; letter-spacing: 2.4px;
   background-image: linear-gradient(180deg, #FFFFFF, #FFFFFF);

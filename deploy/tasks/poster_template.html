@@ -455,6 +455,12 @@
           background: linear-gradient(90deg, rgba(4,12,30,.82), rgba(4,12,30,.70) 70%, rgba(4,12,30,.42));
           box-shadow: inset 0 0 0 1px rgba(150,210,255,.14);
           text-shadow: 0 2px 10px rgba(0,0,0,.9) }
+  /* ⚠️ ไม่มีเนื้อหา → ต้องซ่อนทั้งกล่อง ไม่ใช่ปล่อยให้เหลือแถบเปล่า
+     .body มี padding + background + ขอบ ถ้า {{BODY}} ว่างจะได้แถบมนเปล่า ๆ
+     ลอยอยู่ใต้บรรทัดรอง (เห็นในโปสเตอร์ที่เจ้าของส่งมา 26 ส.ค.)
+     เกิดเมื่อไหร่: build_html ใส่ body เฉพาะตอน "ไม่มีบรรทัดรอง" — พอ split_caption
+     ตัดพาดหัวได้เก่งขึ้น เกือบทุกใบเลยมีบรรทัดรอง แล้ว body ว่างแทบทุกใบ */
+  .body:empty { display: none }
   .body p { position: relative; padding-left: 30px; margin-bottom: 9px }
   .body p:last-child { margin-bottom: 0 }
   .body p::before { content: ''; position: absolute; left: 3px; top: .64em; width: 13px; height: 13px;
@@ -591,7 +597,16 @@
   <i class="sp s1"></i><i class="sp c s2"></i><i class="sp s3"></i><i class="sp c s4"></i>
   <i class="sp c s5"></i><i class="sp s6"></i><i class="sp s7"></i>
 
-  <div class="medal"><s><em>{{BRANCHES}}</em><span>สาขา</span></s></div>
+  <!-- ⚠️ เหรียญ "N สาขา" ถูกเอาออก 26 ส.ค. 2026 · เหตุผล 2 ข้อ:
+       1. art_direction.json ข้อ 27 เขียนไว้เองว่า "Never place a branch count
+          in the artwork" — เทมเพลตขัดกฎตัวเองมาตลอด
+       2. มันอยู่ในเทมเพลตหลัก ไม่ใช่ในไฟล์แนวคิด จึงโผล่ตำแหน่งเดิมข้อความเดิม
+          ทุกใบไม่ว่าสุ่มได้แนวคิดอะไร = ตัวการทำให้เจ้าของรู้สึกว่า
+          "ยังคงเป็นรูปแบบเดิม ๆ" (ทักมาเอง 26 ส.ค.)
+
+       กฎ .medal ใน concept_css ทั้ง 8 ไฟล์ยังอยู่ แต่จะไม่ match อะไร (ไม่มีผลเสีย)
+       ปล่อยไว้เผื่อวันหน้าอยากใช้จุดนี้ใส่อย่างอื่น — ถ้าจะใส่ ต้องเป็นข้อมูล
+       ที่ **เปลี่ยนไปตามคอนเทนต์** ไม่ใช่ค่าคงที่ ไม่งั้นจะกลับมาเป็นปัญหาเดิม -->
 
   <div class="frame"></div>
   <div class="corner"><i>ของแท้ 100%</i></div>
