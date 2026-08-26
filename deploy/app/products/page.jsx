@@ -1,5 +1,5 @@
 import "../globals.css"
-import { fetchPublic } from "../../lib/publicPageData"
+import { fetchPublic, branchCount } from "../../lib/publicPageData"
 
 export const metadata = {
   title: "สินค้าทั้งหมด — DivisionX Card",
@@ -33,7 +33,10 @@ async function getSkus() {
 }
 
 export default async function ProductsPage() {
-  const skus = await getSkus()
+  // ⚠️ จำนวนสาขาต้องนับจากฐานข้อมูล ห้ามเขียนเลขตายตัว
+  //    เดิม hardcode "11 สาขา" ไว้ พอเปิดตู้เพิ่มก็ไม่มีใครกลับมาแก้
+  //    จนไม่ตรงกับหน้า /branches ที่นับจาก DB (ของจริง 12) — เจ้าของทักเอง 26 ส.ค. 2026
+  const [skus, nBranch] = await Promise.all([getSkus(), branchCount()])
 
   // จัดกลุ่มตามแฟรนไชส์
   const byFr = {}
@@ -92,7 +95,10 @@ export default async function ProductsPage() {
         <header className="pr-hero">
           <img className="pr-logo" src="/logo-white.png" alt="DivisionX Card" />
           <h1 className="pr-title">สินค้า<b>ทั้งหมด</b></h1>
-          <div className="pr-sub">สามารถกดซื้อได้แล้ววันนี้ ที่ตู้จำหน่ายการ์ด DivisionX Card ทั้ง 11 สาขา</div>
+          <div className="pr-sub">
+            สามารถกดซื้อได้แล้ววันนี้ ที่ตู้จำหน่ายการ์ด DivisionX Card
+            {nBranch ? ` ทั้ง ${nBranch} สาขา` : ""}
+          </div>
         </header>
 
         {groups.length === 0 && (

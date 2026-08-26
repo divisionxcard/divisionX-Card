@@ -1,4 +1,5 @@
 import "../globals.css"
+import { branchCount } from "../../lib/publicPageData"
 
 export const metadata = {
   title: "วิธีการซื้อ — DivisionX Card",
@@ -14,13 +15,19 @@ const STEPS = [
   { ic: "📦", title: "รับสินค้า", desc: "รอสินค้าหล่นที่ช่องรับด้านล่าง หยิบได้เลย — เปิดลุ้นการ์ดกันได้เลย!" },
 ]
 
-const TIPS = [
-  { ic: "⏰", t: "เปิดตามเวลาห้าง", d: "กดเองได้ ไม่ต้องต่อคิว ทั้ง 11 สาขา" },
+// ⚠️ จำนวนสาขาต้องนับจากฐานข้อมูล ห้ามเขียนเลขตายตัว
+//    เดิมค้างที่ "11 สาขา" ทั้งที่ของจริงเป็น 12 แล้ว และไม่ตรงกับหน้า /branches
+const tips = (n) => [
+  { ic: "⏰", t: "เปิดตามเวลาห้าง", d: `กดเองได้ ไม่ต้องต่อคิว${n ? ` ทั้ง ${n} สาขา` : ""}` },
   { ic: "✨", t: "ลุ้นการ์ดหายาก", d: "มีการ์ดระดับแรร์ซ่อนอยู่เพียบ ลุ้นได้ทุกซอง" },
   { ic: "💬", t: "มีปัญหา?", d: "ของไม่ออก/จ่ายเงินแล้วติดขัด ทักไลน์ @divisionxcard ได้เลย" },
 ]
 
-export default function HowToPage() {
+// ดึงจำนวนสาขาใหม่ทุก 60 วินาที เหมือนหน้า /branches และ /products
+export const revalidate = 60
+
+export default async function HowToPage() {
+  const TIPS = tips(await branchCount())
   return (
     <main style={{ minHeight: "100vh", background: "var(--dx-bg-page)", color: "var(--dx-text)", fontFamily: "var(--dx-font)" }}>
       <style dangerouslySetInnerHTML={{ __html: `

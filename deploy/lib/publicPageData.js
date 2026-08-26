@@ -56,4 +56,25 @@ export async function fetchPublic(path, label = path.split("?")[0]) {
   }
 }
 
-export default { fetchPublic }
+/**
+ * จำนวนสาขาที่แสดงต่อสาธารณะ — นับจากฐานข้อมูล ไม่ใช่เลขตายตัวในโค้ด
+ *
+ * ⚠️ ทำไมต้องมี — เจ้าของทักเอง 26 ส.ค. 2026:
+ *   /products กับ /how-to เขียน "ทั้ง 11 สาขา" ตายตัวไว้ในโค้ด
+ *   ตอนเขียนถูก แต่พอเปิดตู้เพิ่มก็ไม่มีใครกลับมาแก้ → ของจริงเป็น 12 แล้ว
+ *   ส่วน /branches นับจาก DB จึงถูกอยู่ตลอด = สองหน้าบอกเลขไม่ตรงกัน
+ *   ลูกค้าเห็นแล้วสับสน และเสียความน่าเชื่อถือของหน้าที่แชร์ออกโซเชียล
+ *
+ * นับด้วยเงื่อนไขเดียวกับที่ /branches ใช้แสดงการ์ด:
+ *   ตู้ status = active  และ  config.branch.public = true
+ * ตู้ที่ปิดไปแล้ว (เช่น wwv02) จะไม่ถูกนับ
+ *
+ * @returns {Promise<number>} 0 ถ้าอ่านข้อมูลไม่ได้ — ผู้เรียกต้องเผื่อกรณีนี้
+ */
+export async function branchCount() {
+  const rows = await fetchPublic(
+    "machines?status=eq.active&select=machine_id,config", "branch-count")
+  return rows.filter((m) => m.config?.branch?.public).length
+}
+
+export default { fetchPublic, branchCount }
