@@ -28,6 +28,7 @@ HERE = pathlib.Path(__file__).resolve().parent
 SENSITIVE = ("email", "password", "phone", "token", "secret", "ip_address",
              "user_agent", "display_name", "user_id", "requester_id", "created_by")
 NOMATCH = "id=eq.-999999"
+ZERO_UUID = "00000000-0000-0000-0000-000000000000"
 
 
 def env():
@@ -67,7 +68,33 @@ def call(method, path, key, body=None):
 
 
 def blocked(code, msg):
-    return code in (401, 403) or "42501" in str(msg) or "permission denied" in str(msg).lower()
+    """ถูกบล็อกเพราะไม่มีสิทธิ์จริงหรือเปล่า — ดู SQLSTATE ไม่ใช่แค่รหัส HTTP
+
+    42501 = permission denied  → ถูกบล็อกจริง
+    55000 = view เขียนไม่ได้เชิงโครงสร้าง (มี GROUP BY / join หลายตาราง)
+            ไม่เกี่ยวกับสิทธิ์ แต่ก็เขียนไม่ได้อยู่ดี → นับว่าปลอดภัย
+    """
+    s = str(msg)
+    return (code in (401, 403) or "42501" in s or "55000" in s
+            or "permission denied" in s.lower() or "not automatically updatable" in s.lower())
+
+
+def classify_write(code, msg):
+    """แยก 3 สถานะ — เทสต์ที่เตือนหลอกจะไม่มีใครเชื่อ ต้องบอกให้ตรง
+
+    blocked  ไม่มีสิทธิ์จริง (42501)
+    n/a      ทดสอบไม่ได้ ไม่ใช่ช่องโหว่:
+               55000 view เขียนไม่ได้เชิงโครงสร้าง (มี GROUP BY / join หลายตาราง)
+               42703 ไม่มีคอลัมน์ที่ใช้เป็นเงื่อนไข (view ส่วนใหญ่ไม่มี id)
+               22P02 ชนิดข้อมูลไม่ตรง แม้ลองซ้ำด้วย uuid แล้ว
+    open     ผ่านด่านสิทธิ์ = ถ้าใส่เงื่อนไขจริงจะลบได้ → ช่องโหว่
+    """
+    s = str(msg)
+    if code in (401, 403) or "42501" in s or "permission denied" in s.lower():
+        return "blocked"
+    if any(c in s for c in ("55000", "42703", "22P02")) or code in (404, 405) or code == 0:
+        return "n/a"
+    return "open"
 
 
 def main():
@@ -91,16 +118,24 @@ def main():
         sens = []
         if readable and isinstance(data, list) and data:
             sens = [c for c in data[0] if any(s in c.lower() for s in SENSITIVE)]
+        # ⚠️ id ของบางตารางเป็น uuid — ส่งเลขติดลบเข้าไปจะตาย 22P02 ตั้งแต่ก่อนถึง
+        #    ชั้นสิทธิ์ แล้วจะถูกอ่านผิดว่า "ลบได้" (false positive · เจอตอนตรวจ
+        #    profiles กับ slot_restock_sessions หลังรัน migration 069)
+        #    → ถ้าเจอ 22P02 ให้ยิงซ้ำด้วยค่ารูปแบบ uuid
         dc, _, dm = call("DELETE", f"{t}?{NOMATCH}", ANON)
-        deletable = not blocked(dc, dm) and dc != 0 and dc not in (404, 405)
+        if "22P02" in str(dm):
+            dc, _, dm = call("DELETE", f"{t}?id=eq.{ZERO_UUID}", ANON)
+        write = classify_write(dc, dm)
+        deletable = write == "open"
 
         if readable:
             bad_read.append((t, n, sens))
         if deletable:
             bad_write.append(t)
+        wtxt = {"open": "🔴 ได้", "blocked": "🟢 บล็อก", "n/a": "⚪ ทดสอบไม่ได้"}[write]
         print(f"{t:<30}"
               f"{('🔴 ' + str(n) + ' แถว') if readable else '🟢 บล็อก':<16}"
-              f"{'🔴 ได้' if deletable else '🟢 บล็อก':<16}"
+              f"{wtxt:<16}"
               f"{', '.join(sens) if sens else ''}")
 
     print("\n" + "=" * 96)
