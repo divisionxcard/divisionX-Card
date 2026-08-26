@@ -36,24 +36,34 @@ export async function fetchPublic(path, label = path.split("?")[0]) {
     )
     return []
   }
-  try {
-    const res = await fetch(`${URL_BASE}/rest/v1/${path}`, {
-      headers: { apikey: key, Authorization: `Bearer ${key}` },
-      next: { revalidate: 60 },
-    })
-    if (!res.ok) {
-      console.error(`[${label}] ❌ HTTP ${res.status} — ${(await res.text()).slice(0, 200)}`)
-      return []
+  // ⚠️ ต้องมี retry — เจอจริง 26 ส.ค. 2026:
+  //   render รอบแรกหลัง deploy ยิงพลาดครั้งเดียว (cold start) ได้ [] กลับมา
+  //   แล้ว **ผลว่างนั้นถูก ISR cache ไว้ 60 วินาที** → หน้า /products หายคำว่า
+  //   "ทั้ง 12 สาขา" ไปทั้งนาที ทั้งที่ฐานข้อมูลปกติดี
+  //   ยิงพลาดครั้งเดียวไม่ควรทำให้ลูกค้าเห็นหน้าไม่ครบ
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    try {
+      const res = await fetch(`${URL_BASE}/rest/v1/${path}`, {
+        headers: { apikey: key, Authorization: `Bearer ${key}` },
+        next: { revalidate: 60 },
+      })
+      if (!res.ok) {
+        console.error(`[${label}] ❌ ครั้งที่ ${attempt} HTTP ${res.status} — `
+          + `${(await res.text()).slice(0, 200)}`)
+      } else {
+        const rows = await res.json()
+        if (Array.isArray(rows) && rows.length) return rows
+        console.warn(`[${label}] ⚠️ ครั้งที่ ${attempt} ดึงสำเร็จแต่ได้ 0 แถว`)
+        if (Array.isArray(rows)) return rows       // ว่างจริง ไม่ต้องลองซ้ำ
+      }
+    } catch (e) {
+      console.error(`[${label}] ❌ ครั้งที่ ${attempt} ${e?.name}: `
+        + `${String(e?.message).slice(0, 200)}`)
     }
-    const rows = await res.json()
-    if (!Array.isArray(rows) || rows.length === 0) {
-      console.warn(`[${label}] ⚠️ ดึงสำเร็จแต่ได้ 0 แถว — หน้าจะว่าง ตรวจเงื่อนไข query`)
-    }
-    return Array.isArray(rows) ? rows : []
-  } catch (e) {
-    console.error(`[${label}] ❌ ${e?.name}: ${String(e?.message).slice(0, 200)}`)
-    return []
+    if (attempt === 1) await new Promise((r) => setTimeout(r, 400))
   }
+  console.error(`[${label}] ❌ ยิงล้มเหลว 2 ครั้ง — หน้าจะแสดงข้อมูลไม่ครบ`)
+  return []
 }
 
 /**
