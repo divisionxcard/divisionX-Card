@@ -474,6 +474,45 @@ def build_html(content, sku_img, bg_img, branches, concept_key="", concept_css="
             .replace("{{TAGS}}", esc(tags)))
 
 
+# พาดหัวห้ามเกินกี่บรรทัด — art_direction.json ข้อ 7 บอก "maximum 2 lines"
+HEAD_MAX_LINES = 2
+HEAD_MIN_SIZE = 52        # เล็กกว่านี้ = ต่ำกว่าเกณฑ์แบรนด์ (≥5% ของด้านกว้าง 1080 = 54)
+
+
+def fit_headline(pg):
+    """ย่อฟอนต์พาดหัวจนพอดี 2 บรรทัด — วัดในเบราว์เซอร์จริง ไม่ใช่เดา
+
+    ⚠️ ทำไมต้องวัดจริง:
+      ความกว้างตัวอักษรไทยเดาไม่ได้ สระบน/ล่าง/วรรณยุกต์กว้าง 0 แต่พยัญชนะไม่เท่ากัน
+      คำนวณจาก len(text) จึงคลาดเคลื่อนมาก — วัดจากของจริง 26 ส.ค. 2026:
+      พาดหัว 27 ตัวที่ head_size() ให้ฟอนต์ 82px ออกมาเป็น **3 บรรทัด** ไม่ใช่ 2
+      (คอลัมน์ 520px ได้ ~10 ตัว/บรรทัดที่ฟอนต์นั้น)
+
+      Chromium รู้ความกว้างจริงอยู่แล้ว — ถามมันตรง ๆ แม่นกว่าสูตรใด ๆ
+    """
+    js_lines = """() => {
+      const h = document.querySelector('h1');
+      if (!h) return 0;
+      const cs = getComputedStyle(h);
+      const lh = parseFloat(cs.lineHeight) || parseFloat(cs.fontSize) * 1.17;
+      return Math.round(h.getBoundingClientRect().height / lh);
+    }"""
+    size = float(pg.evaluate("() => parseFloat(getComputedStyle(document.querySelector('h1')).fontSize)"))
+    lines = pg.evaluate(js_lines)
+    steps = 0
+    while lines > HEAD_MAX_LINES and size > HEAD_MIN_SIZE and steps < 20:
+        size = max(HEAD_MIN_SIZE, size - 3)
+        pg.evaluate("(s) => document.querySelector('h1').style.fontSize = s + 'px'", size)
+        lines = pg.evaluate(js_lines)
+        steps += 1
+    if lines > HEAD_MAX_LINES:
+        # ย่อจนสุดเพดานแล้วยังไม่พอ — ยอมให้เกิน ดีกว่าตัวเล็กจนอ่านไม่ออก
+        print(f"  ⚠️ พาดหัวยังเป็น {lines} บรรทัดที่ฟอนต์ {size:.0f}px (เพดานล่าง {HEAD_MIN_SIZE})")
+    elif steps:
+        print(f"  ปรับพาดหัว → {size:.0f}px · {lines} บรรทัด")
+    return size, lines
+
+
 def render(html, out_path):
     from playwright.sync_api import sync_playwright
     with sync_playwright() as p:
@@ -481,6 +520,7 @@ def render(html, out_path):
         pg = b.new_page(viewport={"width": SIZE, "height": SIZE}, device_scale_factor=2)
         pg.set_content(html, wait_until="load")
         pg.wait_for_timeout(600)          # เผื่อฟอนต์/รูป data URI วาดเสร็จ
+        fit_headline(pg)                  # ต้องทำหลังฟอนต์โหลดเสร็จ ไม่งั้นวัดผิด
         pg.screenshot(path=out_path, type="png")
         b.close()
 
