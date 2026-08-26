@@ -1,4 +1,5 @@
 import "../globals.css"
+import { fetchPublic } from "../../lib/publicPageData"
 
 export const metadata = {
   title: "สินค้าทั้งหมด — DivisionX Card",
@@ -18,19 +19,17 @@ const FR = [
   { key: "SL",  name: "Solo Leveling", emoji: "⚔️" },
 ]
 
+// ⚠️ เดิมยิงด้วย anon key พอเปิด RLS (migration 069) อ่านไม่ได้แล้ว หน้าเลยว่างเปล่า
+//    ทั้งที่ยังตอบ HTTP 200 — หน้านี้เป็น server component จึงใช้ service key ได้ปลอดภัย
+//
+//    ทางเลือกที่ไม่เอา: เปิดสิทธิ์ anon ให้ตาราง skus — RLS เป็น row-level ไม่ใช่
+//    column-level ถ้าเปิดอ่าน คนนอกจะเห็น cost_price ซึ่งเป็นต้นทุนของเรา
+//    ทั้งที่หน้านี้ใช้แค่ชื่อ/ราคาขาย/รูป
 async function getSkus() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-  try {
-    const res = await fetch(
-      `${url}/rest/v1/skus?is_active=eq.true&select=sku_id,name,series,franchise,sell_price,image_url,image_url_box&order=series,sku_id`,
-      { headers: { apikey: key, Authorization: `Bearer ${key}` }, next: { revalidate: 60 } }
-    )
-    if (!res.ok) return []
-    return await res.json()
-  } catch {
-    return []
-  }
+  return fetchPublic(
+    "skus?is_active=eq.true" +
+    "&select=sku_id,name,series,franchise,sell_price,image_url,image_url_box" +
+    "&order=series,sku_id", "products")
 }
 
 export default async function ProductsPage() {

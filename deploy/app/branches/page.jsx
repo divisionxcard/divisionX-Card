@@ -1,4 +1,5 @@
 import "../globals.css"
+import { fetchPublic } from "../../lib/publicPageData"
 
 export const metadata = {
   title: "สาขาที่พร้อมให้บริการ — DivisionX Card",
@@ -9,23 +10,16 @@ export const metadata = {
 export const revalidate = 60
 
 // ดึงสาขาจาก machines table (config.branch) — data-driven ไม่ต้องแก้โค้ดตอนเพิ่มตู้
+//
+// ⚠️ เดิมยิงด้วย anon key พอเปิด RLS (migration 069) อ่านไม่ได้แล้ว หน้าเลยว่างเปล่า
+//    ทั้งที่ยังตอบ HTTP 200 — หน้านี้เป็น server component จึงใช้ service key ได้ปลอดภัย
 async function getBranches() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-  try {
-    const res = await fetch(
-      `${url}/rest/v1/machines?status=eq.active&select=machine_id,config`,
-      { headers: { apikey: key, Authorization: `Bearer ${key}` }, next: { revalidate: 60 } }
-    )
-    if (!res.ok) return []
-    const rows = await res.json()
-    return rows
-      .map((m) => m.config?.branch)
-      .filter((b) => b && b.public)
-      .sort((a, b) => (a.order ?? 999) - (b.order ?? 999))
-  } catch {
-    return []
-  }
+  const rows = await fetchPublic(
+    "machines?status=eq.active&select=machine_id,config", "branches")
+  return rows
+    .map((m) => m.config?.branch)
+    .filter((b) => b && b.public)
+    .sort((a, b) => (a.order ?? 999) - (b.order ?? 999))
 }
 
 const mapHref = (q) => `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}`
