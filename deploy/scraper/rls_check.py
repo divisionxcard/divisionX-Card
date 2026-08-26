@@ -16,6 +16,7 @@
    ดูแค่ "รหัสตอบกลับ" ว่าผ่านด่านสิทธิ์ไหม ไม่ได้แตะข้อมูลจริง
 """
 import json
+import os
 import pathlib
 import sys
 import urllib.error
@@ -32,6 +33,7 @@ ZERO_UUID = "00000000-0000-0000-0000-000000000000"
 
 
 def env():
+    """อ่านจากไฟล์ก่อน (รันในเครื่อง) ไม่มีก็ใช้ env var (รันใน GitHub Actions)"""
     for src in (HERE.parent / ".env.local", HERE / ".env"):
         if not src.exists():
             continue
@@ -40,9 +42,30 @@ def env():
             if "=" in ln and not ln.strip().startswith("#"):
                 k, v = ln.split("=", 1)
                 out[k.strip()] = v.strip()
-        if "NEXT_PUBLIC_SUPABASE_ANON_KEY" in out:
+        if out.get("NEXT_PUBLIC_SUPABASE_ANON_KEY"):
             return out
-    raise SystemExit("❌ หา NEXT_PUBLIC_SUPABASE_ANON_KEY ไม่เจอใน deploy/.env.local")
+
+    # CI — ชื่อ secret ฝั่ง GitHub ต่างจากฝั่งเว็บ รับทั้งสองแบบ
+    out = {
+        "NEXT_PUBLIC_SUPABASE_URL":
+            os.environ.get("NEXT_PUBLIC_SUPABASE_URL") or os.environ.get("SUPABASE_URL", ""),
+        "NEXT_PUBLIC_SUPABASE_ANON_KEY":
+            os.environ.get("NEXT_PUBLIC_SUPABASE_ANON_KEY")
+            or os.environ.get("SUPABASE_ANON_KEY", ""),
+        "SUPABASE_SERVICE_ROLE_KEY":
+            os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
+            or os.environ.get("SUPABASE_SERVICE_KEY", ""),
+    }
+    if out["NEXT_PUBLIC_SUPABASE_URL"] and out["NEXT_PUBLIC_SUPABASE_ANON_KEY"]:
+        return out
+    # ⚠️ ออกด้วยรหัส 2 ไม่ใช่ 1 — "รันไม่ได้" กับ "ฐานข้อมูลรั่ว" คนละเรื่องกัน
+    #    ถ้าใช้รหัสเดียวกัน CI จะยิงแจ้งเตือนว่าฐานข้อมูลรั่วทั้งที่แค่ไม่มีคีย์
+    #    = เตือนหลอก ซึ่งทำให้คนเลิกเชื่อการแจ้งเตือนทั้งระบบ
+    print("❌ ต้องมี anon key — รันในเครื่องให้ใส่ใน deploy/.env.local\n"
+          "   รันใน CI ให้ตั้ง secret SUPABASE_ANON_KEY (+ SUPABASE_URL)\n"
+          "   ⚠️ anon key ไม่ใช่ความลับ (อยู่ใน bundle หน้าเว็บอยู่แล้ว) แต่ต้องมีถึงจะทดสอบได้",
+          file=sys.stderr)
+    raise SystemExit(2)
 
 
 E = env()

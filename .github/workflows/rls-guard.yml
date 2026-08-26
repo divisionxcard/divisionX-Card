@@ -1,0 +1,90 @@
+name: RLS Guard
+
+# ตรวจว่าคนภายนอกยังเข้าถึงฐานข้อมูลไม่ได้
+#
+# ⚠️ ทำไมต้องมี — เกิดจริง 26 ส.ค. 2026:
+#   RLS ไม่เคยถูกเปิดเลยตั้งแต่สร้างโปรเจกต์ ใครก็ตามที่เปิดหน้าเว็บแล้วดู anon key
+#   ใน DevTools **อ่านและลบได้ทั้ง 22 ตาราง** รวม sales 29,295 แถว
+#   ไม่มีใครรู้จนกระทั่ง Supabase ส่งอีเมลเตือน (แจ้ง 23 ส.ค. เห็น 26 ส.ค.)
+#
+#   Supabase สร้างตารางใหม่มาโดย **ไม่เปิด RLS** เป็นค่าเริ่มต้น
+#   ตารางที่เพิ่มทีหลังจึงเปิดโล่งทันทีโดยไม่มีคำเตือน → ต้องมีตัวเฝ้าอัตโนมัติ
+
+on:
+  schedule:
+    # ทุกวันจันทร์ 09:00 น. ไทย (02:00 UTC) — ต้นสัปดาห์ จะได้มีเวลาแก้
+    - cron: "0 2 * * 1"
+  push:
+    # migration ใหม่ = มีโอกาสเพิ่มตารางที่ลืมเปิด RLS → ตรวจทันที
+    paths:
+      - "backend/database/migrations/**"
+      - "deploy/scraper/rls_check.py"
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: ตรวจสิทธิ์ด้วย anon key
+        id: rls
+        env:
+          # ⚠️ ต้องเป็น anon key ไม่ใช่ service key
+          #    service key ข้าม RLS อยู่แล้ว ทดสอบด้วยตัวนั้นจะไม่เห็นช่องโหว่เลย
+          #    anon key ไม่ใช่ความลับ (อยู่ใน bundle หน้าเว็บ) แต่เก็บเป็น secret ไว้
+          #    เพื่อไม่ต้องแก้ไฟล์นี้ตอนเปลี่ยนโปรเจกต์
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: |
+          set +e
+          python deploy/scraper/rls_check.py 2>&1 | tee /tmp/rls.log
+          CODE=${PIPESTATUS[0]}
+          # ⚠️ แยกให้ออกระหว่าง "ฐานข้อมูลรั่ว" กับ "รันไม่ได้"
+          #    ถ้าปนกัน จะยิงแจ้งเตือนว่ารั่วทั้งที่แค่ยังไม่ได้ตั้ง secret = เตือนหลอก
+          #    0 ปลอดภัย · 1 รั่วจริง · 2 ขาด config
+          echo "code=$CODE" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: แจ้งเตือนถ้ายังรั่ว
+        if: steps.rls.outputs.code == '1'
+        env:
+          TELEGRAM_BOT_TOKEN:     ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_OWNER_CHAT_ID: ${{ secrets.TELEGRAM_OWNER_CHAT_ID }}
+        run: |
+          [ -z "$TELEGRAM_BOT_TOKEN" ] && exit 0
+          [ -z "$TELEGRAM_OWNER_CHAT_ID" ] && exit 0
+          RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          # เอาเฉพาะบรรทัดสรุป ไม่ยัดทั้ง log ลง Telegram
+          SUMMARY=$(grep -E '^🔴' /tmp/rls.log | head -4)
+          # ⚠️ ประกอบข้อความด้วย printf ไม่ใช่สตริงหลายบรรทัดใน YAML
+          #    บรรทัดที่เริ่มคอลัมน์ 0 จะหลุดออกจากบล็อก run: | แล้ว YAML พัง
+          TEXT=$(printf '%s\n\n%s\n\n%s\n%s\n\n%s' \
+            '🔴 <b>ฐานข้อมูลเปิดให้คนนอกเข้าถึงได้</b>' \
+            "$SUMMARY" \
+            'คนที่ไม่ได้ล็อกอินอ่าน/ลบข้อมูลได้ ต้องรีบแก้' \
+            'แก้: รัน backend/database/migrations/069_enable_rls.sql ใน Supabase SQL Editor' \
+            "$RUN_URL")
+          curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+            -H "Content-Type: application/json" \
+            -d "$(jq -n --arg chat "$TELEGRAM_OWNER_CHAT_ID" --arg txt "$TEXT" \
+                  '{chat_id:$chat, text:$txt, parse_mode:"HTML"}')"
+
+      - name: สรุปผล
+        run: |
+          case "${{ steps.rls.outputs.code }}" in
+            0) echo "::notice::🟢 ปลอดภัย — คนที่ไม่ล็อกอินเข้าถึงอะไรไม่ได้" ;;
+            1) echo "::error::🔴 ฐานข้อมูลเปิดให้คนนอกเข้าถึงได้ — ดู log ข้างบน"; exit 1 ;;
+            2) echo "::warning::⚪ ตรวจไม่ได้ ยังไม่ได้ตั้ง secret SUPABASE_ANON_KEY"
+               echo "   ตั้งที่ Settings → Secrets and variables → Actions"
+               echo "   ค่าเดียวกับ NEXT_PUBLIC_SUPABASE_ANON_KEY ใน Vercel (ไม่ใช่ความลับ)"
+               exit 1 ;;
+            *) echo "::error::สคริปต์ออกด้วยรหัสที่ไม่รู้จัก: ${{ steps.rls.outputs.code }}"; exit 1 ;;
+          esac
