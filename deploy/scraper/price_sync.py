@@ -80,6 +80,15 @@ UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
       "(KHTML, like Gecko) Chrome/125.0 Safari/537.36")
 
 
+def norm(s):
+    """ยุบช่องว่างรอบขีดและตัวพิมพ์ เพื่อเทียบชื่อข้ามหลังบ้าน
+
+    'One Piece PRB - 02' กับ 'One Piece PRB-02' คือตัวเดียวกัน
+    แต่ละหลังบ้านพิมพ์คนละแบบ
+    """
+    return re.sub(r"\s*-\s*", "-", re.sub(r"\s+", " ", str(s).lower().strip()))
+
+
 def dec(m):
     """{"_dec_":N,"_exp_":E} → N × 10^E   (รูปแบบตัวเลขของ Vendos)"""
     if isinstance(m, (int, float)):
@@ -209,6 +218,10 @@ def main():
                     help="เขียนราคาให้ SKU ที่ยังไม่มีราคา (sell_price = 0) เท่านั้น")
     ap.add_argument("--apply-all", action="store_true",
                     help="เขียนทับของเดิมด้วย ⚠️ ดูรายการก่อนเสมอ")
+    ap.add_argument("--prefer", choices=["worldwide", "vms", "payif"],
+                    help="ยึดราคาของแบรนด์นี้เป็นหลัก ถ้าแบรนด์นี้มีราคาให้ ให้ตัดของแบรนด์อื่นทิ้ง "
+                         "(26 ส.ค. 2026 เจ้าของแก้ราคาที่ WW ครบแล้วและใช้เป็นราคาหลัก "
+                         "ส่วน VMS/payif จะไล่แก้ตามทีหลัง)")
     a = ap.parse_args()
     load_env()
 
@@ -219,9 +232,10 @@ def main():
     #    และ 'One Piece OP-13' (100 · barcode 4556…) ที่เป็นของเก่า
     #    ถ้าไม่กรอง ราคาเก่าจะมาถ่วงจนดูเหมือน "หลังบ้านตั้งไม่เท่ากัน"
     #    → เชื่อเฉพาะสินค้าที่มีอยู่ในตู้จริงตอนนี้
-    live = {(r["product_name"] or "").strip()
-            for r in sb_get("machine_stock?select=product_name&product_name=not.is.null")}
-    print(f"  ชื่อสินค้าที่อยู่ในตู้จริงตอนนี้ {len(live)} ชื่อ\n")
+    live_raw = {(r["product_name"] or "").strip()
+                for r in sb_get("machine_stock?select=product_name&product_name=not.is.null")}
+    live_norm = {norm(n) for n in live_raw}
+    print(f"  ชื่อสินค้าที่อยู่ในตู้จริงตอนนี้ {len(live_raw)} ชื่อ\n")
 
     rows, dropped = [], []
     for label, fn in (("VMS", from_vms), ("WorldWide", from_ww), ("Vendos", from_vendos)):
@@ -229,8 +243,21 @@ def main():
             got = fn()
             # VMS ดึงจากช่องสด อยู่ในตู้อยู่แล้ว · อีกสองแบรนด์เป็นคลังรวมต้องกรอง
             if label != "VMS":
-                keep = [g for g in got if g["name"].strip() in live]
-                dropped += [g for g in got if g["name"].strip() not in live]
+                # ชั้นที่ 1 — ชื่อตรงเป๊ะ เชื่อได้แน่นอน
+                keep = [g for g in got if g["name"].strip() in live_raw]
+                rest = [g for g in got if g["name"].strip() not in live_raw]
+                taken = {(g["sku_id"], g["unit"]) for g in keep}
+                # ชั้นที่ 2 — ชื่อไม่ตรงเป๊ะแต่ยุบช่องว่างรอบขีดแล้วตรง
+                #   เช่น คลังเขียน 'One Piece PRB - 02' แต่ช่องในตู้เขียน 'One Piece PRB-02'
+                #   ⚠️ รับเฉพาะ (sku, หน่วย) ที่ยังไม่มีตัวชื่อตรงเป๊ะ
+                #      ไม่งั้นรายการชื่อรุ่นเก่า ('One Piece OP-13' ราคา 100) จะกลับเข้ามา
+                for g in rest:
+                    key = (g["sku_id"], g["unit"])
+                    if key not in taken and norm(g["name"]) in live_norm:
+                        keep.append(g)
+                        taken.add(key)
+                    else:
+                        dropped.append(g)
                 got = keep
             print(f"  {label:11} ใช้ได้ {len(got)} รายการ")
             rows += got
@@ -262,6 +289,21 @@ def main():
         tgt = per_box if r["unit"] == "box" else per_pack
         tgt[sid].append((round(r["price"], 2), r["brand"], r["machine_id"], r["name"]))
 
+    # ยึดแบรนด์เดียวเป็นหลัก — ตัดของแบรนด์อื่นทิ้งเฉพาะ SKU ที่แบรนด์หลักมีราคาให้
+    # SKU ที่แบรนด์หลักไม่ได้ขาย ยังใช้ของแบรนด์อื่นตามเดิม (ไม่งั้นจะหายไปเฉย ๆ)
+    raw_pack = {k: list(v) for k, v in per_pack.items()}   # เก็บของเดิมไว้ทำใบงาน
+    overridden = []
+    if a.prefer:
+        for sid, vals in list(per_pack.items()):
+            mine = [v for v in vals if v[1] == a.prefer]
+            if not mine:
+                continue
+            others = {v[0] for v in vals if v[1] != a.prefer}
+            if others - {v[0] for v in mine}:
+                overridden.append((sid, sorted({v[0] for v in mine}), sorted(others)))
+            per_pack[sid] = mine
+        print(f"\n  ยึดราคาของ {a.prefer} เป็นหลัก — ทับของแบรนด์อื่น {len(overridden)} SKU")
+
     print("\n" + "=" * 92)
     print(f"{'SKU':<20}{'ในระบบ':>9}{'หลังบ้าน':>26}  สถานะ")
     print("=" * 92)
@@ -282,6 +324,29 @@ def main():
             state = "⚠️  หลังบ้านตั้งไม่เท่ากัน — ต้องเลือก"
             conflicts.append((sid, vals))
         print(f"{sid:<20}{cur:>9,.0f}{shown:>26}  {state}")
+
+    if a.prefer:
+        # ใบงานให้แอดมินไปไล่แก้หลังบ้านตู้อื่นให้ตรงกับแบรนด์หลัก
+        print("\n" + "=" * 92)
+        print(f"📋 ใบงาน — ตู้ที่ยังตั้งราคาไม่ตรงกับ {a.prefer}")
+        print("=" * 92)
+        todo = defaultdict(list)
+        for sid, vals in raw_pack.items():
+            ref = [v[0] for v in vals if v[1] == a.prefer]
+            if not ref:
+                continue
+            want = ref[0]
+            for price, brand, mid, name in vals:
+                if brand == a.prefer or abs(price - want) < 0.01:
+                    continue
+                todo[(brand, mid)].append((sid, price, want, name))
+        if not todo:
+            print("  ✅ ทุกตู้ตั้งตรงกันหมดแล้ว")
+        for (brand, mid) in sorted(todo, key=lambda x: (x[0], x[1] or "")):
+            items = sorted(todo[(brand, mid)])
+            print(f"\n  {brand} · {mid or 'ราคากลาง (ทุกตู้)'}  — ต้องแก้ {len(items)} รายการ")
+            for sid, cur, want, name in items:
+                print(f"     {name[:36]:38} {cur:>8,.0f} → {want:>8,.0f}")
 
     if conflicts:
         print("\n" + "=" * 92)
