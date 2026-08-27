@@ -317,16 +317,38 @@ async function askOpenAI(style, prompt, refs, deadline = Infinity) {
   const quality = style.openai_quality || "high"
   let lastErr = ""
   const attempts = []            // ไล่ให้เห็นว่าลองโมเดลไหนไปบ้างและพังเพราะอะไร
+  let blockedTimes = 0           // โดนตัวกรองเนื้อหากี่ครั้ง — ใช้แยกข้อความตอนแพ้
 
-  for (const model of models) {
+  // ตัวกรองเนื้อหาของ OpenAI บล็อกแบบ "สุ่ม" ไม่ใช่ตามเนื้อหา
+  //
+  // พิสูจน์แล้ว 27 ส.ค. 2026: prompt เดียวกัน รูปอ้างอิงเดียวกัน ยิงครั้งแรกโดน
+  // moderation_blocked (stage=output, category=other) ยิงซ้ำทันทีผ่านเลย
+  // เจ้าของก็เจอกับคอนเทนต์ #40 ซึ่งเป็นแคปชั่นแกะซองโปเกมอนธรรมดา ไม่มีอะไรผิด
+  //
+  // ⚠️ ห้ามข้ามไปโมเดลสำรองเมื่อโดนบล็อก — ต้องยิงโมเดลเดิมซ้ำ
+  //    เพราะปัญหาไม่ได้อยู่ที่โมเดล และตัวสำรองยึดรูปซองแย่กว่า (ทดสอบแล้ว)
+  const MODERATION_RETRY = 2
+
+  const plan = []
+  models.forEach((m, i) => {
+    // เฉพาะโมเดลหลักที่ยอมยิงซ้ำ — ตัวสำรองมีไว้เผื่อโมเดลหลักถูกปลด ไม่ใช่เผื่อโดนบล็อก
+    const times = i === 0 ? MODERATION_RETRY + 1 : 1
+    for (let k = 0; k < times; k++) plan.push({ model: m, retry: k })
+  })
+  const dead = new Set()         // โมเดลที่รู้แล้วว่าใช้ไม่ได้ ไม่ต้องยิงซ้ำให้เสียเวลา
+
+  for (const { model, retry } of plan) {
+    if (dead.has(model)) continue
     // ⚠️ เช็กก่อนยิง ไม่ใช่หลังยิง — เดิมไม่มีด่านนี้ พอโมเดลแรกช้า มันจะไล่ยิง
     //    ตัวสำรองต่อจนแพลตฟอร์มฆ่าทั้ง request แล้วผู้ใช้ได้ 504 เปล่า ๆ
     //    ไม่มีแม้แต่ attempts ที่อุตส่าห์เก็บไว้ เพราะ response ไม่เคยถูกส่ง
     const left = deadline - Date.now()
-    if (left < 20_000) {
-      attempts.push(`${model}: ข้าม — เหลือเวลา ${Math.round(left / 1000)} วิ ไม่พอสร้างภาพ`)
+    if (left < MIN_GEN_MS) {
+      attempts.push(`${model}: ไม่ได้ยิง — เหลือเวลา ${Math.round(left / 1000)} วิ ` +
+                    `ไม่พอสร้างภาพ (ต้องการ ${MIN_GEN_MS / 1000} วิ)`)
       break
     }
+    if (retry > 0) attempts.push(`${model}: ลองใหม่ครั้งที่ ${retry} หลังโดนตัวกรองบล็อก`)
     try {
       let res
       if (refs.length) {
@@ -376,8 +398,17 @@ async function askOpenAI(style, prompt, refs, deadline = Infinity) {
         //    ("... for this model") ทำให้ error เรื่องพารามิเตอร์ถูกกลืนแล้วเลื่อนโมเดลเงียบ ๆ
         //    เคยทำให้เข้าใจผิดว่าทดสอบ gpt-image-2 อยู่ ทั้งที่จริงตกไปใช้ gpt-image-1.5
         //    จึงเก็บ attempts ไว้คืนออกไปด้วยเสมอ จะได้รู้ว่าภาพที่ได้มาจากโมเดลไหนจริง ๆ
-        if (/model|not found|does not exist|unsupported/i.test(msg) && res.status === 400) continue
-        if (res.status === 404) continue
+        // โดนตัวกรองเนื้อหา → ยิงโมเดลเดิมซ้ำ ไม่ใช่ข้ามไปตัวสำรอง
+        // (คิว plan ใส่โมเดลหลักไว้ซ้ำแล้ว continue จึงวนกลับมาที่ตัวเดิม)
+        if (json?.error?.code === "moderation_blocked" || /safety system/i.test(msg)) {
+          blockedTimes++
+          attempts[attempts.length - 1] = `${model}: ตัวกรองเนื้อหาบล็อก (ครั้งที่ ${blockedTimes})`
+          continue
+        }
+        if (/model|not found|does not exist|unsupported/i.test(msg) && res.status === 400) {
+          dead.add(model); continue
+        }
+        if (res.status === 404) { dead.add(model); continue }
         throw Object.assign(new Error(msg), { status: res.status, json, attempts })
       }
       const b64 = json?.data?.[0]?.b64_json
@@ -390,6 +421,11 @@ async function askOpenAI(style, prompt, refs, deadline = Infinity) {
       lastErr = `${model}: ${String(e.message || e).slice(0, 160)}`
       attempts.push(lastErr)
     }
+  }
+  if (blockedTimes) {
+    throw Object.assign(
+      new Error(`ตัวกรองเนื้อหาของ OpenAI บล็อกติดกัน ${blockedTimes} ครั้ง`),
+      { attempts, moderation: true })
   }
   throw Object.assign(new Error(`ลองครบทุกโมเดลแล้วไม่สำเร็จ — ${lastErr}`), { attempts })
 }
@@ -445,7 +481,14 @@ export const maxDuration = 300
 // ⚠️ เดิมตั้ง timeout 300 วิ "ต่อโมเดล" แล้ววนโมเดลสำรองอีก 3 ตัว
 //    = กรณีแย่สุด 20 นาที ซึ่งไม่มีทางได้คืน response เลย ผู้ใช้เห็นแค่ 504 เปล่า ๆ
 //    ทั้งที่โค้ดอุตส่าห์เก็บ attempts ไว้บอกว่าพังเพราะอะไร
-const TIME_BUDGET_MS = 240_000
+const TIME_BUDGET_MS = 270_000
+
+// เวลาขั้นต่ำที่ต้องเหลือถึงจะกล้าเริ่มยิงภาพใหม่อีกครั้ง
+//
+// ⚠️ ห้ามตั้งต่ำกว่าเวลาสร้างจริง — เริ่มยิงทั้งที่เวลาไม่พอ = โดนตัดกลางคัน
+//    หลังโมเดลวาดเสร็จแล้ว คือจ่ายเงินแล้วไม่ได้ของ
+//    วัดจริงได้ 145-153 วินาที เผื่อไว้เป็น 170
+const MIN_GEN_MS = 170_000
 
 export async function POST(req) {
   const deadline = Date.now() + TIME_BUDGET_MS
@@ -736,7 +779,21 @@ export async function POST(req) {
           attempts: e.attempts || [],
         }, { status: 504 })
       }
-      return NextResponse.json({ error: `${provider}: ${msg.slice(0, 300)}` }, { status: 502 })
+      // ⚠️ อย่าโยนข้อความดิบของ OpenAI ออกไป — เจ้าของเจอ
+      //    "Your request was rejected by the safety system" แล้วเข้าใจว่าคอนเทนต์ตัวเองผิด
+      //    ทั้งที่เป็นแคปชั่นแกะซองโปเกมอนธรรมดา และการบล็อกเป็นการสุ่มล้วน ๆ
+      if (e.moderation || /safety system|moderation/i.test(msg)) {
+        return NextResponse.json({
+          code: "moderation",
+          error: "ตัวกรองเนื้อหาของ OpenAI บล็อกภาพนี้ — ไม่ใช่เพราะแคปชั่นของคุณผิด",
+          hint: "ตัวกรองนี้บล็อกแบบสุ่ม prompt เดิมยิงซ้ำมักผ่าน · ระบบลองซ้ำให้แล้วแต่ยังไม่ผ่าน กดใหม่อีกครั้งได้เลย",
+          attempts: e.attempts || [],
+        }, { status: 502 })
+      }
+      return NextResponse.json({
+        error: `${provider}: ${msg.slice(0, 300)}`,
+        attempts: e.attempts || [],
+      }, { status: 502 })
     }
 
     // ── เก็บลง Storage ── ชื่อไฟล์มี timestamp กดสร้างใหม่ได้ไม่ติด CDN cache
