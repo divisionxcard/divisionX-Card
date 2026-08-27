@@ -26,6 +26,7 @@ import { catalogueBlock } from "../../../../../lib/productCatalogue"
 import { detectFranchise } from "../../../../../lib/franchiseDetect"
 import { checkThaiCaption } from "../../../../../lib/thaiText"
 import { detectSku } from "../../../../../lib/skuDetect"
+import { careBlock } from "../../../../../lib/careKnowledge"
 
 const db = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -150,7 +151,11 @@ const AVOID_LAST = 3
 function pickFormat(voice, recent) {
   const all = voice.content_formats || []
   if (!all.length) return null
-  const seq = recent.map(r => r.format).filter(Boolean)   // ใหม่สุดอยู่หน้า
+  // ⚠️ ต้องอ่านทั้ง content_format และ format
+  //    fetchRecent ดึงคอลัมน์ชื่อ content_format แต่โค้ดเดิมอ่าน r.format อย่างเดียว
+  //    = undefined ทุกแถว → used ว่างเสมอ → ตัวกันซ้ำไม่เคยทำงานเลยตั้งแต่แรก
+  //    (จุดเรียกตอนเขียนรอบสองส่ง { format: ... } มาเอง จึงยังใช้คีย์นี้ต่อได้)
+  const seq = recent.map(r => r.content_format || r.format).filter(Boolean)   // ใหม่สุดอยู่หน้า
   const used = new Set(seq)
   let pool = all.filter(f => !used.has(f.key))
   if (!pool.length) {
@@ -514,6 +519,17 @@ function looksThai(text) {
 // from() คืน query builder ที่มีแค่ select/insert/update/delete — ตัวกรอง (.in .eq .not)
 // อยู่บน filter builder ที่ได้ "หลัง" select · เขียนสลับจะได้ TypeError:
 // "p.from(...).in is not a function" ซึ่งอ่านแล้วไม่รู้เลยว่าเกิดจากลำดับ
+// คำที่ถ้าโผล่ในแคปชั่น แปลว่าโพสต์นั้นเล่าหัวข้อ care ไหนไปแล้ว
+// ใช้เลี่ยงไม่ให้เขียนเรื่องเดิมซ้ำ — ไม่ต้องแม่น แค่กันวนซ้ำติด ๆ กัน
+const CARE_HINT = {
+  humidity: "ความชื้น",
+  sunlight_heat: "แดด",
+  sleeves: "ซองใส",
+  storage_gear: "toploader",
+  handling: "แกะซอง",
+  grading_basics: "สภาพการ์ด",
+}
+
 async function fetchRecent(limit) {
   const q = (cols) => db.from("marketing_content")
     .select(cols)
@@ -582,6 +598,27 @@ export async function POST(req) {
         })
       }
     } catch { knowledge = "" }
+
+    // เก็บรักษาการ์ด — ใช้ได้ทุกค่าย ไม่ผูกกับ franchise จึงต่อแยกจากก้อนบน
+    // ใส่เฉพาะตอนที่รูปแบบโพสต์รอบนี้ต้องใช้จริง (ตัวเลือกใดตัวเลือกหนึ่งเป็น card_care)
+    // ไม่งั้น prompt บวมฟรีทุกครั้งที่เขียนโพสต์ขายปกติ
+    if ([format, formatAlt].some(f => f?.knowledge === "care")) {
+      try {
+        // เลี่ยงหัวข้อที่เพิ่งเขียนไป โดยดูจากคำสำคัญในแคปชั่นเก่าที่เป็น card_care
+        //
+        // ⚠️ ไม่มีคอลัมน์เก็บ "หัวข้อ care" ในตาราง และไม่คุ้มจะเพิ่ม migration
+        //    เพื่อฟีเจอร์เดียว — เทียบจาก label ในแคปชั่นเอาก็พอ ผิดบ้างไม่เสียหาย
+        //    แค่ทำให้สุ่มซ้ำหัวข้อเดิมได้ ซึ่งยังดีกว่าอ้างคอลัมน์ที่ไม่มีจริง
+        const careWords = recent
+          .filter(r => r.content_format === "card_care")
+          .map(r => (r.caption || "").slice(0, 200))
+          .join(" ")
+        const recentCare = ["humidity", "sunlight_heat", "sleeves",
+                            "storage_gear", "handling", "grading_basics"]
+          .filter(k => careWords.includes(CARE_HINT[k]))
+        knowledge += (knowledge ? "\n\n" : "") + await careBlock({ recentTopics: recentCare })
+      } catch { /* อ่านคลังไม่ได้ก็เขียนต่อได้ แค่ไม่มีข้อมูลกำกับ */ }
+    }
 
     // รายการสินค้าจริงทั้งหมด — กันตัวเขียนแต่งสินค้าที่เราไม่มีขึ้นมาเปรียบเทียบ
     // (เคสจริง: แคปชั่นโปเกมอนพูดถึง "ซองคอลเลกชันคลาสสิก" ทั้งที่เรามีแต่ชุดใหม่ 3 ชุด)
