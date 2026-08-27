@@ -108,6 +108,9 @@ export default function MarketingOS() {
   const [loading, setLoading] = useState(false)
   const [err, setErr] = useState("")
   const [notice, setNotice] = useState("")   // ข้อความบอกว่าสั่งงาน async ไปแล้ว
+  // ผลการจับ SKU จากแคปชั่น {contentId: {status, hint, options, applied}}
+  // เก็บแยกจาก item เพราะเป็นผลของ "การกดเขียนรอบนี้" ไม่ใช่ข้อมูลของคอนเทนต์
+  const [skuAsk, setSkuAsk] = useState({})
   const [preview, setPreview] = useState(null)   // url ภาพที่กำลังดูเต็มจอ
   const [downloading, setDownloading] = useState(false)
   const [proofing, setProofing] = useState(new Set())   // id ที่กำลังตรวจปรู๊ฟอยู่
@@ -376,15 +379,30 @@ export default function MarketingOS() {
       })
       setContent(c => ({
         ...c,
-        // route ไม่ได้ embed sku กลับมา — คงของเดิมไว้ ไม่งั้นปุ่ม "ใช้รูป SKU" หายหลังกดเขียน
-        items: (c.items || []).map(i => (i.id === contentId ? { ...updated, sku: i.sku } : i)),
+        // route คืน sku มาแล้ว (ตัวจับ SKU อาจเพิ่งเติม source_sku ให้รอบนี้)
+        // แต่ถ้าไม่มีให้คงของเดิม ไม่งั้นปุ่ม "ใช้รูป SKU" หายหลังกดเขียน
+        items: (c.items || []).map(i =>
+          (i.id === contentId ? { ...updated, sku: updated.sku || i.sku } : i)),
       }))
+      // เจอหลายชุด → ขึ้นให้เลือกบนการ์ด · เจอตัวเดียว → บอกว่าผูกให้แล้ว
+      setSkuAsk(m => ({ ...m, [contentId]: updated.sku_detect || null }))
     } catch (e) {
       setErr(e.message)   // ร่างยังอยู่ในคิว กดเขียนใหม่ได้
     } finally {
       setGenerating(s => { const n = new Set(s); n.delete(contentId); return n })
     }
   }, [api])
+
+  // เลือกซองที่จะใช้ทำภาพ เมื่อแคปชั่นเอ่ยถึงหลายชุด
+  //
+  // ทำไมไม่ให้ระบบเดาเอง: รูปซองถูกส่งให้โมเดลภาพเป็นภาพอ้างอิงที่ต้องลอกตรง ๆ
+  // เดาผิด = โปสเตอร์โชว์สินค้าผิดตัวแบบดูดีมากจนไม่มีใครเอะใจตอนตรวจ
+  // ไม่ห่อ useCallback เพราะต้องเรียก patch() ซึ่งปิดทับ api ที่เปลี่ยนตาม token
+  // ห่อแล้ว deps ว่างจะจับ api ของ render แรกค้างไว้
+  async function pickSku(contentId, skuId) {
+    await patch(contentId, { source_sku: skuId })
+    setSkuAsk(m => ({ ...m, [contentId]: null }))
+  }
 
   // ── ให้ AI สร้างภาพประกอบ ──
   // ใช้รูป SKU จริงเป็นภาพอ้างอิง ไม่ได้ให้มันวาดการ์ดขึ้นเอง
@@ -1414,6 +1432,40 @@ export default function MarketingOS() {
                                         text-amber-800 rounded-lg px-2.5 py-1.5 text-xs">
                           <AlertTriangle size={13} className="mt-0.5 shrink-0" />
                           <span>ยังมีช่องว่างต้องเติมก่อนโพสต์: <b>{holes.join(", ")}</b></span>
+                        </div>
+                      )}
+
+                      {skuAsk[item.id]?.status === "ambiguous" && (
+                        <div className="mb-2 bg-indigo-50 border border-indigo-200 rounded-lg px-2.5 py-2 text-xs">
+                          <div className="flex items-start gap-1.5 text-indigo-900 mb-1.5">
+                            <AlertTriangle size={13} className="mt-0.5 shrink-0" />
+                            <span>แคปชั่นเอ่ยถึงหลายชุด — เลือกว่าจะใช้ซองไหนทำภาพ</span>
+                          </div>
+                          <div className="flex flex-wrap gap-1.5">
+                            {skuAsk[item.id].options.map(o => (
+                              <button key={o.sku_id} disabled={busyId === item.id}
+                                onClick={() => pickSku(item.id, o.sku_id)}
+                                className="px-2.5 py-1 rounded-lg bg-white border border-indigo-300
+                                           text-indigo-800 font-medium hover:bg-indigo-600
+                                           hover:text-white disabled:opacity-50">
+                                {o.sku_id}
+                              </button>
+                            ))}
+                            <button disabled={busyId === item.id}
+                              onClick={() => setSkuAsk(m => ({ ...m, [item.id]: null }))}
+                              className="px-2.5 py-1 rounded-lg text-indigo-600 hover:bg-indigo-100
+                                         disabled:opacity-50">
+                              ไม่ใช้ซองไหนเลย
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      {skuAsk[item.id]?.applied && (
+                        <div className="mb-2 flex items-start gap-1.5 bg-emerald-50 border border-emerald-200
+                                        text-emerald-800 rounded-lg px-2.5 py-1.5 text-xs">
+                          <Check size={13} className="mt-0.5 shrink-0" />
+                          <span>ผูกซอง <b>{skuAsk[item.id].applied}</b> ให้จากชื่อชุดในแคปชั่นแล้ว</span>
                         </div>
                       )}
 

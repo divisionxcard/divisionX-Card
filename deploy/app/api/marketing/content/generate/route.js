@@ -25,6 +25,7 @@ import { tcgKnowledgeBlock } from "../../../../../lib/tcgKnowledge"
 import { catalogueBlock } from "../../../../../lib/productCatalogue"
 import { detectFranchise } from "../../../../../lib/franchiseDetect"
 import { checkThaiCaption } from "../../../../../lib/thaiText"
+import { detectSku } from "../../../../../lib/skuDetect"
 
 const db = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -663,7 +664,10 @@ export async function POST(req) {
       } catch { /* รอบสองล้มก็ใช้ของรอบแรก ดีกว่าไม่ได้อะไรเลย */ }
     }
 
+    // ดึง sku กลับมาด้วย เพราะตัวจับ SKU อาจเพิ่งเติม source_sku ให้ในรอบนี้
+    // ถ้าไม่ดึง การ์ดจะยังไม่เห็นรูปซองจนกว่าจะรีเฟรชหน้า → ปุ่ม "ใช้รูป SKU" หาย
     const EMBED = "*, idea:marketing_ideas!marketing_content_idea_id_fkey(id,url,source,source_label)"
+                + ", sku:skus(sku_id,name,image_url,image_url_box)"
     // ⚠️ เขียนแคปชั่นใหม่ = ต้องล้างรูปเก่าทิ้ง
     //    เคสจริง #40 (27 ส.ค. 2026): กดเขียนใหม่ได้แคปชั่นเรื่อง ASMR + สินค้า M5 Abyss Eye
     //    แต่ media_url ยังเป็นรูปเดิมที่เขียนว่า "13 ตู้ที่มี MEGA Dream ex [M2a] ... 137 ซอง"
@@ -677,6 +681,25 @@ export async function POST(req) {
       caption, status: "pending", created_by: "ai",
       media_url: null, media_type: null,
     }
+
+    // ── ผูก SKU จากชื่อชุดที่แคปชั่นเอ่ยถึง ──
+    //
+    // ⚠️ เติมเฉพาะตอน source_sku ยังว่าง — ห้ามทับของที่คนเลือกไว้เอง
+    // ⚠️ เจอหลายชุด (เช่น "OP13/15/16") ไม่เดา ส่งตัวเลือกกลับให้คนตัดสิน
+    //    เพราะรูปซองถูกส่งให้โมเดลภาพเป็นภาพอ้างอิงที่ต้องลอกตรง ๆ
+    //    เดาผิด = โปสเตอร์โชว์สินค้าผิดตัวแบบดูดีมากจนไม่มีใครเอะใจ
+    //
+    // วัดกับแคปชั่นจริง 34 ชิ้น: มั่นใจ 38% · กำกวม 15% · ไม่เจอ 47%
+    // ที่มั่นใจ ตรงกับที่คนผูกไว้ 7/7 ไม่ขัดกันเลย
+    let skuPick = null
+    try {
+      const { data: liveSkus } = await db.from("skus")
+        .select("sku_id,name,set_code,franchise").eq("is_active", true)
+      skuPick = detectSku(caption, liveSkus || [])
+      if (skuPick.status === "sure" && !content.source_sku) {
+        base.source_sku = skuPick.matches[0].sku_id
+      }
+    } catch { /* จับ SKU ไม่ได้ก็เขียนแคปชั่นต่อได้ ไม่ใช่เรื่องคอขวด */ }
     // content_format มาจาก migration 062 — ถ้ายังไม่ได้รันให้บันทึกแบบไม่มีคอลัมน์นี้
     let { data: updated, error: e1 } = await db.from("marketing_content")
       .update({ ...base, content_format: usedFormat?.key || null })
@@ -695,6 +718,18 @@ export async function POST(req) {
       retried,
       // การ์ดเอาไปบอกผู้ใช้ว่าทำไมรูปหาย — ไม่งั้นจะงงว่าโปสเตอร์ที่เคยมีไปไหน
       image_cleared: hadImage,
+      // ผลการจับ SKU — การ์ดเอาไปขึ้นให้เลือกเมื่อ status = ambiguous
+      // sure  → ผูกให้แล้ว (ถ้าเดิมว่าง) แค่บอกให้รู้
+      // none  → ไม่ต้องขึ้นอะไร ภาพจะใช้ตู้จริงเป็นตัวเอกแทน
+      sku_detect: skuPick ? {
+        status: skuPick.status,
+        hint: skuPick.hint,
+        applied: skuPick.status === "sure" && !content.source_sku
+          ? skuPick.matches[0].sku_id : null,
+        options: skuPick.status === "ambiguous"
+          ? skuPick.matches.map(m => ({ sku_id: m.sku_id, name: m.name,
+                                        set_code: m.set_code })) : [],
+      } : null,
       // การ์ดเอาไปขึ้นป้ายเตือนว่า "คล้ายของเก่า" ให้คนตรวจก่อนอนุมัติ
       similar: dup.score >= SIMILAR_LIMIT
         ? { score: Math.round(dup.score * 100), id: dup.item?.id,

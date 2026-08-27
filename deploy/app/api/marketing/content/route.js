@@ -104,6 +104,21 @@ export async function PATCH(req) {
     patch.media_url = url || null
     patch.media_type = url ? "image" : null
   }
+  // ผูก SKU เอง — ใช้ตอนตัวจับ SKU เจอหลายชุดแล้วให้คนเลือก (ส่ง "" เพื่อเอาออก)
+  //
+  // ตรวจกับตาราง skus ก่อนเสมอ ไม่รับค่าดิบจากการ์ด — source_sku ตัวนี้
+  // ไปตัดสินว่าจะเอารูปซองไหนส่งให้โมเดลภาพลอก ใส่ค่ามั่วแล้วโปสเตอร์จะโชว์สินค้าผิด
+  if (body.source_sku !== undefined) {
+    const sku = (body.source_sku || "").trim()
+    if (sku) {
+      const { data: hit } = await db.from("skus")
+        .select("sku_id").eq("sku_id", sku).eq("is_active", true).maybeSingle()
+      if (!hit) {
+        return NextResponse.json({ error: `ไม่รู้จัก SKU: ${sku}` }, { status: 400 })
+      }
+    }
+    patch.source_sku = sku || null
+  }
   // เหตุผลที่ทิ้ง — เก็บไว้ป้อนกลับ prompt รอบหน้า
   if (body.reject_reason !== undefined) patch.reject_reason = body.reject_reason || null
 
@@ -112,7 +127,8 @@ export async function PATCH(req) {
   }
 
   try {
-    const { data, error } = await db.from(TABLE).update(patch).eq("id", id).select().maybeSingle()
+    const { data, error } = await db.from(TABLE).update(patch).eq("id", id)
+      .select("*, sku:skus(sku_id,name,image_url,image_url_box)").maybeSingle()
     if (error) throw error
     if (!data) return NextResponse.json({ error: `ไม่พบรายการ id=${id}` }, { status: 404 })
     return NextResponse.json(data)
