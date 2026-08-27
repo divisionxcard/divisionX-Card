@@ -621,13 +621,34 @@ export async function POST(req) {
       //    ทั้งที่ตู้ที่เปิดจริงมี 12 (เกิดจริงกับโปสเตอร์ #38 และ #40)
       try {
         const live = new Set((machines || []).map(m => m.machine_id))
-        const { data: frSkus } = await db.from("skus")
-          .select("sku_id").eq("is_active", true).eq("franchise", wantFr)
-        const ids = (frSkus || []).map(s => s.sku_id)
+
+        // ⚠️ นับ "สินค้าตัวที่โพสต์พูดถึง" ก่อนเสมอ ไม่ใช่ทั้งค่าย
+        //    เจอจริง 27 ส.ค. 2026: โพสต์เรื่องเมก้าแชนเดลาex (อยู่ในซอง PKM Ghost)
+        //    ขึ้นป้าย "มีใน 12 ตู้" เพราะนับทุก SKU ของค่าย Pokémon รวมกัน
+        //    แต่ PKM Ghost ตัวเดียวอยู่แค่ 7 ตู้ — ลูกค้าไปตู้ที่มีแต่ PKM Ninja ก็ไม่เจอ
+        //    ตกไปนับทั้งค่ายเฉพาะตอนโพสต์ไม่ได้เจาะจงสินค้าตัวไหน
+        let ids = sku?.sku_id ? [sku.sku_id] : []
+        if (!ids.length) {
+          const { data: frSkus } = await db.from("skus")
+            .select("sku_id").eq("is_active", true).eq("franchise", wantFr)
+          ids = (frSkus || []).map(s => s.sku_id)
+        }
         if (ids.length) {
-          const { data: st } = await db.from("machine_stock")
-            .select("machine_id,sku_id").in("sku_id", ids)
-          const n = new Set((st || []).map(r => r.machine_id).filter(m => live.has(m))).size
+          // ⚠️ ต้องแบ่งหน้า — PostgREST คืนแค่ 1000 แถวเงียบ ๆ (ดู skill dvx-db)
+          //    ตอนนี้ยังไม่ถึง แต่จำนวนตู้ x SKU โตขึ้นทุกเดือน
+          const rows = []
+          for (let from = 0; ; from += 1000) {
+            const { data, error } = await db.from("machine_stock")
+              .select("machine_id,sku_id,remain").in("sku_id", ids).range(from, from + 999)
+            if (error) throw error
+            rows.push(...(data || []))
+            if (!data || data.length < 1000) break
+          }
+          // ⚠️ ต้องมีของเหลือจริง — ป้ายบอกว่า "มีใน N ตู้" คือคำสัญญาว่ากดได้
+          //    ช่องที่เคยมีแต่หมดแล้ว นับเข้าไปคือพาลูกค้าไปเก้อ
+          const n = new Set(rows
+            .filter(r => live.has(r.machine_id) && (r.remain || 0) > 0)
+            .map(r => r.machine_id)).size
           if (n) third = `มีใน ${n} ตู้`
         }
       } catch { /* นับไม่ได้ก็ใช้ป้ายข้อความตามเดิม */ }
