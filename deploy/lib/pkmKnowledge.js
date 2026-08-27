@@ -69,16 +69,48 @@ export function notablePkmCards(set, limit = 8) {
   }).slice(0, limit)
 }
 
-function cardLine(c) {
+// ตัดขึ้นบรรทัดที่ติดมาจากเว็บทางการออก — ในคลังเก็บเป็น \r\n กลางประโยค
+const flat = s => String(s || "").replace(/\s+/g, " ").trim()
+
+/**
+ * @param {object} c การ์ด
+ * @param {boolean} detail ใส่คำอธิบายท่า/ความสามารถเต็ม ๆ ไหม
+ *
+ * ⚠️ detail เพิ่ม 27 ส.ค. 2026 — เดิมส่งเข้า prompt แค่ "ชื่อท่า + แดเมจ"
+ *    โพสต์แนวเจาะการ์ดรายใบจึงเขียนได้แค่ 'พร้อมความสามารถ เปลวไฟต้องสาป'
+ *    แล้วจบ อธิบายไม่ได้ว่ามันทำอะไร ทั้งที่คลังมีข้อความเต็มอยู่ในฟิลด์ effect
+ *    ซึ่งคือทั้งหมดของคุณค่าคอนเทนต์ให้ความรู้
+ *
+ * ⚠️ เปิด detail เฉพาะตอนโพสต์แนวความรู้ ไม่ใช่ทุกโพสต์ — การ์ดเด่น 8 ใบ
+ *    คูณคำอธิบายเต็มจะกิน prompt เพิ่มหลายพันตัวอักษรโดยที่โพสต์ขายไม่ได้ใช้
+ */
+function cardLine(c, detail = false) {
   const bits = [
     c.category === "โปเกมอน" ? `HP ${c.hp}` : c.category,
     (c.types || []).join("/"),
     c.stage,
   ].filter(Boolean)
-  const move = (c.skills || [])[0]
-  const mv = move?.name ? ` · ท่า "${move.name}"${move.damage ? ` แดเมจ ${move.damage}` : ""}` : ""
   // ⚠️ ไม่ใส่ collector_number เด็ดขาด — เลขไทยไม่ตรงกับเลขบนการ์ดญี่ปุ่นในซองเรา
-  return `${c.name} (${bits.join(" · ")})${mv}`
+  const head = `${c.name} (${bits.join(" · ")})`
+
+  const skills = c.skills || []
+  if (!detail) {
+    const move = skills[0]
+    const mv = move?.name ? ` · ท่า "${move.name}"${move.damage ? ` แดเมจ ${move.damage}` : ""}` : ""
+    return head + mv
+  }
+
+  const lines = skills.slice(0, 3).map(s => {
+    const dmg = s.damage ? ` แดเมจ ${s.damage}` : ""
+    const eff = flat(s.effect)
+    return `      - ${s.name}${dmg}` + (eff ? `: ${eff.slice(0, 200)}` : "")
+  })
+  const weak = c.weakness?.energy?.length
+    ? `      - จุดอ่อน ${c.weakness.energy.join("/")} ${c.weakness.value || ""}`.trimEnd()
+    : ""
+  const evo = (c.evolution || []).length > 1
+    ? `      - สายวิวัฒนาการ ${c.evolution.join(" → ")}` : ""
+  return [head, ...lines, weak, evo].filter(Boolean).join("\n")
 }
 
 // ศัพท์เกมโปเกมอนที่ใช้เป็นตัวตัดคำ — ภาษาไทยไม่เว้นวรรค regex ตัดคำไม่ได้
@@ -134,7 +166,7 @@ export function relevantPkmQa(rules, topic, limit = 4, minScore = 3, generalOnly
  * ก้อนข้อมูลอ้างอิงสำหรับใส่ prompt — คืน "" ถ้าไม่มีอะไรเกี่ยว
  * maxChars คุมเฉพาะเนื้อข้อมูล ไม่รวมคำเตือนท้ายบล็อก (คำเตือนห้ามถูกตัดเด็ดขาด)
  */
-export async function pkmKnowledgeBlock({ setCode, topic = "", maxChars = 2000 } = {}) {
+export async function pkmKnowledgeBlock({ setCode, topic = "", maxChars = 2000, detail = false } = {}) {
   const [cards, rules] = await Promise.all([loadPkmCards(), loadPkmRules()])
   if (!cards && !rules) return ""
 
@@ -143,8 +175,10 @@ export async function pkmKnowledgeBlock({ setCode, topic = "", maxChars = 2000 }
   if (set) {
     const head = `ชุด ${set.name_th} · การ์ด ${set.card_count} ใบ` +
       (set.jp_code ? ` · ซองที่เราขายคือฉบับญี่ปุ่น ${set.jp_code}` : "")
+    // โพสต์แนวความรู้ต้องการรายละเอียดลึกแต่ไม่ต้องการหลายใบ — เอาน้อยใบแต่ครบ
+    const picked = notablePkmCards(set, detail ? 4 : 8)
     parts.push("การ์ดเด่นในชุด (ชื่อและค่าสถานะตามทางการ):\n" + head + "\n" +
-      notablePkmCards(set).map(c => "  " + cardLine(c)).join("\n"))
+      picked.map(c => "  " + cardLine(c, detail)).join("\n"))
   }
 
   const qa = relevantPkmQa(rules, topic)
@@ -156,7 +190,9 @@ export async function pkmKnowledgeBlock({ setCode, topic = "", maxChars = 2000 }
   if (!parts.length) return ""
 
   let body = parts.join("\n\n")
-  if (body.length > maxChars) body = body.slice(0, maxChars).replace(/\n[^\n]*$/, "")
+  // โหมดรายละเอียดต้องการที่มากกว่า — คำอธิบายท่าต่อใบยาวกว่าบรรทัดเดียวหลายเท่า
+  const cap = detail ? Math.max(maxChars, 3200) : maxChars
+  if (body.length > cap) body = body.slice(0, cap).replace(/\n[^\n]*$/, "")
 
   return "\n━━━ ข้อมูลทางการ Pokémon เทรดดิ้งการ์ดเกม ━━━\n" + body +
     `\n\nที่มา: เว็บทางการภาษาไทย · ดึงเมื่อ ${cards?._source?.fetched_at || "-"}\n` +

@@ -587,6 +587,11 @@ export async function POST(req) {
     // ⚠️ Pokémon มีคำเตือนเรื่องภาษาฝังอยู่ในบล็อกเอง (ซองเราเป็นญี่ปุ่น ข้อมูลเป็นไทย)
     //    ดู deploy/lib/pkmKnowledge.js — อย่าตัดคำเตือนนั้นออกเพื่อประหยัดที่ใน prompt
     const topicText = [idea?.title, idea?.angle, content.source_reason].filter(Boolean).join(" ")
+    // รูปแบบที่ต้องพึ่งข้อมูลการ์ด/กฎ ต้องได้คำอธิบายเต็ม ไม่ใช่แค่ชื่อ
+    // เจอจริง 27 ส.ค. 2026: โพสต์เขียนว่า "พร้อมความสามารถ เปลวไฟต้องสาป" แล้วจบ
+    // เพราะ prompt ได้แค่ชื่อท่า ทั้งที่คลังมีคำอธิบายเต็มอยู่ — ซึ่งคือคุณค่าทั้งหมดของโพสต์แนวนี้
+    const wantsCardDetail = [format, formatAlt]
+      .some(f => f?.knowledge === "cards" || f?.knowledge === "rules")
     let knowledge = ""
     try {
       if (sku?.franchise === "OP" || /one\s*piece|วันพีซ|วันพีช/i.test(topicText)) {
@@ -594,7 +599,10 @@ export async function POST(req) {
           sku: sku?.sku_id, setCode: sku?.set_code, topic: topicText,
         })
       } else if (sku?.franchise === "PKM" || /pok[eé]mon|โปเกมอน|โปเกม่อน/i.test(topicText)) {
-        knowledge = await pkmKnowledgeBlock({ setCode: sku?.set_code, topic: topicText })
+        // โพสต์แนวเจาะการ์ด/สอนกฎ ต้องได้คำอธิบายท่าเต็ม ๆ ไม่ใช่แค่ชื่อท่า
+        knowledge = await pkmKnowledgeBlock({
+          setCode: sku?.set_code, topic: topicText, detail: wantsCardDetail,
+        })
       } else {
         // Dragon Ball · Yu-Gi-Oh · Naruto · My Little Pony (ดู lib/tcgKnowledge.js)
         // ตัวมันเช็คค่ายเองแล้วคืน "" ถ้าไม่เกี่ยว — ไม่ต้องดักซ้ำตรงนี้
