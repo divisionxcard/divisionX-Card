@@ -839,3 +839,84 @@ def schedule_content(content_id, when, force=False):
         "note": ("ถึงเวลาแล้วระบบจะโพสต์ขึ้นเพจให้เอง (ตรวจทุก 15 นาที)" if auto else
                  "ชิ้นนี้ยังไม่ได้อนุมัติ — ตั้งเวลาไว้ได้ แต่จะไม่โพสต์จนกว่าเจ้าของจะอนุมัติ"),
     }
+
+
+# ── เพิ่มไอเดียเข้าคิวจากภายนอก (Hermes / คน) ────────────────────────────
+#
+# ⚠️ ทำไมเพิ่งมี — เดิมคิวไอเดียรับจากแหล่งอัตโนมัติอย่างเดียว
+#    (ข่าว · TikTok · YouTube · สัญญาณยอดขาย/สต็อก) ไม่มีทางให้คนหรือ agent
+#    ใส่ไอเดียเอง เจ้าของจึงต้องก๊อปข้อความจาก Hermes มาให้ Claude Code อีกที
+#
+# ⚠️ ข้อควรรู้ก่อนใช้ — วัดจากของจริง 27 ส.ค. 2026:
+#    คิวมี 107 ไอเดีย · เขียนเป็นคอนเทนต์ 34 · **โพสต์จริง 2**
+#    คอขวดอยู่ที่ "อนุมัติ" ไม่ใช่ "ไอเดียไม่พอ" (ค้าง pending กลาง 13 วัน)
+#    → tool นี้จึงเตือนกลับเมื่อคิวยาว เพื่อไม่ให้เติมต้นทางจนกองสูงขึ้นเฉย ๆ
+
+# ⚠️ ต้องเป็นค่าที่ผ่าน CHECK constraint ของคอลัมน์ source (migration 060):
+#    'news','youtube','tiktok','internal','comment','manual'
+#    → ใช้ 'manual' ซึ่งตรงความหมายอยู่แล้ว ("คนหรือ agent เสนอเอง")
+#    ไม่เพิ่มค่า 'hermes' เพราะต้องทำ migration ให้เจ้าของไปรันเอง แลกกับที่ได้แค่ป้ายชื่อ
+#    แยกว่าใครเสนอด้วย source_label แทน
+IDEA_SOURCE_EXTERNAL = "manual"
+IDEA_QUEUE_WARN = 60          # 'new' เกินนี้ = คอขวดอยู่ปลายทาง ไม่ใช่ต้นทาง
+
+
+def _idea_key(title):
+    """กันไอเดียซ้ำ — ยุบช่องว่าง/ตัวพิมพ์ แล้วตัดที่ 180 ตัวตามความยาวคอลัมน์"""
+    t = " ".join(str(title or "").lower().split())
+    return f"{IDEA_SOURCE_EXTERNAL}:{t}"[:180]
+
+
+def add_marketing_idea(title, angle, summary="", url="", related_sku="",
+                       score=2.0, source_label=""):
+    """ใส่ไอเดียคอนเทนต์เข้าคิว (status = new) ให้ตัวเขียนคอนเทนต์หยิบไปใช้
+
+    คืน dict ที่มี added (bool) · id · duplicate_of · queue_note
+    """
+    title = " ".join(str(title or "").split())
+    angle = " ".join(str(angle or "").split())
+    if len(title) < 12:
+        raise DvxError("title สั้นเกินไป — เขียนให้เห็นภาพว่าโพสต์นี้เล่าอะไร (อย่างน้อย 12 ตัวอักษร)")
+    if len(angle) < 15:
+        raise DvxError("angle ต้องบอกให้ชัดว่าจะเล่ามุมไหน ไม่ใช่แค่ชื่อหัวข้อ "
+                       "(อย่างน้อย 15 ตัวอักษร) เช่น 'สอนใส่ sleeve ให้ถูกวิธี — "
+                       "โยงเข้าซองที่กดได้จากตู้'")
+
+    key = _idea_key(title)
+    existing = sb_get("marketing_ideas?select=id,title,status"
+                      f"&external_key=eq.{urllib.parse.quote(key)}")
+    if existing:
+        e = existing[0]
+        return {"added": False, "duplicate_of": e["id"], "status": e["status"],
+                "note": f"มีไอเดียชื่อนี้อยู่แล้ว (id={e['id']} · {e['status']}) ไม่ได้เพิ่มซ้ำ"}
+
+    row = {
+        "status": "new", "source": IDEA_SOURCE_EXTERNAL,
+        "source_label": (source_label or "Hermes · เสนอเอง")[:120],
+        "title": title[:300], "summary": (summary or "")[:2000],
+        "url": (url or None), "angle": angle[:500],
+        "relevance": "เสนอโดย Hermes จากการวิเคราะห์คู่แข่ง/ตลาด",
+        "score": float(score), "related_sku": (related_sku or None),
+        "external_key": key,
+    }
+    body = json.dumps([row]).encode("utf-8")
+    req = urllib.request.Request(
+        f"{SB_URL}/rest/v1/marketing_ideas", data=body, method="POST",
+        headers={"apikey": SB_KEY, "Authorization": f"Bearer {SB_KEY}",
+                 "Content-Type": "application/json", "Prefer": "return=representation"})
+    try:
+        with urllib.request.urlopen(req, timeout=30) as r:
+            out = json.loads(r.read().decode("utf-8"))
+    except urllib.error.HTTPError as e:
+        raise DvxError(f"เพิ่มไอเดียไม่สำเร็จ (HTTP {e.code}): "
+                       f"{e.read().decode('utf-8', 'ignore')[:200]}")
+
+    # ⚠️ เตือนกลับเมื่อคิวยาว — ไม่ใช่ error แต่ agent ควรเอาไปบอกผู้ใช้
+    pending = sb_get("marketing_ideas?select=id&status=eq.new")
+    note = "เพิ่มเข้าคิวแล้ว รอตัวเขียนคอนเทนต์หยิบไปใช้"
+    if len(pending) > IDEA_QUEUE_WARN:
+        note = (f"เพิ่มแล้ว แต่คิวมีไอเดียที่ยังไม่ถูกหยิบอยู่ {len(pending)} ชิ้น — "
+                "คอขวดอยู่ที่การอนุมัติคอนเทนต์ ไม่ใช่จำนวนไอเดีย "
+                "บอกเจ้าของให้ไปเคลียร์คอนเทนต์ที่ค้างอนุมัติก่อนจะได้ผลกว่าเติมไอเดียเพิ่ม")
+    return {"added": True, "id": out[0]["id"], "title": title,
+            "queue_new": len(pending), "note": note}
