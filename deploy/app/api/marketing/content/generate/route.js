@@ -335,7 +335,12 @@ const GEMINI_DEFAULT = "gemini-flash-latest"
 // และตอนรุ่นหนึ่งคนแห่ใช้จนล้น (503 "high demand") อีกรุ่นมักยังว่างอยู่
 // ⚠ ตรวจของจริงก่อนใส่ชื่อ — 2026-08-17 ลองแล้ว gemini-2.0-flash-lite / 2.5-flash /
 //   2.5-flash-lite ตายหมด (404 no longer available) เหลือสองตัวนี้ที่ยังใช้ได้
-const GEMINI_CHAIN = ["gemini-flash-latest", "gemini-flash-lite-latest"]
+//
+// 2026-08-27 เพิ่ม gemini-3-flash-preview เป็นตัวที่สาม — วัดสด ๆ ตอน flash-latest
+// ตอบ 503 "high demand" พบว่าตัวนี้ยังตอบได้ปกติ สายเดิมมีแค่ 2 ตัวจึงหมดสายพร้อมกัน
+// แล้วโยน 500 ใส่หน้าเจ้าของ ทั้งที่ยังมีรุ่นที่ใช้ได้อยู่
+const GEMINI_CHAIN = ["gemini-flash-latest", "gemini-flash-lite-latest",
+                      "gemini-3-flash-preview"]
 
 const sleep = ms => new Promise(r => setTimeout(r, ms))
 
@@ -828,6 +833,30 @@ export async function POST(req) {
         : null,
     })
   } catch (err) {
-    return NextResponse.json({ error: err.message }, { status: 500 })
+    const msg = String(err?.message || err || "")
+    // ── ฝั่งผู้ให้บริการล่ม ไม่ใช่ระบบเราพัง ──
+    //
+    // ⚠️ เกิดจริง 27 ส.ค. 2026: Gemini ตอบ 503 "This model is currently experiencing
+    //    high demand" ทุกรุ่นในสายพร้อมกัน เจ้าของเห็นแค่ "HTTP 500" แล้วเข้าใจว่าเว็บพัง
+    //    ทั้งที่รอสองนาทีแล้วกดใหม่ก็ได้เลย (ทดสอบยืนยัน — รุ่นเดิมกลับมาเองใน ~10 นาที)
+    //    500 = ระบบเราผิด · 503 = ปลายทางไม่ว่าง คนละเรื่องกันสำหรับคนที่ต้องตัดสินใจว่าจะทำอะไรต่อ
+    if (/high demand|overloaded|unavailable|คนใช้เยอะจนล้น|try again later/i.test(msg)) {
+      return NextResponse.json({
+        code: "provider_busy",
+        error: "ผู้ให้บริการ AI คนใช้เยอะจนล้นชั่วคราว — ไม่ใช่ระบบเรามีปัญหา",
+        hint: "ระบบลองครบทุกรุ่นสำรองแล้วยังไม่ผ่าน · รอสัก 2-3 นาทีแล้วกดใหม่ มักหายเอง",
+        detail: msg.slice(0, 200),
+      }, { status: 503 })
+    }
+    if (/quota|per day|daily/i.test(msg)) {
+      return NextResponse.json({
+        code: "provider_quota",
+        error: "ใช้โควตาฟรีของวันนี้ครบแล้ว",
+        hint: "โควตารีเซ็ตตอนเที่ยงคืนตามเวลาแปซิฟิก · ถ้าต้องเขียนวันนี้ให้ตั้ง ANTHROPIC_API_KEY เพิ่ม",
+        detail: msg.slice(0, 200),
+      }, { status: 429 })
+    }
+    return NextResponse.json({ error: msg || "เขียนแคปชั่นไม่สำเร็จ (ไม่มีรายละเอียด)" },
+                             { status: 500 })
   }
 }
