@@ -558,6 +558,7 @@ export async function POST(req) {
 
     const caption = (content.caption || "").replace(/#\S+/g, "").trim()
     const lines = caption.split("\n").map(s => s.trim()).filter(Boolean)
+    const head = splitHeadline(content.caption)
     const facts = [
       `- Brand name: DivisionX Card (logo wordmark "DC")`,
       `- Number of branches (real, from database): ${branches}`,
@@ -566,8 +567,15 @@ export async function POST(req) {
       `- Business: self-service trading-card vending machines inside Thai shopping malls, ` +
         `open every day during mall hours`,
       sku ? `- Product shown: ${sku.name} (${sku.sku_id}) — an authentic sealed booster pack` : null,
-      lines.length ? `- Headline text to place (Thai, copy exactly): "${lines[0]}"` : null,
-      lines.length > 1 ? `- Supporting line (Thai, copy exactly): "${lines[1]}"` : null,
+      // ⚠️ ห้ามส่งบรรทัดแรกของแคปชั่นทั้งดุ้น — วัดจากคิวจริง 34 ชิ้นได้เฉลี่ย 71
+      //    ตัวอักษร ยาวสุด 108 ยัดลงกรอบเดียวแล้วตัวหนังสือเล็กจนอ่านไม่ออก
+      //    และยิ่งข้อความยาว โมเดลยิ่งสะกดไทยเพี้ยน ซึ่งเป็นข้อได้เปรียบเดียว
+      //    ที่ทำให้เลิกใช้เทมเพลตได้ ไม่ควรเอาไปทิ้ง
+      //    ตัดแล้วเหลือเฉลี่ย 27 (ดู lib/headline.js · scripts/test_headline.mjs)
+      head.headline
+        ? `- Headline (Thai, copy exactly, largest text on the poster): "${head.headline}"` : null,
+      head.sub
+        ? `- Supporting line (Thai, copy exactly, about half the headline size): "${head.sub}"` : null,
       // ป้ายความน่าเชื่อถือ — ใส่ทีหลังเพราะต้องรู้ค่ายก่อน (ดู pickBadges)
     ].filter(Boolean)
 
