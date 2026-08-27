@@ -112,6 +112,15 @@ const FORMAT_CONCEPTS = {
   fomo:      ["machine_luck", "viral", "battle"],
   compare:   ["battle", "luxury", "viral"],
   behind:    ["real_machine", "machine_luck", "unbox"],
+
+  // ── รูปแบบคอนเทนต์ความรู้ (เพิ่ม 27 ส.ค. 2026) ──
+  //
+  // ⚠️ ตกหล่นตอนเพิ่ม 3 รูปแบบนี้เข้า content_voice.json เมื่อเช้า
+  //    ไม่มีคีย์ตรงนี้ = pickConcept ตกไปใช้ "ทุกแนวที่เปิดอยู่" แล้วสุ่มมั่ว
+  //    โพสต์สอนกฎอาจได้ฉากสมบัติโจรสลัด ซึ่งไม่เข้ากับเรื่องเลย
+  card_deep:   ["hidden_card", "luxury", "unbox"],     // เน้นตัวการ์ด/ของหายาก
+  how_to_play: ["real_machine", "unbox", "battle"],    // สอนของจริง อย่าให้ฟุ้ง
+  card_care:   ["luxury", "unbox", "real_machine"],    // โทนถนอมของ ไม่ใช่โทนลุ้น
 }
 
 function pickConcept(cfg, { format, franchise, id }) {
@@ -557,7 +566,6 @@ export async function POST(req) {
     }
 
     const caption = (content.caption || "").replace(/#\S+/g, "").trim()
-    const lines = caption.split("\n").map(s => s.trim()).filter(Boolean)
     const head = splitHeadline(content.caption)
     const facts = [
       `- Brand name: DivisionX Card (logo wordmark "DC")`,

@@ -25,7 +25,7 @@
     "Give Thai type at least 35% extra leading above cap height for upper vowels and tone marks. Never tight-track Thai.",
     "Never invent numbers. No prices, branch counts, percentages, card values, dates, or quantities that were not supplied.",
     "Never place a branch count in the artwork.",
-    "Never depict scarcity, guaranteed rarity, or superiority over other sellers. No SOLD OUT, GUARANTEED, LAST DAY, or BEST IN THAILAND devices. The selling point is convenience (self-serve, 24h, in a nearby mall), never the product itself.",
+    "Never depict scarcity, guaranteed rarity, or superiority over other sellers. No SOLD OUT, GUARANTEED, LAST DAY, or BEST IN THAILAND devices. The selling point is convenience (self-serve, no queue, in a nearby mall, open every day during mall hours), never the product itself. NEVER say or imply 24 hours — the machines sit inside malls and close when the mall closes.",
     "Print set codes only when they are the publisher's official code, formatted as 'Official Set Name [OP-15]'. Never print internal inventory codes such as PRB 01, YGH UT01, MLP SEA02, or MLP BP-01.",
     "Minimum type size: primary information at least 5% of canvas width, secondary at least 3.5%. Validate by scaling the image to 320px wide; if primary text is unreadable, the layout fails.",
     "For 9:16 video frames at 1080x1920, keep every essential element inside a margin of 140px top, 500px bottom, 60px left, 180px right.",
