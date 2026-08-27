@@ -920,3 +920,57 @@ def add_marketing_idea(title, angle, summary="", url="", related_sku="",
                 "บอกเจ้าของให้ไปเคลียร์คอนเทนต์ที่ค้างอนุมัติก่อนจะได้ผลกว่าเติมไอเดียเพิ่ม")
     return {"added": True, "id": out[0]["id"], "title": title,
             "queue_new": len(pending), "note": note}
+
+
+# ── กล่องจดหมายถึงคนเขียนโค้ด (Hermes → Claude Code) ─────────────────────
+#
+# ⚠️ ทำไมต้องเป็นไฟล์ ไม่ใช่การส่งตรง
+#    Claude Code ไม่ได้รันค้างไว้ — มันมีตัวตนเฉพาะตอนเจ้าของเปิดใช้
+#    จึงรับข้อความแบบ push ไม่ได้ ต้องเป็นกล่องที่ทิ้งไว้แล้วอ่านตอนเปิดครั้งถัดไป
+#    (CLAUDE.md สั่งให้อ่านไฟล์นี้ทุกครั้งที่เริ่ม session)
+#
+# ⚠️ ใช้เฉพาะเรื่องที่ต้อง "แก้โค้ด/แก้ระบบ" เท่านั้น
+#    ไอเดียคอนเทนต์ให้ใช้ add_marketing_idea แทน — มันเข้าคิวแล้วทำงานต่อได้เลย
+#    ไม่ต้องรอใครมาอ่าน
+
+HERMES_INBOX = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
+    "wiki", "hermes-inbox.md")
+
+
+def note_for_dev(topic, detail, why=""):
+    """ฝากข้อเสนอเชิงระบบไว้ให้คนเขียนโค้ดอ่านรอบหน้า"""
+    topic = " ".join(str(topic or "").split())
+    detail = str(detail or "").strip()
+    if len(topic) < 8:
+        raise DvxError("topic สั้นเกินไป — เขียนให้รู้ว่าเรื่องอะไร (อย่างน้อย 8 ตัวอักษร)")
+    if len(detail) < 30:
+        raise DvxError("detail ต้องบอกให้ชัดว่าอยากให้แก้อะไรเป็นอะไร (อย่างน้อย 30 ตัวอักษร) "
+                       "— ข้อเสนอกว้าง ๆ อย่าง 'ปรับปรุงระบบ' เอาไปทำต่อไม่ได้")
+
+    stamp = datetime.now(timezone.utc).astimezone(
+        timezone(timedelta(hours=7))).strftime("%Y-%m-%d %H:%M")
+    block = [f"\n## {topic}", f"`{stamp} · เสนอโดย Hermes`", "", detail.strip()]
+    if why.strip():
+        block += ["", f"**ทำไม:** {why.strip()}"]
+    block += ["", "- [ ] ยังไม่ได้ทำ", ""]
+
+    os.makedirs(os.path.dirname(HERMES_INBOX), exist_ok=True)
+    if not os.path.exists(HERMES_INBOX):
+        with open(HERMES_INBOX, "w", encoding="utf-8") as f:
+            f.write("# กล่องจดหมายจาก Hermes ถึงคนเขียนโค้ด\n\n"
+                    "Hermes ฝากข้อเสนอเชิงระบบไว้ที่นี่ผ่าน tool `note_for_dev`\n"
+                    "Claude Code อ่านไฟล์นี้ทุกครั้งที่เริ่มทำงาน (สั่งไว้ใน CLAUDE.md)\n\n"
+                    "ทำเสร็จแล้วให้ติ๊ก `- [x]` ไว้ อย่าลบทิ้ง จะได้รู้ว่าเคยเสนออะไรไปแล้ว\n"
+                    "\n---\n")
+    with open(HERMES_INBOX, "a", encoding="utf-8") as f:
+        f.write("\n".join(block))
+
+    todo = 0
+    with open(HERMES_INBOX, encoding="utf-8") as f:
+        todo = f.read().count("- [ ] ยังไม่ได้ทำ")
+    return {"saved": True, "topic": topic, "file": "wiki/hermes-inbox.md",
+            "open_items": todo,
+            "note": f"ฝากไว้แล้ว · ตอนนี้มีเรื่องค้าง {todo} เรื่อง "
+                    "จะถูกอ่านตอนเจ้าของเปิด Claude Code ครั้งถัดไป "
+                    "(ไม่ใช่ทันที — Claude Code ไม่ได้รันค้างไว้)"}
