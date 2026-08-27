@@ -24,6 +24,7 @@ import { pkmKnowledgeBlock } from "../../../../../lib/pkmKnowledge"
 import { tcgKnowledgeBlock } from "../../../../../lib/tcgKnowledge"
 import { catalogueBlock } from "../../../../../lib/productCatalogue"
 import { detectFranchise } from "../../../../../lib/franchiseDetect"
+import { checkThaiCaption } from "../../../../../lib/thaiText"
 
 const db = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -622,6 +623,16 @@ export async function POST(req) {
         preview: caption.slice(0, 160),
       }, { status: 422 })
     }
+    // ⚠️ looksThai() จับไม่ได้ — มันนับแค่ "ตัวไทยพอไหม / CJK เยอะกว่าไหม"
+    //    อักษรลาวอยู่ติดกับไทยใน Unicode (U+0E80 ต่อจาก U+0E7F) จึงไม่เข้าเงื่อนไขไหนเลย
+    //    เคสจริง #40: "อยากฟังสຽງฉีกซอง" ใช้ ຽ กับ ງ ของลาวแทน "เสียง" แล้วผ่านฉลุย
+    const foreign = checkThaiCaption(caption)
+    if (foreign) {
+      return NextResponse.json({
+        error: `${foreign} — ไม่บันทึก ลองกดเขียนใหม่`,
+        preview: caption.slice(0, 160),
+      }, { status: 422 })
+    }
 
     // ── เขียนซ้ำของเก่า? ให้โอกาสแก้ตัวรอบเดียว ──
     // ไม่ throw ทิ้งเพราะผู้ใช้จะต้องมานั่งกดเองซ้ำ ๆ · แต่ก็ไม่บันทึกเงียบ ๆ
@@ -653,7 +664,19 @@ export async function POST(req) {
     }
 
     const EMBED = "*, idea:marketing_ideas!marketing_content_idea_id_fkey(id,url,source,source_label)"
-    const base = { caption, status: "pending", created_by: "ai" }
+    // ⚠️ เขียนแคปชั่นใหม่ = ต้องล้างรูปเก่าทิ้ง
+    //    เคสจริง #40 (27 ส.ค. 2026): กดเขียนใหม่ได้แคปชั่นเรื่อง ASMR + สินค้า M5 Abyss Eye
+    //    แต่ media_url ยังเป็นรูปเดิมที่เขียนว่า "13 ตู้ที่มี MEGA Dream ex [M2a] ... 137 ซอง"
+    //    → คนละเรื่อง คนละสินค้า และไม่มีอะไรบอกว่ารูปตกรุ่นแล้ว
+    //    เผลออนุมัติเมื่อไหร่คือโพสต์ที่รูปกับข้อความไม่ตรงกันขึ้นเพจจริง
+    //
+    //    ล้างทิ้งดีกว่าเก็บไว้ให้เข้าใจผิด — ไม่มีรูปเห็นชัดว่าต้องสร้างใหม่
+    //    ส่วนไฟล์เดิมยังอยู่ใน Storage ไม่ได้ลบ (ถ้าอยากได้คืนยังตามได้)
+    const hadImage = Boolean(content.media_url)
+    const base = {
+      caption, status: "pending", created_by: "ai",
+      media_url: null, media_type: null,
+    }
     // content_format มาจาก migration 062 — ถ้ายังไม่ได้รันให้บันทึกแบบไม่มีคอลัมน์นี้
     let { data: updated, error: e1 } = await db.from("marketing_content")
       .update({ ...base, content_format: usedFormat?.key || null })
@@ -670,6 +693,8 @@ export async function POST(req) {
       provider,
       format: usedFormat ? { key: usedFormat.key, label: usedFormat.label } : null,
       retried,
+      // การ์ดเอาไปบอกผู้ใช้ว่าทำไมรูปหาย — ไม่งั้นจะงงว่าโปสเตอร์ที่เคยมีไปไหน
+      image_cleared: hadImage,
       // การ์ดเอาไปขึ้นป้ายเตือนว่า "คล้ายของเก่า" ให้คนตรวจก่อนอนุมัติ
       similar: dup.score >= SIMILAR_LIMIT
         ? { score: Math.round(dup.score * 100), id: dup.item?.id,
