@@ -102,6 +102,16 @@ function ReviewNote({ verdict, notes }) {
   )
 }
 
+// แปลง error ให้แบนเนอร์อ่านได้ — รับทั้งข้อความเปล่าและ Error ที่ api() แนบ hint มา
+//
+// ⚠️ วิธีแก้จริงเกือบทุกเคสอยู่ใน hint ("เติมเครดิตที่ platform.openai.com → Billing")
+//    ถ้าโยนทิ้ง ผู้ใช้เห็นแต่หัวข้อแล้วไม่รู้จะไปทำอะไรต่อ
+function toErr(e) {
+  if (!e) return ""
+  if (typeof e === "string") return { msg: e }
+  return { msg: e.message || String(e), hint: e.hint, code: e.code, attempts: e.attempts }
+}
+
 export default function MarketingOS() {
   const [token, setToken] = useState(null)
   const [authState, setAuthState] = useState("checking")   // checking | ok | anon | forbidden
@@ -111,6 +121,9 @@ export default function MarketingOS() {
   // ผลการจับ SKU จากแคปชั่น {contentId: {status, hint, options, applied}}
   // เก็บแยกจาก item เพราะเป็นผลของ "การกดเขียนรอบนี้" ไม่ใช่ข้อมูลของคอนเทนต์
   const [skuAsk, setSkuAsk] = useState({})
+  // ใบนี้กำลังวาดด้วยทางไหน {id: "ai" | "tpl"} — สองปุ่มใช้ธง imaging ร่วมกัน
+  // ถ้าไม่แยก ข้อความระหว่างรอจะบอกเวลาผิดทางใดทางหนึ่งเสมอ (AI ~150 วิ · เทมเพลต ~60-120 วิ)
+  const [imagingKind, setImagingKind] = useState({})
   const [preview, setPreview] = useState(null)   // url ภาพที่กำลังดูเต็มจอ
   const [downloading, setDownloading] = useState(false)
   const [proofing, setProofing] = useState(new Set())   // id ที่กำลังตรวจปรู๊ฟอยู่
@@ -157,7 +170,7 @@ export default function MarketingOS() {
       setBrief({ id: item.id, text: r.brief, by: r.generated_by, download: r.download || [] })
       try { await navigator.clipboard?.writeText(r.brief) } catch { /* ไม่ให้เขียนคลิปบอร์ดก็ไม่เป็นไร */ }
     } catch (e) {
-      setErr(e.message)
+      setErr(toErr(e))
     } finally {
       setBriefing(s => { const n = new Set(s); n.delete(item.id); return n })
     }
@@ -319,7 +332,16 @@ export default function MarketingOS() {
     }
     if (res.status === 403) { setAuthState("forbidden"); throw new Error("ต้องเป็น admin เท่านั้น") }
     const json = await res.json().catch(() => ({}))
-    if (!res.ok) throw new Error(json.error || `HTTP ${res.status}`)
+    if (!res.ok) {
+      // ⚠️ วิธีแก้จริงของ error เกือบทุกแบบในระบบนี้อยู่ใน hint ไม่ใช่ error
+      //    เช่น "ChatGPT Plus ใช้กับ API ไม่ได้ คนละบิลคนละระบบ"
+      //    เดิมอ่านแค่ json.error ทำให้คนเห็นแต่หัวข้อ ไม่รู้ว่าต้องไปทำอะไรต่อ
+      const e = new Error(json.error || `HTTP ${res.status}`)
+      Object.assign(e, { hint: json.hint, code: json.code,
+                         attempts: json.attempts, status: res.status,
+                         media_url: json.media_url })
+      throw e
+    }
     return json
   }, [])
 
@@ -367,7 +389,7 @@ export default function MarketingOS() {
             // PATCH ไม่ได้ embed sku/idea กลับมา — คงของเดิมไว้ ไม่งั้นปุ่ม "ใช้รูป SKU" หายไป
             items: c.items.map(i => (i.id === id ? { ...i, ...updated, sku: i.sku, idea: i.idea } : i)),
           })
-    } catch (e) { setErr(e.message) } finally { setBusyId(null) }
+    } catch (e) { setErr(toErr(e)) } finally { setBusyId(null) }
   }
 
   // ให้ AI เขียนแคปชั่นจริงจากไอเดีย (Ollama บนเครื่อง) — ใช้เวลา ~15-60 วินาที
@@ -387,7 +409,7 @@ export default function MarketingOS() {
       // เจอหลายชุด → ขึ้นให้เลือกบนการ์ด · เจอตัวเดียว → บอกว่าผูกให้แล้ว
       setSkuAsk(m => ({ ...m, [contentId]: updated.sku_detect || null }))
     } catch (e) {
-      setErr(e.message)   // ร่างยังอยู่ในคิว กดเขียนใหม่ได้
+      setErr(toErr(e))   // ร่างยังอยู่ในคิว กดเขียนใหม่ได้
     } finally {
       setGenerating(s => { const n = new Set(s); n.delete(contentId); return n })
     }
@@ -406,12 +428,13 @@ export default function MarketingOS() {
 
   // ── ให้ AI สร้างภาพประกอบ ──
   // ใช้รูป SKU จริงเป็นภาพอ้างอิง ไม่ได้ให้มันวาดการ์ดขึ้นเอง
-  const makeImage = useCallback(async (contentId) => {
+  const makeImage = useCallback(async (contentId, force = false) => {
     setImaging(s => new Set(s).add(contentId))
+    setImagingKind(m => ({ ...m, [contentId]: "ai" }))
     setImagingSince(m => ({ ...m, [contentId]: Date.now() }))
     try {
       const updated = await api("content/image", {
-        method: "POST", body: JSON.stringify({ id: contentId }),
+        method: "POST", body: JSON.stringify({ id: contentId, force }),
       })
       setContent(c => ({
         ...c,
@@ -419,7 +442,15 @@ export default function MarketingOS() {
         items: (c.items || []).map(i => (i.id === contentId ? { ...updated, sku: i.sku } : i)),
       }))
     } catch (e) {
-      setErr(e.message)
+      // เซิร์ฟเวอร์กันสร้างทับรูปเดิมไว้ เพราะทุกใบคือเงินจริง — ถามก่อนแล้วค่อยยืนยัน
+      if (e.code === "already_has_image") {
+        setImaging(s => { const n = new Set(s); n.delete(contentId); return n })
+        if (window.confirm("ใบนี้มีรูปอยู่แล้ว — สร้างใหม่จะเสียค่าสร้างภาพเพิ่มอีกหนึ่งใบ ยืนยันไหม")) {
+          return makeImage(contentId, true)
+        }
+        return
+      }
+      setErr(toErr(e))
     } finally {
       setImaging(s => { const n = new Set(s); n.delete(contentId); return n })
     }
@@ -441,7 +472,7 @@ export default function MarketingOS() {
       }))
       setTab(t => ({ ...t, [contentId]: "ig" }))   // เด้งไปช่องแรกที่เพิ่งได้ ให้เห็นผลทันที
     } catch (e) {
-      setErr(e.message)
+      setErr(toErr(e))
     } finally {
       setVarying(s => { const n = new Set(s); n.delete(contentId); return n })
     }
@@ -460,6 +491,7 @@ export default function MarketingOS() {
 
   const makePoster = useCallback(async (contentId, beforeUrl) => {
     setImaging(s => new Set(s).add(contentId))
+    setImagingKind(m => ({ ...m, [contentId]: "tpl" }))
     setImagingSince(m => ({ ...m, [contentId]: Date.now() }))
     try {
       const r = await api("content/poster", {
@@ -489,7 +521,7 @@ export default function MarketingOS() {
         setNotice("รอเกิน 4 นาทีแล้วยังไม่เสร็จ — ดูสถานะที่แท็บ Actions บน GitHub หรือกดรีเฟรชเอง")
       }
     } catch (e) {
-      setErr(e.message)
+      setErr(toErr(e))
     } finally {
       setImaging(s => { const n = new Set(s); n.delete(contentId); return n })
     }
@@ -523,7 +555,7 @@ export default function MarketingOS() {
         items: (c.items || []).map(i => (i.id === contentId ? { ...json, sku: i.sku } : i)),
       }))
     } catch (e) {
-      setErr(e.message)
+      setErr(toErr(e))
     } finally {
       setImaging(s => { const n = new Set(s); n.delete(contentId); return n })
     }
@@ -544,7 +576,7 @@ export default function MarketingOS() {
         setContent(c => ({ ...c, items: [res.content, ...(c.items || [])] }))
         generate(res.content.id)
       }
-    } catch (e) { setErr(e.message) } finally { setBusyId(null) }
+    } catch (e) { setErr(toErr(e)) } finally { setBusyId(null) }
   }
 
   // วางลิงก์คลิปที่เห็นว่าไวรัล → ระบบดึงชื่อ/ผู้โพสต์ให้ผ่าน oEmbed
@@ -556,7 +588,7 @@ export default function MarketingOS() {
       const created = await api("ideas", { method: "POST", body: JSON.stringify({ url }) })
       setIdeas(s => ({ ...s, items: [created, ...(s.items || [])] }))
       setPasteUrl("")
-    } catch (e) { setErr(e.message) } finally { setPasting(false) }
+    } catch (e) { setErr(toErr(e)) } finally { setPasting(false) }
   }
 
   // อนุมัติ = ย้ายจากคิว "รออนุมัติ" ไป "รอโพสต์" — ต้องเด้งขึ้นกล่องล่างทันที
@@ -582,7 +614,7 @@ export default function MarketingOS() {
     try {
       await api("content", { method: "PATCH", body: JSON.stringify({ id, status: "posted" }) })
       setReady(s => ({ items: (s.items || []).filter(i => i.id !== id) }))
-    } catch (e) { setErr(e.message) } finally { setBusyId(null) }
+    } catch (e) { setErr(toErr(e)) } finally { setBusyId(null) }
   }
   // ── ทดสอบโดยไม่ขึ้นเพจ ──
   // อัปรูปขึ้น Facebook จริงด้วย published=false → ไม่มีใครเห็นบนเพจ หายเองใน 24 ชม.
@@ -596,7 +628,7 @@ export default function MarketingOS() {
         method: "POST", body: JSON.stringify({ id: item.id, dryRun: true }),
       })
       setDryRun({ ...r, id: item.id })
-    } catch (e) { setErr(e.message) } finally { setBusyId(null) }
+    } catch (e) { setErr(toErr(e)) } finally { setBusyId(null) }
   }
 
   // ── โพสต์ขึ้นเพจจริง ──
@@ -613,7 +645,7 @@ export default function MarketingOS() {
       setReady(s => ({ items: (s.items || []).filter(i => i.id !== item.id) }))
       setPosted(r.post_url || null)
     } catch (e) {
-      setErr(e.message)
+      setErr(toErr(e))
     } finally { setBusyId(null) }
   }
 
@@ -624,7 +656,7 @@ export default function MarketingOS() {
       const back = await api("content", { method: "PATCH", body: JSON.stringify({ id, status: "pending" }) })
       setReady(s => ({ items: (s.items || []).filter(i => i.id !== id) }))
       setContent(c => ({ ...c, items: [back, ...(c.items || [])] }))
-    } catch (e) { setErr(e.message) } finally { setBusyId(null) }
+    } catch (e) { setErr(toErr(e)) } finally { setBusyId(null) }
   }
 
   // ช่องว่างที่ยังไม่ได้เติม เช่น {ชื่อการ์ด} — ห้ามปล่อยให้โพสต์ทั้งอย่างนั้น
@@ -667,7 +699,23 @@ export default function MarketingOS() {
         onNew={() => { setView("ideas"); setTimeout(() => pasteRef.current?.focus(), 0) }} />}>
       {err && (
         <div className="mb-4 flex items-start gap-2 bg-red-50 border border-red-200 text-red-700 rounded-xl p-3 text-sm">
-          <AlertTriangle size={16} className="mt-0.5 shrink-0" /><span>{err}</span>
+          <AlertTriangle size={16} className="mt-0.5 shrink-0" />
+          <div className="flex-1 min-w-0">
+            <div>{typeof err === "string" ? err : err.msg}</div>
+            {err?.hint && <div className="mt-1 text-red-600/80 text-xs leading-relaxed">{err.hint}</div>}
+            {err?.attempts?.length > 0 && (
+              <details className="mt-1.5">
+                <summary className="text-xs text-red-500 cursor-pointer">ดูว่าลองอะไรไปบ้าง</summary>
+                <ul className="mt-1 text-xs text-red-500/90 space-y-0.5">
+                  {err.attempts.map((a, i) => <li key={i}>· {a}</li>)}
+                </ul>
+              </details>
+            )}
+          </div>
+          <button onClick={() => setErr("")} title="ปิด"
+            className="shrink-0 text-red-400 hover:text-red-700">
+            <X size={14} />
+          </button>
         </div>
       )}
 
@@ -997,11 +1045,13 @@ export default function MarketingOS() {
                             <div className="relative w-9 h-9 rounded-full border-[3px] border-blue-200
                                             border-t-blue-600 animate-spin" />
                             <span className="relative text-[11px] font-medium text-blue-700">
-                              กำลังสร้างโปสเตอร์…
+                              {imagingKind[item.id] === "tpl" ? "กำลังสร้างจากเทมเพลต…" : "AI กำลังวาด…"}
                             </span>
                             <span className="relative text-[10px] text-blue-500 tabular-nums">
                               {Math.floor((Date.now() - (imagingSince[item.id] || Date.now())) / 1000)} วินาที
-                              <span className="text-blue-400"> · ปกติ 60-120 วิ</span>
+                              <span className="text-blue-400">
+                                {imagingKind[item.id] === "tpl" ? " · ปกติ 60-120 วิ" : " · ปกติ 150-200 วิ"}
+                              </span>
                             </span>
                           </>
                         ) : (
@@ -1089,28 +1139,36 @@ export default function MarketingOS() {
                       </>
                     )}
 
-                    {/* ทางหลัก — โปสเตอร์จากเทมเพลต · ฟรี ตัวอักษรไทยถูก ตัวเลขมาจาก DB
-                        เป็นงาน async (รันบน GitHub Actions ~1-2 นาที) เพราะต้องใช้ Chromium จริง */}
-                    <button
-                      disabled={imaging.has(item.id)}
-                      onClick={() => makePoster(item.id, item.media_url)}
-                      title="สร้างโปสเตอร์จากเทมเพลตแบรนด์ · ฟรี · ใช้เวลาราว 1-2 นาที"
-                      className="w-full sm:w-36 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg
-                                 bg-blue-600 text-white text-[11px] font-medium disabled:opacity-50">
-                      <ImageIcon size={12} />
-                      {imaging.has(item.id) ? "กำลังสร้าง… รออยู่" : item.media_url ? "สร้างโปสเตอร์ใหม่" : "สร้างโปสเตอร์"}
-                    </button>
+                    {/* ทางหลัก — โปสเตอร์ทั้งใบจาก AI (สลับมาเป็นตัวหลัก 27 ส.ค. 2026)
 
-                    {/* ทางเสริม — พื้นหลังจาก AI · ต้องเปิด billing Gemini ก่อนถึงใช้ได้
-                        บอกไว้ในปุ่มเลย ไม่ให้กดแล้วไปเจอ error โดยไม่รู้ตัว */}
+                        เจ้าของสั่งเปลี่ยนเพราะเทมเพลตออกมาหน้าตาเหมือนกันหมดทุกชิ้น
+                        เปลี่ยนแค่ข้อความกับรูปสินค้า ฉากกับองค์ประกอบไม่เคยต่าง
+
+                        ทดสอบยิงจริง 4 ใบก่อนสลับ: ตัวอักษรไทยถูกทุกตัวรวมวรรณยุกต์กับสระบน/ล่าง
+                        (เหตุผลเดียวที่เทมเพลตเคยจำเป็นคือ Satori ทำไทยเพี้ยน — หมดไปแล้ว)
+                        ซองสินค้าลอกจากรูปจริงครบทุกจุด · ใช้เวลา 145-153 วินาทีต่อใบ */}
                     <button
                       disabled={imaging.has(item.id)}
                       onClick={() => makeImage(item.id)}
-                      title="ให้ AI สร้างภาพฉาก (ต้องเปิด billing Gemini ก่อน)"
+                      title="ให้ AI ออกแบบโปสเตอร์ทั้งใบจากแคปชั่น + รูปซองจริง · ราว 2-3 นาที · เสียค่าสร้างภาพต่อใบ"
+                      className="w-full sm:w-36 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg
+                                 bg-blue-600 text-white text-[11px] font-medium disabled:opacity-50">
+                      <Sparkles size={12} />
+                      {imaging.has(item.id) ? "AI กำลังวาด… รออยู่"
+                        : item.media_url ? "ให้ AI วาดใหม่" : "ให้ AI ออกแบบ"}
+                    </button>
+
+                    {/* ทางสำรอง — เทมเพลตแบรนด์ · ฟรี ตัวเลขมาจาก DB ตรง ๆ
+                        เก็บไว้เพราะไม่เสียเงินและได้ผลแน่นอนเวลา OpenAI ล่ม
+                        แต่หน้าตาตายตัวทุกใบ จึงไม่ใช่ทางหลักอีกต่อไป */}
+                    <button
+                      disabled={imaging.has(item.id)}
+                      onClick={() => makePoster(item.id, item.media_url)}
+                      title="สร้างจากเทมเพลตแบรนด์ · ฟรี · ราว 1-2 นาที · หน้าตาตายตัวทุกใบ"
                       className="w-full sm:w-36 flex items-center justify-center gap-1.5 px-2 py-1
                                  rounded-lg text-[10px] text-gray-400 hover:text-gray-600 disabled:opacity-50">
-                      <Sparkles size={11} />
-                      พื้นหลัง AI (ต้องเปิด billing)
+                      <ImageIcon size={11} />
+                      เทมเพลต (ฟรี)
                     </button>
                   </div>
 

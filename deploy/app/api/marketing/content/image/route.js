@@ -306,7 +306,7 @@ function buildPrompt(style, concept, facts, mode, hasRefs = false, idea = null, 
 
 // ── OpenAI ────────────────────────────────────────────────────────────────
 // มีรูปอ้างอิง → /images/edits (ยึดซองจริง/ตู้จริง) · ไม่มี → /images/generations
-async function askOpenAI(style, prompt, refs) {
+async function askOpenAI(style, prompt, refs, deadline = Infinity) {
   const key = process.env.OPENAI_API_KEY
   const models = [
     process.env.OPENAI_IMAGE_MODEL || style.openai_model,
@@ -319,6 +319,14 @@ async function askOpenAI(style, prompt, refs) {
   const attempts = []            // ไล่ให้เห็นว่าลองโมเดลไหนไปบ้างและพังเพราะอะไร
 
   for (const model of models) {
+    // ⚠️ เช็กก่อนยิง ไม่ใช่หลังยิง — เดิมไม่มีด่านนี้ พอโมเดลแรกช้า มันจะไล่ยิง
+    //    ตัวสำรองต่อจนแพลตฟอร์มฆ่าทั้ง request แล้วผู้ใช้ได้ 504 เปล่า ๆ
+    //    ไม่มีแม้แต่ attempts ที่อุตส่าห์เก็บไว้ เพราะ response ไม่เคยถูกส่ง
+    const left = deadline - Date.now()
+    if (left < 20_000) {
+      attempts.push(`${model}: ข้าม — เหลือเวลา ${Math.round(left / 1000)} วิ ไม่พอสร้างภาพ`)
+      break
+    }
     try {
       let res
       if (refs.length) {
@@ -347,14 +355,14 @@ async function askOpenAI(style, prompt, refs) {
           method: "POST",
           headers: { Authorization: `Bearer ${key}` },
           body: fd,
-          signal: AbortSignal.timeout(300000),
+          signal: AbortSignal.timeout(Math.max(20_000, deadline - Date.now())),
         })
       } else {
         res = await fetch(`${OPENAI_BASE}/images/generations`, {
           method: "POST",
           headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
           body: JSON.stringify({ model, prompt, size, quality, n: 1 }),
-          signal: AbortSignal.timeout(300000),
+          signal: AbortSignal.timeout(Math.max(20_000, deadline - Date.now())),
         })
       }
 
@@ -420,7 +428,27 @@ async function askGemini(style, prompt, refs) {
   }
 }
 
+// ── เพดานเวลา ────────────────────────────────────────────────────────────
+//
+// วัดจริง 27 ส.ค. 2026: gpt-image-2 quality=high 1024 ใช้ 145-153 วินาทีต่อใบ
+// (ยิงจริง 4 ใบ ทั้งแบบมีรูปอ้างอิงและไม่มี ได้เลขใกล้กันทุกครั้ง)
+// บวกขั้นคิดไอเดียภาพ + ดึงข้อมูล + อัปโหลด แล้วราว 200 วินาที
+//
+// ⚠️ ต้องประกาศ maxDuration เอง — ไม่มีที่ไหนในโปรเจกต์ตั้งไว้เลย ทุก route
+//    ใช้ค่า default ของแพลตฟอร์ม ซึ่งต่ำกว่านี้มากถ้าไม่ได้เปิด Fluid Compute
+//    ตอนที่ปุ่ม AI เป็นของเสริมที่แทบไม่มีใครกด เรื่องนี้ไม่เคยทำร้ายใคร
+export const runtime = "nodejs"
+export const maxDuration = 300
+
+// งบเวลารวมทั้ง request — เหลือ 60 วิให้อัปโหลดกับเขียน DB ก่อนโดนฆ่า
+//
+// ⚠️ เดิมตั้ง timeout 300 วิ "ต่อโมเดล" แล้ววนโมเดลสำรองอีก 3 ตัว
+//    = กรณีแย่สุด 20 นาที ซึ่งไม่มีทางได้คืน response เลย ผู้ใช้เห็นแค่ 504 เปล่า ๆ
+//    ทั้งที่โค้ดอุตส่าห์เก็บ attempts ไว้บอกว่าพังเพราะอะไร
+const TIME_BUDGET_MS = 240_000
+
 export async function POST(req) {
+  const deadline = Date.now() + TIME_BUDGET_MS
   const gate = await requireAdmin(req)
   if (gate.error) return gate.error
 
@@ -457,6 +485,21 @@ export async function POST(req) {
       .eq("id", id).maybeSingle()
     if (e0) throw e0
     if (!content) return NextResponse.json({ error: `ไม่พบรายการ id=${id}` }, { status: 404 })
+
+    // ── กันจ่ายซ้ำ ──
+    //
+    // ⚠️ ตอนปุ่มนี้เป็นของเสริมสีเทาที่แทบไม่มีใครกด การกดซ้ำไม่เสียหายอะไร
+    //    พอเป็นปุ่มหลัก ทุกคลิก = เงินจริง 1 ใบ + รอ 2-3 นาที
+    //    ตัวกันที่มีอยู่คือ disabled ฝั่งหน้าเว็บอย่างเดียว ซึ่งหายทันทีที่รีเฟรช
+    //    เปิดแท็บที่สอง หรือกดจากคนละเครื่อง
+    if (content.media_url && !body.force) {
+      return NextResponse.json({
+        code: "already_has_image",
+        error: "ใบนี้มีรูปอยู่แล้ว",
+        hint: "กดยืนยันอีกครั้งถ้าต้องการสร้างใหม่ — จะเสียค่าสร้างภาพเพิ่มอีกหนึ่งใบ",
+        media_url: content.media_url,
+      }, { status: 409 })
+    }
 
     // ── ข้อเท็จจริงจากฐานข้อมูล — ไม่ให้โมเดลเดาเอง ──
     const { data: machines } = await db.from("machines").select("machine_id,config").eq("status", "active")
@@ -658,7 +701,7 @@ export async function POST(req) {
     let out
     try {
       out = provider === "openai"
-        ? await askOpenAI(style, prompt, refs)
+        ? await askOpenAI(style, prompt, refs, deadline)
         : await askGemini(style, prompt, refs)
     } catch (e) {
       const msg = String(e.message || e)
@@ -674,7 +717,24 @@ export async function POST(req) {
         }, { status: 402 })
       }
       if (e.status === 401) {
-        return NextResponse.json({ error: "key ใช้ไม่ได้ — ตรวจว่าคัดลอกครบและยังไม่ถูกเพิกถอน" }, { status: 401 })
+        // ⚠️ ห้ามคืน 401 — ในระบบนี้ 401 ถูกจองไว้ให้ auth ของ Supabase
+        //    หน้าเว็บเห็น 401 แล้วเด้งเป็น "ต้องเข้าสู่ระบบก่อน" ทั้งหน้า
+        //    เจ้าของจะไล่ login ใหม่ซ้ำ ๆ ทั้งที่ปัญหาอยู่ที่ key ของ OpenAI
+        //    ตอนปุ่มนี้เป็นของเสริมแทบไม่มีใครเจอ พอเป็นทางหลักจะเจอแน่วันที่ key หมดอายุ
+        return NextResponse.json({
+          code: "provider_auth",
+          error: `key ของ ${provider} ใช้ไม่ได้ — ไม่ใช่เรื่องการเข้าสู่ระบบของเว็บ`,
+          hint: "ตรวจว่าคัดลอก key มาครบและยังไม่ถูกเพิกถอน แล้วอัปเดตทั้งใน Vercel และ deploy/.env.local",
+        }, { status: 502 })
+      }
+      // หมดเวลาระหว่างรอโมเดล — บอกให้ชัดว่าไม่ใช่ error ของ OpenAI
+      if (/abort|timeout|เหลือเวลา/i.test(msg)) {
+        return NextResponse.json({
+          code: "timeout",
+          error: "สร้างภาพไม่ทันในเวลาที่มี",
+          hint: "ปกติใช้ราว 2-3 นาที · ถ้าเจอบ่อยแปลว่า OpenAI ช้าผิดปกติ ลองใหม่อีกครั้ง",
+          attempts: e.attempts || [],
+        }, { status: 504 })
       }
       return NextResponse.json({ error: `${provider}: ${msg.slice(0, 300)}` }, { status: 502 })
     }
