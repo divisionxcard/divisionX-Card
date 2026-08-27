@@ -161,7 +161,27 @@ function pickFormat(voice, recent) {
   return pool[Math.floor(Math.random() * pool.length)]
 }
 
-function buildPrompt(voice, idea, content, sku, recent = [], format = null, craft = null, knowledge = "") {
+// อ่านบรรทัด "FORMAT: <key>" ที่โมเดลเขียนบอกว่าเลือกรูปแบบไหน แล้วตัดทิ้ง
+//
+// ⚠️ ต้องตัดก่อน tidy() และก่อนเทียบความซ้ำ — ไม่งั้นบรรทัดนี้จะกลายเป็น
+//    บรรทัดแรกของโพสต์จริง และไปเพี้ยนคะแนนเทียบความซ้ำด้วย
+// โมเดลไม่ยอมเขียนบรรทัดนี้ก็ไม่เป็นไร ถือว่าใช้ตัวเลือกที่ให้ไปเป็นหลัก
+function readFormatLine(text, voice, fallback) {
+  const raw = text || ""
+  // ⚠️ จับทั้งบรรทัดแบบกว้าง ๆ แล้วค่อยแกะ key ทีหลัง
+  //    เดิมบังคับ [a-z_]+ พอโมเดลเขียนชื่อไทยหรือใส่คำอธิบายต่อท้าย regex ไม่ match
+  //    บรรทัด "FORMAT: ..." เลยค้างอยู่เป็นบรรทัดแรกของโพสต์จริง
+  //    ตัดทิ้งเสมอ ส่วน key อ่านไม่ออกก็แค่ใช้ตัวที่ให้ไปเป็นหลัก
+  const m = raw.match(/^[ \t]*FORMAT:[^\n]*$/im)
+  if (!m) return { format: fallback, text: raw }
+  // เอาแค่คำแรกหลังโคลอน — โมเดลชอบต่อท้ายด้วยเหตุผล ("story — เพราะมีลำดับเวลา")
+  const tail = (m[0].split(":").slice(1).join(":") || "").trim().toLowerCase()
+  const key = (tail.match(/^[a-z_]+/) || [""])[0]
+  const hit = (voice.content_formats || []).find(f => f.key === key)
+  return { format: hit || fallback, text: raw.replace(m[0], "") }
+}
+
+function buildPrompt(voice, idea, content, sku, recent = [], format = null, craft = null, knowledge = "", altFormat = null) {
   const rules = voice.rules.map((r, i) => `${i + 1}. ${r}`).join("\n")
   const phrases = voice.catchphrases.map(p => `- "${p}"`).join("\n")
 
@@ -215,8 +235,30 @@ ${overclaimPart}${craftPart}${example}
     `แพลตฟอร์ม: ${content.platform === "line" ? "LINE OA" : "Facebook เพจ"}`,
   ].filter(Boolean).join("\n")
 
+  // ── รูปแบบโพสต์ — ให้เลือกเอง ไม่ใช่ยัดให้ ──
+  //
+  // ⚠️ เดิมสุ่มมาแบบเดียวแล้วบังคับให้เขียนตามนั้น พอหัวข้อไม่เข้ากับรูปแบบ
+  //    คนเขียนก็ต้องเค้นให้ได้ — คอนเทนต์ #40 สุ่มได้ "เทียบให้เห็น" กับหัวข้อแกะซอง
+  //    เลยได้ "ฟังเสียงฉีกซอง vs ลุ้นเองหน้าตู้" ซึ่งทำพร้อมกันได้ ไม่ใช่ทางเลือกสองทาง
+  //    เจ้าของอ่านแล้วบอก "ไม่ว่าจะฉีกแบบไหนมันก็ไม่ต่างกันเลย สื่อสารได้ไม่เข้าใจ"
+  //
+  // ให้ 2 ตัวเลือกพร้อมเงื่อนไข แล้วให้มันตัดสินเองว่าอันไหนเข้ากับหัวข้อจริง
+  // ⚠️ ไม่ให้ทั้ง 8 แบบ เพราะให้หมดเท่ากับไม่ได้บังคับอะไรเลย — โมเดลจะเลือกท่าถนัด
+  //    ซ้ำ ๆ แล้วคอนเทนต์จะกลับไปหน้าตาเหมือนกันหมดอีก ซึ่งคือปัญหาที่เพิ่งแก้ไป
+  const showFmt = (f, tag) => f
+    ? `[${tag}] **${f.label}** (${f.key})\n` +
+      `   ${f.brief}\n` +
+      (f.when ? `   ใช้เมื่อ: ${f.when}\n` : "") +
+      (f.avoid_when ? `   ห้ามใช้เมื่อ: ${f.avoid_when}\n` : "")
+    : ""
   const fmt = format
-    ? `\nรูปแบบโพสต์ที่ต้องใช้รอบนี้: **${format.label}**\n${format.brief}\n`
+    ? `\nรูปแบบโพสต์ — เลือก 1 จาก 2 นี้:\n\n` +
+      showFmt(format, "ตัวเลือก 1") +
+      (altFormat ? "\n" + showFmt(altFormat, "ตัวเลือก 2") : "") +
+      `\nอ่าน "ห้ามใช้เมื่อ" ให้ครบก่อนเลือก — ถ้าตัวเลือก 1 ไม่เข้ากับหัวข้อจริง ๆ ให้ใช้ตัวเลือก 2\n` +
+      `ห้ามฝืนเขียนตามรูปแบบที่ไม่เข้ากับเรื่อง ได้คอนเทนต์ที่คนอ่านแล้วงงแย่กว่าไม่โพสต์\n` +
+      `**บรรทัดแรกสุดของคำตอบ เขียนว่า FORMAT: <key ที่เลือก> แล้วขึ้นบรรทัดใหม่เขียนแคปชั่น**\n` +
+      `(บรรทัด FORMAT ถูกตัดออกก่อนบันทึก ไม่ไปโผล่ในโพสต์)\n`
     : ""
 
   // ให้เห็นของเก่าเพื่อ "เลี่ยง" ไม่ใช่เพื่อ "เลียนแบบ" — ต้องบอกให้ชัด
@@ -514,7 +556,9 @@ export async function POST(req) {
 
     const [voice, craft] = await Promise.all([loadVoice(), loadCraft()])
     const recent = await fetchRecent(voice.recent_captions_shown || 8)
+    // สองตัวเลือกให้โมเดลตัดสินเองว่าอันไหนเข้ากับหัวข้อ — ตัวที่สองต้องไม่ซ้ำตัวแรก
     const format = pickFormat(voice, recent)
+    const formatAlt = pickFormat(voice, [...recent, { format: format?.key }])
 
     // ความรู้ทางการ — ใส่เฉพาะโพสต์ที่เกี่ยวกับค่ายนั้นจริง ๆ
     // ถ้าไฟล์หายหรือไม่มีอะไรตรง บล็อกคืน "" เอง prompt จะไม่บวมฟรี
@@ -546,7 +590,7 @@ export async function POST(req) {
     try { catalogue = await catalogueBlock(db, { focus: focusFr }) } catch { catalogue = "" }
 
     const prompt = buildPrompt(voice, idea, content, sku, recent, format, craft,
-                               catalogue + knowledge)
+                               catalogue + knowledge, formatAlt)
 
     // บังคับด้วย AI_PROVIDER ได้ ไม่งั้นเลือกตัวแรกที่พร้อมใช้
     const forced = (process.env.AI_PROVIDER || "").toLowerCase()
@@ -613,6 +657,10 @@ export async function POST(req) {
       } finally { clearTimeout(timer) }
     }
 
+    const first = readFormatLine(out.text, voice, format)
+    let chosenFormat = first.format
+    out = { ...out, text: first.text }
+
     let caption = tidy(out.text)
     if (!caption) {
       return NextResponse.json({ error: "โมเดลตอบว่าง — ลองกดเขียนใหม่อีกครั้ง" }, { status: 502 })
@@ -639,13 +687,16 @@ export async function POST(req) {
     // ไม่ throw ทิ้งเพราะผู้ใช้จะต้องมานั่งกดเองซ้ำ ๆ · แต่ก็ไม่บันทึกเงียบ ๆ
     // ถ้ายังซ้ำอยู่ ส่ง similar กลับไปให้การ์ดขึ้นเตือน แล้วให้คนตัดสิน
     let dup = closestRecent(caption, recent)
-    let usedFormat = format
+    let usedFormat = chosenFormat          // ตัวที่โมเดลเลือกจริง ไม่ใช่ตัวที่สุ่มให้
     let retried = false
     if (recent.length && dup.score >= SIMILAR_LIMIT) {
       retried = true
-      const altFormat = pickFormat(voice, [...recent, { format: format?.key }])
+      // รอบสองเลี่ยงทั้งของเก่าและตัวที่เพิ่งเลือกไป จะได้ไม่วนกลับมาท่าเดิม
+      const altFormat = pickFormat(voice, [...recent, { format: chosenFormat?.key }])
+      const altFormat2 = pickFormat(voice, [...recent, { format: chosenFormat?.key },
+                                            { format: altFormat?.key }])
       const harder = buildPrompt(voice, idea, content, sku, recent, altFormat, craft,
-                                 catalogue + knowledge)
+                                 catalogue + knowledge, altFormat2)
       harder.user +=
         `\n\n⚠️ รอบที่แล้วคุณเขียนออกมาคล้ายโพสต์เก่าถึง ${Math.round(dup.score * 100)}%:\n` +
         `"${(dup.item?.caption || "").split("\n")[0].slice(0, 90)}"\n` +
@@ -655,11 +706,14 @@ export async function POST(req) {
           provider === "claude" ? await askClaude(voice, harder)
           : provider === "gemini" ? await askGemini(voice, harder)
           : await askOllama(voice, harder, AbortSignal.timeout(180000))
-        const c2 = tidy(second.text)
+        const round2 = readFormatLine(second.text, voice, altFormat)
+        const c2 = tidy(round2.text)
         const d2 = closestRecent(c2, recent)
         // รับเฉพาะตอนที่ "ดีขึ้นจริง" — ไม่งั้นเก็บของรอบแรกไว้ดีกว่า
         if (c2 && looksThai(c2) && d2.score < dup.score) {
-          caption = c2; dup = d2; out = second; usedFormat = altFormat
+          caption = c2; dup = d2
+          out = { ...second, text: round2.text }
+          usedFormat = round2.format
         }
       } catch { /* รอบสองล้มก็ใช้ของรอบแรก ดีกว่าไม่ได้อะไรเลย */ }
     }
