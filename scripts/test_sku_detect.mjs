@@ -5,7 +5,7 @@
 //
 // ⚠️ ทำไมต้องรันจริง ไม่ใช่แค่อ่านโค้ด (บทเรียน 27 ส.ค. 2026):
 //    ต้นแบบตัวแรกอ่านแล้วถูกทุกบรรทัด แต่ regex ในไฟล์มีอักขระ backspace ปน
-//    (heredoc แปลง  ให้) — มันเลยไม่เคย match แม้แต่ครั้งเดียว โดยไม่มี error
+//    (heredoc แปลง \b ให้) — มันเลยไม่เคย match แม้แต่ครั้งเดียว โดยไม่มี error
 import { readFileSync } from "node:fs"
 import { pathToFileURL, fileURLToPath } from "node:url"
 

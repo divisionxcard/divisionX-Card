@@ -27,6 +27,7 @@
 - backfill เกิน 5 วัน → XLSX ถูกตัดเงียบ ๆ
 - `npm run build` ทับ `.next/` ของ dev server → 500
 - GitHub webhook ไม่ยิงไป Vercel → push แล้วเว็บไม่เปลี่ยน ทั้งที่โค้ดถูก
+- heredoc แปลง escape ตอนเขียนไฟล์ → regex มีอักขระ backspace ปน ไม่เคย match เลย
 
 ถ้าเจอบั๊กประเภทนี้อีก **ให้เพิ่มเข้าสกิลที่เกี่ยวข้อง** ไม่ใช่แค่แก้แล้วจบ
 

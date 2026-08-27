@@ -62,6 +62,52 @@ if (gate.error) return gate.error
 **แก้:** หยุด dev server → ลบ `.next` → `npm run dev` ใหม่
 **เลี่ยง:** อย่ารัน `npm run build` ขณะ dev server เปิดอยู่ — ถ้าจะเช็ก build ให้ปิด dev ก่อน
 
+### ⚠️ เขียนไฟล์ผ่าน heredoc แล้ว escape ถูกแปลง — regex พังเงียบ ๆ
+
+เจอจริง 27 ส.ค. 2026 ตอนเขียนตัวจับ SKU: ตั้งใจใส่ `\b` (word boundary) ลง regex
+แต่สิ่งที่ลงไปในไฟล์คือ **อักขระ backspace จริง (0x08)**
+→ regex ไม่เคย match เลยสักครั้ง **ไม่มี error** แค่ได้ผลลัพธ์ว่าง
+
+เสียเวลาไล่หลายรอบเพราะ:
+- เปิดไฟล์อ่านแล้วเห็นเป็น `\b` ปกติ — backspace มองไม่เห็นในทุก viewer
+- เขียนสคริปต์ทดสอบแยกแล้วผ่าน เพราะสคริปต์นั้นพิมพ์ regex ถูก ต่างจากตัวในไฟล์
+- `grep` หา `expand_slash` ก็เจอ ฟังก์ชันอยู่ครบ ตรรกะถูกหมด
+
+**ระดับการยุบ escape ไม่แน่นอน** — เขียน `\\b` เพื่อให้เหลือ `\b` ก็ยังโดนยุบซ้ำ
+จนกลายเป็น backspace อยู่ดี (พลาดซ้ำตอนเขียนหัวข้อนี้เอง) และ `\n` `\t`
+ก็กลายเป็นขึ้นบรรทัด/แท็บจริง ทำ markdown พังทั้งบล็อก
+
+**กติกา:**
+- โค้ดหรือเอกสารที่มี `\b` `\n` `\t` `\d` `\s` → **ใช้ Write/Edit tool** อย่าใช้ heredoc
+- ถ้าเลี่ยงไม่ได้จริง ๆ ให้ประกอบ backslash จาก `chr(92)` ในสคริปต์ Python
+  (รหัสตัวอักษรไม่มี escape ให้ยุบ) แล้วต่อสตริงเอา
+
+**สแกนหลังเขียนทุกครั้ง** — อักขระควบคุมที่ไม่ควรมี:
+```bash
+py -3 -c "import pathlib,sys; t=pathlib.Path('ไฟล์.js').read_text(encoding='utf-8'); print([(i,repr(c)) for i,c in enumerate(t) if ord(c)<32 and c not in chr(10)+chr(13)+chr(9)][:5])"
+```
+หรือดูเร็ว ๆ ด้วย `cat -A ไฟล์.js` แล้วมองหา `^H` (backspace) กับ `^[` (escape)
+
+### 🔧 dev server ค้าง — port เปิดอยู่แต่ไม่ตอบ
+
+เจอจริง 27 ส.ค. 2026: `Get-NetTCPConnection -LocalPort 3000` บอกว่า listening
+แต่ `Invoke-WebRequest` timeout ทั้ง `/` และ `/marketing` ที่ 120 วินาที
+
+**อย่ารอ อย่า build ทับ** (build ขณะ dev เปิด = พังหนักกว่าเดิม)
+ตรวจ syntax ตรง ๆ ด้วย babel ที่ Next vendor มาให้ ไม่ต้องลงอะไรเพิ่ม:
+
+```bash
+node scripts/jsxcheck.cjs deploy/components/MarketingOS.jsx deploy/app/api/xxx/route.js
+```
+
+ครอบคลุมแค่ syntax — ไม่ใช่ runtime/type แต่พอจับ JSX ที่ปิด tag ไม่ครบ
+ซึ่งเป็นเกือบทุกเคสที่ทำ dev server พังหลังแก้ไฟล์
+
+⚠️ ทางที่ **ไม่เวิร์ก** ลองแล้วเสียเวลา:
+- `node --check` → ไม่รู้จัก JSX
+- `@next/swc-win32-x64-msvc` `.transform()` / `.parse()` → napi type error ทุกท่า
+- `node_modules/@babel/` มีแค่ `runtime/` ไม่มี parser
+
 **เช็กว่า dev server เปิดอยู่ไหมก่อนเสมอ:**
 ```powershell
 Get-NetTCPConnection -LocalPort 3000 -State Listen -ErrorAction SilentlyContinue
