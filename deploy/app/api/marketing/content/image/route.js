@@ -511,20 +511,32 @@ export async function POST(req) {
       ? pool[Math.abs(Number(content.id) || 0) % pool.length]
       : "ไม่มีวันหยุด"
 
-    let third = `${branches} สาขา`
+    // ⚠️ ห้ามใช้ "N สาขา" เป็นค่าตั้งต้น — art_direction.json ข้อ 21 เขียนไว้เองว่า
+    //    "Never place a branch count in the artwork" (เอาออกจากเทมเพลตไปแล้ว 26 ส.ค.)
+    //    ช่องที่สามจึงตกมาใช้ป้ายข้อความแทน แล้วค่อยแทนที่ด้วยจำนวนตู้ของค่ายนั้น
+    //    ซึ่งเป็น "ของที่กดได้จริงตอนนี้" ไม่ใช่การอวดขนาดกิจการ
+    let third = pool.length
+      ? pool[(Math.abs(Number(content.id) || 0) + 1) % pool.length]
+      : "อยู่ในห้างใกล้บ้าน"
     if (wantFr) {
-      // นับตู้ที่มีค่ายนี้อยู่จริงตอนนี้ — ตัวเลขนี้หนักแน่นกว่าจำนวนสาขารวม
+      // นับตู้ที่มีค่ายนี้อยู่จริงตอนนี้
+      //
+      // ⚠️ ต้องกรองเฉพาะตู้ที่ status = active
+      //    machine_stock ยังเก็บแถวของตู้ที่ปิดไปแล้วไว้ (ลบไม่ได้ ยอดขายเก่าอ้าง FK)
+      //    ไม่กรอง = นับ wwv02 ที่ปิดแล้วเข้าไปด้วย → โปสเตอร์ขึ้น "มีใน 13 ตู้"
+      //    ทั้งที่ตู้ที่เปิดจริงมี 12 (เกิดจริงกับโปสเตอร์ #38 และ #40)
       try {
+        const live = new Set((machines || []).map(m => m.machine_id))
         const { data: frSkus } = await db.from("skus")
           .select("sku_id").eq("is_active", true).eq("franchise", wantFr)
         const ids = (frSkus || []).map(s => s.sku_id)
         if (ids.length) {
           const { data: st } = await db.from("machine_stock")
             .select("machine_id,sku_id").in("sku_id", ids)
-          const n = new Set((st || []).map(r => r.machine_id)).size
+          const n = new Set((st || []).map(r => r.machine_id).filter(m => live.has(m))).size
           if (n) third = `มีใน ${n} ตู้`
         }
-      } catch { /* นับไม่ได้ก็ใช้จำนวนสาขาตามเดิม */ }
+      } catch { /* นับไม่ได้ก็ใช้ป้ายข้อความตามเดิม */ }
     }
     facts.push(`- Trust badges to show (exactly these three, in this order): ` +
       `${badgeCfg.anchor || "ของแท้ 100%"} · ${mid} · ${third}`)
