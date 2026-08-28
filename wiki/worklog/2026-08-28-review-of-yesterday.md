@@ -2,7 +2,7 @@
 type: worklog
 date: 2026-08-28
 tags: [code-review, marketing, poster, ai-image, content-pipeline, thai-text, openai-billing]
-commits: [032dd00, b3b30e4, ba6e788, 5e0a1c9]
+commits: [032dd00, b3b30e4, ba6e788, cbbbc93]
 status: ✅ ไล่แก้ครบทุกข้อที่ตรวจเจอ + เพิ่มป้ายเครดิต · รอเจ้าของรัน migration 070 กับตั้ง OPENAI_ADMIN_KEY
 ---
 
@@ -153,16 +153,24 @@ GET /v1/organization/usage/images → 403 "Missing scopes: api.usage.read"
 
 ## กับดักที่เจอตอนตั้งค่าจริง
 
-เขียนคำแนะนำไว้ว่า  ซึ่งอ่านแล้วเหมือน
+เขียนคำแนะนำไว้ว่า `Settings → API keys → Admin keys` ซึ่งอ่านแล้วเหมือน
 "Admin keys" เป็นแท็บอยู่ในหน้า API keys — **แต่มันเป็นเมนูแยกในแถบซ้าย คนละหน้ากัน**
 
-เจ้าของทำตามแล้วได้  มา ซึ่ง**เป็น key คนละตัวกับตัวเดิมจริง**
+เจ้าของทำตามแล้วได้ `sk-proj-` มา ซึ่ง**เป็น key คนละตัวกับตัวเดิมจริง**
 เลยดูเหมือนทำถูกทุกอย่าง แต่ยังโดน 403 missing scope เหมือนเดิม
 
 > คำแนะนำที่ "ถูกแต่กำกวม" แพงกว่าคำแนะนำที่ผิดชัด ๆ เพราะคนทำตามแล้วได้ผลลัพธ์
 > ที่ดูเหมือนสำเร็จ จึงไม่ย้อนกลับมาสงสัยขั้นตอนนั้นอีก
 
-ที่ถูกคือ **platform.openai.com/settings/organization/admin-keys** · ได้ · เห็นเมนูนี้เฉพาะ Organization Owner · และ Admin key เรียกโมเดลไม่ได้ ห้ามทับ 
-แก้ข้อความ error ให้ตรวจ prefix แล้วบอกตรง ๆ ว่าได้ key ผิดชนิด พร้อม URL
-⚠️ ตรวจ prefix เฉพาะตอนที่ยิงแล้วพัง ไม่ดักก่อนยิง — ถ้า OpenAI เปลี่ยนรูปแบบ key
+ที่ถูกคือ **platform.openai.com/settings/organization/admin-keys**
+ได้ `sk-admin-` · เห็นเมนูนี้เฉพาะ Organization Owner
+· และ Admin key เรียกโมเดลไม่ได้ ห้ามเอาไปทับ `OPENAI_API_KEY`
+
+แก้ข้อความ error ให้ตรวจ prefix แล้วบอกตรง ๆ ว่าได้ key ผิดชนิด พร้อมใส่ URL
+⚠️ ตรวจ prefix เฉพาะตอนที่ยิงแล้วพัง **ไม่ดักก่อนยิง** — ถ้า OpenAI เปลี่ยนรูปแบบ key
 วันหลัง ตัวดักจะไปห้าม key ที่ใช้ได้จริง
+
+**บทเรียนเครื่องมือ:** ต่อไฟล์ด้วย heredoc ที่มี backtick ข้างใน = shell กินไปเงียบ ๆ
+รอบนี้ข้อความหายไป 4 จุดโดยไม่มี error จนกว่าจะเปิดไฟล์ดู — งานแก้ไฟล์ที่มี
+backtick/`$` ให้ใช้เครื่องมือแก้ไฟล์ตรง ๆ (เคยเขียนเตือนไว้แล้วใน
+[[2026-08-27-caption-sku-autolink]] แล้วก็พลาดซ้ำ)
