@@ -1,9 +1,9 @@
 ---
 type: worklog
 date: 2026-08-28
-tags: [code-review, marketing, poster, ai-image, content-pipeline, thai-text]
-commits: [032dd00, b3b30e4]
-status: ✅ ไล่แก้ครบทุกข้อที่ตรวจเจอ + push แล้ว
+tags: [code-review, marketing, poster, ai-image, content-pipeline, thai-text, openai-billing]
+commits: [032dd00, b3b30e4, ba6e788]
+status: ✅ ไล่แก้ครบทุกข้อที่ตรวจเจอ + เพิ่มป้ายเครดิต · รอเจ้าของรัน migration 070 กับตั้ง OPENAI_ADMIN_KEY
 ---
 
 # ตรวจงานเมื่อวานย้อนหลัง แล้วเจอว่าของหลักไม่เคยทำงานเลย
