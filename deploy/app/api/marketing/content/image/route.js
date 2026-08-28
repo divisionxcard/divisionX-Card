@@ -633,7 +633,16 @@ export async function POST(req) {
     //    "Never place a branch count in the artwork" (เอาออกจากเทมเพลตไปแล้ว 26 ส.ค.)
     //    ช่องที่สามจึงตกมาใช้ป้ายข้อความแทน แล้วค่อยแทนที่ด้วยจำนวนตู้ของค่ายนั้น
     //    ซึ่งเป็น "ของที่กดได้จริงตอนนี้" ไม่ใช่การอวดขนาดกิจการ
-    let third = pool.length
+    // ── ช่องที่สามเป็น "คำ" ไม่ใช่ "ตัวเลข" ──
+    //
+    // ⚠️ เดิมเอาจำนวนตู้มาแปะ ซึ่งผิดกฎข้อ 21 ของตัวเอง และผิดความจริงด้วย
+    //    เกิดจริงกับโปสเตอร์ #37: ขึ้น "มีใน 12 ตู้" ทั้งที่แคปชั่นเอ่ยถึง PKM Ghost
+    //    ซึ่งมีของจริงแค่ 7 ตู้ — ลูกค้าไปตู้ที่ไม่มีก็เก้อ
+    //    ต้นตอ: ใบที่ไม่ได้ผูก SKU (60% ของคอนเทนต์) นับรวมทั้งค่าย
+    //
+    // ตัวเลขที่นับได้ยังมีประโยชน์ แต่เอาไปใช้เป็น "ข้อควรระวัง" ให้โมเดลแทน
+    // ไม่ใช่เอาไปโชว์ — กันไม่ให้มันเขียนว่า "ทุกสาขา" ตอนที่ของอยู่ไม่ครบทุกตู้
+    const third = pool.length
       ? pool[(Math.abs(Number(content.id) || 0) + 1) % pool.length]
       : "อยู่ในห้างใกล้บ้าน"
     if (wantFr) {
@@ -650,13 +659,21 @@ export async function POST(req) {
         //    เจอจริง 27 ส.ค. 2026: โพสต์เรื่องเมก้าแชนเดลาex (อยู่ในซอง PKM Ghost)
         //    ขึ้นป้าย "มีใน 12 ตู้" เพราะนับทุก SKU ของค่าย Pokémon รวมกัน
         //    แต่ PKM Ghost ตัวเดียวอยู่แค่ 7 ตู้ — ลูกค้าไปตู้ที่มีแต่ PKM Ninja ก็ไม่เจอ
-        //    ตกไปนับทั้งค่ายเฉพาะตอนโพสต์ไม่ได้เจาะจงสินค้าตัวไหน
-        let ids = sku?.sku_id ? [sku.sku_id] : []
-        if (!ids.length) {
-          const { data: frSkus } = await db.from("skus")
-            .select("sku_id").eq("is_active", true).eq("franchise", wantFr)
-          ids = (frSkus || []).map(s => s.sku_id)
-        }
+        //
+        // ⚠️ 28 ส.ค. 2026 — ยังไม่พอ เพราะ 60% ของคอนเทนต์ไม่ได้ผูก SKU
+        //    #37 เอ่ยชื่อสามชุดในแคปชั่นแต่ source_sku ว่าง เลยตกไปนับทั้งค่าย = 12 อีก
+        //    → จับชื่อชุด/ชื่อสินค้าจากแคปชั่นด้วย แล้วใช้ "ตู้ที่มีครบทุกตัวที่เอ่ยถึง"
+        //      ไม่ใช่ผลรวม — ลูกค้าอ่านแล้วคาดหวังว่าไปตู้นั้นเจอทุกตัวที่โฆษณา
+        const { data: frSkus } = await db.from("skus")
+          .select("sku_id,name,set_code").eq("is_active", true).eq("franchise", wantFr)
+        const hay = `${caption} ${content.idea?.title || ""}`
+        const named = (frSkus || []).filter(s =>
+          (s.name && hay.includes(s.name)) || (s.set_code && hay.includes(s.set_code)))
+        let ids = sku?.sku_id ? [sku.sku_id]
+          : named.length ? named.map(s => s.sku_id)
+          : (frSkus || []).map(s => s.sku_id)
+        // ต้องมีทุกตัวที่เอ่ยถึงในตู้เดียวกันถึงจะนับ (ผูก SKU เดียวก็เท่ากับเงื่อนไขเดิม)
+        const needAll = ids.length > 1 && !sku?.sku_id && named.length > 0
         if (ids.length) {
           // ⚠️ ต้องแบ่งหน้า — PostgREST คืนแค่ 1000 แถวเงียบ ๆ (ดู skill dvx-db)
           //    ตอนนี้ยังไม่ถึง แต่จำนวนตู้ x SKU โตขึ้นทุกเดือน
@@ -668,12 +685,23 @@ export async function POST(req) {
           //    (id เป็น SERIAL PRIMARY KEY ตั้งแต่ migration 015 · machine_id ซ้ำได้หลายช่อง)
           const rows = await fetchAll(() => db.from("machine_stock")
             .select("machine_id,sku_id,remain").in("sku_id", ids).order("id"))
-          // ⚠️ ต้องมีของเหลือจริง — ป้ายบอกว่า "มีใน N ตู้" คือคำสัญญาว่ากดได้
-          //    ช่องที่เคยมีแต่หมดแล้ว นับเข้าไปคือพาลูกค้าไปเก้อ
-          const n = new Set(rows
-            .filter(r => live.has(r.machine_id) && (r.remain || 0) > 0)
-            .map(r => r.machine_id)).size
-          if (n) third = `มีใน ${n} ตู้`
+          // ⚠️ ต้องมีของเหลือจริง — ช่องที่เคยมีแต่หมดแล้ว นับเข้าไปคือพาลูกค้าไปเก้อ
+          const okRows = rows.filter(r => live.has(r.machine_id) && (r.remain || 0) > 0)
+          const bySku = {}
+          for (const r of okRows) (bySku[r.sku_id] = bySku[r.sku_id] || new Set()).add(r.machine_id)
+          const sets = ids.map(i => bySku[i] || new Set())
+          // needAll = ตู้ต้องมีครบทุกตัวที่แคปชั่นเอ่ย · ไม่งั้นนับตู้ที่มีตัวใดตัวหนึ่ง
+          const n = needAll
+            ? [...(sets[0] || [])].filter(m => sets.every(s => s.has(m))).length
+            : new Set(okRows.map(r => r.machine_id)).size
+
+          // ⚠️ ไม่เอาตัวเลขไปแปะบนภาพ (กฎข้อ 21) — ส่งเป็นข้อควรระวังแทน
+          //    เพื่อกันโมเดลเขียนเองว่า "ทุกสาขา" ตอนที่ของอยู่ไม่ครบทุกตู้
+          if (n && n < live.size) {
+            facts.push(`- Availability: the product(s) named in the caption are in stock in ` +
+              `only ${n} of ${live.size} machines right now. Never imply every branch has them, ` +
+              `and never print any machine or branch count in the artwork.`)
+          }
         }
       } catch { /* นับไม่ได้ก็ใช้ป้ายข้อความตามเดิม */ }
     }
