@@ -126,15 +126,27 @@ export async function GET(req) {
     spend = await fetchSpend(key, since, AbortSignal.timeout(25_000))
   } catch (e) {
     const st = e.status
+    // ⚠️ กับดักที่เจอจริง 28 ส.ค. 2026: สร้าง key ใหม่จากหน้า "API keys" แล้วได้ sk-proj-
+    //    มันเป็น key คนละตัวกับตัวเดิมจริง เลยดูเหมือนทำถูกแล้ว แต่ไม่มีสิทธิ์ api.usage.read
+    //    Admin key อยู่คนละหน้าในแถบซ้าย (Settings → Admin keys ไม่ใช่ API keys)
+    //    และสร้างได้เฉพาะ Organization Owner
+    //
+    // ไม่ดักที่ prefix ก่อนยิง เพราะถ้า OpenAI เปลี่ยนรูปแบบ key วันหลัง
+    // ตัวดักจะไปห้าม key ที่ใช้ได้จริง — ปล่อยให้ยิงก่อน แล้วค่อยใช้ prefix ช่วยอธิบายตอนพัง
+    const looksProject = key.startsWith("sk-proj-")
     return NextResponse.json({
       provider: "openai", as_of, reading,
       state: "provider_error",
       error: st === 401 ? "OPENAI_ADMIN_KEY ใช้ไม่ได้ (401)"
-           : st === 403 ? "key ที่ตั้งไว้ไม่ใช่ Admin key — ไม่มีสิทธิ์ api.usage.read"
+           : st === 403 ? (looksProject
+               ? "key ที่ตั้งไว้ขึ้นต้นด้วย sk-proj- — เป็น API key ธรรมดา ไม่ใช่ Admin key"
+               : "key ที่ตั้งไว้ไม่มีสิทธิ์ api.usage.read")
            : `อ่านค่าใช้จ่ายจาก OpenAI ไม่สำเร็จ — ${String(e.message || e).slice(0, 160)}`,
       hint: st === 403
-        ? "ต้องเป็น Admin key (sk-admin-…) จาก Settings → API keys → Admin keys · " +
-          "key แบบ sk-proj- ใช้เรียกโมเดลได้แต่อ่านค่าใช้จ่ายไม่ได้"
+        ? "สร้างที่ platform.openai.com/settings/organization/admin-keys — เป็นเมนู " +
+          "\"Admin keys\" ในแถบซ้าย คนละหน้ากับ \"API keys\" · ค่าที่ได้ขึ้นต้นด้วย sk-admin- " +
+          "· ต้องเป็น Organization Owner ถึงจะเห็นเมนูนี้ · อย่าเอาไปทับ OPENAI_API_KEY " +
+          "เพราะ Admin key เรียกโมเดลไม่ได้"
         : undefined,
     })
   }
