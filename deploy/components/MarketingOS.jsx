@@ -384,9 +384,12 @@ export default function MarketingOS() {
   // บันทึกยอดคงเหลือที่อ่านมาจากหน้า OpenAI แล้วดึงตัวเลขใหม่ทันที
   // ⚠️ ต้องอ่านซ้ำ ไม่ใช่เอาค่าที่เพิ่งกรอกไปแสดงเลย — ค่าใช้จ่ายของวันนี้
   //    ที่เกิดก่อนหน้าที่จะกรอกก็ถูกหักด้วย เลขที่ถูกจึงมาจากฝั่งเซิร์ฟเวอร์เท่านั้น
+  // คืนก้อนใหม่กลับไปให้ป้าย เพื่อบอกได้ว่าบันทึกแล้วคำนวณคงเหลือได้จริงไหม
   const saveCredit = useCallback(async (balance_usd) => {
     await api("ai-credit", { method: "POST", body: JSON.stringify({ balance_usd }) })
-    setCredit(await api("ai-credit"))
+    const fresh = await api("ai-credit")
+    setCredit(fresh)
+    return fresh
   }, [api])
 
   // ── การกระทำบนการ์ด ──
@@ -1871,7 +1874,7 @@ function CreditBadge({ credit, onSave }) {
   const [open, setOpen] = useState(false)
   const [val, setVal] = useState("")
   const [saving, setSaving] = useState(false)
-  const [msg, setMsg] = useState("")
+  const [msg, setMsg] = useState(null)      // { text, ok } — ok=true คือข้อความยืนยัน ไม่ใช่ error
 
   const usd = (n) => `$${Number(n ?? 0).toFixed(2)}`
   const ok = credit?.state === "ok"
@@ -1884,14 +1887,23 @@ function CreditBadge({ credit, onSave }) {
     : left < 15 ? "bg-amber-50 text-amber-700 border-amber-200"
     : "bg-emerald-50 text-emerald-700 border-emerald-200"
 
+  // ⚠️ ห้ามปิดกล่องเองหลังบันทึกสำเร็จ — เกิดจริง 28 ส.ค. 2026:
+  //    บันทึกเข้า DB สำเร็จ แต่ฝั่งเซิร์ฟเวอร์ยังไม่มี OPENAI_ADMIN_KEY ป้ายจึงหน้าตาเดิมทุกอย่าง
+  //    กล่องปิดไปเงียบ ๆ = เจ้าของไม่มีทางรู้ว่าสำเร็จ เลยกดซ้ำจนได้สองแถว
+  //    บันทึกแล้วต้องยืนยันเสมอ และถ้ายังคำนวณคงเหลือไม่ได้ ต้องคาไว้ให้เห็นว่าติดอะไร
   async function save() {
     const n = Number(val)
-    if (!Number.isFinite(n) || n < 0) { setMsg("กรอกเป็นตัวเลขดอลลาร์ เช่น 42.15"); return }
-    setSaving(true); setMsg("")
+    if (!Number.isFinite(n) || n < 0) {
+      setMsg({ text: "กรอกเป็นตัวเลขดอลลาร์ เช่น 42.15" }); return
+    }
+    setSaving(true); setMsg(null)
     try {
-      await onSave(n)
-      setVal(""); setOpen(false)
-    } catch (e) { setMsg(e.message || String(e)) } finally { setSaving(false) }
+      const after = await onSave(n)
+      setVal("")
+      setMsg(after?.state === "ok"
+        ? { text: "✓ บันทึกแล้ว", ok: true }
+        : { text: "✓ บันทึกยอดแล้ว — แต่ยังคำนวณคงเหลือไม่ได้ (ดูสาเหตุด้านบน)", ok: true })
+    } catch (e) { setMsg({ text: e.message || String(e) }) } finally { setSaving(false) }
   }
 
   return (
@@ -1899,7 +1911,10 @@ function CreditBadge({ credit, onSave }) {
       <button onClick={() => setOpen(o => !o)} title="เครดิต OpenAI คงเหลือ"
         className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-sm font-medium ${tone}`}>
         <Wallet size={14} />
-        {ok ? usd(left) : <span className="text-xs">ตั้งค่าเครดิต</span>}
+        {/* credit === null คือยังโหลดไม่เสร็จ — แยกจาก "ตั้งค่าไม่ครบ" ไม่งั้นตอนเปิดหน้า
+            จะขึ้นว่ายังไม่ได้ตั้งค่าทุกครั้งแวบนึง ซึ่งอ่านแล้วนึกว่าค่าหาย */}
+        {ok ? usd(left)
+          : <span className="text-xs">{credit === null ? "…" : "ตั้งค่าเครดิต"}</span>}
       </button>
 
       {open && (
@@ -1957,7 +1972,11 @@ function CreditBadge({ credit, onSave }) {
               {saving ? "…" : "บันทึก"}
             </button>
           </div>
-          {msg && <p className="mt-1.5 text-xs text-red-600">{msg}</p>}
+          {msg && (
+            <p className={`mt-1.5 text-xs ${msg.ok ? "text-emerald-600" : "text-red-600"}`}>
+              {msg.text}
+            </p>
+          )}
           <a href="https://platform.openai.com/settings/organization/billing/overview"
             target="_blank" rel="noreferrer"
             className="mt-2 inline-flex items-center gap-1 text-xs text-blue-600 hover:underline">
