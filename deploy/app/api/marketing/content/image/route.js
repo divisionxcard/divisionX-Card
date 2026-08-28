@@ -558,7 +558,8 @@ export async function POST(req) {
     //    พอเป็นปุ่มหลัก ทุกคลิก = เงินจริง 1 ใบ + รอ 2-3 นาที
     //    ตัวกันที่มีอยู่คือ disabled ฝั่งหน้าเว็บอย่างเดียว ซึ่งหายทันทีที่รีเฟรช
     //    เปิดแท็บที่สอง หรือกดจากคนละเครื่อง
-    if (content.media_url && !body.force) {
+    // ⚠️ โหมดขอบรีฟไม่ต้องผ่านด่านกันจ่ายซ้ำ — มันไม่ได้วาดอะไร จึงไม่มีเงินให้เสีย
+    if (content.media_url && !body.force && !body.brief) {
       return NextResponse.json({
         code: "already_has_image",
         error: "ใบนี้มีรูปอยู่แล้ว",
@@ -696,9 +697,16 @@ export async function POST(req) {
     //    ถ้าไม่มี SKU ให้หยิบซองขายดีจริงมา 3 ตัวเป็นตัวอย่างแทน
     //    เลือกจากยอดขาย 30 วันจริง ไม่ใช่สุ่ม — จะได้เป็นของที่ลูกค้าเห็นในตู้จริง ๆ
     const refs = []
+    // ⚠️ เก็บ "ที่มา" ของรูปอ้างอิงคู่ขนานไปกับตัวไบต์ — ตัว refs เก็บแค่ buffer
+    //    ซึ่งส่งให้ API ได้ แต่บอกคนไม่ได้ว่าต้องแนบรูปไหน
+    //    โหมดบรีฟ (เอาไปวางใน ChatGPT เอง) ต้องการลิงก์รูปให้คนลากไปแนบ
+    const refNotes = []
+    const noteRef = (label, url) => refNotes.push({ label, url: url || null })
+
     const packRef = await fetchRef(sku?.image_url || sku?.image_url_box)
     if (packRef) {
       refs.push(packRef)
+      noteRef(`ซองจริง: ${sku?.name || sku?.sku_id}`, sku?.image_url || sku?.image_url_box)
     } else {
       // ⚠️ 24 ส.ค. 2026 — เดิมหยิบ "3 SKU ขายดีที่สุด" โดยไม่ดูค่าย
       //    ผลคือโพสต์โปเกมอน (#PokemonTCG) ได้ซอง One Piece ไปลอกทั้งสามซอง
@@ -707,10 +715,27 @@ export async function POST(req) {
       //
       // ตรรกะการเลือกอยู่ใน lib/skuPicker.js ตัวเดียว ใช้ร่วมกับ route โปสเตอร์เทมเพลต
       // ห้ามก๊อปมาวางซ้ำที่นี่ — ถ้าแก้แล้วแก้ไม่ครบทั้งสองที่ ภาพจะผิดค่ายอีก
-      const picked = await topSkusByFranchise(db, { franchise: wantFr, limit: 3 })
+      // ⚠️ ห้ามหยิบ "3 อันดับแรก" ตรง ๆ — เกิดจริง 28 ส.ค. 2026 เจ้าของทักว่า
+      //    "บรีฟกำกับด้วยสินค้าแบบเดิมและรูปภาพแบบเดิม" ทุกครั้ง
+      //    ต้นตอ: 60% ของคอนเทนต์ไม่ได้ผูก SKU (15 จาก 25 ใบล่าสุด) จึงตกมาทางนี้
+      //    แล้ว sort ยอดขาย .slice(0,3) ให้ผลเดิมเป๊ะทุกใบ → ซองเดิม รูปเดิม ภาพหน้าตาเดียวกันหมด
+      //
+      // ขยายกองเป็น 9 แล้วหมุนหน้าต่างตาม id ของคอนเทนต์:
+      //   - ยังเป็นซองขายดีจริงทั้งหมด ไม่ได้สุ่มมั่วไปเอาของที่ไม่มีในตู้
+      //   - ใบเดิมได้ชุดเดิมเสมอ (กดซ้ำแล้วบรีฟไม่แกว่ง เทียบผลกันได้)
+      //   - คนละใบได้คนละชุด ซึ่งคือสิ่งที่ขาดไป
+      const POOL = 9
+      const pool = await topSkusByFranchise(db, { franchise: wantFr, limit: POOL })
+      const cid = Math.abs(Number(content.id) || 0)
+      // ⚠️ เลื่อนทีละ 1 ไม่ใช่ทีละ 3 — ก้าว 3 บนกอง 9 ให้จุดเริ่มได้แค่ {0,3,6}
+      //    = หมุนได้แค่ 3 ชุด ซึ่งแทบไม่ต่างจากปัญหาเดิม (ตัวหารร่วมมากต้องเป็น 1)
+      const picked = pool.length
+        ? Array.from({ length: Math.min(3, pool.length) },
+                     (_, i) => pool[(cid + i) % pool.length])
+        : []
       for (const s of picked) {
         const r = await fetchRef(s.image_url || s.image_url_box)
-        if (r) refs.push(r)
+        if (r) { refs.push(r); noteRef(`ซองขายดี: ${s.name}`, s.image_url || s.image_url_box) }
       }
       if (picked.length) {
         const sameFr = !wantFr || picked.every(s => s.franchise === wantFr)
@@ -778,8 +803,20 @@ export async function POST(req) {
     const wantsMachine = ["machine_luck", "real_machine"].includes(conceptKey) ||
                          MACHINE_WORDS.test(ideaText)
     if (wantsMachine) {
-      const m = await localRef("machine/machine-hero.jpg")
-      if (m) refs.push(m)
+      // ⚠️ มีรูปตู้จริง 2 ใบแต่โค้ดเรียกใบเดียวมาตลอด — machine-scene.jpg ไม่เคยถูกใช้เลย
+      //    ทั้งที่ README ในโฟลเดอร์นั้นเขียนไว้ว่ามันมีไว้คนละหน้าที่:
+      //      machine-hero.jpg  = ตู้เป็นพระเอก ถ่ายตรง เห็นสินค้าเต็มตู้
+      //      machine-scene.jpg = บรรยากาศห้างรอบตู้ ถ่ายเฉียง
+      //    เลือกตามสิ่งที่ไอเดียภาพจะเล่า ไม่ใช่สุ่ม — ภาพบรรยากาศห้างที่ได้รูปถ่ายตรงมา
+      //    ก็ยังวาดฉากห้างไม่ออกอยู่ดี
+      const SCENE_WORDS = /ห้าง|บรรยากาศ|ผู้คน|ทางเดิน|รอบตู้|ฉาก|mall|crowd|atmosphere|background|aisle/i
+      const wantsScene = SCENE_WORDS.test(ideaText) && conceptKey !== "real_machine"
+      const rel = wantsScene ? "machine/machine-scene.jpg" : "machine/machine-hero.jpg"
+      const m = await localRef(rel)
+      if (m) {
+        refs.push(m)
+        noteRef(wantsScene ? "รูปตู้จริง (บรรยากาศห้าง)" : "รูปตู้จริง (ตู้เป็นพระเอก)", `/${rel}`)
+      }
     }
 
     // แคปชั่นเอ่ยชื่อห้างไหน → ส่งชั้น+จุดสังเกตจริงของสาขานั้นเข้าบรีฟ
@@ -791,6 +828,38 @@ export async function POST(req) {
       idea ? ideaToPrompt(idea) : null,
       brandRules, frBlock, wantsMachine, branch,
     )
+
+    // ── โหมดขอบรีฟอย่างเดียว — ไม่วาด ไม่เสียเครดิต ──
+    //
+    // เจ้าของจ่าย ChatGPT Plus รายเดือนอยู่แล้ว และเครดิต API เหลือน้อย
+    // ทางที่ถูกที่สุดคือเอาบรีฟที่ระบบประกอบให้ (ซึ่งมีของที่ ChatGPT ไม่มีทางรู้เอง —
+    // จำนวนตู้จริง ชื่อชุดจริง ชั้นและจุดสังเกตของสาขา กฎแบรนด์ พาดหัวที่ตัดมาแล้ว)
+    // ไปวางในกล่องแชทเอง แล้วให้ Plus เป็นคนวาด
+    //
+    // ⚠️ ยิงเข้ากล่องแชทอัตโนมัติทำไม่ได้ — ต้องสวมเซสชันผู้ใช้ ซึ่งผิดเงื่อนไข OpenAI
+    //    และพังทุกครั้งที่หน้าเว็บเปลี่ยน · ได้แค่ "เตรียมให้พร้อมวาง" ซึ่งพอสำหรับงานจริง
+    //
+    // ยังเรียก planVisual อยู่ (~$0.015/ครั้ง) เพราะมันคือขั้นที่ทำให้บรีฟดี
+    // ถ้าตัดออกจะได้บรีฟที่จืดกว่าที่ระบบทำได้ ซึ่งขัดกับเหตุผลที่ทำโหมดนี้ตั้งแต่แรก
+    if (body.brief) {
+      return NextResponse.json({
+        brief: String(prompt).trim(),
+        generated_by: "image-pipeline",
+        references: refNotes,
+        // ⚠️ ChatGPT เปิดลิงก์เองไม่ได้ ต้องลากไฟล์เข้าแชต — กล่องบรีฟในหน้าเว็บ
+        //    มีปุ่มดาวน์โหลดรูปแนบอยู่แล้ว มันอ่านคีย์ชื่อ download
+        download: refNotes.map(r => r.url).filter(Boolean),
+        meta: {
+          concept: concept ? { key: concept.key, label: concept.label } : null,
+          franchise: frBlock?.label || null,
+          machine_ref: wantsMachine,
+          branch: branch?.display_name || null,
+          headline: head.headline || null,
+          sub: head.sub || null,
+          idea: idea ? { big_idea: idea.big_idea, visual_device: idea.visual_device } : null,
+        },
+      })
+    }
 
     let out
     try {

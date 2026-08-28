@@ -169,7 +169,13 @@ export default function MarketingOS() {
     if (briefing.has(item.id)) return
     setBriefing(s => new Set(s).add(item.id))
     try {
-      const r = await api("content/brief", { method: "POST", body: JSON.stringify({ id: item.id }) })
+      // ⚠️ ใช้ท่อเดียวกับเส้นที่จ่ายเงินวาด (content/image + brief:true) ไม่ใช่ content/brief
+      //    ตัวเก่าเป็นคนละตัวประกอบบรีฟ ไม่มีกฎแบรนด์ ธีมค่าย พาดหัวที่ตัดแล้ว
+      //    หรือข้อมูลชั้น/จุดสังเกตของสาขา — เอาไปให้ ChatGPT ก็ได้ของที่อ่อนกว่าที่ระบบทำได้
+      //    brief:true คืนบรีฟอย่างเดียว ไม่เรียกโมเดลวาด จึงไม่กินเครดิต
+      const r = await api("content/image", {
+        method: "POST", body: JSON.stringify({ id: item.id, brief: true }),
+      })
       setBrief({ id: item.id, text: r.brief, by: r.generated_by, download: r.download || [] })
       try { await navigator.clipboard?.writeText(r.brief) } catch { /* ไม่ให้เขียนคลิปบอร์ดก็ไม่เป็นไร */ }
     } catch (e) {
