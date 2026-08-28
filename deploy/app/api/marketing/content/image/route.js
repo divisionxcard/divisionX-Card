@@ -22,6 +22,7 @@ import { detectFranchise, FRANCHISE_LABEL } from "../../../../../lib/franchiseDe
 import { topSkusByFranchise } from "../../../../../lib/skuPicker"
 import { splitHeadline } from "../../../../../lib/headline"
 import { fetchAll } from "../../../../../lib/fetchAll"
+import { loadPkmCards, findPkmSet, artworkPkmCards } from "../../../../../lib/pkmKnowledge"
 
 const SB_URL = process.env.NEXT_PUBLIC_SUPABASE_URL
 const SB_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -822,6 +823,48 @@ export async function POST(req) {
     // แคปชั่นเอ่ยชื่อห้างไหน → ส่งชั้น+จุดสังเกตจริงของสาขานั้นเข้าบรีฟ
     const branch = matchBranch(machines, `${caption} ${content.idea?.title || ""}`)
     if (branch) console.log(`[image] แคปชั่นอ้างถึงสาขา ${branch.display_name} (${branch.machine_id})`)
+
+    // ── ถ้าภาพจะมีการ์ด ต้องระบุเป็นใบ ๆ ไม่ปล่อยให้โมเดลคิดชื่อเอง ──
+    //
+    // ⚠️ เกิดจริงกับโปสเตอร์ #37 (สอนเรื่องวางโปเกมอนบนเบนช์): โมเดลวาดการ์ดขึ้นเอง 6 ใบ
+    //    ปิกาจูโผล่สองใบ HP ไม่เท่ากัน (60 บนเบนช์ / 70 บนสนาม) ซึ่งเป็นไปไม่ได้
+    //    และข้อความบนการ์ดเป็นภาษาญี่ปุ่นมั่ว — คนเล่นจับได้ทันทีว่าปลอม
+    //
+    // กฎข้อ 17 ห้ามวาดการ์ดอยู่แล้ว แต่บรีฟดันสั่งพร้อมกันว่า "สอนเรื่องเบนช์ให้เห็นภาพ"
+    // ซึ่งทำโดยไม่มีการ์ดไม่ได้ โมเดลจึงเลือกฝ่าข้อห้าม — ห้ามอย่างเดียวไม่พอ
+    // ต้องบอกด้วยว่า "ถ้าจำเป็นต้องมี ให้ใช้ใบพวกนี้เท่านั้น"
+    //
+    // ⚠️ กรองตามขั้น (พื้นฐาน/ร่าง 1/ร่าง 2) ด้วย — โพสต์สอนกฎที่วางร่าง 2 ไว้บนเบนช์
+    //    คือสอนผิด ซึ่งแย่กว่าภาพไม่สวย
+    if (wantFr === "PKM") {
+      try {
+        // ชุดจาก SKU ที่ผูกไว้ก่อน · ไม่ผูกก็ดูว่าแคปชั่นเอ่ยชุดไหน (60% ของใบไม่ได้ผูก SKU)
+        let setCode = sku?.set_code || null
+        if (!setCode) {
+          const { data: pkmSkus } = await db.from("skus")
+            .select("name,set_code").eq("is_active", true).eq("franchise", "PKM")
+          const hay = `${caption} ${content.idea?.title || ""}`
+          const hit = (pkmSkus || []).find(s =>
+            (s.set_code && hay.includes(s.set_code)) || (s.name && hay.includes(s.name)))
+          setCode = hit?.set_code || null
+        }
+        const set = findPkmSet(await loadPkmCards(), setCode)
+        const list = artworkPkmCards(set, `${caption} ${ideaText}`, 6)
+        if (list.length) {
+          facts.push(
+            `- ALLOWED CARDS: if any Pokémon card is visible, it must be one of these real ` +
+            `cards from the set we actually sell. Match the creature, its evolution stage and ` +
+            `its HP exactly as listed:\n` +
+            list.map(c => `    · ${c.name} — ${c.stage} · HP ${c.hp} · ` +
+                          `${(c.types || []).join("/")}`).join("\n"))
+          facts.push(
+            `- Never show a card outside that list, never show the same Pokémon twice in one ` +
+            `image, and never change a listed HP or stage. Do not render the small rules text ` +
+            `on a card face — it always comes out as gibberish and marks the card as fake. ` +
+            `Keep card faces mostly artwork, seen at an angle or partly overlapped.`)
+        }
+      } catch { /* อ่านคลังไม่ได้ก็วาดต่อได้ แค่ไม่มีรายชื่อกำกับ */ }
+    }
 
     const prompt = buildPrompt(
       style, concept, facts, mode, refs.length > 0,

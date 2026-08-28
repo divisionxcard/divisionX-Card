@@ -69,6 +69,59 @@ export function notablePkmCards(set, limit = 8) {
   }).slice(0, limit)
 }
 
+// ── การ์ดที่ "อนุญาตให้ปรากฏในภาพ" ──────────────────────────────────────
+//
+// ⚠️ ทำไมต้องแยกจาก notablePkmCards:
+//   ตัวนั้นเลือก "ใบที่น่าพูดถึง" (ex · HP สูง) ซึ่งเหมาะกับแคปชั่น
+//   แต่ภาพต้องการ "ใบที่วางในฉากนั้นได้จริงตามกติกา" ซึ่งคนละเกณฑ์กันเลย
+//
+//   เกิดจริง 28 ส.ค. 2026: โปสเตอร์ #37 สอนเรื่องวางโปเกมอนบนเบนช์
+//   แล้วโมเดลวาดการ์ดขึ้นเอง 6 ใบ — ปิกาจูโผล่สองใบ HP ไม่เท่ากัน (60 กับ 70)
+//   ซึ่งเป็นไปไม่ได้ · เจ้าของขอให้บรีฟ "ระบุเจาะจงว่าต้องใช้ใบไหน"
+//
+// ⚠️ stage สำคัญที่สุดสำหรับโพสต์สอนกฎ — บนเบนช์วางได้แค่ "พื้นฐาน"
+//    ถ้าไม่กรอง โมเดลจะหยิบร่าง 2 ไปวางบนเบนช์ แล้วโพสต์สอนกฎก็สอนผิด
+const STAGE_WORDS = {
+  พื้นฐาน: /เบนช์|bench|พื้นฐาน|basic|เริ่มเกม|เทิร์นแรก|ตั้งโต๊ะ|วางโปเกมอน/i,
+}
+
+/**
+ * รายชื่อการ์ดจริงที่ใช้ประกอบภาพได้ — คืน [] ถ้าไม่มีชุดตรง
+ *
+ * @param {object} set  ชุดจาก findPkmSet
+ * @param {string} topic แคปชั่น/หัวข้อ ใช้เดาว่าฉากต้องการการ์ดขั้นไหน
+ * @param {number} limit
+ */
+export function artworkPkmCards(set, topic = "", limit = 6) {
+  if (!set?.cards?.length) return []
+
+  // ฉากต้องการขั้นไหน — ไม่เข้าเงื่อนไขไหนเลยก็ไม่กรอง
+  const wantStage = Object.keys(STAGE_WORDS).find(s => STAGE_WORDS[s].test(topic))
+  let pool = set.cards.filter(c => c.category === "โปเกมอน" && c.hp)
+  if (wantStage) pool = pool.filter(c => c.stage === wantStage)
+  if (!pool.length) return []
+
+  // ใบที่แคปชั่นเอ่ยชื่อไว้ต้องได้ไปก่อน — ภาพจะได้ตรงกับเรื่องที่เล่า
+  const named = pool.filter(c => c.name && topic.includes(c.name))
+
+  // ⚠️ เกณฑ์เรียงต่างกันตามงานของภาพ:
+  //   ฉากสอนกติกา (มี wantStage) → เอาใบธรรมดา HP ต่ำก่อน
+  //     เพราะภาพสอนตั้งโต๊ะที่เบนช์เต็มไปด้วย Mega ex 280 HP ไม่ใช่ภาพที่เกิดขึ้นจริง
+  //     ตอนเริ่มเกม คนอ่านที่เล่นเป็นจะรู้สึกผิดที่ทันที
+  //   ฉากอวดการ์ด (ไม่กรองขั้น) → ex และ HP สูงก่อน เพราะนั่นคือใบที่คนตามหา
+  const isEx = c => /\bex\b/i.test(c.name || "")
+  const rest = pool.filter(c => !named.includes(c)).sort((a, b) => wantStage
+    ? (isEx(a) - isEx(b)) || (a.hp || 0) - (b.hp || 0)
+    : (isEx(b) - isEx(a)) || (b.hp || 0) - (a.hp || 0))
+
+  const seen = new Set()
+  return [...named, ...rest].filter(c => {
+    if (seen.has(c.name)) return false      // ชื่อซ้ำคนละการพิมพ์ = ใบเดียวกันในสายตาคนอ่าน
+    seen.add(c.name)
+    return true
+  }).slice(0, limit)
+}
+
 // ตัดขึ้นบรรทัดที่ติดมาจากเว็บทางการออก — ในคลังเก็บเป็น \r\n กลางประโยค
 const flat = s => String(s || "").replace(/\s+/g, " ").trim()
 
