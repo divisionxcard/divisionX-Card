@@ -20,6 +20,8 @@ import { requireAdmin } from "../../../../../lib/apiAuth"
 import { planVisual, ideaToPrompt } from "../../../../../lib/artDirector"
 import { detectFranchise, FRANCHISE_LABEL } from "../../../../../lib/franchiseDetect"
 import { topSkusByFranchise } from "../../../../../lib/skuPicker"
+import { splitHeadline } from "../../../../../lib/headline"
+import { fetchAll } from "../../../../../lib/fetchAll"
 
 const SB_URL = process.env.NEXT_PUBLIC_SUPABASE_URL
 const SB_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -336,7 +338,14 @@ async function askOpenAI(style, prompt, refs, deadline = Infinity) {
   //
   // ⚠️ ห้ามข้ามไปโมเดลสำรองเมื่อโดนบล็อก — ต้องยิงโมเดลเดิมซ้ำ
   //    เพราะปัญหาไม่ได้อยู่ที่โมเดล และตัวสำรองยึดรูปซองแย่กว่า (ทดสอบแล้ว)
+  //
+  // ⚠️ ยิงซ้ำได้จริงเฉพาะตอนโดนบล็อก "ก่อนวาด" (stage=input) ซึ่งเด้งกลับในไม่กี่วินาที
+  //    ถ้าโดนตอน stage=output คือโมเดลวาดจนเสร็จแล้วถึงโดนตัด = กินไป ~150 วิ
+  //    เหลือไม่ถึง MIN_GEN_MS ด่านเวลาจะ break ออกก่อนเสมอ (งบทั้งก้อน 270 วิ ยิงเต็ม ๆ ได้รอบเดียว)
+  //    จึงต้องนับว่า "ได้ยิงซ้ำจริงกี่ครั้ง" ไว้ด้วย ไม่งั้นข้อความที่ตอบกลับจะโกหกผู้ใช้
+  //    ว่าลองซ้ำให้แล้ว ทั้งที่ไม่เคยได้ยิง
   const MODERATION_RETRY = 2
+  let retriedAfterBlock = 0      // ยิงซ้ำหลังโดนบล็อกไปแล้วกี่ครั้ง (0 = เวลาไม่พอ ไม่ได้ยิงเลย)
 
   const plan = []
   models.forEach((m, i) => {
@@ -357,7 +366,10 @@ async function askOpenAI(style, prompt, refs, deadline = Infinity) {
                     `ไม่พอสร้างภาพ (ต้องการ ${MIN_GEN_MS / 1000} วิ)`)
       break
     }
-    if (retry > 0) attempts.push(`${model}: ลองใหม่ครั้งที่ ${retry} หลังโดนตัวกรองบล็อก`)
+    if (retry > 0) {
+      retriedAfterBlock++
+      attempts.push(`${model}: ลองใหม่ครั้งที่ ${retry} หลังโดนตัวกรองบล็อก`)
+    }
     try {
       let res
       if (refs.length) {
@@ -433,8 +445,10 @@ async function askOpenAI(style, prompt, refs, deadline = Infinity) {
   }
   if (blockedTimes) {
     throw Object.assign(
-      new Error(`ตัวกรองเนื้อหาของ OpenAI บล็อกติดกัน ${blockedTimes} ครั้ง`),
-      { attempts, moderation: true })
+      new Error(retriedAfterBlock
+        ? `ตัวกรองเนื้อหาของ OpenAI บล็อกติดกัน ${blockedTimes} ครั้ง`
+        : `ตัวกรองเนื้อหาของ OpenAI บล็อก และเวลาที่เหลือไม่พอยิงซ้ำในรอบนี้`),
+      { attempts, moderation: true, moderationRetries: retriedAfterBlock })
   }
   throw Object.assign(new Error(`ลองครบทุกโมเดลแล้วไม่สำเร็จ — ${lastErr}`), { attempts })
 }
@@ -644,14 +658,14 @@ export async function POST(req) {
         if (ids.length) {
           // ⚠️ ต้องแบ่งหน้า — PostgREST คืนแค่ 1000 แถวเงียบ ๆ (ดู skill dvx-db)
           //    ตอนนี้ยังไม่ถึง แต่จำนวนตู้ x SKU โตขึ้นทุกเดือน
-          const rows = []
-          for (let from = 0; ; from += 1000) {
-            const { data, error } = await db.from("machine_stock")
-              .select("machine_id,sku_id,remain").in("sku_id", ids).range(from, from + 999)
-            if (error) throw error
-            rows.push(...(data || []))
-            if (!data || data.length < 1000) break
-          }
+          //    ใช้ lib/fetchAll.js ตัวกลาง — ห้ามเขียน loop .range() เองซ้ำอีก
+          //    (หัวไฟล์นั้นเขียนเหตุผลไว้แล้ว: ตรรกะที่ถูกก๊อปกระจายคือของที่แก้ไม่ครบ)
+          //
+          // ⚠️ ต้อง .order() ด้วยคอลัมน์ที่ไม่ซ้ำ — แบ่งหน้าโดยไม่เรียงลำดับ
+          //    ลำดับแต่ละหน้าไม่การันตี แถวเดิมโผล่สองหน้าหรือหายไปเลยก็ได้
+          //    (id เป็น SERIAL PRIMARY KEY ตั้งแต่ migration 015 · machine_id ซ้ำได้หลายช่อง)
+          const rows = await fetchAll(() => db.from("machine_stock")
+            .select("machine_id,sku_id,remain").in("sku_id", ids).order("id"))
           // ⚠️ ต้องมีของเหลือจริง — ป้ายบอกว่า "มีใน N ตู้" คือคำสัญญาว่ากดได้
           //    ช่องที่เคยมีแต่หมดแล้ว นับเข้าไปคือพาลูกค้าไปเก้อ
           const n = new Set(rows
@@ -820,10 +834,14 @@ export async function POST(req) {
       //    "Your request was rejected by the safety system" แล้วเข้าใจว่าคอนเทนต์ตัวเองผิด
       //    ทั้งที่เป็นแคปชั่นแกะซองโปเกมอนธรรมดา และการบล็อกเป็นการสุ่มล้วน ๆ
       if (e.moderation || /safety system|moderation/i.test(msg)) {
+        // ⚠️ ข้อความต้องตรงกับที่เกิดขึ้นจริง — บอกว่า "ลองซ้ำให้แล้ว" ทั้งที่เวลาหมดก่อน
+        //    ได้ยิง คือทำให้เจ้าของเข้าใจว่ากดใหม่ก็เท่านั้น แล้วเลิกกด ทั้งที่กดใหม่คือคำตอบ
         return NextResponse.json({
           code: "moderation",
           error: "ตัวกรองเนื้อหาของ OpenAI บล็อกภาพนี้ — ไม่ใช่เพราะแคปชั่นของคุณผิด",
-          hint: "ตัวกรองนี้บล็อกแบบสุ่ม prompt เดิมยิงซ้ำมักผ่าน · ระบบลองซ้ำให้แล้วแต่ยังไม่ผ่าน กดใหม่อีกครั้งได้เลย",
+          hint: e.moderationRetries
+            ? "ตัวกรองนี้บล็อกแบบสุ่ม prompt เดิมยิงซ้ำมักผ่าน · ระบบลองซ้ำให้แล้วแต่ยังไม่ผ่าน กดใหม่อีกครั้งได้เลย"
+            : "ตัวกรองนี้บล็อกแบบสุ่ม prompt เดิมยิงซ้ำมักผ่าน · รอบนี้โดนบล็อกตอนวาดเสร็จแล้ว เวลาที่เหลือไม่พอยิงซ้ำในรอบเดียวกัน — กดใหม่ได้เลย มักผ่านตั้งแต่ครั้งที่สอง",
           attempts: e.attempts || [],
         }, { status: 502 })
       }
