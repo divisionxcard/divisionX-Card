@@ -151,10 +151,10 @@ const AVOID_LAST = 3
 function pickFormat(voice, recent) {
   const all = voice.content_formats || []
   if (!all.length) return null
-  // ⚠️ ต้องอ่านทั้ง content_format และ format
-  //    fetchRecent ดึงคอลัมน์ชื่อ content_format แต่โค้ดเดิมอ่าน r.format อย่างเดียว
-  //    = undefined ทุกแถว → used ว่างเสมอ → ตัวกันซ้ำไม่เคยทำงานเลยตั้งแต่แรก
-  //    (จุดเรียกตอนเขียนรอบสองส่ง { format: ... } มาเอง จึงยังใช้คีย์นี้ต่อได้)
+  // รับได้ทั้งสองคีย์เพราะมาจากคนละที่:
+  //   - แถวจาก fetchRecent มีทั้ง content_format (ชื่อคอลัมน์จริง) และ format (ตัวที่ map ให้)
+  //   - จุดเรียกที่อยากตัดรูปแบบบางตัวออกส่ง { format: "..." } ปลอมเข้ามาเอง
+  // อ่านทั้งคู่ไว้จะได้ไม่ต้องจำว่าใครส่งคีย์ไหน
   const seq = recent.map(r => r.content_format || r.format).filter(Boolean)   // ใหม่สุดอยู่หน้า
   const used = new Set(seq)
   let pool = all.filter(f => !used.has(f.key))
@@ -524,17 +524,6 @@ function looksThai(text) {
 // from() คืน query builder ที่มีแค่ select/insert/update/delete — ตัวกรอง (.in .eq .not)
 // อยู่บน filter builder ที่ได้ "หลัง" select · เขียนสลับจะได้ TypeError:
 // "p.from(...).in is not a function" ซึ่งอ่านแล้วไม่รู้เลยว่าเกิดจากลำดับ
-// คำที่ถ้าโผล่ในแคปชั่น แปลว่าโพสต์นั้นเล่าหัวข้อ care ไหนไปแล้ว
-// ใช้เลี่ยงไม่ให้เขียนเรื่องเดิมซ้ำ — ไม่ต้องแม่น แค่กันวนซ้ำติด ๆ กัน
-const CARE_HINT = {
-  humidity: "ความชื้น",
-  sunlight_heat: "แดด",
-  sleeves: "ซองใส",
-  storage_gear: "toploader",
-  handling: "แกะซอง",
-  grading_basics: "สภาพการ์ด",
-}
-
 async function fetchRecent(limit) {
   const q = (cols) => db.from("marketing_content")
     .select(cols)
@@ -545,6 +534,19 @@ async function fetchRecent(limit) {
   let { data, error } = await q("id,caption,content_format")
   if (error) ({ data } = await q("id,caption"))   // ยังไม่ได้รัน migration 062
   return (data || []).map(r => ({ ...r, format: r.content_format || null }))
+}
+
+// คำที่ถ้าโผล่ในแคปชั่น แปลว่าโพสต์นั้นเล่าหัวข้อ care ไหนไปแล้ว
+// ใช้เลี่ยงไม่ให้เขียนเรื่องเดิมซ้ำ — ไม่ต้องแม่น แค่กันวนซ้ำติด ๆ กัน
+//
+// ⚠️ คีย์ต้องตรงกับ topics[].key ใน tasks/card_care.json — ไม่ตรงคือเลี่ยงไม่ได้เงียบ ๆ
+const CARE_HINT = {
+  humidity: "ความชื้น",
+  sunlight_heat: "แดด",
+  sleeves: "ซองใส",
+  storage_gear: "toploader",
+  handling: "แกะซอง",
+  grading_basics: "สภาพการ์ด",
 }
 
 // เกินเท่านี้ถือว่าซ้ำจนคนอ่านจับได้ — 0.5 มาจากลองกับ #1 vs #3 ที่ต่างกันแค่รหัส SKU
@@ -587,51 +589,64 @@ export async function POST(req) {
     // ⚠️ Pokémon มีคำเตือนเรื่องภาษาฝังอยู่ในบล็อกเอง (ซองเราเป็นญี่ปุ่น ข้อมูลเป็นไทย)
     //    ดู deploy/lib/pkmKnowledge.js — อย่าตัดคำเตือนนั้นออกเพื่อประหยัดที่ใน prompt
     const topicText = [idea?.title, idea?.angle, content.source_reason].filter(Boolean).join(" ")
-    // รูปแบบที่ต้องพึ่งข้อมูลการ์ด/กฎ ต้องได้คำอธิบายเต็ม ไม่ใช่แค่ชื่อ
-    // เจอจริง 27 ส.ค. 2026: โพสต์เขียนว่า "พร้อมความสามารถ เปลวไฟต้องสาป" แล้วจบ
-    // เพราะ prompt ได้แค่ชื่อท่า ทั้งที่คลังมีคำอธิบายเต็มอยู่ — ซึ่งคือคุณค่าทั้งหมดของโพสต์แนวนี้
-    const wantsCardDetail = [format, formatAlt]
-      .some(f => f?.knowledge === "cards" || f?.knowledge === "rules")
-    let knowledge = ""
-    try {
-      if (sku?.franchise === "OP" || /one\s*piece|วันพีซ|วันพีช/i.test(topicText)) {
-        knowledge = await knowledgeBlock({
-          sku: sku?.sku_id, setCode: sku?.set_code, topic: topicText,
-        })
-      } else if (sku?.franchise === "PKM" || /pok[eé]mon|โปเกมอน|โปเกม่อน/i.test(topicText)) {
-        // โพสต์แนวเจาะการ์ด/สอนกฎ ต้องได้คำอธิบายท่าเต็ม ๆ ไม่ใช่แค่ชื่อท่า
-        knowledge = await pkmKnowledgeBlock({
-          setCode: sku?.set_code, topic: topicText, detail: wantsCardDetail,
-        })
-      } else {
-        // Dragon Ball · Yu-Gi-Oh · Naruto · My Little Pony (ดู lib/tcgKnowledge.js)
-        // ตัวมันเช็คค่ายเองแล้วคืน "" ถ้าไม่เกี่ยว — ไม่ต้องดักซ้ำตรงนี้
-        knowledge = await tcgKnowledgeBlock({
-          franchise: sku?.franchise, setCode: sku?.set_code, topic: topicText,
-        })
-      }
-    } catch { knowledge = "" }
 
-    // เก็บรักษาการ์ด — ใช้ได้ทุกค่าย ไม่ผูกกับ franchise จึงต่อแยกจากก้อนบน
-    // ใส่เฉพาะตอนที่รูปแบบโพสต์รอบนี้ต้องใช้จริง (ตัวเลือกใดตัวเลือกหนึ่งเป็น card_care)
-    // ไม่งั้น prompt บวมฟรีทุกครั้งที่เขียนโพสต์ขายปกติ
-    if ([format, formatAlt].some(f => f?.knowledge === "care")) {
+    // ⚠️ ต้องเป็นฟังก์ชันที่เรียกซ้ำได้ ไม่ใช่คำนวณครั้งเดียวแล้วใช้ยาว
+    //    รอบเขียนใหม่ (ตอนซ้ำเกินเกณฑ์) สุ่มรูปแบบใหม่ทั้งคู่ ถ้าใช้ knowledge ก้อนเดิม
+    //    รอบสองที่ได้ card_care จะถูกสั่งว่า "หยิบ 1 หัวข้อจาก card_care.json มาเล่า"
+    //    โดยที่คลัง care ไม่ได้อยู่ใน prompt เลย → โมเดลแต่งวิธีเก็บรักษาขึ้นเอง
+    //    ซึ่งคือสิ่งที่ careBlock() เขียนกฎห้ามไว้ทั้งย่อหน้า (แนะนำผิด = การ์ดลูกค้าพังจริง)
+    //    เช่นเดียวกับ card_deep/how_to_play ที่จะได้การ์ด 8 ใบแบบตื้นแทนโหมด detail
+    //
+    // เรียกซ้ำไม่แพง — ตัวโหลดคลังทุกตัว cache ไฟล์ไว้ในตัวแปรโมดูลแล้ว (`_cards ??=`)
+    const buildKnowledge = async (cands) => {
+      // รูปแบบที่ต้องพึ่งข้อมูลการ์ด/กฎ ต้องได้คำอธิบายเต็ม ไม่ใช่แค่ชื่อ
+      // เจอจริง 27 ส.ค. 2026: โพสต์เขียนว่า "พร้อมความสามารถ เปลวไฟต้องสาป" แล้วจบ
+      // เพราะ prompt ได้แค่ชื่อท่า ทั้งที่คลังมีคำอธิบายเต็มอยู่ — ซึ่งคือคุณค่าทั้งหมดของโพสต์แนวนี้
+      const wantsCardDetail = cands
+        .some(f => f?.knowledge === "cards" || f?.knowledge === "rules")
+      let out = ""
       try {
-        // เลี่ยงหัวข้อที่เพิ่งเขียนไป โดยดูจากคำสำคัญในแคปชั่นเก่าที่เป็น card_care
-        //
-        // ⚠️ ไม่มีคอลัมน์เก็บ "หัวข้อ care" ในตาราง และไม่คุ้มจะเพิ่ม migration
-        //    เพื่อฟีเจอร์เดียว — เทียบจาก label ในแคปชั่นเอาก็พอ ผิดบ้างไม่เสียหาย
-        //    แค่ทำให้สุ่มซ้ำหัวข้อเดิมได้ ซึ่งยังดีกว่าอ้างคอลัมน์ที่ไม่มีจริง
-        const careWords = recent
-          .filter(r => r.content_format === "card_care")
-          .map(r => (r.caption || "").slice(0, 200))
-          .join(" ")
-        const recentCare = ["humidity", "sunlight_heat", "sleeves",
-                            "storage_gear", "handling", "grading_basics"]
-          .filter(k => careWords.includes(CARE_HINT[k]))
-        knowledge += (knowledge ? "\n\n" : "") + await careBlock({ recentTopics: recentCare })
-      } catch { /* อ่านคลังไม่ได้ก็เขียนต่อได้ แค่ไม่มีข้อมูลกำกับ */ }
+        if (sku?.franchise === "OP" || /one\s*piece|วันพีซ|วันพีช/i.test(topicText)) {
+          out = await knowledgeBlock({
+            sku: sku?.sku_id, setCode: sku?.set_code, topic: topicText,
+          })
+        } else if (sku?.franchise === "PKM" || /pok[eé]mon|โปเกมอน|โปเกม่อน/i.test(topicText)) {
+          // โพสต์แนวเจาะการ์ด/สอนกฎ ต้องได้คำอธิบายท่าเต็ม ๆ ไม่ใช่แค่ชื่อท่า
+          out = await pkmKnowledgeBlock({
+            setCode: sku?.set_code, topic: topicText, detail: wantsCardDetail,
+          })
+        } else {
+          // Dragon Ball · Yu-Gi-Oh · Naruto · My Little Pony (ดู lib/tcgKnowledge.js)
+          // ตัวมันเช็คค่ายเองแล้วคืน "" ถ้าไม่เกี่ยว — ไม่ต้องดักซ้ำตรงนี้
+          out = await tcgKnowledgeBlock({
+            franchise: sku?.franchise, setCode: sku?.set_code, topic: topicText,
+          })
+        }
+      } catch { out = "" }
+
+      // เก็บรักษาการ์ด — ใช้ได้ทุกค่าย ไม่ผูกกับ franchise จึงต่อแยกจากก้อนบน
+      // ใส่เฉพาะตอนที่รูปแบบโพสต์รอบนี้ต้องใช้จริง (ตัวเลือกใดตัวเลือกหนึ่งเป็น card_care)
+      // ไม่งั้น prompt บวมฟรีทุกครั้งที่เขียนโพสต์ขายปกติ
+      if (cands.some(f => f?.knowledge === "care")) {
+        try {
+          // เลี่ยงหัวข้อที่เพิ่งเขียนไป โดยดูจากคำสำคัญในแคปชั่นเก่าที่เป็น card_care
+          //
+          // ⚠️ ไม่มีคอลัมน์เก็บ "หัวข้อ care" ในตาราง และไม่คุ้มจะเพิ่ม migration
+          //    เพื่อฟีเจอร์เดียว — เทียบจาก label ในแคปชั่นเอาก็พอ ผิดบ้างไม่เสียหาย
+          //    แค่ทำให้สุ่มซ้ำหัวข้อเดิมได้ ซึ่งยังดีกว่าอ้างคอลัมน์ที่ไม่มีจริง
+          const careWords = recent
+            .filter(r => r.content_format === "card_care")
+            .map(r => (r.caption || "").slice(0, 200))
+            .join(" ")
+          const recentCare = Object.keys(CARE_HINT)
+            .filter(k => careWords.includes(CARE_HINT[k]))
+          out += (out ? "\n\n" : "") + await careBlock({ recentTopics: recentCare })
+        } catch { /* อ่านคลังไม่ได้ก็เขียนต่อได้ แค่ไม่มีข้อมูลกำกับ */ }
+      }
+      return out
     }
+
+    const knowledge = await buildKnowledge([format, formatAlt])
 
     // รายการสินค้าจริงทั้งหมด — กันตัวเขียนแต่งสินค้าที่เราไม่มีขึ้นมาเปรียบเทียบ
     // (เคสจริง: แคปชั่นโปเกมอนพูดถึง "ซองคอลเลกชันคลาสสิก" ทั้งที่เรามีแต่ชุดใหม่ 3 ชุด)
@@ -745,8 +760,12 @@ export async function POST(req) {
       const altFormat = pickFormat(voice, [...recent, { format: chosenFormat?.key }])
       const altFormat2 = pickFormat(voice, [...recent, { format: chosenFormat?.key },
                                             { format: altFormat?.key }])
+      // ⚠️ ต้องสร้างคลังใหม่ตามรูปแบบของรอบนี้ ไม่ใช่ใช้ก้อนของรอบแรก
+      //    รอบนี้เป็นคนละคู่รูปแบบ ถ้าได้ card_care/card_deep มาแล้วคลังไม่ตาม
+      //    โมเดลจะถูกสั่งให้เล่าเรื่องที่ไม่มีข้อมูลรองรับ แล้วมันจะแต่งเอา
+      const knowledge2 = await buildKnowledge([altFormat, altFormat2])
       const harder = buildPrompt(voice, idea, content, sku, recent, altFormat, craft,
-                                 catalogue + knowledge, altFormat2)
+                                 catalogue + knowledge2, altFormat2)
       harder.user +=
         `\n\n⚠️ รอบที่แล้วคุณเขียนออกมาคล้ายโพสต์เก่าถึง ${Math.round(dup.score * 100)}%:\n` +
         `"${(dup.item?.caption || "").split("\n")[0].slice(0, 90)}"\n` +

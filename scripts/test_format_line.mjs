@@ -1,6 +1,10 @@
 // ทดสอบตัวอ่านบรรทัด FORMAT: ที่โมเดลเขียนบอกว่าเลือกรูปแบบไหน
 import { readFileSync } from "node:fs"
-const src = readFileSync("c:/Projects/divisionX Card/deploy/app/api/marketing/content/generate/route.js", "utf8")
+import { fileURLToPath } from "node:url"
+
+// ⚠️ อ้างจากตำแหน่งไฟล์สคริปต์เอง ไม่ใช่ path เครื่องใครเครื่องมัน
+const ROOT = fileURLToPath(new URL("..", import.meta.url))
+const src = readFileSync(`${ROOT}deploy/app/api/marketing/content/generate/route.js`, "utf8")
 const fn = src.match(/function readFormatLine[\s\S]*?\n}/)[0]
 const readFormatLine = new Function("return " + fn)()
 
