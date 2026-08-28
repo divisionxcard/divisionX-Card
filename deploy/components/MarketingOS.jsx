@@ -124,6 +124,9 @@ export default function MarketingOS() {
   // ใบนี้กำลังวาดด้วยทางไหน {id: "ai" | "tpl"} — สองปุ่มใช้ธง imaging ร่วมกัน
   // ถ้าไม่แยก ข้อความระหว่างรอจะบอกเวลาผิดทางใดทางหนึ่งเสมอ (AI ~150 วิ · เทมเพลต ~60-120 วิ)
   const [imagingKind, setImagingKind] = useState({})
+  // เครดิต OpenAI คงเหลือ — null = ยังไม่ได้โหลด · undefined ไม่ใช้ เพราะ Shell
+  // ใช้ค่า undefined เป็นสัญญาณว่า "หน้านี้ไม่มีป้ายเครดิต" (จอ login/forbidden)
+  const [credit, setCredit] = useState(null)
   const [preview, setPreview] = useState(null)   // url ภาพที่กำลังดูเต็มจอ
   const [downloading, setDownloading] = useState(false)
   const [proofing, setProofing] = useState(new Set())   // id ที่กำลังตรวจปรู๊ฟอยู่
@@ -348,13 +351,14 @@ export default function MarketingOS() {
   const loadAll = useCallback(async () => {
     if (!token) return
     setLoading(true); setErr("")
-    const [i, c, p, m, a, f] = await Promise.allSettled([
+    const [i, c, p, m, a, f, cr] = await Promise.allSettled([
       api(`ideas?status=new&per_source=${perSource}`),
       api("content?status=draft,pending"),
       api("pipeline"),
       api(`metrics?days=${days}`),
       api("content?status=approved"),
       api("content/publish"),
+      api("ai-credit"),
     ])
     if (i.status === "fulfilled") setIdeas(i.value)
     if (c.status === "fulfilled") setContent(c.value)
@@ -364,6 +368,11 @@ export default function MarketingOS() {
     if (a.status === "fulfilled") setReady({ items: (a.value.items || []).filter(x => !x.posted_at) })
     // ยังไม่ได้ตั้งค่า FB จะคืน 200 พร้อม connected:false · ต่อไม่ติดจริงถึงจะ reject
     setFb(f.status === "fulfilled" ? f.value : { connected: false, error: f.reason?.message })
+    // ⚠️ ตัวอ่านเครดิตคืน 200 พร้อม state บอกปัญหาเสมอ (ไม่มี key / ยังไม่ได้รัน migration)
+    //    ที่ reject จริงคือต่อไม่ติดเท่านั้น — เก็บเป็น state ของป้าย ไม่ใช่ error ของทั้งหน้า
+    //    เครดิตอ่านไม่ได้ไม่ควรบังหน้าที่เหลือ ซึ่งยังทำงานได้ปกติ
+    setCredit(cr.status === "fulfilled" ? cr.value
+      : { state: "fetch_error", error: cr.reason?.message || "อ่านยอดเครดิตไม่สำเร็จ" })
     // ตัวเช็ก FB ไม่นับเป็น error ของทั้งหน้า — ไม่ได้ตั้งค่าไว้ก็ใช้หน้าอื่นได้ตามปกติ
     const failed = [i, c, p, m, a].filter(r => r.status === "rejected")
     if (failed.length) setErr(failed.map(f => f.reason.message).join(" · "))
@@ -371,6 +380,14 @@ export default function MarketingOS() {
   }, [api, token, days, perSource])
 
   useEffect(() => { if (authState === "ok") loadAll() }, [authState, loadAll])
+
+  // บันทึกยอดคงเหลือที่อ่านมาจากหน้า OpenAI แล้วดึงตัวเลขใหม่ทันที
+  // ⚠️ ต้องอ่านซ้ำ ไม่ใช่เอาค่าที่เพิ่งกรอกไปแสดงเลย — ค่าใช้จ่ายของวันนี้
+  //    ที่เกิดก่อนหน้าที่จะกรอกก็ถูกหักด้วย เลขที่ถูกจึงมาจากฝั่งเซิร์ฟเวอร์เท่านั้น
+  const saveCredit = useCallback(async (balance_usd) => {
+    await api("ai-credit", { method: "POST", body: JSON.stringify({ balance_usd }) })
+    setCredit(await api("ai-credit"))
+  }, [api])
 
   // ── การกระทำบนการ์ด ──
   // เปลี่ยน status = ออกจากคิว (อนุมัติ/ทิ้ง) · แก้อย่างอื่น (เช่นรูป) = อยู่ในคิวต่อ แค่อัปเดตในที่
@@ -695,6 +712,7 @@ export default function MarketingOS() {
 
   return (
     <Shell onRefresh={loadAll} loading={loading}
+      credit={credit} onSaveCredit={saveCredit}
       nav={<NavRail view={view} setView={setView} counts={navCounts}
         onNew={() => { setView("ideas"); setTimeout(() => pasteRef.current?.focus(), 0) }} />}>
       {err && (
@@ -1839,7 +1857,119 @@ export function NavRail({ view, setView, counts, onNew }) {
   )
 }
 
-export function Shell({ children, nav, onRefresh, loading }) {
+// ── ป้ายเครดิต OpenAI คงเหลือ ──
+//
+// ⚠️ ยอดคงเหลืออ่านจาก API ไม่ได้ — OpenAI เปิดให้เฉพาะ session key จากเบราว์เซอร์
+//    (ทดสอบยิงจริง 28 ส.ค. 2026 · ดู app/api/marketing/ai-credit/route.js)
+//    เลขที่เห็นคือ "ยอดที่เจ้าของกรอกไว้ − ค่าใช้จ่ายจาก costs API ตั้งแต่ตอนนั้น"
+//    ถ้าเริ่มเพี้ยน กดเข้ามากรอกยอดจากหน้า OpenAI ใหม่ จุดตั้งต้นจะรีเซ็ตให้เอง
+//
+// ⚠️ ป้ายนี้ต้องกดได้เสมอ แม้ตอนที่ยังตั้งค่าไม่เสร็จ — เพราะทางแก้ทุกเคส
+//    (ยังไม่มี admin key · ยังไม่ได้รัน migration · ยังไม่ได้กรอกยอด) อยู่ในกล่องนี้
+//    ถ้าซ่อนป้ายตอนยังไม่พร้อม จะไม่มีทางรู้เลยว่าต้องไปทำอะไรต่อ
+function CreditBadge({ credit, onSave }) {
+  const [open, setOpen] = useState(false)
+  const [val, setVal] = useState("")
+  const [saving, setSaving] = useState(false)
+  const [msg, setMsg] = useState("")
+
+  const usd = (n) => `$${Number(n ?? 0).toFixed(2)}`
+  const ok = credit?.state === "ok"
+  const left = ok ? Number(credit.remaining_usd) : null
+
+  // เกณฑ์สีเป็นค่าคร่าว ๆ ให้เห็นก่อนหมดจริง ไม่ได้ผูกกับราคาต่อภาพ
+  // เพราะยังไม่ได้เก็บราคาต่อภาพไว้เทียบ (usage ที่ได้กลับมาทุกครั้งถูกทิ้ง ไม่ได้บันทึก)
+  const tone = !ok ? "bg-gray-100 text-gray-500 border-gray-200"
+    : left < 5 ? "bg-red-50 text-red-700 border-red-200"
+    : left < 15 ? "bg-amber-50 text-amber-700 border-amber-200"
+    : "bg-emerald-50 text-emerald-700 border-emerald-200"
+
+  async function save() {
+    const n = Number(val)
+    if (!Number.isFinite(n) || n < 0) { setMsg("กรอกเป็นตัวเลขดอลลาร์ เช่น 42.15"); return }
+    setSaving(true); setMsg("")
+    try {
+      await onSave(n)
+      setVal(""); setOpen(false)
+    } catch (e) { setMsg(e.message || String(e)) } finally { setSaving(false) }
+  }
+
+  return (
+    <div className="relative">
+      <button onClick={() => setOpen(o => !o)} title="เครดิต OpenAI คงเหลือ"
+        className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-sm font-medium ${tone}`}>
+        <Wallet size={14} />
+        {ok ? usd(left) : <span className="text-xs">ตั้งค่าเครดิต</span>}
+      </button>
+
+      {open && (
+        <div className="absolute right-0 top-full mt-2 w-80 bg-white rounded-xl border border-gray-200 shadow-lg p-3 z-20 text-left">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-semibold text-gray-800">เครดิต OpenAI</span>
+            <button onClick={() => setOpen(false)} className="text-gray-400 hover:text-gray-600">
+              <X size={14} />
+            </button>
+          </div>
+
+          {ok && (
+            <dl className="text-xs text-gray-600 space-y-1 mb-3">
+              <div className="flex justify-between">
+                <dt>ยอดที่บันทึกไว้</dt><dd className="font-mono">{usd(credit.balance_usd)}</dd>
+              </div>
+              <div className="flex justify-between">
+                <dt>ใช้ไปตั้งแต่นั้น</dt><dd className="font-mono">−{usd(credit.spent_usd)}</dd>
+              </div>
+              <div className="flex justify-between border-t border-gray-100 pt-1 font-semibold text-gray-800">
+                <dt>คงเหลือ</dt><dd className="font-mono">{usd(left)}</dd>
+              </div>
+              <p className="text-[11px] text-gray-400 pt-1 leading-relaxed">
+                บันทึกยอดไว้เมื่อ {new Date(credit.reading.read_at).toLocaleString("th-TH", {
+                  dateStyle: "medium", timeStyle: "short",
+                })}
+                {" · "}เป็นตัวเลขประมาณ เพราะ OpenAI คิดค่าใช้จ่ายเป็นรายวัน
+              </p>
+            </dl>
+          )}
+
+          {!ok && (
+            <div className="text-xs text-gray-600 mb-3 leading-relaxed">
+              <p className="font-medium text-gray-700">{credit?.error || "ยังอ่านยอดไม่ได้"}</p>
+              {credit?.hint && <p className="mt-1 text-gray-500">{credit.hint}</p>}
+              {credit?.state === "no_reading" && (
+                <p className="mt-1 text-gray-500">
+                  key ใช้ได้แล้ว · 30 วันที่ผ่านมาใช้ไป {usd(credit.spent_usd)}
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* กรอกได้เสมอ ไม่ว่าสถานะไหน — เป็นทางแก้ของทั้ง no_reading และเลขเริ่มเพี้ยน */}
+          <label className="block text-xs text-gray-500 mb-1">
+            ยอดคงเหลือที่เห็นบนหน้า OpenAI ตอนนี้ (USD)
+          </label>
+          <div className="flex gap-1.5">
+            <input value={val} onChange={e => setVal(e.target.value)} inputMode="decimal"
+              placeholder="เช่น 42.15" disabled={saving}
+              onKeyDown={e => e.key === "Enter" && save()}
+              className="flex-1 min-w-0 px-2 py-1.5 rounded-lg border border-gray-200 text-sm" />
+            <button onClick={save} disabled={saving || !val}
+              className="px-3 py-1.5 rounded-lg bg-blue-600 text-white text-sm font-medium disabled:opacity-50">
+              {saving ? "…" : "บันทึก"}
+            </button>
+          </div>
+          {msg && <p className="mt-1.5 text-xs text-red-600">{msg}</p>}
+          <a href="https://platform.openai.com/settings/organization/billing/overview"
+            target="_blank" rel="noreferrer"
+            className="mt-2 inline-flex items-center gap-1 text-xs text-blue-600 hover:underline">
+            เปิดหน้า Billing ของ OpenAI <ExternalLink size={11} />
+          </a>
+        </div>
+      )}
+    </div>
+  )
+}
+
+export function Shell({ children, nav, onRefresh, loading, credit, onSaveCredit }) {
   return (
     <main className="min-h-screen bg-gray-50">
       <header className="bg-white border-b border-gray-100 sticky top-0 z-10">
@@ -1850,6 +1980,7 @@ export function Shell({ children, nav, onRefresh, loading }) {
             <p className="text-xs text-gray-400">DivisionX Card · การตลาดออนไลน์</p>
           </div>
           <a href="/" className="text-xs text-gray-500 hover:text-gray-700">← กลับหน้าหลัก</a>
+          {credit !== undefined && <CreditBadge credit={credit} onSave={onSaveCredit} />}
           {onRefresh && (
             <button onClick={onRefresh} disabled={loading}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-100 text-gray-700 text-sm disabled:opacity-50">
