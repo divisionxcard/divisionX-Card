@@ -58,7 +58,13 @@ async function fetchSpend(key, startTime, signal) {
       throw Object.assign(new Error(String(msg)), { status: r.status })
     }
 
-    // { object: "page", data: [ { results: [ { amount: { value, currency } } ] } ] }
+    // { object: "page", data: [ { results: [ { amount: { value, currency } } ] } ], has_more, next_page }
+    //
+    // ยืนยันกับของจริงแล้ว 28 ส.ค. 2026 (30 วัน → 31 bucket · has_more=false · limit=180 ผ่าน):
+    //   { object: "bucket", start_time, end_time, start_time_iso, end_time_iso,
+    //     results: [ { amount: { currency: "usd", value: 0.728766 },
+    //                  project_id, api_key_id, line_item, ... } ] }
+    // วันที่ไม่มีค่าใช้จ่ายจะได้ bucket ที่ results เป็น [] — วนแล้วบวก 0 เอง ไม่ต้องดักแยก
     for (const bucket of j.data || []) {
       days++
       for (const res of bucket.results || []) total += Number(res?.amount?.value || 0)
