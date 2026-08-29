@@ -11,7 +11,7 @@
 import { createClient } from "@supabase/supabase-js"
 import { NextResponse } from "next/server"
 import { fbConfig } from "../../../../../lib/facebook"
-import { publishOne } from "../../../../../lib/publishContent"
+import { publishOne, PUBLISHABLE, PLATFORM_LABEL } from "../../../../../lib/publishContent"
 
 const db = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -56,16 +56,33 @@ export async function POST(req) {
   // ถึงคิวแล้ว = อนุมัติแล้ว + มีเวลาที่ตั้งไว้ + เวลานั้นมาถึงแล้ว + ยังไม่เคยขึ้นเพจ
   // เรียงเก่าก่อน เพื่อให้ของที่เลยกำหนดนานสุดได้ออกก่อน
   const nowIso = new Date().toISOString()
-  const { data: due, error } = await db.from(TABLE)
+  const dueQuery = () => db.from(TABLE)
     .select("*")
     .in("status", ["approved", "scheduled"])
     .is("post_id", null)
     .not("scheduled_at", "is", null)
     .lte("scheduled_at", nowIso)
+
+  // ⚠️ ต้องกรอง platform ตั้งแต่ใน query ไม่ใช่ปล่อยให้ blockReason ตีกลับทีหลัง
+  //    เพราะรอบหนึ่งหยิบได้แค่ MAX_PER_RUN ชิ้น — ถ้ามีชิ้นที่ส่งไม่ได้ค้างคิวอยู่
+  //    มันจะกินโควตาทั้งสองช่องทุกรอบ แล้วของที่โพสต์ได้จริงจะไม่มีวันได้ออก
+  //    (blockReason ยังกันซ้ำอีกชั้นในโมดูลกลาง สำหรับทางที่คนกดเอง)
+  const { data: due, error } = await dueQuery()
+    .in("platform", [...PUBLISHABLE])
     .order("scheduled_at", { ascending: true })
     .limit(MAX_PER_RUN)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  // ชิ้นที่ถึงเวลาแล้วแต่ปลายทางยังต่อไม่ได้ — ไม่ใช่ความล้มเหลว แต่ต้องเห็น
+  // ไม่งั้นเจ้าของจะรอโพสต์ที่ไม่มีวันออก โดยไม่มีอะไรบอกสักอย่าง
+  const { data: stuck } = await dueQuery().not("platform", "in", `(${[...PUBLISHABLE].join(",")})`)
+  const waiting = (stuck || []).map(r => ({
+    id: r.id,
+    platform: r.platform,
+    platform_label: PLATFORM_LABEL[r.platform] || r.platform,
+    scheduled_at: r.scheduled_at,
+  }))
 
   // ⚠ ต้องคืน "รูปเดียวกัน" กับตอนมีของถึงคิว — ครบทุก field รวมทั้ง failed
   // เคยพลาดมาแล้ว: ทางนี้เคยคืนแค่ posted แล้ว workflow ที่มองหา "failed":0
@@ -74,6 +91,7 @@ export async function POST(req) {
   if (!due?.length) {
     return NextResponse.json({
       ok: true, checked_at: nowIso, dryRun, due: 0, posted: 0, failed: 0, results: [],
+      waiting_unsupported: waiting.length, waiting,
     })
   }
 
@@ -95,6 +113,8 @@ export async function POST(req) {
   return NextResponse.json({
     ok: true, checked_at: nowIso, dryRun,
     due: due.length, posted, failed: results.length - posted,
+    // ⚠️ ต้องมีทุกคำตอบ ไม่ใช่เฉพาะตอนมีของค้าง — คำตอบที่รูปไม่คงที่ทำให้คนอ่านผิด
+    waiting_unsupported: waiting.length, waiting,
     results,
   })
 }
