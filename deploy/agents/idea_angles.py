@@ -18,6 +18,8 @@
     python deploy/agents/idea_angles.py --id 51        # เจาะไอเดียเดียว
 
 โมเดล: Gemini free tier → ไล่โมเดลถัดไปเมื่อโควตารายวันหมด → ถอยไป Ollama บนเครื่อง
+⚠️ "ล้มเหลว" ของ Gemini มีสี่แบบ ต้องแยกกันคนละทาง (ดู classify) — เหมารวมเมื่อไหร่
+   ก็แก้ผิดทางเมื่อนั้น · 503 high demand เป็นอาการชั่วคราว ห้ามปลดโมเดลทิ้งทั้งรอบ
 ⚠️ gemini-flash-latest ให้ฟรีแค่ **วันละ 20 ครั้ง** (อ่านจาก quotaId ในตัว error เอง)
 แต่โควตานับแยกตามโมเดล เปลี่ยนโมเดลจึงได้ก้อนใหม่จริง — ดูคอมเมนต์เหนือ MODEL_CHAIN
 """
@@ -147,10 +149,22 @@ BACKOFF = [20, 45, 90]
 MODEL_CHAIN = ["gemini-flash-latest", "gemini-flash-lite-latest"]
 
 
-class QuotaOut(Exception):
-    def __init__(self, model, daily):
-        super().__init__(f"โควตา {model} หมด" + (" (รายวัน)" if daily else " (ต่อนาที)"))
+class SwitchModel(Exception):
+    """เลิกยิงโมเดลตัวนี้แล้วไปตัวถัดไป
+
+    permanent=True  หมดจริงทั้งรอบ (โควตารายวัน · รุ่นตาย) — อย่ากลับมาอีก
+    permanent=False อาการชั่วคราว (คนใช้ล้น) — ตัวถัดไปเฉพาะครั้งนี้ ชิ้นหน้ากลับมาใช้ได้
+    """
+
+    def __init__(self, model, why, permanent=True):
+        super().__init__(f"{model}: {why}")
         self.model = model
+        self.permanent = permanent
+
+
+class QuotaOut(SwitchModel):
+    def __init__(self, model, daily):
+        super().__init__(model, "โควตาหมด" + (" รายวัน" if daily else " ต่อนาที"), permanent=True)
         self.daily = daily
 
 
@@ -159,12 +173,35 @@ def is_daily_quota(detail):
     return "PerDay" in detail
 
 
+# ⚠️ 503 "high demand" ไม่ใช่โควตาหมด — รอไม่กี่วินาทีหรือเปลี่ยนรุ่นก็ผ่าน
+#    ฝั่งเว็บแยกสี่แบบนี้ไปตั้งแต่ 17 ส.ค. (lib/geminiText.js) แต่ไฟล์นี้ไม่ได้ตามไปด้วย
+#    ทั้งที่คอมมิทนั้นแตะไฟล์นี้อยู่แล้ว (ตัดชื่อโมเดลที่ตายออก) — ผลคือ 503 ทีเดียว
+#    ก็นับเป็นล้มเหลวทั้งชิ้น และ workflow ตั้ง continue-on-error ไว้ จึงเงียบสนิท
+#    วัดผลจริง 31 ส.ค. 2026: ทั้งตาราง 60 แถวมี angles แค่ 5 แถว (8%)
+#    → ตัวแก้ "รากของคอนเทนต์ซ้ำ" ที่ทำไว้ 10 ส.ค. แทบไม่เคยได้ทำงานเลย
+SPIKE_RE = re.compile(r"high demand|overloaded|unavailable|try again later", re.I)
+DEAD_RE = re.compile(r"no longer available|not found|is not supported", re.I)
+SPIKE_WAIT = [1.5, 3]      # คลื่นคนใช้ล้นมักผ่านไปในไม่กี่วินาที (เท่ากับฝั่ง JS)
+
+
+def classify(code, detail):
+    """สี่ทางเดียวกับ lib/geminiText.js — เหมารวมเมื่อไหร่ก็แก้ผิดทางเมื่อนั้น"""
+    if code in (500, 502, 503) or SPIKE_RE.search(detail):
+        return "spike"          # ล้นชั่วคราว → รอสั้น ๆ แล้วลองใหม่
+    if code == 429:
+        return "day" if is_daily_quota(detail) else "minute"
+    if code == 404 or DEAD_RE.search(detail):
+        return "dead"           # รุ่นนี้ไม่มีแล้ว → เปลี่ยนถาวร
+    return "fatal"              # key ผิด/prompt ผิด → ยิงซ้ำก็เหมือนเดิม
+
+
 def ask_gemini(prompt, model):
     body = {
         "contents": [{"role": "user", "parts": [{"text": prompt}]}],
         "generationConfig": {"temperature": 0.95, "maxOutputTokens": 2048},
     }
-    for attempt in range(len(BACKOFF) + 1):
+    spike = minute = 0          # นับแยกกัน — คนละอาการ คนละจังหวะรอ
+    while True:
         req = urllib.request.Request(
             f"{GEMINI_BASE}/models/{model}:generateContent",
             method="POST",
@@ -174,19 +211,48 @@ def ask_gemini(prompt, model):
         try:
             with urllib.request.urlopen(req, timeout=90) as r:
                 j = json.load(r)
-            parts = (j.get("candidates") or [{}])[0].get("content", {}).get("parts", [])
-            return "".join(p.get("text", "") for p in parts).strip()
         except urllib.error.HTTPError as e:
-            if e.code != 429:
-                raise
             detail = e.read().decode("utf-8", "ignore")
-            # โควตารายวันหมด → ถอยรอกี่ทีก็ไม่คืน ส่งต่อให้ ask_ai เปลี่ยนโมเดลทันที
-            if is_daily_quota(detail) or attempt >= len(BACKOFF):
-                raise QuotaOut(model, daily=is_daily_quota(detail))
-            wait = BACKOFF[attempt]
-            print(f"      (ชนลิมิตต่อนาที รอ {wait} วิ แล้วลองใหม่)")
-            time.sleep(wait)
-    return ""
+            kind = classify(e.code, detail)
+            if kind == "dead":
+                raise SwitchModel(model, f"รุ่นนี้ไม่มีแล้ว (HTTP {e.code})")
+            if kind == "day":
+                raise QuotaOut(model, daily=True)
+            if kind == "minute":
+                # รอครบชุดแล้วยังชน = เปลี่ยนถาวร ไม่งั้นกินเวลาทั้งรอบไปกับการรอ
+                if minute >= len(BACKOFF):
+                    raise QuotaOut(model, daily=False)
+                wait = BACKOFF[minute]; minute += 1
+                print(f"      (ชนลิมิตต่อนาที รอ {wait} วิ แล้วลองใหม่)")
+                time.sleep(wait)
+                continue
+            if kind == "spike":
+                if spike >= len(SPIKE_WAIT):
+                    raise SwitchModel(model, f"ล้นชั่วคราว (HTTP {e.code})", permanent=False)
+                wait = SPIKE_WAIT[spike]; spike += 1
+                print(f"      (โมเดลล้นชั่วคราว รอ {wait} วิ แล้วลองใหม่)")
+                time.sleep(wait)
+                continue
+            raise
+        except (TimeoutError, urllib.error.URLError) as e:
+            # ต่อไม่ติด/อ่านไม่ทันใน 90 วิ — อาการชั่วคราวเหมือน 503 แต่คนละชนิด exception
+            # (เจอจริง 31 ส.ค. 2026: ชิ้นแรกได้ "read operation timed out" แล้วนับเป็นล้มเหลว)
+            # ⚠️ ให้โอกาสเดียว ไม่ใช่ชุดเต็ม — แต่ละครั้งกินได้ถึง 90 วิ และทั้ง job มี 10 นาที
+            if spike:
+                raise SwitchModel(model, f"เครือข่ายไม่ตอบ ({type(e).__name__})", permanent=False)
+            spike += 1
+            print(f"      (ยิงไม่ถึงปลายทาง รอ {SPIKE_WAIT[0]} วิ แล้วลองใหม่)")
+            time.sleep(SPIKE_WAIT[0])
+            continue
+
+        cand = (j.get("candidates") or [{}])[0]
+        parts = cand.get("content", {}).get("parts", [])
+        text = "".join(p.get("text", "") for p in parts).strip()
+        # ใช้โควตา output ไปกับการ "คิด" จนไม่เหลือเขียน — รุ่น lite คิดน้อยกว่า
+        # เปลี่ยนรุ่นได้ผลกว่ายิงซ้ำรุ่นเดิมด้วย prompt เดิม (เหตุผลเดียวกับฝั่ง JS)
+        if not text and cand.get("finishReason") == "MAX_TOKENS":
+            raise SwitchModel(model, "ใช้โควตาไปกับการคิดจนไม่เหลือเขียน", permanent=False)
+        return text
 
 
 def ask_ollama(prompt, voice):
@@ -209,7 +275,11 @@ def ask_ollama(prompt, voice):
 
 
 class Router:
-    """จำไว้ว่าโมเดลไหนหมดแล้ว จะได้ไม่ยิงซ้ำให้เสียเวลาทั้ง 78 รอบ"""
+    """จำไว้ว่าโมเดลไหน **หมดถาวร** แล้ว จะได้ไม่ยิงซ้ำให้เสียเวลาทั้ง 78 รอบ
+
+    ⚠️ จำเฉพาะที่หมดถาวรเท่านั้น — เดิมจำทุกความล้มเหลว ทำให้ 503 ครั้งเดียว
+       (อาการที่หายเองใน 2-3 วินาที) ปลดโมเดลตัวดีทิ้งไปทั้งรอบ
+    """
 
     def __init__(self, chain, voice):
         self.chain = list(chain)
@@ -219,21 +289,31 @@ class Router:
 
     @property
     def label(self):
-        return f"ollama:{os.environ.get('OLLAMA_MODEL') or self.voice.get('ollama_model') or 'qwen2.5:14b'}" \
-            if self.on_ollama else self.chain[self.i]
+        if self.on_ollama or self.i >= len(self.chain):
+            return f"ollama:{os.environ.get('OLLAMA_MODEL') or self.voice.get('ollama_model') or 'qwen2.5:14b'}"
+        return self.chain[self.i]
 
     def ask(self, prompt):
-        while not self.on_ollama:
+        if self.on_ollama:
+            return ask_ollama(prompt, self.voice)
+        last = None
+        i = self.i
+        while i < len(self.chain):
             try:
-                return ask_gemini(prompt, self.chain[self.i])
-            except QuotaOut as e:
-                self.i += 1
-                if self.i < len(self.chain):
-                    print(f"      ({e} → เปลี่ยนไป {self.chain[self.i]})")
-                    continue
-                print(f"      ({e} → Gemini หมดทุกโมเดล ถอยไปใช้ Ollama บนเครื่อง)")
-                self.on_ollama = True
-        return ask_ollama(prompt, self.voice)
+                return ask_gemini(prompt, self.chain[i])
+            except SwitchModel as e:
+                last = e
+                if e.permanent:
+                    self.i = i + 1          # ตัวนี้หมดจริง ชิ้นถัดไปไม่ต้องเสียเวลาแวะ
+                i += 1
+                nxt = f" → ลอง {self.chain[i]}" if i < len(self.chain) else ""
+                print(f"      ({e}{nxt})")
+        if self.i >= len(self.chain):
+            print("      (Gemini หมดทุกโมเดล ถอยไปใช้ Ollama บนเครื่อง)")
+            self.on_ollama = True
+            return ask_ollama(prompt, self.voice)
+        # ล้มแบบชั่วคราวทุกตัว — ชิ้นนี้ข้ามไปก่อน ชิ้นหน้ายังได้ยิงโมเดลเดิมอยู่
+        raise last
 
 
 def parse_angles(text):
