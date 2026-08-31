@@ -68,6 +68,21 @@ export default function PageRefillPrep({ machines, machineStock, machineAssignme
     ? machineStock.reduce((latest, s) => { const t = s.synced_at || ""; return t > latest ? t : latest }, "")
     : null
 
+  // อายุของข้อมูลที่ใบนี้คำนวณมาจาก — ต้องบอกให้เห็นทั้งบนจอและบนกระดาษ
+  //
+  // ทำไมสำคัญ: ตัวเลข "ต้องเติม" = ความจุ − คงเหลือ ณ เวลาที่ sync
+  // ถ้ามีคนไปเติมตู้หลังเวลานั้น ใบนี้จะยังสั่งของเท่าเดิม → จัดของไปซ้ำแล้วขนกลับ
+  // sync สต็อกมีแค่วันละ 2-3 รอบ และรอบเช้าลงจริงสายได้ถึง 6 ชม.
+  // (วัด 14 วัน: ตั้ง 09:10 แต่ลงจริง 10:xx-15:xx) ช่วงที่ข้อมูลค้างจึงยาวจริง
+  //
+  // ⚠️ 3 ชม. ไม่ใช่เลขสวย ๆ — มันคือช่วงที่ "ไปเติมตู้แล้วกลับมาทำใบใหม่" ทันพอดี
+  //    ธงเดิมของหน้าสต็อกตั้งไว้ 24 ชม. ซึ่งจับเคสนี้ไม่ได้เลย (นั่นไว้จับ sync พัง)
+  const stockAgeHours = lastSync ? (Date.now() - new Date(lastSync).getTime()) / 3_600_000 : null
+  const stockStale = stockAgeHours != null && stockAgeHours >= 3
+  const ageLabel = stockAgeHours == null ? "ไม่ทราบ"
+    : stockAgeHours < 1 ? `${Math.round(stockAgeHours * 60)} นาที`
+    : `${Math.floor(stockAgeHours)} ชม.`
+
   const machineNameMap = {}
   // ตัด "(chukesXX)" หรือ "(...)" ท้ายชื่อออกเพื่อให้แสดงสั้น
   const stripId = (name) => (name || "").replace(/\s*\([^)]*\)\s*$/, "").trim()
@@ -345,10 +360,19 @@ export default function PageRefillPrep({ machines, machineStock, machineAssignme
           <td style="width:20%"></td>
         </tr>`
       }).join("")
+      // ⚠️ บรรทัด "ข้อมูล ณ" ต้องอยู่บนกระดาษด้วย ไม่ใช่แค่บนจอ —
+      //    ใบที่พิมพ์ไว้เมื่อวานหน้าตาเหมือนใบที่พิมพ์เมื่อกี้ทุกอย่าง
+      //    ถ้ากระดาษไม่บอกว่าเลขนี้มาจากข้อมูลของเวลาไหน คนถือใบจะไม่มีทางรู้เลย
+      const stockLine = lastSync
+        ? `<div${stockStale ? ' style="color:#b45309;font-weight:700"' : ""}>`
+          + `ข้อมูลสต็อกหน้าตู้ ณ ${thaiDateTime(lastSync)} (เก่า ${ageLabel})`
+          + `${stockStale ? " ⚠ อาจมีการเติมตู้หลังเวลานี้" : ""}</div>`
+        : `<div style="color:#b45309;font-weight:700">⚠ ไม่ทราบเวลาของข้อมูลสต็อก</div>`
       return `<div class="machine">
         <div class="header">
           <h1>รายการเตรียมของเติมตู้ — DivisionX Card</h1>
-          <div>${dateStr} เวลา ${timeStr} น.</div>
+          <div>พิมพ์ ${dateStr} เวลา ${timeStr} น.</div>
+          ${stockLine}
         </div>
         <h3>${name} <span style="font-weight:400;font-size:11px">· ${enriched.length} รายการ · ${fmt(sumPacks)} ซอง</span></h3>
         <table>
@@ -441,6 +465,24 @@ ${machineBlocks}
         subtitle="คำนวณจาก VMS เทียบกับสต็อกของคุณ"
         actions={<AdminSwitcher/>}
       />
+
+      {/* ข้อมูลค้าง = ใบสั่งของเกิน · ต้องเห็นก่อนกดพิมพ์ ไม่ใช่รู้ตอนขนของกลับ */}
+      {stockStale && (
+        <div style={{
+          display: "flex", alignItems: "center", gap: 10, padding: "12px 16px",
+          borderRadius: 10, fontSize: 12,
+          background: "rgba(255,200,87,0.08)",
+          border: "1px solid rgba(255,200,87,0.3)",
+          color: "var(--dx-warning)",
+        }}>
+          <AlertTriangle size={16} style={{ flexShrink: 0 }}/>
+          <span>
+            ตัวเลขในใบนี้มาจากสต็อกหน้าตู้ที่ดึงมา <b>{thaiDateTime(lastSync)}</b> (เก่า {ageLabel})
+            {" — ถ้ามีคนไปเติมตู้หลังเวลานี้ ใบจะสั่งของเกิน "}
+            กด <b>“ดึงข้อมูล VMS/WW”</b> ที่หน้าสต็อกหน้าตู้ก่อนพิมพ์
+          </span>
+        </div>
+      )}
 
       {/* Multi-select ตู้ */}
       <div className="dx-card" style={{ padding: 14, display: "flex", flexDirection: "column", gap: 10 }}>

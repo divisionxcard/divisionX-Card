@@ -81,7 +81,15 @@ export default function PageMachineStockView({ machines, machineStock, skus, onR
   // Stale = sync เก่ากว่า 24 ชม. → เตือน · กันกรณี sync ตายเงียบ (เช่น VMS API เปลี่ยน)
   const lastSyncMs = lastSync ? new Date(lastSync).getTime() : 0
   const staleHours = lastSync ? (Date.now() - lastSyncMs) / 3_600_000 : 0
+  // เกิน 24 ชม. = sync พังจริง (คนละเรื่องกับข้อมูลค้างระหว่างวัน)
   const isStale = lastSync && staleHours > 24
+  // ⚠️ เกิน 3 ชม. ยังไม่ใช่ sync พัง แต่พอที่จะทำให้ "รายงานเติมสินค้า" สั่งของเกิน
+  //    ถ้ามีคนไปเติมตู้หลังเวลาที่ sync — sync มีวันละ 2-3 รอบ และรอบเช้าลงสายได้ถึง 6 ชม.
+  //    ธง 24 ชม. เดิมจับเคสนี้ไม่ได้เลย เพราะมันไม่เคยแตะ 24 ชม.
+  const refillStale = lastSync && staleHours >= 3
+  const ageLabel = !lastSync ? "ไม่ทราบ"
+    : staleHours < 1 ? `${Math.round(staleHours * 60)} นาที`
+    : `${Math.floor(staleHours)} ชม.`
 
   // Refill report data
   const getRefillData = () => {
@@ -212,6 +220,23 @@ export default function PageMachineStockView({ machines, machineStock, skus, onR
             <button onClick={() => window.print()} className="dx-btn dx-btn-primary">
               Print / Save PDF
             </button>
+          </div>
+
+          {/* ⚠️ บรรทัดนี้ต้องติดไปกับกระดาษด้วย (ไม่ใส่ print:hidden) —
+              ใบที่พิมพ์เมื่อวานหน้าตาเหมือนใบที่พิมพ์เมื่อกี้ทุกอย่าง
+              ถ้ากระดาษไม่บอกว่าเลขมาจากข้อมูลของเวลาไหน คนถือใบไม่มีทางรู้ */}
+          <div style={{
+            marginBottom: 14, padding: "8px 12px", borderRadius: 8, fontSize: 11,
+            display: "flex", alignItems: "center", gap: 8,
+            background: refillStale ? "rgba(255,200,87,0.1)" : "var(--dx-bg-elevated)",
+            border: `1px solid ${refillStale ? "rgba(255,200,87,0.35)" : "var(--dx-border)"}`,
+            color: refillStale ? "var(--dx-warning)" : "var(--dx-text-secondary)",
+          }}>
+            {refillStale && <AlertTriangle size={14} style={{ flexShrink: 0 }}/>}
+            <span>
+              ข้อมูลสต็อกหน้าตู้ ณ <b>{lastSync ? thaiDateTime(lastSync) : "ไม่ทราบ"}</b> (เก่า {ageLabel})
+              {refillStale && " — ถ้ามีคนไปเติมตู้หลังเวลานี้ ตัวเลขจะสั่งของเกิน กด “ดึงข้อมูล” ด้านบนก่อนพิมพ์"}
+            </span>
           </div>
           {getRefillData().filter(d => d.list.length > 0).map(({ machId, mInfo, list, totalBox, totalPack }) => (
             <div key={machId} className="refill-machine" style={{ marginBottom: 24 }}>
