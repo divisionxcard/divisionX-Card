@@ -11,6 +11,11 @@ import RestockSessionPanel from "./RestockSessionPanel"
 import { authFetch } from "../../lib/authFetch"
 import { thaiDateTime } from "../../lib/thaiDate"
 
+// ช่องที่ของหมดต่อเนื่องเกินกี่วัน ถึงจะถือว่า "เติมไม่ได้จริง" ไม่ใช่แค่เพิ่งหมด
+// 3 วัน = ผ่านรอบเติมปกติไปแล้วอย่างน้อย 1 รอบ · ต่ำกว่านี้จะติดธงของที่เพิ่งหมดเมื่อวาน
+// (ค่ามาจาก machine_stock.empty_since ซึ่งตัว sync จำให้ — migration 072)
+const STUCK_DAYS = 3
+
 export default function PageMachineStockView({ machines, machineStock, skus, onRefresh, profile }) {
   const [selectedMachine, setSelectedMachine] = useState("all")
   const [sortBy, setSortBy] = useState("slot")
@@ -105,18 +110,28 @@ export default function PageMachineStockView({ machines, machineStock, skus, onR
         const isBox = name.toLowerCase().includes("box")
         const key = (s.sku_id || name) + (isBox ? "_box" : "_pack")
         const refill = Math.max(0, (s.max_capacity || 0) - (s.remain || 0))
-        if (!skuRefill[key]) skuRefill[key] = { sku_id: s.sku_id || "", name, isBox, refill: 0, remain: 0, capacity: 0, slots: 0, slotNums: [] }
+        if (!skuRefill[key]) skuRefill[key] = { sku_id: s.sku_id || "", name, isBox, refill: 0, remain: 0, capacity: 0, slots: 0, slotNums: [], stuck: 0, stuckDays: 0 }
         skuRefill[key].refill += refill
         skuRefill[key].remain += s.remain || 0
         skuRefill[key].capacity += s.max_capacity || 0
         skuRefill[key].slots += 1
         if (refill > 0) skuRefill[key].slotNums.push(s.slot_number)
+        // ช่องที่ว่างค้างมาหลายวันแล้วยังเติมไม่ได้ — ใบสั่งเต็มความจุให้ทุกวันไม่มีวันหยุด
+        // (เคสจริง: TF OVERDRIVE ที่ wwv07 ว่างมา 8 วัน ใบสั่ง 24 ซองทุกวัน)
+        // แยกให้เห็น ไม่ตัดออกเอง — บางทีของเพิ่งเข้าคลังแล้วเติมได้จริงในรอบนี้
+        const days = s.empty_since ? (Date.now() - new Date(s.empty_since).getTime()) / 86_400_000 : 0
+        if (days >= STUCK_DAYS) {
+          skuRefill[key].stuck += refill
+          skuRefill[key].stuckDays = Math.max(skuRefill[key].stuckDays, Math.floor(days))
+        }
       })
       const list = sortSkus(Object.values(skuRefill))
       return {
         machId, mInfo, list,
         totalBox: list.filter(r => r.isBox).reduce((a, r) => a + r.refill, 0),
         totalPack: list.filter(r => !r.isBox).reduce((a, r) => a + r.refill, 0),
+        stuckPack: list.filter(r => !r.isBox).reduce((a, r) => a + r.stuck, 0),
+        stuckBox: list.filter(r => r.isBox).reduce((a, r) => a + r.stuck, 0),
       }
     })
   }
@@ -238,7 +253,7 @@ export default function PageMachineStockView({ machines, machineStock, skus, onR
               {refillStale && " — ถ้ามีคนไปเติมตู้หลังเวลานี้ ตัวเลขจะสั่งของเกิน กด “ดึงข้อมูล” ด้านบนก่อนพิมพ์"}
             </span>
           </div>
-          {getRefillData().filter(d => d.list.length > 0).map(({ machId, mInfo, list, totalBox, totalPack }) => (
+          {getRefillData().filter(d => d.list.length > 0).map(({ machId, mInfo, list, totalBox, totalPack, stuckPack, stuckBox }) => (
             <div key={machId} className="refill-machine" style={{ marginBottom: 24 }}>
               <h3 style={{
                 margin: "0 0 8px", fontSize: 13, fontWeight: 700, color: "var(--dx-text)",
@@ -279,6 +294,11 @@ export default function PageMachineStockView({ machines, machineStock, skus, onR
                             border: "1px solid var(--dx-border)",
                           }}>
                             {full ? "เต็ม" : `${r.refill} ${unit}`}
+                            {r.stuck > 0 && (
+                              <span style={{ marginLeft: 6, fontSize: 10, fontWeight: 600, color: "var(--dx-warning)" }}>
+                                ⚠ ว่าง {r.stuckDays} วัน
+                              </span>
+                            )}
                           </td>
                         </tr>
                       )
@@ -306,6 +326,23 @@ export default function PageMachineStockView({ machines, machineStock, skus, onR
                   </tfoot>
                 </table>
               </div>
+              {(stuckPack > 0 || stuckBox > 0) && (
+                <div style={{
+                  marginTop: 6, padding: "6px 10px", borderRadius: 6, fontSize: 10.5,
+                  background: "rgba(255,200,87,0.1)",
+                  border: "1px solid rgba(255,200,87,0.3)",
+                  color: "var(--dx-warning)",
+                }}>
+                  ⚠ ในจำนวนนี้{" "}
+                  <b>
+                    {stuckBox > 0 ? `${stuckBox} กล่อง` : ""}
+                    {stuckBox > 0 && stuckPack > 0 ? " / " : ""}
+                    {stuckPack > 0 ? `${stuckPack} ซอง` : ""}
+                  </b>
+                  {" "}มาจากช่องที่ว่างค้างเกิน {STUCK_DAYS} วันแล้วยังเติมไม่ได้ —
+                  เช็คว่ามีของในคลังจริงก่อนจัดใส่รถ ไม่งั้นขนไปแล้วขนกลับ
+                </div>
+              )}
             </div>
           ))}
         </div>

@@ -291,6 +291,14 @@ def main():
             track_refill_events(supabase, "worldwide", all_records, synced_at, "worldwide_stock_sync")
         except Exception as e:
             print(f"⚠️  slot_refill_events tracking failed: {e}")
+        # จำว่าช่องไหนว่างมาตั้งแต่เมื่อไหร่ — ต้องอยู่ก่อน save (อ่านของเดิมก่อนถูกทับ)
+        try:
+            from slot_empty import apply as mark_empty
+            mark_empty(supabase, all_records, synced_at)
+        except Exception as e:
+            print(f"⚠️  จำช่องว่างค้างไม่สำเร็จ: {e}")
+            for r in all_records:
+                r.pop("empty_since", None)
         save_to_supabase(supabase, all_records)
         # ลบช่องที่หลังบ้านเลิกส่งแล้ว (ดู stock_reconcile.py — เจอที่ pf01 ก่อน แต่เป็นช่องโหว่ร่วมทุกแบรนด์)
         try:
