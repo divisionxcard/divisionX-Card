@@ -1,0 +1,65 @@
+name: Refill Plan Check
+
+# เทียบ "ใบจัดของสั่งไปเท่าไหร่" (refill_plans) กับ "เติมเข้าจริงเท่าไหร่"
+# (slot_refill_events) แล้วสรุปเข้า Telegram ว่าวันนั้นขนของเกิน/ขาดตรงไหน
+#
+# ทำไมต้องมี: ก่อนหน้านี้ระบบเก็บแค่ "เติมเข้าจริงเท่าไหร่" ไม่เคยเก็บว่าใบสั่งเท่าไหร่
+# → ของที่แอดมินขนกลับมาไม่มีร่องรอยในระบบเลย ต้องรอบอกปากเปล่าอย่างเดียว
+#
+# ⚠️ ต้องรันหลังรอบ sync สต็อกของวัน ไม่งั้นจะเห็นว่า "ยังไม่มีของเข้า" แล้วสรุปผิด
+#    ว่าเกินทั้งใบ · ตัวสคริปต์กันไว้อีกชั้นด้วย (ข้ามใบที่ยังไม่มี sync ตามหลัง)
+
+on:
+  schedule:
+    # 22:30 น. ไทย (15:30 UTC) — หลังรอบ sync สต็อก 21:00 น. ของ WW
+    - cron: "30 15 * * *"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "ดูอย่างเดียว ไม่เขียน DB ไม่ส่ง Telegram"
+        type: boolean
+        default: false
+      min_age:
+        description: "รอกี่ชั่วโมงหลังออกใบถึงจะเทียบ (ว่าง = 12)"
+        required: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - run: pip install supabase
+
+      - name: Compare plan vs actual
+        env:
+          SUPABASE_URL:           ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY:   ${{ secrets.SUPABASE_SERVICE_KEY }}
+          TELEGRAM_BOT_TOKEN:     ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_ADMIN_CHAT_ID: ${{ secrets.TELEGRAM_ADMIN_CHAT_ID }}
+          IN_DRY_RUN: ${{ inputs.dry_run }}
+          IN_MIN_AGE: ${{ inputs.min_age }}
+        working-directory: deploy/scraper
+        run: |
+          ARGS=()
+          if [ "$IN_DRY_RUN" = "true" ]; then ARGS+=(--dry-run); echo "🧪 DRY-RUN"; fi
+          if [ -n "$IN_MIN_AGE" ]; then ARGS+=(--min-age "$IN_MIN_AGE"); fi
+          python refill_plan_check.py "${ARGS[@]}"
+
+      - name: Telegram alert on failure
+        if: failure()
+        env:
+          TELEGRAM_BOT_TOKEN:     ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_OWNER_CHAT_ID: ${{ secrets.TELEGRAM_OWNER_CHAT_ID }}
+        run: |
+          if [ -n "$TELEGRAM_BOT_TOKEN" ] && [ -n "$TELEGRAM_OWNER_CHAT_ID" ]; then
+            RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+              -H "Content-Type: application/json" \
+              -d "{\"chat_id\":\"$TELEGRAM_OWNER_CHAT_ID\",\"parse_mode\":\"HTML\",\"text\":\"🚨 <b>Cron FAIL</b>\\n\\nJob: <code>Refill Plan Check</code>\\n<a href=\\\"$RUN_URL\\\">ดู log บน GitHub</a>\"}"
+          fi

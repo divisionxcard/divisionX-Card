@@ -136,6 +136,32 @@ export default function PageMachineStockView({ machines, machineStock, skus, onR
     })
   }
 
+  // บันทึกว่า "ใบนี้สั่งไปเท่าไหร่" ตอนกดพิมพ์ (migration 073)
+  //
+  // ทำไม: ระบบเก็บแค่ "เติมเข้าจริงเท่าไหร่" (slot_refill_events) แต่ไม่เคยเก็บว่าใบสั่งเท่าไหร่
+  // → SKU ที่สั่งแล้วเติมไม่ได้เลยจะไม่มีแถวสักแถว ของที่ขนกลับจึงหายไปจากข้อมูลทั้งก้อน
+  // เก็บไว้แล้ว refill_plan_check.py จะเทียบให้เองแล้วสรุปเข้า Telegram
+  //
+  // ⚠️ ห้ามทำให้การพิมพ์ล้ม — ยิงแล้วไม่รอผล ถ้าบันทึกไม่ได้ก็แค่ไม่มีข้อมูลไว้เทียบ
+  //    ไม่ใช่เหตุให้แอดมินพิมพ์ใบไม่ได้ (ใบสำคัญกว่าสถิติ)
+  const savePlan = () => {
+    const lines = []
+    getRefillData().forEach(({ machId, list }) => list.forEach(r => {
+      if (r.refill > 0) {
+        lines.push({
+          machine_id: machId, sku_id: r.sku_id || null, product_name: r.name,
+          is_box: r.isBox, planned_qty: r.refill, remain: r.remain, capacity: r.capacity,
+        })
+      }
+    }))
+    if (lines.length === 0) return
+    authFetch("/api/refill-plan", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ source: "stock_report", stock_synced_at: lastSync || null, lines }),
+    }).catch(() => {})
+  }
+
   return (
     <div style={{ padding: 24, display: "flex", flexDirection: "column", gap: 20 }}>
       <SectionTitle
@@ -232,7 +258,7 @@ export default function PageMachineStockView({ machines, machineStock, skus, onR
         }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }} className="print:hidden">
             <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "var(--dx-warning)" }}>รายงานเติมสินค้า</h2>
-            <button onClick={() => window.print()} className="dx-btn dx-btn-primary">
+            <button onClick={() => { savePlan(); window.print() }} className="dx-btn dx-btn-primary">
               Print / Save PDF
             </button>
           </div>

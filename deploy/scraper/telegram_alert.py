@@ -238,6 +238,46 @@ def alert_product_swaps(machine_id, machine_name, removed, added,
                         reply_markup={"inline_keyboard": buttons})
 
 
+def refill_plan_text(over, under):
+    """ข้อความสรุป "ใบจัดของสั่งไปเท่าไหร่ เทียบกับที่เติมได้จริง"
+
+    over/under: [(row ของ refill_plans, actual_added)]
+    แยกออกมาให้ทดสอบได้โดยไม่ต้องยิงจริง
+    """
+    def line(p, a):
+        unit = "กล่อง" if p.get("is_box") else "ซอง"
+        name = p.get("sku_id") or p.get("product_name") or "—"
+        return (f"\n• <b>{_esc(p['machine_id'])}</b> {_esc(name)} · "
+                f"สั่ง {p['planned_qty']} {unit} · เข้าจริง {a} {unit}")
+
+    parts = ["📋 <b>ใบจัดของ vs ของที่เติมเข้าจริง</b>\n"]
+    if over:
+        tot = sum(p["planned_qty"] - a for p, a in over)
+        parts.append(f"\n<b>ขนไปเกิน {tot} หน่วย ({len(over)} รายการ)</b>")
+        for p, a in sorted(over, key=lambda x: x[1] - x[0]["planned_qty"])[:12]:
+            parts.append(line(p, a))
+        if len(over) > 12:
+            parts.append(f"\n<i>…และอีก {len(over) - 12} รายการ</i>")
+    if under:
+        tot = sum(a - p["planned_qty"] for p, a in under)
+        parts.append(f"\n\n<b>ขนไปไม่พอ {tot} หน่วย ({len(under)} รายการ)</b>")
+        for p, a in sorted(under, key=lambda x: x[0]["planned_qty"] - x[1])[:8]:
+            parts.append(line(p, a))
+    # ต้องบอกด้วยว่าตัวเลขนี้เชื่อได้แค่ไหน ไม่งั้นคนอ่านจะเอาไปใช้ตัดสินคนเติมของ
+    parts.append("\n\n<i>เทียบจากยอดที่หน้าตู้เพิ่มขึ้นหลังออกใบ · "
+                 "ถ้ามีคนอื่นไปเติมคั่นกลาง ตัวเลขจะเพี้ยนได้</i>")
+    return "".join(parts)
+
+
+def alert_refill_plan_diff(over, under):
+    """ส่งสรุปเข้ากลุ่ม Admin — เกิน/ขาดเทียบกับใบที่พิมพ์ไป"""
+    if not over and not under:
+        return None
+    buttons = [[{"text": "📋 ดูสต็อกหน้าตู้", "url": PAGESLOTS_URL}]]
+    return send_message(ADMIN_CHAT_ID, refill_plan_text(over, under),
+                        reply_markup={"inline_keyboard": buttons})
+
+
 def overfilled_text(machine_id, machine_name, items, cap, synced_at=None):
     """ข้อความเตือน "หน้าตู้จริงมีของเกินเพดาน" — แยกออกมาให้ทดสอบได้โดยไม่ต้องยิงจริง"""
     label = machine_name or f"ตู้ {machine_id}"
