@@ -175,12 +175,21 @@ def fetch_sales(token: str, date_from: str, date_to: str) -> list[dict]:
     return all_sales
 
 def fetch_slot_lookup(supabase) -> dict:
-    """ดึง machine_stock จาก Supabase เพื่อ build lookup (machine_id, slot) → (sku_id, product_name, product_id)
+    """ดึง machine_stock จาก Supabase เพื่อ build lookup
+    (machine_id, slot) → (sku_id, product_name, product_id, sell_price)
+
     ⚠ หลัง VMS rebuild · API ไม่ส่ง products+name แล้ว · ต้อง lookup จาก DB
+    ⚠ sell_price (migration 071) คือราคาที่ตู้ตั้งไว้ต่อช่อง — จำเป็นเพราะ API ยอดขาย
+      ส่งมาแค่ยอดรวมของบิล ไม่มีราคารายชิ้น ถ้าไม่มีราคาต้องหารเฉลี่ยซึ่งผิด
     """
-    res = supabase.table("machine_stock").select(
-        "machine_id, slot_number, sku_id, product_name, product_id"
-    ).execute()
+    cols = "machine_id, slot_number, sku_id, product_name, product_id, sell_price"
+    try:
+        res = supabase.table("machine_stock").select(cols).execute()
+    except Exception:
+        # ยังไม่ได้รัน migration 071 → ทำงานต่อได้ แต่จะตกไปใช้ราคากลาง/หารเฉลี่ย
+        print("⚠️  machine_stock ยังไม่มีคอลัมน์ sell_price (migration 071)")
+        res = supabase.table("machine_stock").select(
+            "machine_id, slot_number, sku_id, product_name, product_id").execute()
     lookup = {}
     for r in (res.data or []):
         key = (r.get("machine_id") or "", r.get("slot_number") or "")
@@ -188,20 +197,80 @@ def fetch_slot_lookup(supabase) -> dict:
         # ถ้า DB ไม่มี sku_id แต่มี product_name → ลอง regex
         if not sku_id and r.get("product_name"):
             sku_id = map_product_to_sku(r["product_name"])
-        lookup[key] = (sku_id, r.get("product_name") or "", r.get("product_id"))
-    print(f"🗺  Slot lookup: {len(lookup)} slots ({sum(1 for v in lookup.values() if v[0])} mapped)")
+        lookup[key] = (sku_id, r.get("product_name") or "", r.get("product_id"),
+                       _num(r.get("sell_price")))
+    priced = sum(1 for v in lookup.values() if v[3])
+    print(f"🗺  Slot lookup: {len(lookup)} slots ({sum(1 for v in lookup.values() if v[0])} mapped"
+          f" · {priced} มีราคา)")
     return lookup
 
 
-def parse_api_sales(api_rows: list[dict], slot_lookup: dict | None = None) -> list[dict]:
+def fetch_sku_prices(supabase) -> dict:
+    """ราคากลางต่อซองจากตาราง skus — ใช้เป็นทางสำรองเมื่อช่องนั้นยังไม่มีราคา
+
+    ⚠️ เป็นราคาเดียวใช้ทุกตู้ ซึ่ง VMS ไม่ได้ตั้งแบบนั้น (แยกตามตู้/ช่อง)
+       จึงเป็นแค่ทางสำรอง ไม่ใช่ตัวหลัก
+    """
+    try:
+        res = supabase.table("skus").select("sku_id, sell_price").execute()
+    except Exception as e:
+        print(f"⚠️  โหลดราคากลางจาก skus ไม่ได้: {e}")
+        return {}
+    return {r["sku_id"]: _num(r.get("sell_price")) for r in (res.data or []) if r.get("sku_id")}
+
+
+def _num(v):
+    """แปลงเป็นเลขบวก · 0/ว่าง/แปลงไม่ได้ = ไม่มีราคา (None)
+    ⚠️ 0 ต้องไม่ถือว่าเป็นราคา ไม่งั้นบรรทัดนั้นจะได้เงิน 0 ทั้งที่ลูกค้าจ่ายจริง"""
+    try:
+        f = float(v)
+    except (TypeError, ValueError):
+        return None
+    return f if f > 0 else None
+
+
+def allocate(total: float, weights: list) -> list:
+    """แบ่งเงินของบิลใบเดียวไปตามน้ำหนัก (= ราคาต่อการกด 1 ครั้งของแต่ละช่อง)
+
+    ทำไมต้องมี: VMS ส่งมาแค่ยอดรวมของบิล ไม่ส่งราคารายชิ้น
+    ของเดิมหารเท่ากันหมด → บิล 590 บาทที่มี FB 04 (110) + FB 09 (230) + OP 17 (250)
+    กลายเป็น 196.67 ทั้งสามบรรทัด เงินไม่หายแต่ไปนั่งผิด SKU
+
+    ⚠️ ไม่มีราคาครบทุกบรรทัด = หารเฉลี่ยเหมือนเดิม ห้ามถ่วงครึ่ง ๆ กลาง ๆ
+       ถ่วงเฉพาะบางบรรทัดจะเพี้ยนหนักกว่าหารเฉลี่ยเสียอีก
+    ⚠️ เศษจากการปัดทศนิยมต้องไม่หาย — ยัดเข้าบรรทัดที่ยอดสูงสุด
+       ให้ผลรวมเท่ายอดบิลเป๊ะ (ของเดิมได้ 219.99 จากบิล 220)
+    """
+    n = len(weights)
+    if n == 0:
+        return []
+    wsum = sum(w for w in weights if w)
+    if wsum > 0 and all(w for w in weights):
+        out = [round(total * w / wsum, 2) for w in weights]
+    else:
+        out = [round(total / n, 2)] * n
+    diff = round(total - sum(out), 2)
+    if diff:
+        i = max(range(n), key=lambda k: out[k])
+        out[i] = round(out[i] + diff, 2)
+    return out
+
+
+def parse_api_sales(api_rows: list[dict], slot_lookup: dict | None = None,
+                    sku_prices: dict | None = None) -> list[dict]:
     """แปลง API response เป็น records สำหรับ Supabase
     หลัง VMS rebuild 28 เม.ย. 2026 schema เปลี่ยนเป็น cart + cart_slot (ไม่มี products+name)
-    → ใช้ slot_lookup เพื่อแปลง (machine_id, slot_code) → (sku_id, product_name)
+    → ใช้ slot_lookup เพื่อแปลง (machine_id, slot_code) → (sku_id, product_name, ราคา)
+
+    ⚠️ บิลที่มีหลายรายการ: VMS ให้มาแค่ยอดรวม ต้องแบ่งเองตามราคาต่อช่อง
+       ห้ามหารเท่ากัน — เงินจะไปนั่งผิด SKU (ดู allocate() และ migration 071)
     """
     records = []
     txn_counter = {}
     slot_lookup = slot_lookup or {}
+    sku_prices = sku_prices or {}
     skipped_no_lookup = 0
+    weighted_txn = even_txn = 0
 
     for row in api_rows:
         txn_id = str(
@@ -259,39 +328,68 @@ def parse_api_sales(api_rows: list[dict], slot_lookup: dict | None = None) -> li
             continue
 
         # ── Path B: schema ใหม่ (post-rebuild 28 เม.ย.) ──
-        # ใช้ cart + cart_slot · lookup product_name + sku_id จาก machine_stock
+        # ใช้ cart + cart_slot · lookup product_name + sku_id + ราคา จาก machine_stock
         cart       = row.get("cart") or []
         cart_slot  = row.get("cart_slot") or []
         n_items = len(cart_slot) or len(cart)
         if n_items == 0:
             continue
-        per_item_price = total_price / n_items if n_items else 0
+
+        # รอบแรก: แปลงทุกช่องในบิลให้เป็นรายการก่อน แล้วค่อยแบ่งเงิน
+        # ต้องรู้ราคาของ *ทุก* บรรทัดก่อน ถึงจะถ่วงน้ำหนักได้ถูก
+        line_items = []
         for slot_code in cart_slot:
             slot_str = str(slot_code) if slot_code is not None else ""
-            sku_id, product_name, product_id_val = slot_lookup.get((machine_id, slot_str), (None, "", None))
-            if not sku_id:
+            sku_id, product_name, product_id_val, slot_price = \
+                slot_lookup.get((machine_id, slot_str), (None, "", None, None))
+            is_box = unit_of(product_name) == "box"
+            # ราคาสำรองจากตาราง skus เป็นราคา "ต่อซอง" — ช่องกล่องต้องคูณกลับ
+            # ไม่งั้นบิลที่มีทั้งกล่องและซองจะถ่วงน้ำหนักผิดหนัก
+            fallback = sku_prices.get(sku_id) if sku_id else None
+            if fallback and is_box:
+                fallback = fallback * PACKS_PER_BOX.get(sku_id, 24)
+            line_items.append({
+                "sku_id": sku_id, "product_name": product_name,
+                "product_id": product_id_val, "slot": slot_str,
+                "is_box": is_box, "price": slot_price or fallback,
+            })
+
+        prices = [li["price"] for li in line_items]
+        if all(prices):
+            weighted_txn += 1
+        else:
+            even_txn += 1
+        amounts = allocate(total_price, prices)
+
+        for li, amount in zip(line_items, amounts):
+            if not li["sku_id"]:
+                # ช่องที่ map ไม่ได้ → ทิ้งทั้งบรรทัดพร้อมส่วนแบ่งของมัน
+                # (ไม่โยนเงินไปให้บรรทัดอื่น ไม่งั้น SKU อื่นจะพองเกินจริง)
                 skipped_no_lookup += 1
                 continue
             txn_counter[txn_id] = txn_counter.get(txn_id, -1) + 1
             sale_key = f"{txn_id}-{txn_counter[txn_id]}"
-            name_lower = normalize(product_name)
-            is_box = unit_of(product_name) == "box"
-            qty = PACKS_PER_BOX.get(sku_id, 24) if is_box else 1
+            qty = PACKS_PER_BOX.get(li["sku_id"], 24) if li["is_box"] else 1
             records.append({
                 "sale_key": sale_key,
                 "transaction_id": txn_id,
                 "machine_id": machine_id,
-                "sku_id": sku_id,
-                "product_name_raw": product_name,
+                "sku_id": li["sku_id"],
+                "product_name_raw": li["product_name"],
                 "quantity_sold": qty,
-                "grand_total": per_item_price,
+                "grand_total": amount,
                 "sold_at": sold_at,
-                "slot_number": slot_str if slot_str else None,
-                "product_id":  product_id_val,
+                "slot_number": li["slot"] or None,
+                "product_id":  li["product_id"],
             })
 
     if skipped_no_lookup:
         print(f"  ⚠️ skip {skipped_no_lookup} items: ไม่พบ slot ใน machine_stock (อาจต้อง trigger stock sync ก่อน)")
+    if weighted_txn or even_txn:
+        print(f"  💰 แบ่งเงินตามราคาจริง {weighted_txn} บิล · หารเฉลี่ยเพราะไม่รู้ราคา {even_txn} บิล")
+        if even_txn:
+            print("     (บิลที่หารเฉลี่ยจะทำให้ยอดรายตัว SKU เพี้ยนเมื่อของในบิลราคาไม่เท่ากัน"
+                  " — ตรวจว่ารัน migration 071 + sync สต็อกรอบใหม่แล้วหรือยัง)")
     return records
 
 def save_to_supabase(records: list[dict]):
@@ -347,8 +445,9 @@ def main():
     # Build slot lookup จาก machine_stock (จำเป็นสำหรับ schema ใหม่)
     supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
     slot_lookup = fetch_slot_lookup(supabase)
+    sku_prices  = fetch_sku_prices(supabase)   # ทางสำรองเมื่อช่องนั้นยังไม่มีราคา
 
-    records = parse_api_sales(api_rows, slot_lookup)
+    records = parse_api_sales(api_rows, slot_lookup, sku_prices)
     print(f"📋 แปลงได้ {len(records)} records")
 
     # Fail loud: ถ้าดึง transactions ได้แต่ parse ไม่ออก = schema เปลี่ยน

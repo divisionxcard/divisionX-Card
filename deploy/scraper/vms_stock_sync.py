@@ -188,6 +188,26 @@ def login() -> str:
     print("  ✅ Login สำเร็จ")
     return data["token"]
 
+def _num(v):
+    """ราคาจาก API มาเป็น str บ้าง None บ้าง — เอาที่แปลงเป็นเลขได้จริงเท่านั้น
+    ⚠️ 0 ถือว่า "ไม่มีราคา" (คืน None) ไม่ใช่ "ของฟรี" — ถ้าปล่อย 0 ไปถ่วงน้ำหนัก
+       บรรทัดนั้นจะได้เงิน 0 บาททั้งที่ลูกค้าจ่ายจริง"""
+    try:
+        f = float(v)
+    except (TypeError, ValueError):
+        return None
+    return f if f > 0 else None
+
+
+def _has_sell_price(supabase) -> bool:
+    """machine_stock มีคอลัมน์ sell_price แล้วหรือยัง (migration 071)"""
+    try:
+        supabase.table("machine_stock").select("sell_price").limit(1).execute()
+        return True
+    except Exception:
+        return False
+
+
 def get_slots(token: str, kiosk_record_id: int, num_tabs: int = 1) -> list[dict]:
     """ดึงข้อมูล slot ทั้งหมดของตู้"""
     headers = {"Authorization": f"Bearer {token}"}
@@ -406,9 +426,24 @@ def main():
                 "is_occupied":     bool(slot.get("is_occupied")),
                 "status":          slot.get("status") or "inactive",
                 "synced_at":       synced_at,
+                # ราคาที่ลูกค้าจ่ายจริงเมื่อกดช่องนี้ (ช่องกล่อง = ราคาทั้งกล่อง)
+                # เก็บไว้เพราะ API ยอดขายของ VMS ส่งมาแค่ยอดรวมของบิล ไม่ส่งราคารายชิ้น
+                # → vms_sales_api ต้องใช้ราคานี้ถ่วงน้ำหนักตอนแบ่งเงิน ไม่งั้นหารเฉลี่ยแล้วผิด
+                #   (ดู migration 071 · เคสจริง 30 ส.ค. 2026 บิล 590 บาทถูกหารสามเป็น 196.67)
+                "sell_price":      _num(slot.get("pay_price")),
             })
 
     print(f"\n📊 รวม {len(all_records)} slots จาก {len(KIOSKS)} ตู้")
+
+    # ⚠️ ถ้ายังไม่ได้รัน migration 071 คอลัมน์ sell_price จะไม่มี แล้ว upsert จะ 400 ทั้งชุด
+    #    = sync สต็อกตายทั้งรอบเพราะฟีเจอร์เสริม ซึ่งแพงกว่าที่ได้มาก
+    #    เช็กก่อนครั้งเดียว ถ้าไม่มีก็ถอดฟิลด์ออกแล้วเดินต่อ พร้อมบอกวิธีแก้
+    if all_records and not _has_sell_price(supabase):
+        for r in all_records:
+            r.pop("sell_price", None)
+        print("⚠️  machine_stock ยังไม่มีคอลัมน์ sell_price — ข้ามการเก็บราคารอบนี้")
+        print("    → รัน backend/database/migrations/071_machine_stock_sell_price.sql "
+              "ใน Supabase SQL Editor แล้วยอดขายรายตัว SKU จะถูกต้องตั้งแต่รอบถัดไป")
 
     # Fail loud ถ้าทุกตู้ดึงข้อมูลไม่ได้เลย
     # (ป้องกัน "sync ตายเงียบ" เช่นตอน VMS rebuild ทำให้ kiosk_record_id เปลี่ยน)
