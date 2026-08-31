@@ -140,12 +140,24 @@ def is_box(goods_name: str) -> bool:
     return unit_of(goods_name) == "box"
 
 
+# Portal ของ WorldWide เป็นแพลตฟอร์มจีน — เวลาที่ส่งมาเป็น **UTC+8 ไม่ใช่เวลาไทย**
+# เดิม tag เป็น +07:00 ทำให้ยอดขาย WW ทุกแถวถูกบันทึกช้ากว่าความจริง 1 ชั่วโมง
+#
+# วัดยังไง (31 ส.ค. 2026): เลขที่ใบเสร็จของ WW ลงท้ายด้วยเวลาที่ "ตู้" ประทับเอง
+# เทียบกับ sold_at ที่เราเก็บ →
+#     WorldWide  ช้ากว่า 60 นาที ×183 · 61 ×66 · 62 ×1   (จาก 250 รายการ)
+#     Payif      วิธีเดียวกัน 0-1 นาที ×241              ← ตู้ไทย ไม่มี offset
+# 1-2 นาทีที่เหลือคือช่วงตั้งแต่กดสั่งจนจ่ายเงินเสร็จ ซึ่ง Payif ก็มีเท่ากัน
+# ⚠️ อย่าใช้ "เวลาห้างเปิด-ปิด" มาตัดสินเรื่องนี้ — ตู้ VMS มียอดขายตอน 00:xx จริง 27 รายการ
+WW_PORTAL_TZ = "+08:00"
+
+
 def bkk_to_iso(dt_str: str) -> str | None:
-    """Portal ส่ง 'YYYY-MM-DD HH:MM:SS' เวลาไทย (ไม่มี TZ)
-    Postgres จะตีเป็น UTC ถ้าไม่ tag → shift +7 ชม. · append +07:00 ให้ตรง"""
+    """Portal ส่ง 'YYYY-MM-DD HH:MM:SS' แบบไม่มี TZ · เป็นเวลาจีน (UTC+8)
+    Postgres จะตีเป็น UTC ถ้าไม่ tag → ต้อง tag ให้ตรงกับที่ portal ใช้จริง"""
     if not dt_str:
         return None
-    return dt_str.replace(" ", "T") + "+07:00"
+    return dt_str.replace(" ", "T") + WW_PORTAL_TZ
 
 
 # ── Worldwide portal ───────────────────────────────────────────

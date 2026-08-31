@@ -21,7 +21,10 @@ Schema sales: sale_key UNIQUE, transaction_id, machine_id, sku_id,
 หมายเหตุ:
   - envelope ทุก endpoint = {"code":1000,"desc":"success","data":…}
   - ราคา/จำนวนเงิน = {"_dec_":N,"_exp_":E} → N × 10^E  (เช่น 12000×10⁻² = 120.00)
-  - timestamp ไม่มี TZ → เป็นเวลาไทย (พอร์ทัลไทย เหมือน WW) → append +07:00
+  - timestamp ไม่มี TZ → เป็นเวลาไทยจริง → append +07:00
+    ⚠️ อย่าเหมารวมกับ WorldWide — portal ของ WW ส่งเวลาจีน (UTC+8)
+       ตรวจแล้ว 31 ส.ค. 2026 โดยเทียบกับเวลาที่ตู้ประทับในเลขที่ใบเสร็จ:
+       Payif ตรง 0-1 นาที · WW ช้าไป 60-61 นาที (ดู worldwide_sales_api.WW_PORTAL_TZ)
   - order list ไม่มี line items → ต้องเรียก detail แยกทุก order (N+1 เหมือน WW searchDetail)
 """
 import os, argparse, requests
@@ -86,7 +89,11 @@ def is_box(name: str) -> bool:
 
 
 def sold_at_iso(ts: str) -> str | None:
-    """timestamp Vendos 'YYYY-MM-DDTHH:MM:SS.ffffff' (เวลาไทย ไม่มี TZ) → tag +07:00"""
+    """timestamp Vendos 'YYYY-MM-DDTHH:MM:SS.ffffff' (เวลาไทยจริง ไม่มี TZ) → tag +07:00
+
+    ⚠️ ยืนยันแล้วว่าเป็นเวลาไทย ไม่ใช่เดา — เทียบกับเวลาที่ตู้ประทับในเลขที่ใบเสร็จ
+       ได้ส่วนต่าง 0-1 นาที (WW ทำแบบเดียวกันได้ 60 นาที เพราะ portal เป็นเวลาจีน)
+    """
     if not ts:
         return None
     return ts.split(".")[0] + "+07:00"
