@@ -9,7 +9,7 @@ import {
 } from "recharts"
 import { CHART_COLORS } from "../shared/constants"
 import { fmt, fmtB, getLastNDays, fmtDayLabel, today, buildBrandMap, ksherFeePct } from "../shared/helpers"
-import { Badge, KpiCard, SectionTitle } from "../shared/dx-components"
+import { KpiCard, SectionTitle } from "../shared/dx-components"
 import { authFetch } from "../../lib/authFetch"
 
 // ลำดับ SKU ตามที่เจ้าของใช้จริงเวลาจัดของ — เรียงตามค่าย แล้วตามเลขชุด
@@ -128,7 +128,7 @@ function SalesSkuByMachine({ sales, machines, skus }) {
           const skuList = Object.entries(skuData)
             .map(([skuId, v]) => {
               const s = skus.find(sk => sk.sku_id === skuId)
-              return { sku_id: skuId, series: s?.series || "OP", name: s?.name || skuId, ...v }
+              return { sku_id: skuId, name: s?.name || skuId, ...v }
             })
             .sort((a, b) => {
               if (sortBy === "sku") {
@@ -208,9 +208,8 @@ function SalesSkuByMachine({ sales, machines, skus }) {
                             <Th align="center" style={{ width: 44 }}>#</Th>
                             <Th align="left">SKU</Th>
                             <Th align="left" className="hidden sm:table-cell">ชื่อสินค้า</Th>
-                            <Th align="center">Series</Th>
-                            <Th align="right" style={{ color: "var(--dx-danger)" }}>กล่อง</Th>
                             <Th align="right">ซอง</Th>
+                            <Th align="right" style={{ color: "var(--dx-danger)" }}>กล่อง</Th>
                             <Th align="right">ยอดขาย</Th>
                             {ranked && <Th align="left" style={{ width: 100 }}>สัดส่วน</Th>}
                           </tr>
@@ -237,14 +236,11 @@ function SalesSkuByMachine({ sales, machines, skus }) {
                                 <td className="hidden sm:table-cell" style={{ padding: "8px 8px", fontSize: 11, color: "var(--dx-text-muted)", maxWidth: 120, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                                   {r.name}
                                 </td>
-                                <td style={{ padding: "8px 8px", textAlign: "center" }}>
-                                  <Badge series={r.series}/>
+                                <td className="dx-mono" style={{ padding: "8px 8px", textAlign: "right", fontSize: 11, fontWeight: 500, color: r.packQty > 0 ? "var(--dx-cyan-soft)" : "var(--dx-text-muted)" }}>
+                                  {r.packQty > 0 ? fmt(r.packQty) : "-"}
                                 </td>
                                 <td className="dx-mono" style={{ padding: "8px 8px", textAlign: "right", fontSize: 11, fontWeight: 500, color: r.boxQty > 0 ? "var(--dx-danger)" : "var(--dx-text-muted)" }}>
                                   {r.boxQty > 0 ? fmt(r.boxQty) : "-"}
-                                </td>
-                                <td className="dx-mono" style={{ padding: "8px 8px", textAlign: "right", fontSize: 11, fontWeight: 500, color: r.packQty > 0 ? "var(--dx-cyan-soft)" : "var(--dx-text-muted)" }}>
-                                  {r.packQty > 0 ? fmt(r.packQty) : "-"}
                                 </td>
                                 <td className="dx-mono" style={{ padding: "8px 8px", textAlign: "right", fontSize: 11, fontWeight: 700, color: "var(--dx-success)" }}>
                                   {fmtB(r.rev)}
@@ -266,14 +262,15 @@ function SalesSkuByMachine({ sales, machines, skus }) {
                         </tbody>
                         <tfoot>
                           <tr style={{ background: "var(--dx-bg-elevated)", fontWeight: 600 }}>
-                            <td colSpan={4} style={{ padding: "8px 12px", fontSize: 10, color: "var(--dx-text-muted)", letterSpacing: 0.4 }}>
+                            {/* # · SKU · ชื่อสินค้า — ต้องเท่ากับจำนวนคอลัมน์ก่อนถึงช่อง "ซอง" */}
+                            <td colSpan={3} style={{ padding: "8px 12px", fontSize: 10, color: "var(--dx-text-muted)", letterSpacing: 0.4 }}>
                               รวม {m.name}
-                            </td>
-                            <td className="dx-mono" style={{ padding: "8px 8px", textAlign: "right", fontSize: 10, color: "var(--dx-danger)" }}>
-                              {fmt(machineTotalBox)} กล่อง
                             </td>
                             <td className="dx-mono" style={{ padding: "8px 8px", textAlign: "right", fontSize: 10, color: "var(--dx-cyan-bright)" }}>
                               {fmt(machineTotalPack)} ซอง
+                            </td>
+                            <td className="dx-mono" style={{ padding: "8px 8px", textAlign: "right", fontSize: 10, color: "var(--dx-danger)" }}>
+                              {fmt(machineTotalBox)} กล่อง
                             </td>
                             <td className="dx-mono" style={{ padding: "8px 8px", textAlign: "right", fontSize: 10, color: "var(--dx-success)" }}>
                               {fmtB(machineTotal)}
