@@ -513,21 +513,66 @@ def purge(cfg, dry_run=False):
     return deleted
 
 
-def save(ideas, dry_run=False):
+def cap_by_subtype(rows, queued, cap):
+    """ตัดของที่ทำให้คิวมี "มุมเดิม" เกิน cap ชิ้น — คืน (ที่เก็บ, ที่ข้าม)
+
+    ทำไมต้องมี (วัดจากคิวจริง 31 ส.ค. 2026):
+        คิว status=new 35 ชิ้น เป็น internal 29 ชิ้น (83%)
+        falling_sku 17 · machine_drop 8 — และ 8 ชิ้นนั้นใช้ประโยค angle
+        เดียวกันเป๊ะ ("คอนเทนต์เจาะสาขานี้ — โพสต์บอกทำเล/ของที่มี…")
+        เพราะ angle ของสัญญาณภายในเป็นข้อความตายตัวต่อ subtype
+
+        แหล่งที่เติมของมากที่สุด กลับเป็นแหล่งที่ถูกหยิบไปใช้น้อยที่สุด:
+            internal 9/38 (23%) · news 8/14 (57%) · tiktok 7/8 (87%)
+        คิวที่เต็มไปด้วยของหน้าตาเดียวกันทำให้คนเลิกกวาดสายตา ของดีจึงจมไปด้วย
+
+    ⚠️ นับ "ที่ค้างอยู่ในคิวแล้ว" รวมด้วย ไม่ใช่นับเฉพาะของในรอบนี้
+       ถ้านับแค่รอบเดียว เก็บวันละ 5 สิบวันก็ได้ 50 ชิ้นเหมือนเดิม
+       ซึ่งเป็นรูปของปัญหาที่เกิดขึ้นจริง — mdrop/fall ใช้กุญแจกันซ้ำรายสัปดาห์
+       ตู้/SKU เดิมจึงกลับเข้าคิวได้ใหม่ทุกสัปดาห์โดยไม่ชนกุญแจเก่า
+
+    ⚠️ ตัดจากตัวคะแนนต่ำ ไม่ใช่ตัดท้ายตามลำดับที่เก็บมา — โควตาที่เหลือควรตกกับ
+       สัญญาณที่แรงที่สุดของ subtype นั้น
+    """
+    if not isinstance(cap, int) or cap <= 0:
+        return rows, []
+    left = dict(queued)
+    keep_idx, skipped = [], []
+    # เรียงคะแนนมากไปน้อยเพื่อ "เลือก" แต่จำ index ไว้คืนลำดับเดิมตอนส่งกลับ
+    for n, r in sorted(enumerate(rows), key=lambda p: -(p[1].get("score") or 0)):
+        key = (r.get("source"), r.get("subtype"))
+        if left.get(key, 0) >= cap:
+            skipped.append(r)
+            continue
+        left[key] = left.get(key, 0) + 1
+        keep_idx.append(n)
+    return [rows[n] for n in sorted(keep_idx)], skipped
+
+
+def save(ideas, cfg, dry_run=False):
     if not ideas:
         log("[ideas] ไม่มีไอเดียใหม่")
         return 0
 
+    # ดึงทีเดียวได้ทั้งกุญแจกันซ้ำ (ทุกสถานะ) และจำนวนที่ค้างในคิว (เฉพาะ new)
     # dry-run ต้องพรีวิวได้แม้ยังไม่ได้ apply migration 060
     try:
-        have = {r["external_key"] for r in data.sb_get("marketing_ideas?select=external_key")}
+        rows = data.sb_get("marketing_ideas?select=external_key,source,subtype,status")
     except data.DvxError as e:
         if "404" not in str(e):
             raise
         if not dry_run:
             sys.exit("❌ ยังไม่มีตาราง marketing_ideas — รัน migration 060 ใน Supabase SQL Editor ก่อน")
         log("  ⚠️  ยังไม่มีตาราง marketing_ideas — พรีวิวอย่างเดียว")
-        have = set()
+        rows = []
+    have = {r["external_key"] for r in rows}
+    queued = {}
+    for r in rows:
+        if r.get("status") != "new":
+            continue                      # ที่ถูกหยิบไปทำแล้วไม่กินโควตาคิว
+        k = (r.get("source"), r.get("subtype"))
+        queued[k] = queued.get(k, 0) + 1
+
     new = [i for i in ideas if i["external_key"] not in have]
     # กันซ้ำในรอบเดียวกันด้วย (คำค้นหลายอันอาจเจอข่าวเดียวกัน)
     seen, uniq = set(), []
@@ -536,6 +581,19 @@ def save(ideas, dry_run=False):
             continue
         seen.add(i["external_key"])
         uniq.append({k: i.get(k) for k in FIELDS} | {"status": "new"})
+
+    cap = cfg.get("max_per_subtype", 5)
+    uniq, over = cap_by_subtype(uniq, queued, cap)
+    if over:
+        by_key = {}
+        for r in over:
+            k = f"{r['source']}/{r.get('subtype')}"
+            by_key[k] = by_key.get(k, 0) + 1
+        log(f"[ideas] 🚧 ข้าม {len(over)} ชิ้นที่ทำให้คิวมีมุมเดิมเกิน {cap} ชิ้น "
+            f"({' · '.join(f'{k} +{v}' for k, v in sorted(by_key.items(), key=lambda x: -x[1]))})")
+        log("        คิวเดิมของกลุ่มนี้: "
+            + " · ".join(f"{s}/{st} {queued.get((s, st), 0)}"
+                         for s, st in sorted({(r['source'], r.get('subtype')) for r in over})))
 
     log(f"[ideas] เก็บได้ {len(ideas)} · มีอยู่แล้ว {len(ideas) - len(new)} · ใหม่ {len(uniq)}")
     for i in sorted(uniq, key=lambda x: -x["score"])[:15]:
@@ -595,7 +653,7 @@ def main():
         except Exception as e:
             log(f"  ⚠️  สัญญาณภายในล้ม: {type(e).__name__}: {e}")
 
-    save(ideas, dry_run=args.dry_run)
+    save(ideas, cfg, dry_run=args.dry_run)
 
 
 if __name__ == "__main__":
