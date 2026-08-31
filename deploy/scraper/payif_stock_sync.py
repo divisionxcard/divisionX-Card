@@ -21,6 +21,8 @@ from supabase import create_client
 
 # unit (กล่อง/ซอง) มาจากชื่อสินค้า — SKU เดียวขายทั้งสองแบบในตู้เดียวกัน
 from sales_unit import add_unit, upsert_sales  # noqa: E402
+# ตู้นี้รายงานความจุช่องซอง 15 แต่เราเติมจริงแค่ 12 — ตัดตั้งแต่ต้นทาง ดูเหตุผลในไฟล์
+from slot_capacity import plan_capacity  # noqa: E402
 
 # ── Config ────────────────────────────────────────────────────
 BASE         = "https://vendos.one"
@@ -162,7 +164,7 @@ def fetch_slots(s: requests.Session, shop_id: str) -> list[dict]:
             "product_name": name or None,
             "sku_id":       map_name_to_sku(name),
             "remain":       qty,
-            "max_capacity": cap,
+            "max_capacity": plan_capacity(cap, name),
             "is_occupied":  bool(name),
             "status":       status,
         })

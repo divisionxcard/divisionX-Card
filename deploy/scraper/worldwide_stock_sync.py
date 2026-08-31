@@ -20,6 +20,8 @@ from supabase import create_client
 
 # unit (กล่อง/ซอง) มาจากชื่อสินค้า — SKU เดียวขายทั้งสองแบบในตู้เดียวกัน
 from sales_unit import add_unit, upsert_sales  # noqa: E402
+# เพดานความจุที่เราเติมจริงต่อช่อง (ซองไม่เกิน 12) — กฎเดียวกันทุกยี่ห้อตู้
+from slot_capacity import plan_capacity  # noqa: E402
 
 # ── Config ────────────────────────────────────────────────────
 WW_BASE      = "https://www.worldwidevending-vms.com"
@@ -160,7 +162,7 @@ def fetch_inventory(s, vendor_id: str) -> list[dict]:
         slots.append({
             "slot_number":  slot_num,
             "product_name": goods_name,
-            "max_capacity": capacity,
+            "max_capacity": plan_capacity(capacity, goods_name),
             "remain":       remain,
             "status":       status,
             "sku_id":       map_goods_to_sku(goods_name),

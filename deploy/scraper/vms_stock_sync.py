@@ -10,6 +10,8 @@ from supabase import create_client
 
 # unit (กล่อง/ซอง) มาจากชื่อสินค้า — SKU เดียวขายทั้งสองแบบในตู้เดียวกัน
 from sales_unit import add_unit, upsert_sales  # noqa: E402
+# เพดานความจุที่เราเติมจริงต่อช่อง (ซองไม่เกิน 12) — กฎเดียวกันทุกยี่ห้อตู้
+from slot_capacity import plan_capacity  # noqa: E402
 
 # ── Image cache (memory) — กัน re-upload product_id เดิมหลายรอบใน run นี้ ──
 _image_cache: dict = {}
@@ -400,7 +402,7 @@ def main():
                 "product_img":     permanent_img,
                 "sku_id":          map_product_to_sku(product_name),
                 "remain":          slot.get("remain") or 0,
-                "max_capacity":    slot.get("max_capacity") or 0,
+                "max_capacity":    plan_capacity(slot.get("max_capacity"), product_name),
                 "is_occupied":     bool(slot.get("is_occupied")),
                 "status":          slot.get("status") or "inactive",
                 "synced_at":       synced_at,
