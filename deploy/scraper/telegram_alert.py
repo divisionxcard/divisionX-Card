@@ -238,6 +238,47 @@ def alert_product_swaps(machine_id, machine_name, removed, added,
                         reply_markup={"inline_keyboard": buttons})
 
 
+def overfilled_text(machine_id, machine_name, items, cap, synced_at=None):
+    """ข้อความเตือน "หน้าตู้จริงมีของเกินเพดาน" — แยกออกมาให้ทดสอบได้โดยไม่ต้องยิงจริง"""
+    label = machine_name or f"ตู้ {machine_id}"
+    parts = [
+        f"📦 <b>หน้าตู้มีของเกินเพดาน {cap} ซอง/ช่อง</b>\n<b>{_esc(label)}</b>\n",
+        f"\nพบ {len(items)} ช่อง — ระบบตั้งเพดานไว้ {cap} แต่หลังบ้านของตู้รายงานมากกว่านั้น\n",
+    ]
+    for i in items[:20]:
+        rep = i.get("reported_capacity")
+        # บอกความจุที่ตู้รายงานด้วย จะได้แยกออกว่า "เติมเกินนโยบาย" กับ "ตู้ตั้งค่ามาแบบนี้"
+        rep_txt = f" · ตู้บอกจุ {rep}" if rep else ""
+        parts.append(
+            f"\n• ช่อง <code>{_esc(i.get('slot_number'))}</code> "
+            f"{_esc(i.get('product_name') or i.get('sku_id') or '—')} · "
+            f"มีจริง <b>{i.get('remain')}</b> (เกิน {i.get('over')}){rep_txt}"
+        )
+    if len(items) > 20:
+        parts.append(f"\n\n<i>...และอีก {len(items) - 20} ช่อง</i>")
+    # ต้องบอกด้วยว่ามันทำให้ตัวเลขอะไรเพี้ยน ไม่งั้นอ่านแล้วไม่รู้ว่าต้องรีบแค่ไหน
+    parts.append("\n\n⚠️ ช่องพวกนี้จะถูกคิดว่า <b>เต็มแล้ว</b> ในใบจัดของ "
+                 "และสต็อกในระบบจะน้อยกว่าของจริง")
+    if synced_at:
+        parts.append(f"\n\n<i>ตรวจพบจากการซิงค์ {_esc(str(synced_at)[:16])}</i>")
+    return "".join(parts)
+
+
+def alert_slot_overfilled(machine_id, machine_name, items, cap, synced_at=None):
+    """ส่งเข้ากลุ่ม Admin เมื่อของจริงหน้าตู้เกินเพดานที่เราตั้งไว้
+
+    items: จาก slot_capacity.find_overfilled()
+    ⚠️ ส่งทุกครั้งที่ยังเกินอยู่ ไม่ใช่ส่งครั้งเดียว — ตราบใดที่ยังไม่จัดการ
+       ใบจัดของก็ยังผิดอยู่ทุกวัน การเงียบไปหลังเตือนครั้งแรกคือปล่อยให้ลืม
+    """
+    if not items:
+        return None
+    buttons = [[{"text": "📋 ดูสต็อกหน้าตู้", "url": PAGESLOTS_URL}]]
+    return send_message(ADMIN_CHAT_ID,
+                        overfilled_text(machine_id, machine_name, items, cap, synced_at),
+                        reply_markup={"inline_keyboard": buttons})
+
+
 if __name__ == "__main__":
     # Smoke test (run python telegram_alert.py)
     import sys

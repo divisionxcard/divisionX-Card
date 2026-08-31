@@ -40,3 +40,35 @@ def plan_capacity(reported, product_name=None):
     """ความจุที่เอาไปคิดยอดเติม · ซองไม่เกิน PACK_SLOT_MAX · กล่องใช้ตามที่ตู้รายงาน"""
     cap = int(reported or 0)
     return cap if is_box(product_name) else min(cap, PACK_SLOT_MAX)
+
+
+def find_overfilled(slots, cap=PACK_SLOT_MAX):
+    """ช่องซองที่ "ของจริงหน้าตู้" มีมากกว่าเพดานที่เราตั้งไว้ — เจ้าของขอให้เตือนทันที
+
+    ทำไมต้องรู้: เราตัด max_capacity เหลือ 12 ไปแล้ว ถ้าหน้าตู้จริงมี 15
+    ระบบจะคิดว่าช่องนั้น "เต็มแล้ว" (เติม = 12 − 15 → ติดลบ → ปัดเป็น 0) แล้วเงียบไปเลย
+    ทั้งที่ของหน้าตู้ไม่ตรงกับที่เราตั้งไว้ และสต็อกในระบบก็จะเพี้ยนตามไปด้วย
+
+    ⚠️ ต้องดูจาก remain ที่ตู้รายงาน เทียบกับ "เพดาน" ไม่ใช่เทียบกับ max_capacity
+       ที่เราตัดแล้ว — เทียบกับตัวที่ตัดแล้วก็ยังเจอ แต่ถ้าวันหลังใครเปลี่ยนไปเก็บ
+       ความจุดิบลง DB ด่านนี้จะเงียบทันทีโดยไม่มีใครรู้ · ผูกกับค่าคงที่ปลอดภัยกว่า
+
+    slots: dict ที่มี product_name · remain · slot_number (จะมี reported_capacity ด้วยก็ได้)
+    """
+    over = []
+    for s in slots:
+        name = s.get("product_name")
+        if is_box(name):
+            continue                       # กล่องคนละหน่วย ไม่อยู่ใต้เพดานซอง
+        remain = int(s.get("remain") or 0)
+        if remain <= cap:
+            continue
+        over.append({
+            "slot_number": s.get("slot_number"),
+            "product_name": name,
+            "sku_id": s.get("sku_id"),
+            "remain": remain,
+            "reported_capacity": s.get("reported_capacity"),
+            "over": remain - cap,
+        })
+    return over

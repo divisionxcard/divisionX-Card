@@ -18,7 +18,8 @@ sys.path.insert(0, str(ROOT / "deploy" / "scraper"))
 sys.path.insert(0, str(ROOT / "deploy" / "agents"))
 sys.stdout.reconfigure(encoding="utf-8")
 
-from slot_capacity import PACK_SLOT_MAX, is_box, plan_capacity  # noqa: E402
+from slot_capacity import PACK_SLOT_MAX, find_overfilled, is_box, plan_capacity  # noqa: E402
+from telegram_alert import overfilled_text  # noqa: E402
 
 fails = []
 
@@ -40,6 +41,85 @@ check("กล่องที่ตู้บอกเกิน 12 ก็ไม่
 check("ชื่อกล่องพิมพ์ใหญ่/เล็กปนกันก็จับได้", is_box("ONE PIECE OP - 13 BOX"), True)
 check("ช่องว่าง (ไม่มีชื่อ) นับเป็นซอง", plan_capacity(15, None), 12)
 check("ค่า None → 0 ไม่ระเบิด", plan_capacity(None, "OP - 01 Pack"), 0)
+
+print("\n── ตรวจจับของจริงหน้าตู้เกินเพดาน (เตือนเข้า Telegram) ──")
+SLOTS = [
+    {"slot_number": "011", "product_name": "ONE PIECE OP - 01 Pack", "sku_id": "OP 01",
+     "remain": 15, "reported_capacity": 15},
+    {"slot_number": "012", "product_name": "ONE PIECE OP - 02 Pack", "sku_id": "OP 02",
+     "remain": 12, "reported_capacity": 15},
+    {"slot_number": "013", "product_name": "ONE PIECE OP - 03 Pack", "sku_id": "OP 03",
+     "remain": 13, "reported_capacity": 15},
+    {"slot_number": "051", "product_name": "ONE PIECE OP - 11 Box", "sku_id": "OP 11",
+     "remain": 20, "reported_capacity": 20},
+    {"slot_number": "099", "product_name": None, "sku_id": None,
+     "remain": 0, "reported_capacity": 15},
+]
+over = find_overfilled(SLOTS)
+check("จับเฉพาะช่องที่เกินจริง", [o["slot_number"] for o in over], ["011", "013"])
+check("บอกว่าเกินไปเท่าไหร่", [o["over"] for o in over], [3, 1])
+check("ช่องที่เต็มพอดี 12 ไม่นับว่าเกิน", any(o["slot_number"] == "012" for o in over), False)
+check("กล่องมี 20 ก็ไม่ถือว่าเกิน (คนละหน่วย)", any(o["slot_number"] == "051" for o in over), False)
+check("ติดความจุที่ตู้รายงานมาด้วย", over[0]["reported_capacity"], 15)
+check("ไม่มีอะไรเกิน → ไม่ต้องเตือน", find_overfilled([SLOTS[1], SLOTS[3]]), [])
+
+msg = overfilled_text("pf01", "ตู้ที่ 12 (pf01) · ไอคอนสยาม (Payif)", over, PACK_SLOT_MAX, "2026-08-31T00:20")
+check("ข้อความมีชื่อตู้", "ไอคอนสยาม" in msg, True)
+check("ข้อความบอกช่องกับจำนวนจริง", "มีจริง <b>15</b>" in msg, True)
+check("ข้อความบอกผลกระทบ ไม่ใช่แค่แจ้งเลข", "ใบจัดของ" in msg, True)
+print("      ── ตัวอย่างข้อความที่จะส่ง ──")
+import re as _re  # noqa: E402
+for ln in _re.sub(r"<[^>]+>", "", msg).strip().splitlines():
+    print(f"      {ln}")
+
+# ── เส้นทางจริง: payif_stock_sync เรียกตัวเตือนเองไหม ────────────────────
+# ⚠️ ปลอมแค่ชั้น api_get (ตัวคุยกับ Vendos) — fetch_slots ตัวจริงจึงได้ทำงานทั้งเส้น
+#    รวมทั้ง plan_capacity() ที่ตัดความจุ · ถ้าปลอม fetch_slots ทิ้งจะไม่ได้พิสูจน์อะไรเลย
+#    (บทเรียน 28 ส.ค.: ทดสอบไลบรารีผ่าน 34/34 แต่ route เรียกไม่ได้เพราะลืม import)
+print("\n── เส้นทางจริง: payif_stock_sync ยิงเตือนเองไหม ──")
+STOCK = [
+    {"slot": "011", "qty": 15, "capacity": 15, "warn_threshold": 3},   # เกินเพดาน
+    {"slot": "012", "qty": 12, "capacity": 15, "warn_threshold": 3},   # เต็มพอดี
+    {"slot": "051", "qty": 20, "capacity": 20, "warn_threshold": 1},   # กล่อง ไม่นับ
+]
+NAMES = {
+    "011": {"product_name": "ONE PIECE OP - 01 Pack"},
+    "012": {"product_name": "ONE PIECE OP - 02 Pack"},
+    "051": {"product_name": "ONE PIECE OP - 11 Box"},
+}
+
+import payif_stock_sync as ps          # noqa: E402
+import slot_tracking                   # noqa: E402
+import stock_reconcile                 # noqa: E402
+import telegram_alert                  # noqa: E402
+
+sent, saved = [], []
+# กันแตะ DB จริงทุกทาง — create_client คืนวัตถุเปล่า และตัวที่เขียน DB ถูกถอดออกหมด
+ps.create_client = lambda *a, **k: object()
+ps.login = lambda: None
+ps.fetch_payif_machines = lambda sb: [{"machine_id": "pf01", "name": "ตู้ทดสอบ", "shop_id": "1"}]
+ps.api_get = lambda s, path: (STOCK if "/stock/" in path else NAMES)
+ps.null_unknown_skus = lambda sb, recs: None
+ps.save_to_supabase = lambda sb, recs: saved.extend(recs)
+slot_tracking.track_refill_events = lambda *a, **k: None
+stock_reconcile.reconcile_from_records = lambda *a, **k: None
+telegram_alert.alert_slot_overfilled = lambda *a, **k: sent.append(a)
+
+_argv = sys.argv
+sys.argv = ["payif_stock_sync.py"]
+try:
+    ps.main()
+finally:
+    sys.argv = _argv
+
+check("sync เรียกตัวเตือนเองจริง (ไม่ต้องมีใครไปกดอะไร)", len(sent), 1)
+if sent:
+    check("เตือนเฉพาะช่องที่ของจริงเกิน", [o["slot_number"] for o in sent[0][2]], ["011"])
+    check("บอกเพดานที่ใช้ตัดสินไปด้วย", sent[0][3], PACK_SLOT_MAX)
+rec011 = next((r for r in saved if r["slot_number"] == "011"), None)
+check("แถวที่เขียนลง DB ใช้ความจุที่ตัดแล้ว", rec011 and rec011["max_capacity"], 12)
+check("แต่ remain ยังเป็นของจริงที่ตู้รายงาน", rec011 and rec011["remain"], 15)
+check("ความจุดิบไม่หลุดลง DB", "reported_capacity" in (rec011 or {}), False)
 
 # ── ของจริงใน DB — ด่านเฝ้าเฉพาะตู้ Payif ──
 # ⚠️ ตู้ยี่ห้ออื่นไม่อยู่ใต้เพดานนี้ (คนละแบบตู้) — ถ้าเจอเกิน 12 ให้ "รายงาน" ไม่ใช่ "ฟ้อง"

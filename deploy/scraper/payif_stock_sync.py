@@ -22,7 +22,7 @@ from supabase import create_client
 # unit (กล่อง/ซอง) มาจากชื่อสินค้า — SKU เดียวขายทั้งสองแบบในตู้เดียวกัน
 from sales_unit import add_unit, upsert_sales  # noqa: E402
 # ตู้นี้รายงานความจุช่องซอง 15 แต่เราเติมจริงแค่ 12 — ตัดตั้งแต่ต้นทาง ดูเหตุผลในไฟล์
-from slot_capacity import plan_capacity  # noqa: E402
+from slot_capacity import PACK_SLOT_MAX, find_overfilled, plan_capacity  # noqa: E402
 
 # ── Config ────────────────────────────────────────────────────
 BASE         = "https://vendos.one"
@@ -131,14 +131,15 @@ def fetch_payif_machines(supabase) -> list[dict]:
 
     ตู้ที่ยกเลิกแล้วยังมีแถวค้างอยู่ (ลบไม่ได้ ยอดขายเก่าอ้าง FK) ต้องกรองออก
     """
-    res = (supabase.table("machines").select("machine_id, config")
+    res = (supabase.table("machines").select("machine_id, name, config")
            .eq("brand", "payif").eq("status", "active").execute())
     out = []
     for row in (res.data or []):
         cfg = row.get("config") or {}
         sid = cfg.get("machine_id_vendor")
         if sid:
-            out.append({"machine_id": row["machine_id"], "shop_id": str(sid)})
+            out.append({"machine_id": row["machine_id"], "name": row.get("name"),
+                        "shop_id": str(sid)})
     return out
 
 
@@ -165,6 +166,9 @@ def fetch_slots(s: requests.Session, shop_id: str) -> list[dict]:
             "sku_id":       map_name_to_sku(name),
             "remain":       qty,
             "max_capacity": plan_capacity(cap, name),
+            # ความจุดิบที่ตู้รายงาน — ไม่ได้เขียนลง DB ใช้แค่ในข้อความเตือน
+            # เพื่อแยก "คนเติมเกินนโยบาย" ออกจาก "ตู้ตั้งค่าช่องมาแบบนี้"
+            "reported_capacity": cap,
             "is_occupied":  bool(name),
             "status":       status,
         })
@@ -223,6 +227,7 @@ def main():
     s = login()
     synced_at = datetime.utcnow().isoformat()
     all_records, machines_with_data, failed = [], 0, []
+    overfilled = []          # (machine_id, ชื่อตู้, ช่องที่ของจริงเกินเพดาน)
 
     for m in machines:
         mid, sid = m["machine_id"], m["shop_id"]
@@ -236,6 +241,11 @@ def main():
         print(f"  ✅ พบ {len(slots)} slots")
         if slots:
             machines_with_data += 1
+        over = find_overfilled(slots)
+        if over:
+            overfilled.append((mid, m.get("name"), over))
+            print(f"  📦 ของจริงเกินเพดาน {PACK_SLOT_MAX} ซอง/ช่อง: {len(over)} ช่อง — "
+                  + " · ".join(f"{o['slot_number']}={o['remain']}" for o in over[:8]))
         for slot in slots:
             all_records.append({
                 "machine_id":      mid,
@@ -266,6 +276,9 @@ def main():
             flag = "" if r["sku_id"] else "  ⚠️ NO SKU"
             print(f"  slot={r['slot_number']} sku={str(r['sku_id']):<16} "
                   f"remain={r['remain']}/{r['max_capacity']} · {r['product_name']}{flag}")
+        if overfilled:
+            n = sum(len(o) for _, _, o in overfilled)
+            print(f"\n🧪 DRY-RUN: ไม่ส่งเตือน Telegram · ของจริงเกินเพดาน {n} ช่อง")
     else:
         null_unknown_skus(supabase, all_records)
         try:
@@ -281,6 +294,17 @@ def main():
             reconcile_from_records(supabase, all_records)
         except Exception as e:
             print(f"⚠️  reconcile ช่องที่หายไปไม่สำเร็จ: {e}")
+
+        # เตือนทันทีเมื่อของจริงหน้าตู้เกินเพดานที่เราตั้งไว้ (เจ้าของขอ 31 ส.ค. 2026)
+        # ⚠️ ส่งหลัง save เสมอ — ข้อความชวนให้ไปเปิดหน้าสต็อกดู ถ้าส่งก่อนบันทึก
+        #    หน้าเว็บจะยังเป็นข้อมูลรอบก่อน แล้วคนอ่านจะงงว่าเลขไม่ตรงกับที่เตือน
+        # ⚠️ ห่อ try ไว้ — Telegram ล่มต้องไม่ทำให้งานซิงค์ที่สำเร็จแล้วกลายเป็นล้มเหลว
+        for mid, mname, over in overfilled:
+            try:
+                from telegram_alert import alert_slot_overfilled
+                alert_slot_overfilled(mid, mname, over, PACK_SLOT_MAX, synced_at)
+            except Exception as e:
+                print(f"⚠️  ส่งเตือนของเกินเพดานไม่สำเร็จ ({mid}): {e}")
 
 
 if __name__ == "__main__":
