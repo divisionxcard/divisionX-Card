@@ -33,7 +33,7 @@ import argparse
 import os
 import sys
 from collections import defaultdict
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
@@ -45,6 +45,33 @@ SUPABASE_KEY = os.environ.get("SUPABASE_SERVICE_KEY", "")
 MIN_AGE_HOURS = 12      # ต้องผ่านไปกี่ชั่วโมงหลังออกใบถึงจะเทียบได้
 EXPIRE_DAYS = 5         # ค้างนานกว่านี้ = เทียบไม่ได้แล้ว
 MIN_REPORT = 3          # ต่างกันน้อยกว่านี้ไม่ต้องรายงาน (เศษปกติของการเติม)
+
+# ── ช่วงทดลอง: ส่งเข้าแชทส่วนตัวเจ้าของก่อน แล้วค่อยเปลี่ยนเป็นกลุ่ม Admin ──
+#
+# เจ้าของขอดูเองก่อน 3 วัน (1-3 ก.ย. 2026) ค่อยปล่อยลงกลุ่ม
+#
+# ⚠️ ตั้งเป็น "วันที่หมดอายุ" ไม่ใช่ "ธงที่ต้องมาปิดเอง" — ของที่ต้องจำว่าอีก 3 วัน
+#    ต้องกลับมาแก้ คือของที่ไม่มีใครกลับมาแก้ · ให้มันเปลี่ยนเองดีกว่า
+# ⚠️ วันสุดท้ายของช่วงทดลองจะเตือนในข้อความว่าพรุ่งนี้จะย้ายไปกลุ่มแล้ว
+#    ถ้าเปลี่ยนเงียบ ๆ วันดีคืนดีรายงานไปโผล่ในกลุ่มโดยไม่มีใครตั้งตัว
+TRIAL_TO_OWNER_UNTIL = date(2026, 9, 4)   # ตั้งแต่วันนี้เป็นต้นไป = ส่งเข้ากลุ่มตามปกติ
+
+
+def th_today():
+    """วันที่ตามเวลาไทย — job รัน 22:30 น. ไทย ซึ่งเป็นวันถัดไปแล้วถ้าวัดด้วย UTC"""
+    return (datetime.now(timezone.utc) + timedelta(hours=7)).date()
+
+
+def trial_state():
+    """(ส่งเข้าส่วนตัวไหม, ข้อความเตือนว่าจะย้ายวันไหน)"""
+    today = th_today()
+    if today >= TRIAL_TO_OWNER_UNTIL:
+        return False, None
+    if today == TRIAL_TO_OWNER_UNTIL - timedelta(days=1):
+        return True, (f"⏳ วันสุดท้ายของช่วงทดลอง — พรุ่งนี้ ({TRIAL_TO_OWNER_UNTIL:%d/%m}) "
+                      "รายงานนี้จะเริ่มส่งเข้ากลุ่ม Admin แทน ถ้ายังไม่พร้อมบอกให้เลื่อนได้")
+    return True, (f"🧪 ช่วงทดลอง — ส่งเข้าแชทส่วนตัวถึง {TRIAL_TO_OWNER_UNTIL - timedelta(days=1):%d/%m} "
+                  "แล้วจะย้ายไปกลุ่ม Admin เอง")
 
 
 def _dt(v):
@@ -121,6 +148,27 @@ def main():
     db = create_client(SUPABASE_URL, SUPABASE_KEY)
     now = datetime.now(timezone.utc)
 
+    trial_owner, trial_note = trial_state()
+    to_owner = args.to_owner or trial_owner
+    print(f"[plan-check] ปลายทาง: {'แชทส่วนตัวเจ้าของ' if to_owner else 'กลุ่ม Admin'}"
+          + (f" · {trial_note}" if trial_note else ""))
+
+    def heartbeat(reason):
+        """ช่วงทดลอง: บอกด้วยว่ารันแล้วแต่ไม่มีอะไรรายงาน
+
+        ⚠️ มีเฉพาะช่วงทดลอง — ปกติไม่ควรส่งอะไรตอนไม่มีเรื่อง เดี๋ยวกลายเป็น noise
+           แต่ตอนทดลอง "เงียบ" กับ "พัง" หน้าตาเหมือนกันเป๊ะ ต้องแยกให้ออกก่อน
+        """
+        if not (trial_owner and not args.dry_run):
+            return
+        try:
+            from telegram_alert import send_message, OWNER_CHAT_ID
+            send_message(OWNER_CHAT_ID,
+                         f"🧪 <b>ตัวเทียบใบจัดของ</b> — รันแล้ว ไม่มีอะไรต้องรายงาน\n{reason}"
+                         + (f"\n\n<i>{trial_note}</i>" if trial_note else ""))
+        except Exception as e:
+            print(f"⚠️  ส่ง heartbeat ไม่สำเร็จ: {e}")
+
     try:
         plans = (db.table("refill_plans").select("*")
                  .eq("status", "open").order("planned_at").execute()).data or []
@@ -130,6 +178,7 @@ def main():
         return
     if not plans:
         print("[plan-check] ไม่มีใบที่รอเทียบ")
+        heartbeat("ยังไม่มีใบจัดของถูกบันทึกเข้าระบบ — ลองกดพิมพ์ใบจากหน้าสต็อกหน้าตู้ดู")
         return
     print(f"[plan-check] ใบที่รอเทียบ {len(plans)} แถว")
 
@@ -147,6 +196,7 @@ def main():
         print(f"[plan-check] ปิดเป็น expired {len(expired)} แถว (ค้างเกิน {EXPIRE_DAYS} วัน)")
     if not ready:
         print(f"[plan-check] ยังไม่มีใบที่ครบ {args.min_age} ชม.")
+        heartbeat(f"มีใบรออยู่ {len(plans)} แถว แต่ยังไม่ครบ {args.min_age} ชม. หลังออกใบ")
         return
 
     # ── ดึงการเติมจริงหลังเวลาออกใบที่เก่าสุด ──
@@ -185,6 +235,7 @@ def main():
         print(f"[plan-check] ข้าม {no_sync} แถว — ยังไม่มี sync ตามหลังใบนั้น")
     if not rows:
         print("[plan-check] ไม่มีแถวที่เทียบได้รอบนี้")
+        heartbeat("มีใบรออยู่ แต่ยังไม่มี sync สต็อกตามหลังใบนั้น จึงยังเทียบไม่ได้")
         return
 
     if not args.dry_run:
@@ -207,9 +258,11 @@ def main():
     if over or under:
         try:
             from telegram_alert import alert_refill_plan_diff
-            alert_refill_plan_diff(over, under, to_owner=args.to_owner)
+            alert_refill_plan_diff(over, under, to_owner=to_owner, note=trial_note)
         except Exception as e:
             print(f"⚠️  ส่ง Telegram ไม่สำเร็จ: {e}")
+    else:
+        heartbeat(f"เทียบไปแล้ว {len(rows)} รายการ ตรงตามใบทั้งหมด (ต่างไม่เกิน {MIN_REPORT} หน่วย)")
 
 
 if __name__ == "__main__":
