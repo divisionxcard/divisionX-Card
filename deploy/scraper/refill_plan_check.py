@@ -57,12 +57,64 @@ def _dt(v):
     return d if d.tzinfo else d.replace(tzinfo=timezone.utc)
 
 
+def send_sample(to_owner):
+    """ส่งรายงาน 'ตัวอย่าง' เพื่อดูหน้าตาก่อนของจริงจะมา
+
+    ทำไมต้องมี: ตัวเทียบจะมีข้อมูลก็ต่อเมื่อแอดมินกดพิมพ์ใบไปแล้วอย่างน้อย 1 ครั้ง
+    + รออีก 12 ชม. → กว่าจะได้เห็นรายงานจริงครั้งแรกคือข้ามวัน
+    อยากรู้ว่าหน้าตาโอเคไหมก่อนถึงตอนนั้น
+
+    ⚠️ ใช้ **ช่องที่ว่างค้างจริง** ในตู้มาเป็นตัวอย่าง ไม่ใช่ตัวเลขมั่ว —
+       จะได้เห็นว่าเวลาของจริงมาหน้าตาเป็นแบบไหน
+    ⚠️ ติดป้ายว่าเป็นตัวอย่างให้ชัด ไม่งั้นคนอ่านจะไปจัดของตามนั้นจริง
+    """
+    db = create_client(SUPABASE_URL, SUPABASE_KEY)
+    rows = (db.table("machine_stock")
+            .select("machine_id, slot_number, product_name, sku_id, remain, max_capacity, empty_since")
+            .not_.is_("empty_since", "null").execute()).data or []
+    now = datetime.now(timezone.utc)
+    over = []
+    for r in sorted(rows, key=lambda x: str(x.get("empty_since"))):
+        if not (r.get("sku_id") and r.get("product_name")):
+            continue
+        days = (now - (_dt(r["empty_since"]) or now)).days
+        if days < 1:
+            continue
+        over.append(({
+            "machine_id": r["machine_id"], "sku_id": r["sku_id"],
+            "product_name": r["product_name"],
+            "is_box": "box" in (r["product_name"] or "").lower(),
+            "planned_qty": (r.get("max_capacity") or 0) - (r.get("remain") or 0),
+        }, 0))
+        if len(over) >= 4:
+            break
+    if not over:
+        print("[plan-check] ไม่มีช่องว่างค้างให้ยกมาเป็นตัวอย่าง — ข้าม")
+        return
+    from telegram_alert import alert_refill_plan_diff
+    res = alert_refill_plan_diff(
+        over, [], to_owner=to_owner,
+        note="🧪 นี่คือรายงานตัวอย่าง (ยังไม่มีใบจริงในระบบ) — "
+             "ยกช่องที่ว่างค้างจริงมาแสดงให้เห็นหน้าตา อย่าเพิ่งจัดของตามนี้")
+    where = "แชทส่วนตัวเจ้าของ" if to_owner else "กลุ่ม Admin"
+    print(f"[plan-check] ส่งตัวอย่าง {len(over)} รายการเข้า{where}: "
+          f"{'สำเร็จ' if res else 'ไม่สำเร็จ (ไม่มี token/chat id?)'}")
+
+
 def main():
     ap = argparse.ArgumentParser(description="เทียบใบจัดของกับที่เติมจริง")
     ap.add_argument("--dry-run", action="store_true", help="ไม่เขียน DB ไม่ส่ง Telegram")
     ap.add_argument("--min-age", type=float, default=MIN_AGE_HOURS,
                     help=f"รอกี่ชั่วโมงหลังออกใบ (ค่าเริ่มต้น {MIN_AGE_HOURS})")
+    ap.add_argument("--to-owner", action="store_true",
+                    help="ส่งเข้าแชทส่วนตัวเจ้าของแทนกลุ่ม Admin (ใช้ดูหน้าตารายงานก่อน)")
+    ap.add_argument("--sample", action="store_true",
+                    help="ส่งรายงานตัวอย่างจากช่องที่ว่างค้างจริง — ใช้ทดสอบตอนยังไม่มีใบในระบบ")
     args = ap.parse_args()
+
+    if args.sample:
+        send_sample(args.to_owner)
+        return
 
     if not (SUPABASE_URL and SUPABASE_KEY):
         sys.exit("❌ ไม่มี SUPABASE_URL / SUPABASE_SERVICE_KEY")
@@ -155,7 +207,7 @@ def main():
     if over or under:
         try:
             from telegram_alert import alert_refill_plan_diff
-            alert_refill_plan_diff(over, under)
+            alert_refill_plan_diff(over, under, to_owner=args.to_owner)
         except Exception as e:
             print(f"⚠️  ส่ง Telegram ไม่สำเร็จ: {e}")
 

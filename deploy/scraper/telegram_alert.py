@@ -269,12 +269,20 @@ def refill_plan_text(over, under):
     return "".join(parts)
 
 
-def alert_refill_plan_diff(over, under):
-    """ส่งสรุปเข้ากลุ่ม Admin — เกิน/ขาดเทียบกับใบที่พิมพ์ไป"""
+def alert_refill_plan_diff(over, under, to_owner=False, note=None):
+    """ส่งสรุปเกิน/ขาดเทียบกับใบที่พิมพ์ไป
+
+    to_owner=True → เข้าแชทส่วนตัวเจ้าของแทนกลุ่ม Admin
+    ใช้ตอนอยากดูหน้าตารายงานก่อนปล่อยให้ลงกลุ่มจริง
+    note → ข้อความกำกับหัวเรื่อง (เช่น บอกว่านี่เป็นตัวอย่างทดสอบ)
+    """
     if not over and not under:
         return None
+    text = refill_plan_text(over, under)
+    if note:
+        text = f"{_esc(note)}\n\n{text}"
     buttons = [[{"text": "📋 ดูสต็อกหน้าตู้", "url": PAGESLOTS_URL}]]
-    return send_message(ADMIN_CHAT_ID, refill_plan_text(over, under),
+    return send_message(OWNER_CHAT_ID if to_owner else ADMIN_CHAT_ID, text,
                         reply_markup={"inline_keyboard": buttons})
 
 

@@ -22,6 +22,14 @@ on:
       min_age:
         description: "รอกี่ชั่วโมงหลังออกใบถึงจะเทียบ (ว่าง = 12)"
         required: false
+      to_owner:
+        description: "ส่งเข้าแชทส่วนตัวเจ้าของแทนกลุ่ม Admin"
+        type: boolean
+        default: false
+      sample:
+        description: "ส่งรายงานตัวอย่างจากช่องที่ว่างค้างจริง (ใช้ดูหน้าตาก่อนมีใบจริง)"
+        type: boolean
+        default: false
 
 jobs:
   check:
@@ -42,12 +50,18 @@ jobs:
           SUPABASE_SERVICE_KEY:   ${{ secrets.SUPABASE_SERVICE_KEY }}
           TELEGRAM_BOT_TOKEN:     ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_ADMIN_CHAT_ID: ${{ secrets.TELEGRAM_ADMIN_CHAT_ID }}
+          # ต้องส่งด้วย ไม่งั้น --to-owner จะเงียบ (send_message ข้ามเมื่อ chat_id ว่าง)
+          TELEGRAM_OWNER_CHAT_ID: ${{ secrets.TELEGRAM_OWNER_CHAT_ID }}
           IN_DRY_RUN: ${{ inputs.dry_run }}
           IN_MIN_AGE: ${{ inputs.min_age }}
+          IN_TO_OWNER: ${{ inputs.to_owner }}
+          IN_SAMPLE: ${{ inputs.sample }}
         working-directory: deploy/scraper
         run: |
           ARGS=()
           if [ "$IN_DRY_RUN" = "true" ]; then ARGS+=(--dry-run); echo "🧪 DRY-RUN"; fi
+          if [ "$IN_TO_OWNER" = "true" ]; then ARGS+=(--to-owner); echo "📩 ส่งเข้าแชทส่วนตัว"; fi
+          if [ "$IN_SAMPLE" = "true" ]; then ARGS+=(--sample); echo "🧪 รายงานตัวอย่าง"; fi
           if [ -n "$IN_MIN_AGE" ]; then ARGS+=(--min-age "$IN_MIN_AGE"); fi
           python refill_plan_check.py "${ARGS[@]}"
 
