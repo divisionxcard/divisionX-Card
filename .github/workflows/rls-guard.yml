@@ -53,8 +53,18 @@ jobs:
           echo "code=$CODE" >> "$GITHUB_OUTPUT"
           exit 0
 
-      - name: แจ้งเตือนถ้ายังรั่ว
-        if: steps.rls.outputs.code == '1'
+      # ⚠️ ต้องเตือนทั้งตอน "รั่ว" (1) และตอน "ตรวจไม่ได้" (2)
+      #
+      # เดิมเตือนเฉพาะ code==1 ด้วยเหตุผลว่า "ขาด secret ไม่ใช่ช่องโหว่ อย่าเตือนหลอก"
+      # ซึ่งฟังขึ้น แต่ผลจริงคือ **ตัวเฝ้าเงียบสนิทมาตั้งแต่วันแรก**:
+      #   ตรวจ 1 ก.ย. 2026 — รันไป 7 รอบตั้งแต่ 26 ส.ค. แดงทุกรอบด้วย code=2
+      #   (ไม่เคยตั้ง secret SUPABASE_ANON_KEY) → ขั้นแจ้งเตือนถูก skip ทุกครั้ง
+      #   เหลือแค่กากบาทแดงใน Actions ที่ไม่มีใครเปิดดู
+      #   ระหว่างนั้น ai_credit_readings เปิดให้ anon อ่าน/ลบได้ค้างอยู่ 4 วันเต็ม
+      #
+      # ตัวเฝ้าที่ดังแล้วไม่มีคนได้ยิน = ไม่มีตัวเฝ้า · ยอมเตือนหลอกดีกว่าเงียบตอนรั่วจริง
+      - name: แจ้งเตือนถ้ายังรั่ว หรือตรวจไม่ได้
+        if: steps.rls.outputs.code == '1' || steps.rls.outputs.code == '2'
         env:
           TELEGRAM_BOT_TOKEN:     ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_OWNER_CHAT_ID: ${{ secrets.TELEGRAM_OWNER_CHAT_ID }}
@@ -62,16 +72,25 @@ jobs:
           [ -z "$TELEGRAM_BOT_TOKEN" ] && exit 0
           [ -z "$TELEGRAM_OWNER_CHAT_ID" ] && exit 0
           RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          if [ "${{ steps.rls.outputs.code }}" = "2" ]; then
+            TEXT=$(printf '%s\n\n%s\n%s\n\n%s' \
+              '⚪ <b>ตัวเฝ้า RLS ตรวจไม่ได้</b>' \
+              'ยังไม่ได้ตั้ง secret SUPABASE_ANON_KEY ใน GitHub → ตัวเฝ้าไม่เคยตรวจอะไรเลย' \
+              'ตั้งที่ Settings → Secrets and variables → Actions (ค่าเดียวกับ NEXT_PUBLIC_SUPABASE_ANON_KEY ใน Vercel)' \
+              "$RUN_URL")
+          else
           # เอาเฉพาะบรรทัดสรุป ไม่ยัดทั้ง log ลง Telegram
-          SUMMARY=$(grep -E '^🔴' /tmp/rls.log | head -4)
+          # (🔴 ไม่ได้อยู่คอลัมน์แรกของบรรทัดตาราง จึงไม่ anchor ด้วย ^)
+          SUMMARY=$(grep -E '🔴' /tmp/rls.log | head -5)
           # ⚠️ ประกอบข้อความด้วย printf ไม่ใช่สตริงหลายบรรทัดใน YAML
           #    บรรทัดที่เริ่มคอลัมน์ 0 จะหลุดออกจากบล็อก run: | แล้ว YAML พัง
           TEXT=$(printf '%s\n\n%s\n\n%s\n%s\n\n%s' \
             '🔴 <b>ฐานข้อมูลเปิดให้คนนอกเข้าถึงได้</b>' \
             "$SUMMARY" \
             'คนที่ไม่ได้ล็อกอินอ่าน/ลบข้อมูลได้ ต้องรีบแก้' \
-            'แก้: รัน backend/database/migrations/069_enable_rls.sql ใน Supabase SQL Editor' \
+            'แก้: ตารางใหม่ต้องมี ENABLE RLS + policy + REVOKE ALL FROM anon (ดู migration 074)' \
             "$RUN_URL")
+          fi
           curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
             -H "Content-Type: application/json" \
             -d "$(jq -n --arg chat "$TELEGRAM_OWNER_CHAT_ID" --arg txt "$TEXT" \
