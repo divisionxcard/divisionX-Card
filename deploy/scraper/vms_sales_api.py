@@ -362,11 +362,18 @@ def parse_api_sales(api_rows: list[dict], slot_lookup: dict | None = None,
         #
         # ถ้า cart[] มีรหัส/ชื่อสินค้าติดมาด้วย เราต้องใช้ตัวนั้นแทนการเดาจากช่อง
         # เพราะมันคือข้อเท็จจริงของบิลใบนั้น ไม่ใช่สภาพตู้ ณ เวลาที่เราไป sync
+        # ⚠️ พิมพ์เฉพาะฟิลด์ที่ต้องใช้ออกแบบ — ห้ามพิมพ์ทั้ง row เพราะมี qr_data /
+        #    ksher_order_no / ksher_mid ซึ่งเป็นข้อมูลการชำระเงิน ไม่ควรลง log สาธารณะ
         if os.environ.get("VMS_DUMP_RAW") and cart:
-            print(f"  🔍 RAW row keys: {sorted(row.keys())}")
-            print(f"  🔍 cart      = {json.dumps(cart, ensure_ascii=False)[:600]}")
-            print(f"  🔍 cart_slot = {json.dumps(cart_slot, ensure_ascii=False)[:300]}")
-            os.environ.pop("VMS_DUMP_RAW")      # พิมพ์ครั้งเดียวพอ ไม่ให้ log ท่วม
+            keep = ("cart", "cart_slot", "dispenseStatus", "dispenseStatusSummary",
+                    "discount", "promotion", "coupon", "normal_price", "total_price",
+                    "system_total_price", "price_conflict", "status", "type", "cart_enable")
+            print("  🔍 " + json.dumps({k: row.get(k) for k in keep}, ensure_ascii=False)[:1500])
+            n = int(os.environ.get("VMS_DUMP_RAW") or 1) - 1
+            if n <= 0:
+                os.environ.pop("VMS_DUMP_RAW")
+            else:
+                os.environ["VMS_DUMP_RAW"] = str(n)
         n_items = len(cart_slot) or len(cart)
         if n_items == 0:
             continue
