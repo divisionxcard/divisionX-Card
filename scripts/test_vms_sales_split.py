@@ -187,6 +187,16 @@ NO_DISP = {k: val for k, val in REAL.items() if k != "dispenseStatus"}
 r8 = v.parse_api_sales([NO_DISP], STALE_SLOT, {}, FRESH_PRODUCT)
 check("ยังอ่านรหัสสินค้าจาก cart ได้", sorted(r["sku_id"] for r in r8), ["OP 08", "OP 17"])
 
+print("\n-- ด่านโหมดซ่อม: ซ่อมเฉพาะบิลที่ชี้สินค้าจากรหัสได้ครบ --")
+check("บิลที่ชี้จากรหัสได้ครบ + ราคาตรงยอดบิล = ซ่อมได้",
+      all(r["_confident"] for r in r6), True)
+check("บิลที่ต้องถอยไปเดาจากช่อง = ห้ามแตะ",
+      any(r["_confident"] for r in r7), False)
+# ราคาที่เราถือรวมแล้วไม่เท่ายอดบิล (โปรโมชั่น/ราคาค้าง) ก็ห้ามแตะเหมือนกัน
+PROMO = {**REAL, "txid": "promo", "total_price": 300}
+r9 = v.parse_api_sales([PROMO], STALE_SLOT, {}, FRESH_PRODUCT)
+check("ราคารวมไม่ตรงยอดบิล = ห้ามแตะ", any(r["_confident"] for r in r9), False)
+
 print()
 if fails:
     print(f"❌ ไม่ผ่าน {len(fails)} ข้อ: {' · '.join(fails)}")

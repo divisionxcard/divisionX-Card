@@ -470,6 +470,11 @@ def parse_api_sales(api_rows: list[dict], slot_lookup: dict | None = None,
         else:
             even_txn += 1
 
+        # บิลนี้ "มั่นใจ" ก็ต่อเมื่อทุกบรรทัดรู้จักรหัสสินค้า และราคารายชิ้นรวมได้เท่ายอดบิล
+        # ใช้เป็นด่านของโหมดซ่อม — ซ่อมเฉพาะบิลที่เรารู้คำตอบจริง ไม่เดาทับของเดิม
+        bill_ok = (all(li["src"] == "product" for li in line_items)
+                   and method == "price" and abs(drift) <= DRIFT_TOL)
+
         for li, amount in zip(line_items, amounts):
             if not li["sku_id"]:
                 # ช่องที่ map ไม่ได้ → ทิ้งทั้งบรรทัดพร้อมส่วนแบ่งของมัน
@@ -490,6 +495,7 @@ def parse_api_sales(api_rows: list[dict], slot_lookup: dict | None = None,
                 "sold_at": sold_at,
                 "slot_number": li["slot"] or None,
                 "product_id":  li["product_id"],
+                "_confident":  bill_ok,
             })
 
     if skipped_no_lookup:
@@ -513,28 +519,80 @@ def parse_api_sales(api_rows: list[dict], slot_lookup: dict | None = None,
             print(f"        {mid} บิล {t[:16]} ตู้คิด {tot:,.2f} · ราคาที่เรารวมได้ {ours:,.2f}")
     return records
 
-def save_to_supabase(records: list[dict]):
+def save_to_supabase(records: list[dict], repair: bool = False):
+    """repair=False -> เขียนเฉพาะแถวใหม่ (ปกติ) · repair=True -> ทับแถวเดิมที่ป้ายสินค้าผิด
+
+    ⚠️ ปกติต้อง ignore_duplicates=True เสมอ เพราะ VMS คืน "ชื่อสินค้าปัจจุบัน"
+       ถ้า sync ย้อนหลังแล้วทับ ประวัติจะกลายเป็นของชุดใหม่ทั้งแถว
+       โหมดซ่อมยอมทับได้เพราะเราชี้สินค้าจาก **รหัส** ไม่ใช่จากช่อง — รหัสไม่ขยับตามช่อง
+       และมีด่าน _confident กันไว้อีกชั้น (บิลไหนไม่ชัวร์ ไม่แตะ)
+    """
     if not records:
         print("⚠️ ไม่มีข้อมูลที่จะบันทึก")
         return
     supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+
+    if repair:
+        keep, skipped = [], []
+        for r in records:
+            (keep if r.pop("_confident", True) else skipped).append(r)
+        records = keep
+        print(f"🔧 โหมดซ่อม: ซ่อม {len(records)} แถว · ข้าม {len(skipped)} แถวที่ยังไม่ชัวร์")
+        if skipped:
+            byt = sorted({r["transaction_id"] for r in skipped})
+            print(f"   บิลที่ไม่แตะ ({len(byt)} ใบ): {', '.join(byt[:8])}"
+                  + (" …" if len(byt) > 8 else ""))
+        if not records:
+            print("   ไม่มีอะไรให้ซ่อม")
+            return
+    else:
+        for r in records:
+            r.pop("_confident", None)
+
     print(f"💾 บันทึก {len(records)} รายการลง Supabase...")
     batch_size = 100
     saved = 0
     for i in range(0, len(records), batch_size):
         batch = records[i:i+batch_size]
-        # ⚠ ignore_duplicates=True · กัน overwrite product_name + sku_id หลัง admin เปลี่ยนสินค้า slot
-        # (VMS API คืน current name · ถ้า upsert จะ overwrite ประวัติเดิม)
-        upsert_sales(supabase, add_unit(batch, "product_name_raw"))
+        upsert_sales(supabase, add_unit(batch, "product_name_raw"),
+                     ignore_duplicates=not repair)
         saved += len(batch)
         print(f"  ✅ batch {i//batch_size + 1}: {len(batch)} รายการ")
     print(f"🎉 บันทึกทั้งหมด {saved} รายการ")
+
+    if repair:
+        drop_orphans(supabase, records)
+
+
+def drop_orphans(supabase, records: list[dict]):
+    """ลบแถวส่วนเกินของบิลที่เพิ่งซ่อม
+
+    sale_key คือ "<txid>-<ลำดับในบิล>" ซึ่งนับเฉพาะบรรทัดที่ map ได้
+    ถ้ารอบเก่า map ได้ 3 บรรทัดแต่รอบนี้ได้ 2 · แถว "-2" ของเดิมจะค้างเป็นผี
+    ทำให้ยอดเกินจริง ต้องเก็บกวาด ไม่งั้นการซ่อมจะสร้างปัญหาใหม่แทน
+    """
+    keys = {r["sale_key"] for r in records}
+    txns = sorted({r["transaction_id"] for r in records})
+    orphans = []
+    for i in range(0, len(txns), 100):
+        res = supabase.table("sales").select("sale_key").in_(
+            "transaction_id", txns[i:i+100]).execute()
+        orphans += [r["sale_key"] for r in (res.data or []) if r["sale_key"] not in keys]
+    if not orphans:
+        print("🧹 ไม่มีแถวส่วนเกินค้างอยู่")
+        return
+    print(f"🧹 ลบแถวส่วนเกิน {len(orphans)} แถว: {', '.join(orphans[:6])}"
+          + (" …" if len(orphans) > 6 else ""))
+    for i in range(0, len(orphans), 100):
+        supabase.table("sales").delete().in_("sale_key", orphans[i:i+100]).execute()
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--days", type=int, default=1)
     parser.add_argument("--from-date", type=str, default=None)
     parser.add_argument("--to-date", type=str, default=None)
+    parser.add_argument("--repair", action="store_true",
+                        help="ทับแถวเดิมที่ป้ายสินค้าผิด (เฉพาะบิลที่ชี้สินค้าจากรหัสได้ครบ)")
     args = parser.parse_args()
 
     now_bkk = datetime.utcnow() + timedelta(hours=7)
@@ -579,7 +637,7 @@ def main():
             "VMS API schema อาจเปลี่ยน · ตรวจ key txid/pay_price/total_price ใน vms_sales_api.py"
         )
 
-    save_to_supabase(records)
+    save_to_supabase(records, repair=args.repair)
 
 if __name__ == "__main__":
     main()

@@ -16,6 +16,10 @@ on:
       to_date:
         description: "วันสิ้นสุด (YYYY-MM-DD) สำหรับ backfill"
         required: false
+      repair:
+        description: "โหมดซ่อม: ทับแถวเดิมที่ป้ายสินค้าผิด (ใช้คู่กับ from_date/to_date)"
+        type: boolean
+        default: false
       dump_raw:
         description: "พิมพ์โครงสร้างดิบของบิลใบแรกลง log (ใช้สืบว่า API ส่งชื่อสินค้ามาไหม)"
         type: boolean
@@ -55,6 +59,10 @@ jobs:
           IN_DAYS:      ${{ inputs.days }}
           IN_FROM_DATE: ${{ inputs.from_date }}
           IN_TO_DATE:   ${{ inputs.to_date }}
+          # โหมดซ่อม — ทับสินค้าที่ป้ายผิดจากยุคที่ยังเดาจากช่อง
+          # ปกติ sales ตั้ง ignore_duplicates=True ไว้กัน sync ย้อนหลังทับประวัติ
+          # โหมดนี้ยอมทับเพราะชี้สินค้าจากรหัสในบิล ไม่ใช่จากสภาพตู้ตอนนี้
+          IN_REPAIR:    ${{ inputs.repair }}
         run: |
           # Build args as bash array (รองรับช่องว่าง/อักขระพิเศษ + ป้องกัน positional leak)
           ARGS=()
@@ -67,8 +75,20 @@ jobs:
           else
             echo "📅 Default: --days 1"
           fi
+          # --repair ให้เฉพาะตัว API — Playwright ไม่มีรหัสสินค้าให้ยึด
+          # ถ้าปล่อยไปมันจะตายเพราะไม่รู้จัก flag และแย่กว่านั้นคือถ้ารู้จัก
+          # มันจะทับข้อมูลด้วยของที่เดาจากช่องอีกรอบ = ย้อนกลับไปหาบั๊กเดิม
+          API_ARGS=("${ARGS[@]}")
+          if [ "$IN_REPAIR" = "true" ]; then
+            API_ARGS+=(--repair)
+            echo "🔧 โหมดซ่อม: ทับแถวเดิมเฉพาะบิลที่ชี้สินค้าจากรหัสได้ครบ (ไม่ fallback)"
+          fi
           echo "🚀 ลอง API ก่อน..."
-          python deploy/scraper/vms_sales_api.py "${ARGS[@]}" || {
+          python deploy/scraper/vms_sales_api.py "${API_ARGS[@]}" || {
+            if [ "$IN_REPAIR" = "true" ]; then
+              echo "❌ โหมดซ่อมล้ม — ไม่ fallback ไป Playwright (ซ่อมด้วยข้อมูลที่เดาจากช่องไม่ได้)"
+              exit 1
+            fi
             echo "⚠️ API ไม่สำเร็จ — fallback ไป Playwright..."
             pip install playwright && playwright install --with-deps chromium
             python deploy/scraper/vms_scraper.py "${ARGS[@]}"
