@@ -229,31 +229,50 @@ def _num(v):
     return f if f > 0 else None
 
 
-def allocate(total: float, weights: list) -> list:
-    """แบ่งเงินของบิลใบเดียวไปตามน้ำหนัก (= ราคาต่อการกด 1 ครั้งของแต่ละช่อง)
+# เจ้าของสั่ง 2 ก.ย. 2026: เลิกหารทุกกรณี ใช้ราคาสินค้ารายชิ้นเท่านั้น
+DRIFT_TOL = 0.05     # ผลรวมราคารายชิ้น ห่างจากยอดบิลได้ไม่เกินนี้ถึงจะถือว่าปกติ
 
-    ทำไมต้องมี: VMS ส่งมาแค่ยอดรวมของบิล ไม่ส่งราคารายชิ้น
-    ของเดิมหารเท่ากันหมด → บิล 590 บาทที่มี FB 04 (110) + FB 09 (230) + OP 17 (250)
-    กลายเป็น 196.67 ทั้งสามบรรทัด เงินไม่หายแต่ไปนั่งผิด SKU
 
-    ⚠️ ไม่มีราคาครบทุกบรรทัด = หารเฉลี่ยเหมือนเดิม ห้ามถ่วงครึ่ง ๆ กลาง ๆ
-       ถ่วงเฉพาะบางบรรทัดจะเพี้ยนหนักกว่าหารเฉลี่ยเสียอีก
-    ⚠️ เศษจากการปัดทศนิยมต้องไม่หาย — ยัดเข้าบรรทัดที่ยอดสูงสุด
-       ให้ผลรวมเท่ายอดบิลเป๊ะ (ของเดิมได้ 219.99 จากบิล 220)
+def line_amounts(total: float, prices: list):
+    """ยอดของแต่ละบรรทัดในบิลใบเดียว · คืน (ยอดรายบรรทัด, วิธีที่ใช้, ส่วนต่างจากยอดบิล)
+
+    **กติกาข้อเดียว: ยอดของบรรทัด = ราคาสินค้าชิ้นนั้น** ไม่ใช่ส่วนแบ่งของยอดบิล
+
+    ทำไมต้องเลิกหาร (เจ้าของสั่งเอง 2 ก.ย. 2026 หลังเจอของจริงติดกันสองรอบ):
+      รอบแรก  หารเท่ากันทุกบรรทัด → บิล 590 (FB04 110 · FB09 230 · OP17 250)
+              กลายเป็น 196.67 ทั้งสามบรรทัด
+      รอบสอง  เปลี่ยนเป็นถ่วงน้ำหนักตามราคา ก็ยังผิดอยู่ดีเมื่อ "ราคาที่ใช้ถ่วง" ผิด —
+              บิล 390 ที่ chukes04 ได้ 8.97 / 381.03 เพราะราคาสำรองของช่องกล่อง
+              ถูกคูณ packs_per_box จนกลายเป็น 5,100
+      บทเรียน: **การหารคือการเดา** ต่อให้เดาด้วยสูตรที่ดีขึ้น มันก็ยังผิดได้เงียบ ๆ
+              และผิดแบบที่ได้ตัวเลขหน้าตาน่าเชื่อถือ ซึ่งไม่มีใครไปสงสัย
+
+    ตอนนี้เรามีราคาต่อช่องจริงใน machine_stock.sell_price (migration 071) แล้ว
+    จึงกำหนดยอดตรง ๆ ได้ ไม่ต้องแบ่งอะไรทั้งนั้น
+
+    ⚠️ ส่วนต่างระหว่างผลรวมราคากับยอดบิล **ห้ามเกลี่ยเข้าบรรทัด** — ต้องรายงานออกมา
+       เพราะมันคือสัญญาณว่าราคาที่เราถืออยู่ไม่ตรงกับที่ตู้คิดเงินจริง (โปรโมชั่น ·
+       ราคาค้างเก่า · ของในช่องเปลี่ยน) การเกลี่ยลงบรรทัดคือการซ่อนสัญญาณนั้น
+
+    ⚠️ ไม่รู้ราคาแม้แต่บรรทัดเดียว = ยังไม่มีข้อมูลพอจะเลิกหาร ต้องหารเฉลี่ยไปก่อน
+       และต้องนับไว้ให้เห็น ไม่ใช่ปล่อยเงียบ — ถ้าตัวเลขนี้ไม่เป็น 0
+       แปลว่าราคาต่อช่องยังเก็บไม่ครบ ต้องไปแก้ที่ต้นทางนั้น ไม่ใช่มาแก้ที่นี่
     """
-    n = len(weights)
+    n = len(prices)
     if n == 0:
-        return []
-    wsum = sum(w for w in weights if w)
-    if wsum > 0 and all(w for w in weights):
-        out = [round(total * w / wsum, 2) for w in weights]
-    else:
-        out = [round(total / n, 2)] * n
+        return [], "none", 0.0
+
+    if all(p for p in prices):
+        out = [round(float(p), 2) for p in prices]
+        return out, "price", round(total - sum(out), 2)
+
+    # ทางสุดท้ายเท่านั้น — ไม่มีราคา ก็ไม่มีข้อมูลอื่นให้ใช้นอกจากยอดรวม
+    out = [round(total / n, 2)] * n
     diff = round(total - sum(out), 2)
     if diff:
         i = max(range(n), key=lambda k: out[k])
         out[i] = round(out[i] + diff, 2)
-    return out
+    return out, "even", 0.0
 
 
 def parse_api_sales(api_rows: list[dict], slot_lookup: dict | None = None,
@@ -271,6 +290,7 @@ def parse_api_sales(api_rows: list[dict], slot_lookup: dict | None = None,
     sku_prices = sku_prices or {}
     skipped_no_lookup = 0
     weighted_txn = even_txn = 0
+    drift_total, drift_bills = 0.0, []
 
     for row in api_rows:
         txn_id = str(
@@ -355,11 +375,16 @@ def parse_api_sales(api_rows: list[dict], slot_lookup: dict | None = None,
             })
 
         prices = [li["price"] for li in line_items]
-        if all(prices):
+        amounts, method, drift = line_amounts(total_price, prices)
+        if method == "price":
             weighted_txn += 1
+            # ⚠️ เก็บส่วนต่างไว้รายงาน ไม่เกลี่ยลงบรรทัด — มันคือสัญญาณว่าราคาที่เราถือ
+            #    ไม่ตรงกับที่ตู้คิดเงินจริง เกลี่ยลงไปเมื่อไหร่คือกลบสัญญาณทิ้ง
+            if abs(drift) > DRIFT_TOL:
+                drift_total += drift
+                drift_bills.append((txn_id, machine_id, total_price, round(sum(amounts), 2)))
         else:
             even_txn += 1
-        amounts = allocate(total_price, prices)
 
         for li, amount in zip(line_items, amounts):
             if not li["sku_id"]:
@@ -386,10 +411,16 @@ def parse_api_sales(api_rows: list[dict], slot_lookup: dict | None = None,
     if skipped_no_lookup:
         print(f"  ⚠️ skip {skipped_no_lookup} items: ไม่พบ slot ใน machine_stock (อาจต้อง trigger stock sync ก่อน)")
     if weighted_txn or even_txn:
-        print(f"  💰 แบ่งเงินตามราคาจริง {weighted_txn} บิล · หารเฉลี่ยเพราะไม่รู้ราคา {even_txn} บิล")
+        print(f"  💰 ใช้ราคาสินค้ารายชิ้น {weighted_txn} บิล · หารเฉลี่ยเพราะไม่รู้ราคา {even_txn} บิล")
         if even_txn:
-            print("     (บิลที่หารเฉลี่ยจะทำให้ยอดรายตัว SKU เพี้ยนเมื่อของในบิลราคาไม่เท่ากัน"
-                  " — ตรวจว่ารัน migration 071 + sync สต็อกรอบใหม่แล้วหรือยัง)")
+            print("     ⚠️ บิลที่ยังต้องหารเฉลี่ยคือบิลที่เรายังไม่มีราคาต่อช่อง —")
+            print("        แก้ที่ต้นทาง (รัน migration 071 + sync สต็อกให้ครบทุกตู้) ไม่ใช่แก้ที่สูตรแบ่งเงิน")
+    if drift_bills:
+        print(f"  ⚠️ ราคาที่เราถือ ไม่ตรงกับยอดที่ตู้คิดเงินจริง {len(drift_bills)} บิล "
+              f"· ต่างรวม {drift_total:+,.2f} บาท")
+        print("     (โปรโมชั่น · ราคาค้างเก่า · หรือของในช่องเปลี่ยนแล้วสต็อกยังไม่ sync)")
+        for t, mid, tot, ours in drift_bills[:5]:
+            print(f"        {mid} บิล {t[:16]} ตู้คิด {tot:,.2f} · ราคาที่เรารวมได้ {ours:,.2f}")
     return records
 
 def save_to_supabase(records: list[dict]):
