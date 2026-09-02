@@ -144,6 +144,49 @@ got5 = {r["sku_id"]: r["grand_total"] for r in recs5}
 check("เหลือ 2 บรรทัด", len(recs5), 2)
 check("บรรทัดที่เหลือไม่พองขึ้น", got5, {"FB 04": 196.66, "OP 17": 196.67})
 
+# -- 3. PRODUCT ID BEATS SLOT --
+print("\n-- รหัสสินค้า vs ช่อง: บิลจริง chukes04 1 ก.ย. 2026 --")
+# หลังบ้าน VMS: 14:05:42 ตู้ 4 = OP-17 (250) + OP-08 (140) = 390
+# ตอนนั้นแอดมินเพิ่งเปลี่ยนของหน้าตู้เมื่อเช้า แต่เรา sync สต็อกตอน 14:19
+# slot_lookup จึงยังถือของชุดเก่า (NRT Jin-2 / PRB 01 Box) อยู่
+STALE_SLOT = {
+    ("chukes04", "017"): ("NRT Jin - 2", "Naruto Jin - 2", "9001", 120.0),
+    ("chukes04", "026"): ("PRB 01", "PRB - 01 (Box)", "9002", 5100.0),
+}
+FRESH_PRODUCT = {
+    "pair": {("chukes04", "14258"): ("OP 17", "One Piece OP - 17", 250.0)},
+    "pid":  {"14258": ("OP 17", "One Piece OP - 17", 250.0),
+             "1408":  ("OP 08", "One Piece OP - 08", 140.0)},
+}
+REAL = {
+    "txid": "sep01-1405", "kiosk_id": "chukes04",
+    "created_at": "2026-09-01T07:05:42", "total_price": 390, "status": "paid",
+    "cart": ["14258", "1408"], "cart_slot": ["017", "026"],
+    "dispenseStatus": [
+        {"product_id": "14258", "slot_code": "017", "status": "success"},
+        {"product_id": "1408",  "slot_code": "026", "status": "success"},
+    ],
+}
+r6 = v.parse_api_sales([REAL], STALE_SLOT, {}, FRESH_PRODUCT)
+check("ได้สินค้าตามบิล ไม่ใช่ตามของที่ค้างอยู่ในช่อง",
+      sorted(r["sku_id"] for r in r6), ["OP 08", "OP 17"])
+check("ยอดตรงกับที่หลังบ้านแสดง (250 + 140)",
+      {r["sku_id"]: r["grand_total"] for r in r6}, {"OP 17": 250.0, "OP 08": 140.0})
+check("รวมได้ยอดบิลพอดี", round(sum(r["grand_total"] for r in r6), 2), 390.0)
+check("นับเป็นซองเดี่ยว ไม่ใช่กล่อง 10 ซองอย่างที่ช่องค้างไว้",
+      sorted(r["quantity_sold"] for r in r6), [1, 1])
+check("ยังเก็บเลขช่องไว้อ้างอิง", sorted(r["slot_number"] for r in r6), ["017", "026"])
+
+print("\n-- ไม่รู้จักรหัสสินค้า ถอยไปดูช่องได้ ไม่ทิ้งยอด --")
+r7 = v.parse_api_sales([REAL], STALE_SLOT, {}, {"pair": {}, "pid": {}})
+check("ยังได้ 2 บรรทัดจากช่อง", len(r7), 2)
+check("ยอดรวมไม่หาย", round(sum(r["grand_total"] for r in r7), 2) > 0, True)
+
+print("\n-- บิลเก่าที่ไม่มี dispenseStatus ใช้ zip(cart, cart_slot) แทน --")
+NO_DISP = {k: val for k, val in REAL.items() if k != "dispenseStatus"}
+r8 = v.parse_api_sales([NO_DISP], STALE_SLOT, {}, FRESH_PRODUCT)
+check("ยังอ่านรหัสสินค้าจาก cart ได้", sorted(r["sku_id"] for r in r8), ["OP 08", "OP 17"])
+
 print()
 if fails:
     print(f"❌ ไม่ผ่าน {len(fails)} ข้อ: {' · '.join(fails)}")

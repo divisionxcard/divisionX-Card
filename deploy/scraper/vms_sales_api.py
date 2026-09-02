@@ -205,6 +205,45 @@ def fetch_slot_lookup(supabase) -> dict:
     return lookup
 
 
+def fetch_product_lookup(supabase) -> dict:
+    """product_id → (sku_id, product_name, ราคา) · **ตัวนี้คือตัวหลัก ไม่ใช่ slot**
+
+    ทำไมต้องเลิกดูจากช่อง (เจ้าของจับได้ 1 ก.ย. 2026):
+        API ยอดขายส่ง cart[] = รหัสสินค้า มาให้ตลอด แต่โค้ดเดิมไม่เคยหยิบ
+        ไปเดาแทนว่า "ตอนนี้ช่องนั้นมีอะไร" ซึ่งผิดทุกครั้งที่แอดมินเปลี่ยนของหน้าตู้
+        แล้วเรายังไม่ได้ sync สต็อก
+
+        เคสจริง: chukes04 เปลี่ยนของเช้าวันที่ 1 ก.ย. เรารู้ตอน 14:19 น.
+        บิล 10:45 กับ 14:05 จึงถูกป้ายเป็นสินค้าตัวเก่า (หลังบ้านบอก OP-17+OP-08
+        เราบันทึก MLP / NRT Jin-2 + PRB 01) — 118/143 แถวของตู้นั้นผิดด้วยเหตุนี้
+
+    **รหัสสินค้าไม่ขยับตามช่อง** ย้ายของกี่รอบก็ยังชี้ตัวเดิม จึงเป็นข้อเท็จจริงที่ใช้ได้จริง
+
+    ⚠️ ราคาแยกตามตู้ (VMS ตั้งราคาต่อช่อง/ต่อตู้ได้) จึงเก็บสองชั้น:
+       (machine_id, product_id) ก่อน แล้วค่อยตกไปที่ราคาที่พบของสินค้านั้นในตู้ไหนก็ได้
+    """
+    try:
+        res = supabase.table("machine_stock").select(
+            "machine_id, product_id, sku_id, product_name, sell_price").execute()
+    except Exception as e:
+        print(f"⚠️  โหลด product lookup ไม่ได้: {e}")
+        return {}
+    by_pair, by_pid = {}, {}
+    for r in (res.data or []):
+        pid = str(r.get("product_id") or "").strip()
+        if not pid:
+            continue
+        sku = r.get("sku_id") or (map_product_to_sku(r["product_name"]) if r.get("product_name") else None)
+        info = (sku, r.get("product_name") or "", _num(r.get("sell_price")))
+        by_pair[(r.get("machine_id") or "", pid)] = info
+        # ตัวสำรองข้ามตู้ — ถ้าตู้นี้ยังไม่มีสินค้าตัวนั้นแล้ว (เพิ่งถอดออก) ยังรู้ว่ามันคืออะไร
+        if pid not in by_pid or (info[2] and not by_pid[pid][2]):
+            by_pid[pid] = info
+    print(f"🏷  Product lookup: {len(by_pid)} รหัสสินค้า "
+          f"({sum(1 for v in by_pid.values() if v[2])} มีราคา · {len(by_pair)} คู่ตู้-สินค้า)")
+    return {"pair": by_pair, "pid": by_pid}
+
+
 def fetch_sku_prices(supabase) -> dict:
     """ราคากลางต่อซองจากตาราง skus — ใช้เป็นทางสำรองเมื่อช่องนั้นยังไม่มีราคา
 
@@ -276,7 +315,7 @@ def line_amounts(total: float, prices: list):
 
 
 def parse_api_sales(api_rows: list[dict], slot_lookup: dict | None = None,
-                    sku_prices: dict | None = None) -> list[dict]:
+                    sku_prices: dict | None = None, product_lookup: dict | None = None) -> list[dict]:
     """แปลง API response เป็น records สำหรับ Supabase
     หลัง VMS rebuild 28 เม.ย. 2026 schema เปลี่ยนเป็น cart + cart_slot (ไม่มี products+name)
     → ใช้ slot_lookup เพื่อแปลง (machine_id, slot_code) → (sku_id, product_name, ราคา)
@@ -288,7 +327,9 @@ def parse_api_sales(api_rows: list[dict], slot_lookup: dict | None = None,
     txn_counter = {}
     slot_lookup = slot_lookup or {}
     sku_prices = sku_prices or {}
+    product_lookup = product_lookup or {}
     skipped_no_lookup = 0
+    by_slot_fallback = not_dispensed = 0
     weighted_txn = even_txn = 0
     drift_total, drift_bills = 0.0, []
 
@@ -378,23 +419,43 @@ def parse_api_sales(api_rows: list[dict], slot_lookup: dict | None = None,
         if n_items == 0:
             continue
 
-        # รอบแรก: แปลงทุกช่องในบิลให้เป็นรายการก่อน แล้วค่อยแบ่งเงิน
-        # ต้องรู้ราคาของ *ทุก* บรรทัดก่อน ถึงจะถ่วงน้ำหนักได้ถูก
+        # ── รายการในบิล — เอาจาก dispenseStatus ก่อน เพราะมันผูก product_id กับ
+        #    slot_code มาให้ในแถวเดียวกันแล้ว และมีสถานะรายชิ้นด้วย
+        #    ไม่มีก็ค่อย zip(cart, cart_slot) ซึ่งเรียงตรงกันอยู่แล้ว
+        disp = row.get("dispenseStatus") or []
+        if disp and len(disp) == len(cart_slot or disp):
+            pairs = [(str(d.get("product_id") or ""), str(d.get("slot_code") or ""),
+                      (d.get("status") or "")) for d in disp]
+        else:
+            pairs = [(str(p or ""), str(s or ""), "")
+                     for p, s in zip(cart or [None] * len(cart_slot), cart_slot)]
+
         line_items = []
-        for slot_code in cart_slot:
-            slot_str = str(slot_code) if slot_code is not None else ""
-            sku_id, product_name, product_id_val, slot_price = \
-                slot_lookup.get((machine_id, slot_str), (None, "", None, None))
+        for product_id_val, slot_str, dstat in pairs:
+            # ⚠️ **รหัสสินค้ามาก่อนเสมอ** — ช่องบอกได้แค่ "ตอนนี้ตรงนั้นมีอะไร"
+            #    ซึ่งเปลี่ยนได้ทุกครั้งที่แอดมินจัดของใหม่ · รหัสสินค้าคือของในบิลจริง
+            info = (product_lookup.get("pair", {}).get((machine_id, product_id_val))
+                    or product_lookup.get("pid", {}).get(product_id_val))
+            if info:
+                sku_id, product_name, price = info
+                src = "product"
+            else:
+                # ไม่รู้จักรหัสนี้ (สินค้าถูกถอดออกจากทุกตู้แล้ว) → ค่อยถอยไปดูช่อง
+                sku_id, product_name, _pid, price = \
+                    slot_lookup.get((machine_id, slot_str), (None, "", None, None))
+                src = "slot"
+                by_slot_fallback += 1
             is_box = unit_of(product_name) == "box"
             # ราคาสำรองจากตาราง skus เป็นราคา "ต่อซอง" — ช่องกล่องต้องคูณกลับ
-            # ไม่งั้นบิลที่มีทั้งกล่องและซองจะถ่วงน้ำหนักผิดหนัก
             fallback = sku_prices.get(sku_id) if sku_id else None
             if fallback and is_box:
                 fallback = fallback * PACKS_PER_BOX.get(sku_id, 24)
+            if dstat and dstat != "success":
+                not_dispensed += 1
             line_items.append({
                 "sku_id": sku_id, "product_name": product_name,
-                "product_id": product_id_val, "slot": slot_str,
-                "is_box": is_box, "price": slot_price or fallback,
+                "product_id": product_id_val or None, "slot": slot_str,
+                "is_box": is_box, "price": price or fallback, "src": src,
             })
 
         prices = [li["price"] for li in line_items]
@@ -432,7 +493,13 @@ def parse_api_sales(api_rows: list[dict], slot_lookup: dict | None = None,
             })
 
     if skipped_no_lookup:
-        print(f"  ⚠️ skip {skipped_no_lookup} items: ไม่พบ slot ใน machine_stock (อาจต้อง trigger stock sync ก่อน)")
+        print(f"  ⚠️ skip {skipped_no_lookup} items: หารหัสสินค้าไม่เจอทั้งจากรหัสและจากช่อง")
+    if by_slot_fallback:
+        print(f"  ⚠️ {by_slot_fallback} รายการต้องถอยไปเดาจากช่อง (ไม่รู้จักรหัสสินค้า)"
+              " — สินค้าตัวนั้นอาจถูกถอดออกจากทุกตู้แล้ว")
+    if not_dispensed:
+        print(f"  ⚠️ {not_dispensed} รายการที่ตู้จ่ายของไม่สำเร็จ แต่ยังถูกบันทึกเป็นยอดขาย"
+              " (หลังบ้าน VMS ก็นับเป็นรายรับ) — ถ้าจะแยกออกต้องมีคอลัมน์สถานะก่อน")
     if weighted_txn or even_txn:
         print(f"  💰 ใช้ราคาสินค้ารายชิ้น {weighted_txn} บิล · หารเฉลี่ยเพราะไม่รู้ราคา {even_txn} บิล")
         if even_txn:
@@ -498,10 +565,11 @@ def main():
 
     # Build slot lookup จาก machine_stock (จำเป็นสำหรับ schema ใหม่)
     supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
-    slot_lookup = fetch_slot_lookup(supabase)
-    sku_prices  = fetch_sku_prices(supabase)   # ทางสำรองเมื่อช่องนั้นยังไม่มีราคา
+    slot_lookup    = fetch_slot_lookup(supabase)
+    product_lookup = fetch_product_lookup(supabase)   # ตัวหลัก — รหัสสินค้าไม่ขยับตามช่อง
+    sku_prices     = fetch_sku_prices(supabase)       # ทางสำรองสุดท้าย
 
-    records = parse_api_sales(api_rows, slot_lookup, sku_prices)
+    records = parse_api_sales(api_rows, slot_lookup, sku_prices, product_lookup)
     print(f"📋 แปลงได้ {len(records)} records")
 
     # Fail loud: ถ้าดึง transactions ได้แต่ parse ไม่ออก = schema เปลี่ยน
