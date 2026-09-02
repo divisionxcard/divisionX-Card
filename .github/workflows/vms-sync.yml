@@ -16,6 +16,10 @@ on:
       to_date:
         description: "วันสิ้นสุด (YYYY-MM-DD) สำหรับ backfill"
         required: false
+      dump_raw:
+        description: "พิมพ์โครงสร้างดิบของบิลใบแรกลง log (ใช้สืบว่า API ส่งชื่อสินค้ามาไหม)"
+        type: boolean
+        default: false
 
 jobs:
   sync:
@@ -44,6 +48,9 @@ jobs:
           TELEGRAM_BOT_TOKEN:     ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_ADMIN_CHAT_ID: ${{ secrets.TELEGRAM_ADMIN_CHAT_ID }}
           TELEGRAM_OWNER_CHAT_ID: ${{ secrets.TELEGRAM_OWNER_CHAT_ID }}
+          # ตัวช่วยสืบว่า API ส่งชื่อ/รหัสสินค้ามากับบิลไหม (ดู vms_sales_api.py Path B)
+          # ตอนนี้เราเดาสินค้าจาก "ช่องนั้นมีอะไรตอนนี้" ซึ่งผิดทุกครั้งที่เพิ่งเปลี่ยนของหน้าตู้
+          VMS_DUMP_RAW: ${{ inputs.dump_raw && '1' || '' }}
           # ใช้ env vars แทน inline ${{ }} เพื่อกัน shell substitution edge cases
           IN_DAYS:      ${{ inputs.days }}
           IN_FROM_DATE: ${{ inputs.from_date }}

@@ -4,7 +4,7 @@ DivisionX Card — VMS Sales Sync via REST API
 เร็วกว่า XLSX export ~10 เท่า
 """
 
-import os, re, argparse, requests
+import os, re, json, argparse, requests
 from datetime import datetime, timedelta
 from supabase import create_client
 
@@ -351,6 +351,22 @@ def parse_api_sales(api_rows: list[dict], slot_lookup: dict | None = None,
         # ใช้ cart + cart_slot · lookup product_name + sku_id + ราคา จาก machine_stock
         cart       = row.get("cart") or []
         cart_slot  = row.get("cart_slot") or []
+
+        # ⚠️ ตัวช่วยสืบ (ชั่วคราว) — ตั้ง VMS_DUMP_RAW=1 แล้วดู log
+        #
+        # ทำไมต้องมี: การหา "ขายสินค้าอะไร" ตอนนี้ไปเดาจาก machine_stock ว่า
+        # "ตอนนี้ช่องนั้นมีอะไร" ซึ่งผิดทุกครั้งที่แอดมินเปลี่ยนของแล้วเรายังไม่ได้ sync
+        # เคสจริง 1 ก.ย. 2026: chukes04 เปลี่ยนของตอนเช้า เรารู้ตอน 14:19 น.
+        # บิล 10:45 กับ 14:05 จึงถูกป้ายเป็นสินค้าตัวเก่าทั้งคู่ (หลังบ้าน VMS บอก OP-17/OP-08
+        # แต่เราบันทึก MLP / NRT Jin-2 + PRB 01) — 118/143 แถวของตู้นั้นผิดด้วยเหตุนี้
+        #
+        # ถ้า cart[] มีรหัส/ชื่อสินค้าติดมาด้วย เราต้องใช้ตัวนั้นแทนการเดาจากช่อง
+        # เพราะมันคือข้อเท็จจริงของบิลใบนั้น ไม่ใช่สภาพตู้ ณ เวลาที่เราไป sync
+        if os.environ.get("VMS_DUMP_RAW") and cart:
+            print(f"  🔍 RAW row keys: {sorted(row.keys())}")
+            print(f"  🔍 cart      = {json.dumps(cart, ensure_ascii=False)[:600]}")
+            print(f"  🔍 cart_slot = {json.dumps(cart_slot, ensure_ascii=False)[:300]}")
+            os.environ.pop("VMS_DUMP_RAW")      # พิมพ์ครั้งเดียวพอ ไม่ให้ log ท่วม
         n_items = len(cart_slot) or len(cart)
         if n_items == 0:
             continue
