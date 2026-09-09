@@ -1,0 +1,239 @@
+name: Render Video
+
+# ประกอบคลิปสั้น 9:16 ด้วยโรงงานวิดีโอใน deploy/agents/video/
+# (เสียงพากย์ไทย + ซับที่ตรงเสียงรายคำ + ภาพถ่ายจริงของตู้กับซองเรา)
+#
+# ทำไมต้องรันที่นี่ ไม่ใช่บน Vercel:
+#   เหตุผลเดียวกับ poster-render.yml เป๊ะ — ซับไทยต้องให้ Chromium จริงเป็นคนวาด
+#   next/og (Satori) ทิ้งวรรณยุกต์เมื่อซ้อนบนสระบน ("ที่" กลายเป็น "ที") และ
+#   ffmpeg/libass ก็จัดสระบน-ล่างพลาดได้เงียบ ๆ แบบที่ตาเห็นทันทีแต่โปรแกรมไม่ฟ้อง
+#   ดู wiki/worklog/2026-08-08-thai-text-rendering.md และ agents/video/README.md
+#
+#   อีกข้อคือคลิปหนึ่งตัวใช้เวลาเป็นสิบนาที ยาวเกิน serverless function ทุกแบบ
+#
+# ⚠️ runner ไม่มีการ์ดจอ — ข้อจำกัดสองข้อที่ต้องรู้ก่อนสั่งงาน:
+#   1. whisper จับเวลาบน CPU (faster-whisper เช็ก torch ไม่เจอ CUDA แล้วตกไป
+#      cpu/int8 ให้เอง — ดู align._load) ช้ากว่าเครื่องที่บ้านหลายเท่า จึงตั้ง
+#      timeout เผื่อไว้ 45 นาที ไม่ใช่ 10 แบบโปสเตอร์
+#   2. FLUX วาดภาพไม่ได้เลย — local_image.py ต้องมี CUDA + โมเดลหลาย GB + HF_TOKEN
+#      แผนที่มี visuals แบบ "flux:..." จะพังกลางคัน (หลังจ่ายค่า TTS ไปแล้วด้วย)
+#      → เตรียมภาพให้เสร็จก่อน แล้วอ้างเป็น machine:/sku:/ไฟล์ที่อยู่ในรีโป
+#      ด้วยเหตุผลเดียวกัน "file:C:\..." ก็ใช้ไม่ได้ — path วินโดวส์ไม่มีบน ubuntu
+#      → ด่าน Preflight ข้างล่างคัดสองอย่างนี้ทิ้งตั้งแต่วินาทีแรก
+
+on:
+  workflow_dispatch:
+    inputs:
+      job_id:
+        description: "id ของงานในตาราง video_jobs ที่จะประกอบ"
+        required: true
+        type: string
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    # คลิป 45 วิ: TTS ~4 นาที · whisper บน CPU ~10-15 นาที · ffmpeg ~2 นาที
+    # ที่เหลือเป็นค่าโหลดโมเดลรอบแรกกับ margin — เผื่อไว้ดีกว่าโดนตัดตอนกำลังเข้ารหัส
+    timeout-minutes: 45
+
+    # ยกขึ้นมาระดับ job เพราะสามขั้นใช้ชุดเดียวกัน (ตรวจก่อน · เรนเดอร์ · ปิดแถวตอนพัง)
+    # ถ้าประกาศซ้ำในแต่ละ step วันหนึ่งจะแก้ที่เดียวแล้วลืมอีกสองที่
+    #
+    # ชื่อ secret ของรีโปนี้กับชื่อคีย์ที่โค้ดอ่านไม่ตรงกัน — ส่งให้ครบทั้งสองชื่อ
+    # (config.env อ่าน deploy/.env.local ก่อน ซึ่งบน runner ไม่มี แล้วค่อยตกมาที่
+    #  os.environ · ส่วน visuals.py มองหา NEXT_PUBLIC_SUPABASE_URL /
+    #  SUPABASE_SERVICE_ROLE_KEY ตามชื่อในไฟล์ .env.local ของเครื่องเจ้าของ)
+    env:
+      SUPABASE_URL:               ${{ secrets.SUPABASE_URL }}
+      NEXT_PUBLIC_SUPABASE_URL:   ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_KEY:       ${{ secrets.SUPABASE_SERVICE_KEY }}
+      SUPABASE_SERVICE_ROLE_KEY:  ${{ secrets.SUPABASE_SERVICE_KEY }}
+      GEMINI_API_KEY:             ${{ secrets.GEMINI_API_KEY }}
+      JOB_ID:                     ${{ inputs.job_id }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # ── ด่านตรวจก่อนลงของ ──
+      # ทุกอย่างที่ตรวจตรงนี้ "รู้ได้ตั้งแต่วินาทีแรก" แต่ถ้าไม่ตรวจจะไปตายเอาตอน
+      # นาทีที่ 5-20 หลังจากจ่ายค่า apt + pip + chromium (~3 นาที) และค่า TTS ไปแล้ว
+      # (curl กับ jq มีมาในอิมเมจอยู่แล้ว ไม่ต้องลงเพิ่ม — ใช้แบบเดียวกับ vms-sync.yml)
+      #
+      # ทุกทางที่ exit 1 ต้องเขียน FAIL_REASON ลง $GITHUB_ENV ก่อนเสมอ — ขั้น
+      # "Mark job failed" จะเอาไปใส่คอลัมน์ error ให้คนอ่านบนเว็บ ไม่ต้องเปิด log
+      # ของ Actions (เหตุผลของคอลัมน์นั้นตามที่เขียนไว้ใน migration 075)
+      - name: Preflight
+        run: |
+          fail() {
+            echo "FAIL_REASON=$1" >> "$GITHUB_ENV"
+            echo "::error::$1"
+            exit 1
+          }
+
+          if [ -z "$GEMINI_API_KEY" ]; then
+            fail "ยังไม่ได้ตั้ง secret GEMINI_API_KEY — ไม่มีเสียงพากย์ก็ทำคลิปไม่ได้"
+          fi
+          if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_SERVICE_KEY" ]; then
+            # ไม่มีคีย์ = เขียนกลับไปบอกใครไม่ได้อยู่ดี ปิดแถวไม่ได้ก็ต้องยอม
+            fail "ยังไม่ได้ตั้ง secret SUPABASE_URL / SUPABASE_SERVICE_KEY"
+          fi
+
+          JOB_JSON="$RUNNER_TEMP/job.json"
+          CODE=$(curl -sS -o "$JOB_JSON" -w '%{http_code}' \
+            "$SUPABASE_URL/rest/v1/video_jobs?id=eq.$JOB_ID&select=plan" \
+            -H "apikey: $SUPABASE_SERVICE_KEY" \
+            -H "Authorization: Bearer $SUPABASE_SERVICE_KEY" || echo 000)
+
+          # อ่านไม่ได้ = ยังไม่ได้รัน migration 075 หรือเน็ตสะดุด — ไม่ใช่เหตุให้ล้มงาน
+          # ปล่อยให้ publish.py เป็นคนบอกว่าเกิดอะไรขึ้น ดีกว่าบล็อกด้วยข้อความที่เดาเอง
+          if [ "$CODE" != "200" ]; then
+            echo "::warning::อ่านแผนมาตรวจล่วงหน้าไม่ได้ (HTTP $CODE) — ข้ามด่านนี้ไป"
+            exit 0
+          fi
+
+          if [ "$(jq -r 'length' "$JOB_JSON")" = "0" ]; then
+            fail "ไม่พบงาน id=$JOB_ID ในตาราง video_jobs — ส่ง id ผิด หรือแถวถูกลบไปแล้ว"
+          fi
+
+          # แผนที่มี flux: หรือ path วินโดวส์ เรนเดอร์บนเครื่องที่บ้านได้ปกติ
+          # ผิดเฉพาะ "ที่นี่" เพราะ runner ไม่มีการ์ดจอและไม่มีไดรฟ์ C: ของเจ้าของ
+          # → เป็นข้อจำกัดของเครื่อง ไม่ใช่ของแผน จึงคัดที่นี่ ไม่ใช่ที่ validatePlan ฝั่งเว็บ
+          #
+          # ต้องคัดก่อน ไม่ใช่ปล่อยให้ไปพังเอง: visuals เป็นขั้นที่ 4 จาก 6 — กว่าจะถึง
+          # ก็จ่ายค่า TTS กับเวลา whisper ไปครบแล้ว แล้วได้คลิปเปล่ากลับมา
+          VIS="$RUNNER_TEMP/visuals.txt"
+          jq -r '.[]? | .plan.visuals[]?' "$JOB_JSON" > "$VIS" || true
+          if grep -qiE '^(flux:|file:[a-z]:|file:.*\\)' "$VIS"; then
+            BAD=$(grep -iE '^(flux:|file:[a-z]:|file:.*\\)' "$VIS" | paste -sd' ' -)
+            fail "แผนนี้มีแหล่งภาพที่ runner ทำไม่ได้ ($BAD) — เตรียมภาพให้เสร็จก่อน แล้วใช้ machine: / sku: / ไฟล์ที่อยู่ในรีโปแทน"
+          fi
+
+          # เพลงประกอบเป็นไฟล์ที่ต้องชี้เอง (ยังไม่มีคลังเพลง — ดู README ของโรงงานวิดีโอ)
+          # ถ้าชี้ไปที่ไฟล์บนเครื่องเจ้าของ ffmpeg จะเปิดไม่เจอตอน "ประกอบคลิปสุดท้าย"
+          # ซึ่งเป็นขั้นที่ 6 จาก 6 — พังทีหลังสุด หลังจ่ายครบทั้ง TTS whisper ภาพ และซับ
+          # compose.build ส่ง path ให้ ffmpeg ตรง ๆ โดยมี cwd อยู่ที่ deploy/ จึงเช็กสองที่
+          MUSIC=$(jq -r '.[]? | .plan.music // empty' "$JOB_JSON")
+          if [ -n "$MUSIC" ] && [ ! -f "deploy/$MUSIC" ] && [ ! -f "$MUSIC" ]; then
+            fail "แผนอ้างไฟล์เพลง $MUSIC ซึ่งไม่มีอยู่ในรีโป — บน runner มีแค่ไฟล์ที่ commit ไว้เท่านั้น"
+          fi
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      # compose.py กับ voice.py เรียก ffmpeg/ffprobe ผ่าน subprocess ตรง ๆ
+      # config.ffmpeg_bin() หาใน PATH ก่อน (ทางที่ apt ลงให้) แล้วค่อยตกไปดู
+      # โฟลเดอร์บนเครื่องวินโดวส์ — บน runner จึงต้องมีใน PATH เท่านั้น
+      - name: Install ffmpeg
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y ffmpeg
+          ffmpeg -version | head -1
+          ffprobe -version | head -1
+
+      # โมเดล whisper (large-v3-turbo) หนัก ~1.6GB และโหลดใหม่ทุกรอบกินเวลา 2-3 นาที
+      # แถมมีสิทธิ์โดน HuggingFace throttle ตอนคนใช้เยอะ — แคชไว้คุ้มกว่ามาก
+      # คีย์ตายตัวเพราะโมเดลไม่เปลี่ยนตามโค้ด (ถ้าเปลี่ยนรุ่นโมเดล ให้ขยับ v1 เป็น v2)
+      #
+      # ⚠️ actions/cache เขียนแคชใน post step ที่มี post-if: success() — job ที่ล้ม
+      #    จะไม่ได้แคชเลย ช่วงที่ยังไล่แก้บั๊กจึงต้องโหลดโมเดลใหม่ทุกรอบ
+      #    ถ้าเริ่มรำคาญ ให้แยกเป็น cache/restore + cache/save ที่ if: always()
+      - name: Cache whisper model
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/huggingface
+          key: hf-whisper-${{ runner.os }}-v1
+
+      # ⚠️ ห้ามปักหมุด playwright 1.44.0 ตาม deploy/scraper/requirements.txt
+      # รุ่นนั้นสั่งลง libasound2 ซึ่ง Ubuntu 24.04 (noble) เปลี่ยนชื่อเป็น libasound2t64
+      # → "Package 'libasound2' has no installation candidate" แล้วล้มทั้ง job
+      # (poster-render รัน #1 #2 ตายด้วยเหตุนี้) ใช้เป็นขั้นต่ำแทนการปักหมุด
+      #
+      # ไม่ลง torch โดยตั้งใจ — หนักกว่า 2GB และไม่มี GPU ให้ใช้อยู่ดี
+      # align.py ครอบ import torch ด้วย try อยู่แล้ว ขาดไปก็แค่ตกไป CPU ตามที่ตั้งใจ
+      #
+      # รายการนี้คือสัญญากับ agents.video.publish ด้วย: บน runner ไม่มี supabase-py
+      # ถ้าจะคุยกับฐานข้อมูล ให้ใช้ urllib แบบเดียวกับ video/visuals.py
+      - name: Install Python deps + Chromium
+        run: |
+          pip install faster-whisper "playwright>=1.49" pillow
+          playwright install --with-deps chromium
+
+      # ต้องรันจาก deploy/ ไม่ใช่ราก:
+      #   agents/ ไม่มี __init__.py (เป็น namespace package) จึงต้องให้ deploy อยู่ใน
+      #   sys.path ซึ่ง python -m ใส่ cwd ให้เอง — และโมดูลใน video/ ใช้ relative import
+      #   (from . import config) รันแบบชี้ path ตรง ๆ ไม่ได้
+      - name: Render video
+        working-directory: deploy
+        env:
+          # ไม่งั้น log จะโผล่เป็นก้อนตอนจบ — งานนี้ยาว 20-40 นาที ต้องเห็นว่าไปถึงขั้นไหน
+          PYTHONUNBUFFERED: "1"
+        run: python -m agents.video.publish --job "$JOB_ID"
+
+      # เก็บ mp4 ไว้ให้ดาวน์โหลดดูได้ เผื่อคลิปออกมาเพี้ยน (ซับเลื่อน ภาพผิดฉาก)
+      # จะได้ตรวจย้อนหลังโดยไม่ต้องรันใหม่ทั้งรอบ — ที่นี่แพงกว่าโปสเตอร์มาก
+      # .video-work/ อยู่ใน .gitignore และชื่อโฟลเดอร์มาจาก plan.project ไม่ใช่ job_id
+      # จึงต้องกวาดด้วย glob
+      - name: Upload artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: video-${{ inputs.job_id }}
+          path: .video-work/**/*.mp4
+          if-no-files-found: ignore
+          retention-days: 7
+
+      # ── ด่านสุดท้าย: ห้ามปล่อยงานค้างสถานะเดิมตลอดกาล ──
+      # publish.py ปิดแถวเองได้เฉพาะตอนที่มัน "ยังมีชีวิตอยู่" แต่เคสที่เจ็บที่สุดคือ
+      # เคสที่ except ในโค้ดไม่มีทางทำงาน:
+      #   • ครบ timeout-minutes 45 → runner โดนฆ่าทิ้งกลางคัน
+      #   • กดยกเลิกงานจากหน้า Actions
+      #   • ด่าน Preflight / ลง chromium ล้ม ตั้งแต่ยังไม่ได้เรียก python
+      # แถวจะค้าง queued/rendering ไปตลอด เพราะ dispatch ยิงครั้งเดียวจบ ไม่มีตัวไล่เก็บ
+      # หน้าเว็บที่ poll /api/video/jobs ก็จะหมุนรอคลิปที่ไม่มีวันมา
+      #
+      # เขียนผ่าน PostgREST ด้วย curl เพราะบน runner ไม่มี supabase-py (ข้อตกลงเดียวกับ
+      # ที่เขียนไว้ข้างบน) · แตะแค่ status กับ error สองคอลัมน์ที่ทั้ง migration 075
+      # และ API route เห็นตรงกัน — ใส่คอลัมน์ที่ไม่มีจริงลงไปแม้แต่ตัวเดียว PostgREST
+      # ตอบ 400 แล้วการปิดแถวจะล้มทั้งอัน กลายเป็นค้างเหมือนเดิมโดยที่เราคิดว่าซ่อมแล้ว
+      #
+      # status=neq.done กันเคสที่ publish.py ปิดงานสำเร็จไปแล้วแต่ step หลังจากนั้นล้ม
+      # (เช่นอัปโหลด artifact) — ไม่งั้นคลิปที่ทำเสร็จแล้วจะถูกป้ายว่า failed
+      - name: Mark job failed
+        if: failure() || cancelled()
+        env:
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_SERVICE_KEY" ]; then
+            echo "::warning::ไม่มีคีย์ Supabase — ปิดแถว video_jobs ไม่ได้ ต้องไปแก้สถานะเอง"
+            exit 0
+          fi
+          # FAIL_REASON มาจากด่าน Preflight ถ้าเป็นตัวที่ล้ม · ขั้นอื่นล้มก็ใช้ข้อความกลาง
+          # ประกอบ JSON ด้วย jq ไม่ใช่ต่อสตริงเอง — ข้อความเป็นภาษาไทยและอาจมี " หรือ \
+          # ติดมาจาก error ของ python ซึ่งจะทำให้ payload เสียแล้วปิดแถวไม่สำเร็จ
+          REASON="${FAIL_REASON:-งานเรนเดอร์ล้มบน GitHub Actions (หมดเวลา ถูกยกเลิก หรือพังก่อนถึงตัวเรนเดอร์)}"
+          BODY=$(jq -nc --arg e "$REASON — ดู log: $RUN_URL" '{status:"failed",error:$e}')
+
+          OUT="$RUNNER_TEMP/patch.json"
+          CODE=$(curl -sS -o "$OUT" -w '%{http_code}' \
+            -X PATCH "$SUPABASE_URL/rest/v1/video_jobs?id=eq.$JOB_ID&status=neq.done" \
+            -H "apikey: $SUPABASE_SERVICE_KEY" \
+            -H "Authorization: Bearer $SUPABASE_SERVICE_KEY" \
+            -H "Content-Type: application/json" \
+            -H "Prefer: return=representation" \
+            -d "$BODY" \
+            || echo 000)
+          if [ "$CODE" != "200" ] && [ "$CODE" != "204" ]; then
+            echo "::warning::ปิดแถว video_jobs ไม่สำเร็จ (HTTP $CODE) — งาน $JOB_ID อาจค้างสถานะเดิม"
+            head -c 300 "$OUT" || true
+            exit 0
+          fi
+          # 200 พร้อม [] = ไม่มีแถวไหนโดนแก้ · ปกติแปลว่า publish.py ปิดเป็น done ไปแล้ว
+          # (แล้ว step หลังจากนั้นค่อยล้ม) หรือไม่ก็ส่ง id ผิด — บอกไว้ให้รู้ ไม่ต้องเดา
+          if [ "$(jq -r 'if type=="array" then length else 1 end' "$OUT" 2>/dev/null)" = "0" ]; then
+            echo "::warning::ไม่มีแถวไหนถูกแก้ — งาน $JOB_ID ปิดเป็น done ไปแล้ว หรือหา id ไม่เจอ"
+          else
+            echo "ปิดแถว video_jobs $JOB_ID เป็น failed แล้ว"
+          fi
