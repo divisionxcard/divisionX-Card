@@ -1,0 +1,58 @@
+<!doctype html>
+<meta charset="utf-8">
+<!--
+  เทมเพลตซับไทย — Chromium เรนเดอร์เป็น PNG โปร่งใสแล้วเอาไปซ้อนใน ffmpeg
+
+  ทำไมไม่ให้ ffmpeg/libass วาดเอง: ภาษาไทยมีสระบน สระล่าง และวรรณยุกต์ที่ต้อง
+  จัดตำแหน่งซ้อนกัน (เช่น "ตู้" มีทั้งสระอูและไม้โท) ถ้า shaping ผิดจะเลื่อนหรือ
+  ทับกันแบบที่ตาคนเห็นทันทีแต่โปรแกรมไม่ฟ้อง โปรเจกต์นี้โดนบั๊กตัวอักษรไทยมาแล้ว
+  หลายรอบ จึงใช้เบราว์เซอร์ซึ่งเป็นตัวเดียวที่จัดไทยถูก 100%
+
+  ตัวแปรที่ถูกแทนค่าจาก subtitle.py: {{FONT_BOLD}} {{TEXT}} {{SIZE}} {{BOTTOM}}
+                                     {{FILL}} {{STROKE}} {{ACCENT}} {{W}} {{H}}
+-->
+<style>
+  @font-face {
+    font-family: 'DX';
+    src: url({{FONT_BOLD}}) format('truetype');
+    font-weight: 700;
+  }
+  html, body {
+    margin: 0;
+    padding: 0;
+    width: {{W}}px;
+    height: {{H}}px;
+    background: transparent;          /* สำคัญ — ต้องโปร่งเพื่อซ้อนบนวิดีโอ */
+    overflow: hidden;
+  }
+  .wrap {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: {{BOTTOM}}px;             /* ยกสูงจากขอบล่าง หลบแถบ UI ของ TikTok */
+    display: flex;
+    justify-content: center;
+    padding: 0 84px;
+  }
+  .sub {
+    font-family: 'DX', sans-serif;
+    font-weight: 700;
+    font-size: {{SIZE}}px;
+    line-height: 1.32;
+    color: {{FILL}};
+    text-align: center;
+    letter-spacing: -0.01em;
+    /* ขอบหนา + เงา — ให้อ่านออกทั้งบนภาพสว่างและภาพมืด โดยไม่ต้องมีกล่องพื้นหลัง */
+    -webkit-text-stroke: 9px {{STROKE}};
+    paint-order: stroke fill;
+    text-shadow: 0 6px 18px rgba(0,0,0,.55);
+    /* ภาษาไทยไม่มีช่องว่างระหว่างคำ — ห้ามให้เบราว์เซอร์ตัดคำเอง เดี๋ยวตัดกลางคำ */
+    word-break: keep-all;
+    overflow-wrap: normal;
+  }
+  .sub em {
+    font-style: normal;
+    color: {{ACCENT}};                /* คำที่อยากเน้น — ฟ้านีออนตาม brand identity */
+  }
+</style>
+<div class="wrap"><div class="sub">{{TEXT}}</div></div>

@@ -1,0 +1,188 @@
+"""หาว่าแต่ละบรรทัดของสคริปต์ถูกพูดที่วินาทีไหน — ด้วย faster-whisper
+
+ทำไมต้องมี:
+    เราอ่านทั้งสคริปต์รวดเดียวเพื่อให้น้ำเสียงต่อเนื่อง (ดู segments.speech_text)
+    แต่การตัดภาพกับซับต้องรู้เวลาเป็นรายบรรทัด — whisper ถอดเสียงพร้อมเวลารายคำ
+    ให้ได้ จึงเอามาเทียบกลับกับข้อความต้นฉบับที่เรารู้อยู่แล้ว
+
+    นี่คือความต่างระหว่าง "ซับตรงเสียงเป๊ะ" กับ "ซับที่เดาเวลาเอา" — อย่างหลัง
+    จะเลื่อนสะสมไปเรื่อย ๆ พอถึงท้ายคลิปซับกับเสียงห่างกันเป็นวินาที
+
+⚠️ เราไม่ได้ใช้ "ข้อความ" ที่ whisper ถอดมา ใช้แค่ "เวลา"
+    ข้อความจริงเรามีอยู่แล้วเพราะเราเป็นคนสั่งให้อ่าน การเอาข้อความจาก whisper
+    มาแสดงจะทำให้ซับผิดตรงที่มันถอดพลาด ทั้งที่เรารู้คำที่ถูกต้องอยู่แล้ว
+"""
+import re
+
+_NOSPACE = re.compile(r"\s+")
+
+_model_cache = {}
+
+
+def _load(size, device):
+    """โหลดโมเดลครั้งเดียวแล้วใช้ซ้ำ — โหลดใหม่ทุกครั้งกิน RAM และเวลาเปล่า"""
+    from faster_whisper import WhisperModel
+
+    key = (size, device)
+    if key in _model_cache:
+        return _model_cache[key]
+
+    if device == "auto":
+        try:
+            import torch
+            device = "cuda" if torch.cuda.is_available() else "cpu"
+        except Exception:
+            device = "cpu"
+    ctype = "float16" if device == "cuda" else "int8"
+    try:
+        m = WhisperModel(size, device=device, compute_type=ctype)
+    except Exception:
+        # การ์ดจอ 6GB บางทีไม่พอถ้า FLUX ยังค้างอยู่ใน VRAM — ตกไป CPU ดีกว่าพัง
+        m = WhisperModel(size, device="cpu", compute_type="int8")
+    _model_cache[key] = m
+    return m
+
+
+def word_times(wav_path, model_size="large-v3", device="auto"):
+    """ถอดเสียงเอาเฉพาะเวลารายคำ → [(คำ, เริ่ม, จบ), ...]"""
+    m = _load(model_size, device)
+    segs, _ = m.transcribe(str(wav_path), language="th", word_timestamps=True,
+                           vad_filter=False)
+    out = []
+    for s in segs:
+        for w in (s.words or []):
+            t = _NOSPACE.sub("", w.word)
+            if t:
+                out.append((t, float(w.start), float(w.end)))
+    return out
+
+
+def map_segments(segments, words, total_duration):
+    """ผูกเวลาจาก whisper กลับเข้ากับบรรทัดต้นฉบับ
+
+    วิธี: ต่อข้อความทุกบรรทัดเป็นสายอักขระเดียว (ตัดช่องว่างทิ้ง เพราะภาษาไทย
+    ไม่มีช่องว่างระหว่างคำอยู่แล้ว) จำไว้ว่าอักขระตัวที่ i เป็นของบรรทัดไหน
+    แล้วเดินคำที่ whisper ถอดมาไล่จับคู่ทีละตัว
+
+    ถ้า whisper ถอดผิดบางตัว ตัวชี้จะเลื่อนหาในหน้าต่างสั้น ๆ ข้างหน้าแทนที่จะ
+    หลุดทั้งแถว — ผิดบางคำไม่ควรทำให้ทั้งคลิปเสียเวลา
+    """
+    target, owner = [], []
+    for s in segments:
+        for ch in _NOSPACE.sub("", s["text"]):
+            target.append(ch)
+            owner.append(s["index"])
+    if not target:
+        return _even(segments, total_duration)
+
+    n = len(target)
+    ptr = 0
+    hits = {s["index"]: [] for s in segments}
+
+    for text, start, end in words:
+        seg_at_start = owner[min(ptr, n - 1)]
+        matched = False
+        for ch in text:
+            found = -1
+            for look in range(ptr, min(ptr + 12, n)):     # ยอมให้ถอดพลาดได้ ~12 ตัว
+                if target[look] == ch:
+                    found = look
+                    break
+            if found >= 0:
+                if not matched:
+                    seg_at_start = owner[found]
+                    matched = True
+                ptr = found + 1
+        hits[seg_at_start].append((start, end))
+
+    # แปลงคำที่จับได้เป็นช่วงเวลาของแต่ละบรรทัด
+    spans = {}
+    for s in segments:
+        got = hits.get(s["index"]) or []
+        if got:
+            spans[s["index"]] = [min(a for a, _ in got), max(b for _, b in got)]
+
+    if not spans:
+        return _even(segments, total_duration)
+
+    # บรรทัดที่ไม่มีคำไหนตกลงมาเลย — เติมด้วยการแบ่งช่องว่างระหว่างเพื่อนบ้าน
+    ordered = [s["index"] for s in segments]
+    for i, idx in enumerate(ordered):
+        if idx in spans:
+            continue
+        prev_end = next((spans[j][1] for j in reversed(ordered[:i]) if j in spans), 0.0)
+        next_start = next((spans[j][0] for j in ordered[i + 1:] if j in spans),
+                          total_duration)
+        spans[idx] = [prev_end, max(prev_end + 0.4, next_start)]
+
+    # บังคับให้เรียงต่อกันไม่ทับกัน และคลุมเสียงทั้งเส้น
+    out = []
+    cursor = 0.0
+    for i, idx in enumerate(ordered):
+        a, b = spans[idx]
+        a = max(cursor, min(a, total_duration))
+        b = max(a + 0.35, min(b, total_duration))
+        if i == 0:
+            a = 0.0                                  # ฉากแรกเริ่มพร้อมคลิป
+        if i == len(ordered) - 1:
+            b = total_duration                       # ฉากท้ายค้างจนเสียงจบ
+        out.append({"index": idx, "start": round(a, 3), "end": round(b, 3)})
+        cursor = b
+    return out
+
+
+def _even(segments, total):
+    """ทางถอย: แบ่งเวลาตามจำนวนอักขระ ใช้เมื่อ whisper ใช้ไม่ได้
+
+    ไม่แม่นเท่าของจริงแต่ยังดูได้ — ระบบต้องเดินต่อได้แม้ไม่มีการ์ดจอ"""
+    lens = [max(1, len(_NOSPACE.sub("", s["text"]))) for s in segments]
+    tot = sum(lens)
+    out, t = [], 0.0
+    for s, ln in zip(segments, lens):
+        d = total * ln / tot
+        out.append({"index": s["index"], "start": round(t, 3),
+                    "end": round(min(t + d, total), 3)})
+        t += d
+    if out:
+        out[-1]["end"] = round(total, 3)
+    return out
+
+
+def subtitle_chunks(segments, timing, max_chars=28):
+    """ซอยบรรทัดเป็นชิ้นซับที่อ่านทันบนจอ พร้อมเวลาของแต่ละชิ้น
+
+    แบ่งเวลาภายในบรรทัดตามสัดส่วนอักขระ — ละเอียดพอสำหรับซับ และไม่ต้องพึ่ง
+    การจับคู่รายคำซ้ำอีกรอบซึ่งพลาดง่ายกว่า
+    """
+    by_idx = {t["index"]: t for t in timing}
+    out = []
+    for s in segments:
+        t = by_idx.get(s["index"])
+        if not t:
+            continue
+        pieces = _chunk(s["text"], max_chars)
+        lens = [max(1, len(_NOSPACE.sub("", p))) for p in pieces]
+        tot = sum(lens)
+        span = t["end"] - t["start"]
+        cur = t["start"]
+        for p, ln in zip(pieces, lens):
+            d = span * ln / tot
+            out.append({"text": p, "start": round(cur, 3),
+                        "end": round(cur + d, 3), "segment": s["index"]})
+            cur += d
+    return out
+
+
+def _chunk(text, limit):
+    if len(text) <= limit:
+        return [text]
+    words, cur, out = text.split(" "), "", []
+    for w in words:
+        if cur and len(cur) + 1 + len(w) > limit:
+            out.append(cur)
+            cur = w
+        else:
+            cur = f"{cur} {w}".strip()
+    if cur:
+        out.append(cur)
+    return out or [text]
