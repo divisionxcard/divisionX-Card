@@ -60,42 +60,45 @@ def word_times(wav_path, model_size="large-v3", device="auto"):
 def map_segments(segments, words, total_duration):
     """ผูกเวลาจาก whisper กลับเข้ากับบรรทัดต้นฉบับ
 
-    วิธี: ต่อข้อความทุกบรรทัดเป็นสายอักขระเดียว (ตัดช่องว่างทิ้ง เพราะภาษาไทย
-    ไม่มีช่องว่างระหว่างคำอยู่แล้ว) จำไว้ว่าอักขระตัวที่ i เป็นของบรรทัดไหน
-    แล้วเดินคำที่ whisper ถอดมาไล่จับคู่ทีละตัว
+    ต่อข้อความทุกบรรทัดเป็นสายอักขระเดียว (ตัดช่องว่างทิ้ง เพราะภาษาไทยไม่มี
+    ช่องว่างระหว่างคำอยู่แล้ว) จำว่าอักขระตัวที่ i เป็นของบรรทัดไหน แล้วหา
+    "ท่อนที่ตรงกัน" ระหว่างสิ่งที่ whisper ถอดได้กับข้อความจริง ด้วย difflib
 
-    ถ้า whisper ถอดผิดบางตัว ตัวชี้จะเลื่อนหาในหน้าต่างสั้น ๆ ข้างหน้าแทนที่จะ
-    หลุดทั้งแถว — ผิดบางคำไม่ควรทำให้ทั้งคลิปเสียเวลา
+    ⚠️ เคยเขียนแบบเดินตัวชี้ไปข้างหน้าทีละตัวอักษรแล้วผิดหนัก (9 ก.ย. 2026):
+       ภาษาไทยมีอักขระซ้ำเยอะมาก การ "มองหาไปข้างหน้าอีก 12 ตัว" ทำให้ตัวชี้
+       กระโดดข้ามไปไกลเกินจริงเรื่อย ๆ จนกินข้อความหมดตั้งแต่วินาทีที่ 23
+       ของคลิป 45 วินาที ผลคือ 11 บรรทัดแรกอัดกันอยู่ครึ่งแรก และบรรทัดสุดท้าย
+       ค้างบนจอ 21 วินาที — ดูเหมือนทำงานได้ แต่ผิดทั้งเส้น
+
+       difflib หาการจับคู่ที่ดีที่สุดของทั้งสายพร้อมกัน ไม่ใช่ตัดสินทีละตัว
+       จึงไม่สะสมความผิดพลาด · autojunk=False สำคัญมาก ไม่งั้นมันจะทิ้งอักขระ
+       ที่พบบ่อย (ซึ่งในภาษาไทยคืออักขระส่วนใหญ่) ออกจากการเทียบ
     """
+    import difflib
+
     target, owner = [], []
     for s in segments:
         for ch in _NOSPACE.sub("", s["text"]):
             target.append(ch)
             owner.append(s["index"])
-    if not target:
+    if not target or not words:
         return _even(segments, total_duration)
 
-    n = len(target)
-    ptr = 0
-    hits = {s["index"]: [] for s in segments}
-
-    for text, start, end in words:
-        seg_at_start = owner[min(ptr, n - 1)]
-        matched = False
+    heard, of_word = [], []
+    for wi, (text, _, _) in enumerate(words):
         for ch in text:
-            found = -1
-            for look in range(ptr, min(ptr + 12, n)):     # ยอมให้ถอดพลาดได้ ~12 ตัว
-                if target[look] == ch:
-                    found = look
-                    break
-            if found >= 0:
-                if not matched:
-                    seg_at_start = owner[found]
-                    matched = True
-                ptr = found + 1
-        hits[seg_at_start].append((start, end))
+            heard.append(ch)
+            of_word.append(wi)
 
-    # แปลงคำที่จับได้เป็นช่วงเวลาของแต่ละบรรทัด
+    sm = difflib.SequenceMatcher(None, heard, target, autojunk=False)
+    hits = {s["index"]: [] for s in segments}
+    for i, j, n in sm.get_matching_blocks():
+        for k in range(n):
+            seg = owner[j + k]
+            _, start, end = words[of_word[i + k]]
+            hits[seg].append((start, end))
+
+    # แปลงอักขระที่จับคู่ได้เป็นช่วงเวลาของแต่ละบรรทัด
     spans = {}
     for s in segments:
         got = hits.get(s["index"]) or []

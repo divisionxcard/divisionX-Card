@@ -100,9 +100,19 @@ def build_video(plan, out_mp4=None, skip_align=False):
     clips_dir.mkdir(exist_ok=True)
     clips = []
     for i, (fr, t) in enumerate(zip(frames, timing)):
-        dur = t["end"] - t["start"]
+        # ⚠️ ต้องยืดถึง "เวลาเริ่มของฉากถัดไป" ไม่ใช่ "เวลาจบของฉากนี้"
+        #    ระหว่างสองประโยคมีช่องว่างที่คนพูดหายใจ (จับได้จริงจาก whisper
+        #    เช่น 3.72 → 4.16 = เงียบ 0.44 วิ) ถ้าคิดแค่ end-start ภาพจะสั้นกว่า
+        #    เส้นเวลาจริง แล้ว offset ของ xfade จะเลยความยาวที่มี → ffmpeg ตัดทิ้ง
+        #    ทั้งท้ายคลิปโดยไม่ error
+        #
+        #    เกิดจริง 9 ก.ย. 2026: คลิป 45 วินาทีออกมาเหลือ 5.97 วินาที
+        #    แต่โปรแกรมยังพิมพ์ว่า "เสร็จแล้ว 45.0 วินาที" — พังเงียบสนิท
+        #    ตอนนี้ compose.build() ตรวจความยาวจริงหลังเรนเดอร์แล้วโวยถ้าไม่ตรง
         if i < len(frames) - 1:
-            dur += xfade                    # ชดเชยส่วนที่ถูก xfade กินไป
+            dur = timing[i + 1]["start"] - t["start"] + xfade
+        else:
+            dur = total - t["start"]
         clips.append(compose.render_scene(fr, max(0.5, dur),
                                           clips_dir / f"scene_{i:03d}.mp4"))
     compose.build(clips, timing, chunks, wav, out_mp4,
