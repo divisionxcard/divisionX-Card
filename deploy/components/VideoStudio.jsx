@@ -23,7 +23,7 @@ import {
   Film, Type, Image as ImageIcon, Send, AlertTriangle, X, Lock, Download,
   RefreshCw, Loader2, Check, Clock, Sparkles, Mic,
 } from "lucide-react"
-import { supabase, getSkus } from "../lib/supabase"
+import { supabase, getSkus, getProfile } from "../lib/supabase"
 
 // ── ตัวเลือกที่ต้องตรงกับฝั่ง python ────────────────────────────────────
 // คำอธิบายลอกมาจาก VOICES ใน agents/video/voice.py — เสียงพวกนี้ทดสอบกับไทยแล้ว
@@ -58,19 +58,43 @@ const MAX_SCRIPT_CHARS = 4000
 // ที่ต้องมีสองชุด (มี /g กับไม่มี) เพราะ RegExp ที่มี /g จำ lastIndex ไว้ —
 // เรียก .test() ซ้ำกับสตริงเดิมจะได้ true สลับ false เป็นชุด ๆ ซึ่งบนหน้านี้จะกลาย
 // เป็นคำเตือน "มีอีโมจิ" กะพริบเข้า-ออกทุกครั้งที่พิมพ์ แล้วหาสาเหตุไม่เจอ
+//
+// ⚠️ ช่วง emoji ต้องเท่ากับ _EMOJI ใน segments.py **เป๊ะ ๆ** ห้ามกว้างกว่าเด็ดขาด
+//    ฉบับแรกเขียนไว้ 2600-2BFF ซึ่งกว้างกว่า python (หยุดที่ 27BF) ผลคือ ⭐ ⭕ ⬛ ⬜
+//    ถูกตัดฝั่งเว็บแต่ python เก็บไว้ → บรรทัด "⭐" เดี่ยว ๆ หน้าเว็บนับได้ 0 ฉาก
+//    แต่ python นับได้ 1 ฉาก ภาพเลยเลื่อนกันทั้งคลิปตั้งแต่ฉากนั้นไป โดยไม่มีอะไรฟ้อง
+//    (รันเทียบสองฝั่งด้วยสคริปต์จริง 9 ก.ย. 2026 — ต่างกัน 7 จาก 18 เคส)
+//
+//    วงเล็บใช้ `.` ไม่ใช่ `[\s\S]` เพราะ python ก็ใช้ `.` ซึ่งไม่ข้ามบรรทัด
+//    ถ้าปล่อยให้ข้ามได้ วงเล็บเปิดบรรทัดแรกกับวงเล็บปิดบรรทัดที่ห้าจะจับคู่กันเอง
+//    แล้วขึ้นเตือน "มีข้อความในวงเล็บ" ทั้งที่ไม่มีอะไรถูกตัดจริงสักตัว
 const RE = {
   url:     /https?:\/\/\S+|www\.\S+/g,
-  bracket: /[[(（][\s\S]*?[\])）]/g,
+  bracket: /[[(（].*?[\])）]/g,
   hashtag: /#\S+/g,
-  emoji:   /[\u{1F300}-\u{1FAFF}\u{1F1E6}-\u{1F1FF}\u{2600}-\u{2BFF}\uFE0F]+/gu,
+  emoji:   /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{1F1E6}-\u{1F1FF}\uFE0F]+/gu,
   spaces:  /[ \t\u00A0]+/g,
 }
 const HAS = {
   url:     /https?:\/\/\S+|www\.\S+/,
-  bracket: /[[(（][\s\S]*?[\])）]/,
+  bracket: /[[(（].*?[\])）]/,
   hashtag: /#\S+/,
-  emoji:   /[\u{1F300}-\u{1FAFF}\u{1F1E6}-\u{1F1FF}\u{2600}-\u{2BFF}\uFE0F]/u,
+  emoji:   /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{1F1E6}-\u{1F1FF}\uFE0F]/u,
+  // \u0E2A\u0E31\u0E0D\u0E25\u0E31\u0E01\u0E29\u0E13\u0E4C\u0E17\u0E35\u0E48\u0E2D\u0E22\u0E39\u0E48 "\u0E19\u0E2D\u0E01" \u0E0A\u0E48\u0E27\u0E07\u0E17\u0E35\u0E48 sanitize \u0E15\u0E31\u0E14 \u2014 \u2B50 \u2B55 \u2B1B \u2B1C \u2192 \u25B6 \u0E2F\u0E25\u0E2F
+  // \u0E15\u0E31\u0E14\u0E40\u0E2D\u0E07\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49\u0E40\u0E1E\u0E23\u0E32\u0E30\u0E08\u0E30\u0E44\u0E21\u0E48\u0E15\u0E23\u0E07\u0E01\u0E31\u0E1A python (\u0E14\u0E39\u0E04\u0E33\u0E40\u0E15\u0E37\u0E2D\u0E19\u0E02\u0E49\u0E32\u0E07\u0E1A\u0E19) \u0E21\u0E31\u0E19\u0E08\u0E36\u0E07\u0E40\u0E2B\u0E25\u0E37\u0E2D\u0E15\u0E34\u0E14\u0E44\u0E1B\u0E43\u0E2B\u0E49 TTS \u0E2D\u0E48\u0E32\u0E19\u0E08\u0E23\u0E34\u0E07
+  // \u0E15\u0E49\u0E2D\u0E07\u0E1A\u0E2D\u0E01\u0E43\u0E2B\u0E49\u0E04\u0E19\u0E40\u0E02\u0E35\u0E22\u0E19\u0E25\u0E1A\u0E40\u0E2D\u0E07 \u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E1B\u0E25\u0E48\u0E2D\u0E22\u0E44\u0E1B\u0E44\u0E14\u0E49\u0E22\u0E34\u0E19\u0E40\u0E2A\u0E35\u0E22\u0E07\u0E2D\u0E48\u0E32\u0E19\u0E2A\u0E31\u0E0D\u0E25\u0E31\u0E01\u0E29\u0E13\u0E4C\u0E43\u0E19\u0E04\u0E25\u0E34\u0E1B\u0E41\u0E25\u0E49\u0E27\u0E04\u0E48\u0E2D\u0E22\u0E23\u0E39\u0E49
+  leftover: /[\u2190-\u25FF\u27C0-\u2BFF]/,
 }
+
+// python \u0E15\u0E31\u0E14\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E14\u0E49\u0E27\u0E22 str.splitlines() \u0E0B\u0E36\u0E48\u0E07\u0E15\u0E31\u0E14\u0E17\u0E35\u0E48 \r \u0E41\u0E25\u0E30 U+2028/2029 \u0E14\u0E49\u0E27\u0E22 \u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E41\u0E04\u0E48 \n
+// textarea \u0E04\u0E37\u0E19\u0E04\u0E48\u0E32\u0E21\u0E32\u0E40\u0E1B\u0E47\u0E19 \n \u0E01\u0E47\u0E08\u0E23\u0E34\u0E07 \u0E41\u0E15\u0E48\u0E2A\u0E04\u0E23\u0E34\u0E1B\u0E15\u0E4C\u0E17\u0E35\u0E48 "\u0E27\u0E32\u0E07" \u0E21\u0E32\u0E08\u0E32\u0E01 Word \u0E2B\u0E23\u0E37\u0E2D\u0E44\u0E1F\u0E25\u0E4C CRLF
+// \u0E1E\u0E32 \r \u0E01\u0E31\u0E1A U+2028 \u0E15\u0E34\u0E14\u0E21\u0E32\u0E44\u0E14\u0E49 \u2014 \u0E1D\u0E31\u0E48\u0E07\u0E40\u0E27\u0E47\u0E1A\u0E19\u0E31\u0E1A\u0E40\u0E1B\u0E47\u0E19\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E40\u0E14\u0E35\u0E22\u0E27 python \u0E19\u0E31\u0E1A\u0E40\u0E1B\u0E47\u0E19\u0E2A\u0E2D\u0E07 \u0E20\u0E32\u0E1E\u0E40\u0E25\u0E37\u0E48\u0E2D\u0E19\u0E2D\u0E35\u0E01\u0E17\u0E32\u0E07
+const LINE_BREAK = /\r\n|[\n\r\v\f\u0085\u2028\u2029]/
+
+// \u0E19\u0E31\u0E1A\u0E04\u0E27\u0E32\u0E21\u0E22\u0E32\u0E27\u0E40\u0E1B\u0E47\u0E19 "\u0E15\u0E31\u0E27\u0E2D\u0E31\u0E01\u0E29\u0E23" (code point) \u0E41\u0E1A\u0E1A len() \u0E02\u0E2D\u0E07 python \u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48 .length \u0E02\u0E2D\u0E07 JS
+// \u0E17\u0E35\u0E48\u0E19\u0E31\u0E1A\u0E40\u0E1B\u0E47\u0E19\u0E2B\u0E19\u0E48\u0E27\u0E22 UTF-16 \u2014 \u0E15\u0E31\u0E27\u0E2B\u0E19\u0E32\u0E41\u0E1A\u0E1A\u0E42\u0E0B\u0E40\u0E0A\u0E35\u0E22\u0E25 (\uD835\uDC07\uD835\uDC1E\uD835\uDC25\uD835\uDC25\uD835\uDC28 = U+1D400 \u0E02\u0E36\u0E49\u0E19\u0E44\u0E1B) \u0E19\u0E31\u0E1A\u0E40\u0E1B\u0E47\u0E19 2 \u0E15\u0E48\u0E2D\u0E15\u0E31\u0E27
+// \u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E22\u0E32\u0E27 \u0E46 \u0E08\u0E36\u0E07\u0E16\u0E39\u0E01\u0E0B\u0E2D\u0E22\u0E1D\u0E31\u0E48\u0E07\u0E40\u0E27\u0E47\u0E1A\u0E41\u0E15\u0E48\u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E0B\u0E2D\u0E22\u0E1D\u0E31\u0E48\u0E07 python = \u0E08\u0E33\u0E19\u0E27\u0E19\u0E09\u0E32\u0E01\u0E44\u0E21\u0E48\u0E15\u0E23\u0E07\u0E01\u0E31\u0E19\u0E2D\u0E35\u0E01\u0E41\u0E1A\u0E1A
+const cpLen = (s) => [...s].length
 
 function sanitize(line) {
   let s = line.normalize("NFC")
@@ -86,11 +110,11 @@ function sanitize(line) {
 // ซอยบรรทัดยาวที่ช่องว่าง — ก๊อปตรรกะจาก segments._wrap
 // ภาษาไทยไม่มีช่องว่างระหว่างคำ ถ้าซอยไม่ได้ก็ปล่อยยาวไว้ ดีกว่าตัดกลางคำจนอ่านไม่รู้เรื่อง
 function wrapLine(line, limit) {
-  if (line.length <= limit) return [line]
+  if (cpLen(line) <= limit) return [line]
   const out = []
   let cur = ""
   for (const w of line.split(" ")) {
-    if (cur && cur.length + 1 + w.length > limit) { out.push(cur); cur = w }
+    if (cur && cpLen(cur) + 1 + cpLen(w) > limit) { out.push(cur); cur = w }
     else cur = `${cur} ${w}`.trim()
   }
   if (cur) out.push(cur)
@@ -99,12 +123,31 @@ function wrapLine(line, limit) {
 
 function splitScenes(text) {
   const out = []
-  for (const raw of (text || "").split("\n")) {
+  for (const raw of (text || "").split(LINE_BREAK)) {
     const line = sanitize(raw)
     if (!line) continue
     for (const piece of wrapLine(line, MAX_SCENE_CHARS)) out.push(piece)
   }
   return out
+}
+
+// คืนข้อความบอกว่า path นี้ใช้ไม่ได้เพราะอะไร · คืน null ถ้าผ่าน
+// กติกาลอกจาก badVisual() ใน app/api/video/render/route.js — เครื่องเรนเดอร์เป็น ubuntu
+// ที่ checkout รีโปแล้วรันด้วย working-directory: deploy path ของเครื่องเราจึงไม่มีอยู่จริงที่นั่น
+//
+// ⚠️ ลิงก์ http(s) ต้องกันเองตรงนี้ด้วย เพราะ route ปล่อยผ่าน (ไม่เข้าเงื่อนไขไดรฟ์/แบ็กสแลช/
+//    ขึ้นต้นด้วย /) แต่ visuals.resolve() เปิดเป็นไฟล์ตรง ๆ ไม่ได้ดาวน์โหลดให้ — งานจะไปตาย
+//    FileNotFoundError ที่ขั้น 4 คือหลังจ่ายค่า TTS ไปแล้ว เสียทั้งโควตาและเวลา runner
+function badFilePath(p) {
+  if (!p) return "ยังไม่ได้ใส่ที่อยู่ไฟล์"
+  if (/^https?:\/\//i.test(p)) {
+    return "ยังใช้ลิงก์รูปไม่ได้ — ต้องเป็นไฟล์ที่อยู่ในรีโป (คอมมิตเข้าไปก่อน แล้วอ้างเป็น path)"
+  }
+  if (/^[A-Za-z]:/.test(p) || p.includes("\\") || p.startsWith("/")) {
+    return "ต้องเป็น path ในรีโปแบบ relative จากโฟลเดอร์ deploy/ เช่น public/machine/machine-hero.jpg"
+  }
+  if (p.split("/").includes("..")) return "ห้ามมี .. ใน path"
+  return null
 }
 
 function mmss(sec) {
@@ -177,18 +220,41 @@ export default function VideoStudio() {
   const [sending, setSending] = useState(false)
   const [job, setJob] = useState(null)          // งานที่กำลังติดตามอยู่
   const [jobs, setJobs] = useState([])          // รายการงานเก่า
+  const [jobsErr, setJobsErr] = useState("")    // อ่านรายการงานเก่าไม่สำเร็จเพราะอะไร
   const [since, setSince] = useState(null)      // เวลาที่กดส่ง — ใช้นับว่ารอมากี่นาทีแล้ว
 
   // ธงบอกว่ายังอยู่บนหน้านี้ไหม — ลูปติดตามงานต้องหยุดเองถ้าคนปิดหน้าไปแล้ว
   // ไม่งั้นจะยิง API ต่อและ setState กับ component ที่ถูก unmount ไปแล้ว
+  //
+  // ⚠️ ต้องตั้งกลับเป็น true ตอน mount ด้วย ห้ามพึ่งค่าเริ่มต้นของ useRef อย่างเดียว —
+  //    React StrictMode (เปิดโดยดีฟอลต์ตั้งแต่ Next 13.5 ตอน dev) รัน effect เป็น
+  //    mount → cleanup → mount ค่าจึงค้างเป็น false ตั้งแต่วินาทีแรก แล้วทุกผลลัพธ์
+  //    จาก API ถูกทิ้งเงียบ ๆ: รายการงานว่างตลอด สถานะไม่เคยขยับ และไม่มี error ให้เห็น
+  //    (prod ไม่เจอเพราะ effect รันรอบเดียว — บั๊กที่โผล่เฉพาะตอน dev คือแบบที่หาสาเหตุนานสุด)
   const alive = useRef(true)
-  useEffect(() => () => { alive.current = false }, [])
-
-  // ── auth (ท่าเดียวกับ MarketingOS) ──
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      setAuthState(data?.session?.access_token ? "ok" : "anon")
+    alive.current = true
+    return () => { alive.current = false }
+  }, [])
+
+  // ── auth ──
+  // ท่าเดียวกับ MarketingOS แต่ตรวจ role เพิ่มตั้งแต่เปิดหน้า เพราะสองปลายทางคนละสิทธิ์:
+  // /api/video/jobs ใช้ requireUser (ล็อกอินแล้วดูสถานะได้) ส่วน /api/video/render ใช้
+  // requireAdmin — ถ้าไม่ตรวจตรงนี้ คนที่ไม่ใช่แอดมินจะพิมพ์สคริปต์จนจบแล้วเพิ่งโดน 403
+  // ตอนกดส่ง ซึ่งจังหวะนั้นทั้งจอถูกแทนด้วยหน้า "เฉพาะแอดมิน" = สคริปต์ที่พิมพ์มาหายทั้งดุ้น
+  useEffect(() => {
+    let stop = false
+    supabase.auth.getSession().then(async ({ data }) => {
+      const user = data?.session?.access_token ? data.session.user : null
+      if (!user) { if (!stop) setAuthState("anon"); return }
+      let role
+      // อ่าน role ไม่ได้ (เน็ตหลุด/RLS) ให้ผ่านไปก่อนแล้วปล่อยให้ route เป็นคนตัดสิน —
+      // ล็อกแอดมินตัวจริงออกเพราะ query พลาดครั้งเดียว แย่กว่าปล่อยให้ไปเจอ 403 ตอนกด
+      try { role = (await getProfile(user.id))?.role } catch { role = undefined }
+      if (stop) return
+      setAuthState(role && role !== "admin" ? "forbidden" : "ok")
     })
+    return () => { stop = true }
   }, [])
 
   // ⚠️ ต้องดึง token สดทุกครั้ง ห้ามใช้ตัวที่เก็บไว้ตอน mount —
@@ -240,12 +306,23 @@ export default function VideoStudio() {
       .catch(e => setSkuErr(e.message || "โหลดรายการสินค้าไม่สำเร็จ"))
   }, [authState])
 
+  // ยังไม่มีรูปซอง/กล่องในระบบ = สั่งไปก็ตายที่ขั้น 4 ของโรงงาน (visuals._sku_image
+  // โยน "SKU ... ยังไม่มีรูป") ซึ่งเป็นจังหวะหลังจ่ายค่า TTS ไปแล้ว — กันตั้งแต่ตรงนี้
+  // (ชื่อคอลัมน์สองตัวนี้ต้องตรงกับที่ _sku_image อ่าน: image_url ก่อน แล้วค่อย image_url_box)
+  const skuNoImage = useMemo(
+    () => new Set(skus.filter(s => !s.image_url && !s.image_url_box).map(s => s.sku_id)),
+    [skus])
+
   const scenes = useMemo(() => splitScenes(script), [script])
-  const chars = useMemo(() => scenes.reduce((n, s) => n + s.length, 0), [scenes])
+  const chars = useMemo(() => scenes.reduce((n, s) => n + cpLen(s), 0), [scenes])
   const estSec = chars / CHARS_PER_SEC
 
   // เพดานของ /api/video/render นับ "บรรทัดที่ไม่ว่าง" ของสคริปต์ดิบ ไม่ใช่ฉากหลังซอย
   // จึงต้องนับแบบเดียวกันเป๊ะ ไม่งั้นหน้าเว็บบอกว่าผ่านแต่เซิร์ฟเวอร์ตีกลับ
+  //
+  // ⚠️ ตัวตัดบรรทัดตรงนี้เป็น /\r?\n/ ต่างจาก LINE_BREAK ของ splitScenes โดยตั้งใจ —
+  //    สองบรรทัดนี้ตอบคนละคำถาม: อันนี้เลียน route (ตัวที่จะตีกลับ) ส่วน splitScenes
+  //    เลียน python (ตัวที่กำหนดว่าจะได้กี่ฉาก) ทำให้เหมือนกันเมื่อไหร่จะผิดฝั่งใดฝั่งหนึ่ง
   const rawLines = useMemo(
     () => script.split(/\r?\n/).map(s => s.trim()).filter(Boolean), [script])
 
@@ -260,6 +337,12 @@ export default function VideoStudio() {
     if (HAS.url.test(script)) w.push("ลิงก์")
     return w
   }, [script])
+
+  // ต่างจาก warns ข้างบน: พวกนี้ระบบ "ตัดให้ไม่ได้" (ตัดแล้วจะไม่ตรงกับ segments.py)
+  // จึงเหลือติดไปให้ TTS อ่านออกเสียงจริง ๆ ต้องบอกให้ลบเอง ไม่ใช่บอกว่าเดี๋ยวตัดให้
+  // ตรวจกับข้อความ "หลังล้างแล้ว" เพราะตัวที่อยู่ในวงเล็บ/ท้ายแฮชแท็กถูกตัดไปก่อนแล้ว
+  const leftovers = useMemo(
+    () => scenes.some(s => HAS.leftover.test(s)), [scenes])
 
   // ── ภาพต่อฉาก: ยาวเท่าจำนวนฉากเสมอ ──
   // ค่าเริ่มต้นสลับ hero/scene ตามที่ make_video.py ทำเวลาระบุภาพมาไม่ครบ
@@ -298,11 +381,19 @@ export default function VideoStudio() {
       b.push(`สคริปต์ยาวเกิน ${MAX_SCRIPT_CHARS.toLocaleString("th-TH")} ตัวอักษร`)
     }
     picks.forEach((p, i) => {
-      if (p.source === "sku" && !p.sku) b.push(`ฉาก ${i + 1} ยังไม่ได้เลือกสินค้า`)
-      if (p.source === "file" && !p.file.trim()) b.push(`ฉาก ${i + 1} ยังไม่ได้ใส่ที่อยู่ไฟล์`)
+      if (p.source === "sku") {
+        if (!p.sku) b.push(`ฉาก ${i + 1} ยังไม่ได้เลือกสินค้า`)
+        else if (skuNoImage.has(p.sku)) {
+          b.push(`ฉาก ${i + 1} · ${p.sku} ยังไม่มีรูปซอง/กล่องในระบบ — อัปโหลดที่หน้าจัดการ SKU ก่อน`)
+        }
+      }
+      if (p.source === "file") {
+        const bad = badFilePath(p.file.trim())
+        if (bad) b.push(`ฉาก ${i + 1} · ${bad}`)
+      }
     })
     return b
-  }, [scenes.length, project, picks, rawLines])
+  }, [scenes.length, project, picks, rawLines, skuNoImage])
 
   // ── รายการงานเก่า ──
   const loadJobs = useCallback(async () => {
@@ -310,9 +401,12 @@ export default function VideoStudio() {
       const r = await api("jobs")
       if (!alive.current) return
       setJobs((r.items || r.jobs || []).map(normJob))
-    } catch {
+      setJobsErr("")
+    } catch (e) {
       // อ่านรายการงานเก่าไม่ได้ ไม่ควรบังหน้าที่เหลือซึ่งยังสั่งงานใหม่ได้ตามปกติ
-      if (alive.current) setJobs([])
+      // แต่ต้องเก็บสาเหตุไว้โชว์ในกล่องว่าง ๆ ด้วย — ไม่งั้น 500 จากเซิร์ฟเวอร์กับ
+      // "ยังไม่เคยสั่งงานเลย" หน้าตาเหมือนกันเป๊ะ แล้วคนสั่งซ้ำเพราะนึกว่าใบเก่าหายไป
+      if (alive.current) { setJobs([]); setJobsErr(e.message || "อ่านรายการงานไม่สำเร็จ") }
     }
   }, [api])
 
@@ -330,11 +424,16 @@ export default function VideoStudio() {
         if (!alive.current) return
         const n = normJob(r)
         setJob(n)
+        // ถามสำเร็จแล้ว = เน็ตกลับมาแล้ว ต้องเก็บแบนเนอร์ของรอบที่หลุดไปด้วย
+        // ไม่งั้นข้อความ "เน็ตหลุด" ค้างจอทั้งที่งานเดินต่อปกติ คนจะไม่กล้ารอ
+        // ⚠️ เก็บเฉพาะตัวที่ลูปนี้เป็นคนตั้ง (from === "poll") — error จากตอนกดส่ง
+        //    เช่น 409 ชื่อซ้ำ ต้องค้างไว้ให้อ่าน ไม่ใช่โดนลูปลบทิ้งใน 5 วินาที
+        setErr(prev => (prev?.from === "poll" ? null : prev))
         if (n && !OPEN_STATES.has(n.status)) loadJobs()
       } catch (e) {
         // ล้มครั้งเดียวไม่เลิกติดตาม — เน็ตมือถือหลุดวูบเดียวไม่ควรทำให้เลิกตามงาน
         // ที่ยังทำอยู่จริง (เรนเดอร์คลิปหนึ่งตัวกินเวลา ~5 นาที มีเวลาให้หลุดเยอะ)
-        if (alive.current) setErr({ msg: e.message, hint: e.hint })
+        if (alive.current) setErr({ msg: e.message, hint: e.hint, from: "poll" })
       }
     }, 5000)
     return () => clearInterval(t)
@@ -403,7 +502,10 @@ export default function VideoStudio() {
     </Frame>
   )
 
-  const waited = since && running ? (Date.now() - since) / 1000 : null
+  // นาฬิกา "รอมาแล้ว" ต้องเดินได้ทั้งงานที่เพิ่งกดส่ง (since) และงานเก่าที่กดเปิดจาก
+  // รายการข้างล่าง (ไม่มี since แต่มี created_at) — ใบที่ค้างมาข้ามคืนคือใบที่ต้องรู้ที่สุด
+  const startedAt = since ?? (job?.created_at ? new Date(job.created_at).getTime() : null)
+  const waited = running && startedAt ? (Date.now() - startedAt) / 1000 : null
 
   return (
     <Frame onRefresh={loadJobs}>

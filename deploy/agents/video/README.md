@@ -96,9 +96,36 @@ ffmpeg       → เวลา การเคลื่อนไหว เสี�
 - **GEMINI_API_KEY** ใน `deploy/.env.local`
 - การ์ดจอไม่บังคับ — ไม่มีก็ตกไปใช้ CPU หรือสั่ง `--no-align` ได้
 
+## สั่งงานผ่านเว็บ
+
+```
+หน้า /video  →  POST /api/video/render  →  แถวใน video_jobs (queued)
+                                        →  workflow_dispatch video-render.yml
+                                                    ↓
+                            runner: publish.py claim → build → upload → done
+                                                    ↓
+                          หน้าเว็บ poll /api/video/jobs?id= จนขึ้น done แล้วเล่นคลิปได้เลย
+```
+
+| ชิ้น | ไฟล์ |
+|---|---|
+| ตารางคิว | `backend/database/migrations/075_video_jobs.sql` |
+| ตัวรันบน runner | `publish.py` (`python -m agents.video.publish --job <id>`) |
+| workflow | `.github/workflows/video-render.yml` |
+| API | `deploy/app/api/video/{render,jobs}/route.js` |
+| หน้าเว็บ | `deploy/app/video/page.jsx` + `deploy/components/VideoStudio.jsx` |
+| เพลง | `music.py` + `deploy/tasks/video_music.json` |
+
+**เรนเดอร์บน GitHub Actions ไม่ใช่ Vercel** ด้วยเหตุผลเดียวกับ `poster-render.yml`
+(ซับไทยต้องให้ Chromium จริงวาด · คลิปหนึ่งตัวยาวเกิน serverless ทุกแบบ)
+
+⚠️ **runner ไม่มีการ์ดจอ** → `flux:` วาดไม่ได้ และ `file:C:\...` ก็ไม่มีบน ubuntu
+ใช้ได้แค่ `machine:` / `sku:` / ไฟล์ที่อยู่ในรีโป · whisper ตกไปรันบน CPU (ช้ากว่าแต่ได้)
+
+secrets ที่ต้องมี — มีอยู่ในรีโปครบแล้วทั้งหมด: `GEMINI_API_KEY` `SUPABASE_URL` `SUPABASE_SERVICE_KEY`
+
 ## ยังไม่ได้ทำ
 
-- หน้าเว็บ timeline (ตอนนี้สั่งผ่าน CLI)
-- อัปโหลดขึ้น Supabase storage อัตโนมัติ
-- ต่อเข้าคิว `marketing_content` (สร้างวิดีโอจากแคปชั่นที่อนุมัติแล้ว)
-- คลังเพลงประกอบ (ตอนนี้ต้องชี้ไฟล์เอง)
+- ปุ่ม "ทำเป็นวิดีโอ" ในหน้า `/marketing` (ตอนนี้ต้องก๊อปแคปชั่นมาวางเองที่ `/video`)
+- ไฟล์เพลงจริง — `video_music.json` เตรียม slot ไว้ 10 ช่องแล้ว รอเจ้าของเลือกเพลงที่มีสิทธิ์
+- ฟุตเทจตู้เพิ่ม — ตอนนี้มีรูปตู้แค่ 2 มุม คลิปจึงวนใช้ซ้ำ
