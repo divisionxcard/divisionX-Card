@@ -199,8 +199,15 @@ jobs:
       # และ API route เห็นตรงกัน — ใส่คอลัมน์ที่ไม่มีจริงลงไปแม้แต่ตัวเดียว PostgREST
       # ตอบ 400 แล้วการปิดแถวจะล้มทั้งอัน กลายเป็นค้างเหมือนเดิมโดยที่เราคิดว่าซ่อมแล้ว
       #
-      # status=neq.done กันเคสที่ publish.py ปิดงานสำเร็จไปแล้วแต่ step หลังจากนั้นล้ม
-      # (เช่นอัปโหลด artifact) — ไม่งั้นคลิปที่ทำเสร็จแล้วจะถูกป้ายว่า failed
+      # ⚠️ กรองด้วย status=in.(queued,rendering) ไม่ใช่ neq.done — ต่างกันตรงเคส failed
+      #    publish.py จับ error ของตัวเองแล้วเขียนเหตุผลละเอียดลงคอลัมน์ error เสมอ
+      #    (เช่น "SKU OP-99 ยังไม่มีรูป" หรือ traceback ของ ffmpeg) ถ้าใช้ neq.done
+      #    step นี้จะ PATCH ทับข้อความนั้นด้วยประโยคกลาง ๆ ทุกครั้งที่ publish.py พังเอง
+      #    → คนเปิดเว็บมาดูจะเห็นแค่ "ล้มบน GitHub Actions" แล้วต้องไปไล่ log เอง
+      #      ทั้งที่ระบบรู้สาเหตุจริงอยู่แล้ว เป็นการทำลายข้อมูลที่มีค่าที่สุดของการดีบั๊ก
+      #
+      #    กรองแบบนี้แล้ว step นี้จะแตะเฉพาะแถวที่ "ไม่มีใครปิดใบให้" จริง ๆ คือ
+      #    ถูก cancel / ชน timeout 45 นาที / ตายก่อนถึงตัว publish.py (เช่น pip ล้ม)
       - name: Mark job failed
         if: failure() || cancelled()
         env:
@@ -218,7 +225,7 @@ jobs:
 
           OUT="$RUNNER_TEMP/patch.json"
           CODE=$(curl -sS -o "$OUT" -w '%{http_code}' \
-            -X PATCH "$SUPABASE_URL/rest/v1/video_jobs?id=eq.$JOB_ID&status=neq.done" \
+            -X PATCH "$SUPABASE_URL/rest/v1/video_jobs?id=eq.$JOB_ID&status=in.(queued,rendering)" \
             -H "apikey: $SUPABASE_SERVICE_KEY" \
             -H "Authorization: Bearer $SUPABASE_SERVICE_KEY" \
             -H "Content-Type: application/json" \

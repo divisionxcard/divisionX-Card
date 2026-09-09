@@ -16,7 +16,9 @@
 //                                             voice, style, music, xfade } }
 //                             → 202 { job_id, status } · 409 ถ้าชื่องานซ้ำกับใบที่ยังทำอยู่
 //    GET  /api/video/jobs?id= → { id, project, status, video_url, duration_seconds, error, ... }
-//                               status = queued | running | done | failed
+//                               status = queued | rendering | done | failed
+//                               (ไม่มีคำว่า running — CHECK ในตาราง video_jobs ห้ามไว้
+//                                STATUS_ALIAS ข้างล่างรับไว้เผื่อฝั่งเซิร์ฟเวอร์เปลี่ยนคำเฉย ๆ)
 //    GET  /api/video/jobs     → { items: [...] }
 import { useState, useEffect, useMemo, useCallback, useRef } from "react"
 import {
@@ -257,6 +259,10 @@ export default function VideoStudio() {
       try { role = (await getProfile(user.id))?.role } catch { role = undefined }
       if (stop) return
       setAuthState(role && role !== "admin" ? "forbidden" : "ok")
+    }).catch(() => {
+      // getSession() พังเอง (localStorage ถูกปิด / โดเมนแปลก) — ถ้าไม่รับไว้ตรงนี้
+      // authState จะค้างที่ "checking" คือจอ "กำลังตรวจสิทธิ์…" ตลอดกาล ไม่มี error ให้เห็น
+      if (!stop) setAuthState("anon")
     })
     return () => { stop = true }
   }, [])
