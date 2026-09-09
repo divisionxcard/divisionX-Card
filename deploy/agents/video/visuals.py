@@ -113,6 +113,26 @@ def _flux(prompt, cache_dir):
 
 
 # ── ปรับให้เป็นเฟรม 9:16 ────────────────────────────────────────────────
+def _flatten(im):
+    """วางภาพโปร่งใสลงบนพื้นกรมท่าก่อน แล้วค่อยแปลงเป็น RGB
+
+    ⚠️ รูปซอง/กล่องใน Supabase เป็น **RGBA ที่ไขพื้นหลังออกแล้ว** (ตัดขอบสินค้า)
+       ถ้าเรียก .convert("RGB") ตรง ๆ ส่วนที่โปร่งจะกลายเป็น **สีดำสนิท**
+       ผลคือคลิปมีแถบดำคาดบน-ล่างรอบตัวสินค้า ดูเหมือนงานยังไม่เสร็จ
+       (เจอจริง 9 ก.ย. 2026 — ตอนดูเฟรมด้วยตาถึงเห็น ไม่มี error ใด ๆ)
+
+       วางบนสีแบรนด์แทน ได้ทั้งความถูกต้องและได้พื้นหลังเบลอเป็นเงาสีของสินค้า
+       บนกรมท่า ซึ่งเข้ากับ brand identity อยู่แล้ว
+    """
+    from PIL import Image
+
+    if im.mode in ("RGBA", "LA") or (im.mode == "P" and "transparency" in im.info):
+        im = im.convert("RGBA")
+        bg = Image.new("RGBA", im.size, BRAND_BG + (255,))
+        return Image.alpha_composite(bg, im).convert("RGB")
+    return im.convert("RGB")
+
+
 def to_frame(src, out_png, blur_fill=True):
     """ภาพขนาดใดก็ได้ → 1080×1920
 
@@ -122,7 +142,7 @@ def to_frame(src, out_png, blur_fill=True):
     """
     from PIL import Image, ImageFilter
 
-    im = Image.open(src).convert("RGB")
+    im = _flatten(Image.open(src))
     tw, th = config.W, config.H
     scale = min(tw / im.width, th / im.height)
     cover = max(tw / im.width, th / im.height)
