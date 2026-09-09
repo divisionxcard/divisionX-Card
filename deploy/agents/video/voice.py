@@ -31,15 +31,23 @@ VOICES = {
 }
 
 
-def synth(text, out_wav, voice=None, model=None, retries=3):
+def synth(text, out_wav, voice=None, model=None, retries=3, style=None):
     """อ่านข้อความเป็นไฟล์ .wav — คืน path
 
     มีแคช: ถ้าไฟล์มีอยู่แล้วและข้อความไม่เปลี่ยน จะข้ามการเรียก API
     (เก็บ hash ของข้อความไว้ข้าง ๆ) เพราะตอนแก้ภาพหรือซับ ไม่ควรต้องจ่าย TTS ใหม่
+
+    style: คำสั่งอารมณ์การอ่านเป็นภาษาธรรมชาติ เช่น
+           "อ่านแบบเพื่อนเล่าให้เพื่อนฟัง ตื่นเต้นนิด ๆ ไม่ใช่อ่านประกาศ"
+           Gemini TTS ออกแบบมาให้รับคำสั่งนำแบบนี้โดยไม่อ่านตัวคำสั่งออกเสียง
+           ⚠️ ยังไม่ได้ทดสอบกับไทยจริงจัง (10 ก.ย. 2026 โควตาหมดก่อน) —
+           ถ้าพบว่าเสียงอ่านคำสั่งออกมา ให้ตรวจ timing ของฉากแรกเป็นพิเศษ
     """
     out_wav = pathlib.Path(out_wav)
     voice = voice or config.TTS_VOICE
     model = model or config.TTS_MODEL
+    if style:
+        text = f"{style.strip()}:\n\n{text}"
 
     stamp = out_wav.with_suffix(".stamp.json")
     key = {"text": text, "voice": voice, "model": model}

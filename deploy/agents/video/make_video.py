@@ -37,10 +37,39 @@ def _log(step, msg):
     print(f"[{step}] {msg}", flush=True)
 
 
+def _edited_timing(raw, segs, total):
+    """เวลาที่คนแก้มือจากห้องตัดต่อ → ตรวจให้อยู่ในกรอบที่เรนเดอร์ได้จริง
+
+    คนลากบนหน้าจอพลาดได้เสมอ (จุดตัดสลับกัน · เกินความยาวเสียง · ฉากหาย)
+    ถ้าปล่อยผ่านจะไปตายที่ xfade แบบเงียบ ๆ เหมือนบั๊กเมื่อ 9 ก.ย. — จึงบีบให้
+    เรียงเป็นระเบียบตรงนี้: ฉากแรกเริ่ม 0 · จุดตัดถัดไปห้ามย้อน · ฉากสั้นสุด 0.35 วิ
+    """
+    by_idx = {int(t["index"]): t for t in raw}
+    out, cursor = [], 0.0
+    n = len(segs)
+    for i in range(n):
+        t = by_idx.get(i) or {}
+        start = 0.0 if i == 0 else max(cursor + 0.35, float(t.get("start", cursor + 0.35)))
+        start = min(start, max(0.0, total - 0.35 * (n - i)))
+        out.append({"index": i, "start": round(start, 3), "end": 0.0})
+        cursor = start
+    for i in range(n):
+        out[i]["end"] = round(out[i + 1]["start"] if i < n - 1 else total, 3)
+    return out
+
+
 def build_video(plan, out_mp4=None, skip_align=False):
     project = plan.get("project") or "clip"
     work = config.work_dir(project)
     out_mp4 = pathlib.Path(out_mp4 or (work / f"{project}.mp4"))
+
+    # เก็บ plan ทั้งก้อนไว้ในโฟลเดอร์งานเสมอ — ห้องตัดต่อบนเว็บอ่านไฟล์นี้
+    # เป็นจุดตั้งต้น และทำให้เรนเดอร์ซ้ำได้เหมือนเดิมแม้ต้นทาง (DB/CLI) จะหาย
+    (work / "plan.json").write_text(
+        json.dumps(plan, ensure_ascii=False, indent=2), encoding="utf-8")
+
+    # การแก้ไขจากห้องตัดต่อ — ทุกคีย์ optional ดูโครงใน components/editor/CONTRACT.md
+    edit = plan.get("edit") or {}
 
     # ── 1. สคริปต์ → ฉาก ──
     segs = segments.split_script(plan["script"])
@@ -53,13 +82,19 @@ def build_video(plan, out_mp4=None, skip_align=False):
     wav = work / "voice.wav"
     from . import voice as voice_mod
     voice_mod.synth(segments.speech_text(segs), wav,
-                    voice=plan.get("voice"), model=plan.get("tts_model"))
+                    voice=plan.get("voice"), model=plan.get("tts_model"),
+                    style=plan.get("voice_style"))
     total = voice_mod.duration(wav)
     _log("2/6", f"เสียงพากย์ {total:.1f} วินาที ({time.time()-t0:.0f} วิ)")
 
     # ── 3. จับเวลาแต่ละบรรทัด ──
     t0 = time.time()
-    if skip_align:
+    if edit.get("timing"):
+        # คนตัดสินเวลาเองจากห้องตัดต่อ — เชื่อคนก่อนเครื่องเสมอ และได้ของแถมคือ
+        # ข้ามขั้นที่ช้าที่สุด (whisper) → วนแก้-เรนเดอร์ได้เร็ว
+        timing = _edited_timing(edit["timing"], segs, total)
+        _log("3/6", f"ใช้เวลาที่แก้มือจากห้องตัดต่อ {len(timing)} ฉาก")
+    elif skip_align:
         timing = align._even(segs, total)
         _log("3/6", "ข้ามการจับเวลา — แบ่งตามสัดส่วนตัวอักษรแทน")
     else:
@@ -78,19 +113,41 @@ def build_video(plan, out_mp4=None, skip_align=False):
         fallback = specs or ["machine:hero", "machine:scene"]
         while len(specs) < len(segs):
             specs.append(fallback[len(specs) % len(fallback)])
-    frames = visuals.prepare(specs[:len(segs)], work)
+    specs = specs[:len(segs)]
+    scene_edit = edit.get("scenes") or {}
+    for i in range(len(specs)):                      # ห้องตัดต่อสลับ/เปลี่ยนภาพรายฉาก
+        ov = scene_edit.get(str(i)) or {}
+        if ov.get("visual"):
+            specs[i] = ov["visual"]
+    # file:ชื่อไฟล์เฉย ๆ (ไม่มีไดรฟ์/โฟลเดอร์) = ไฟล์ที่อัปโหลดไว้ในโฟลเดอร์งานนี้เอง
+    for i, s in enumerate(specs):
+        if s.startswith("file:") and "/" not in s[5:] and "\\" not in s[5:] and ":" not in s[5:]:
+            specs[i] = f"file:{work / s[5:]}"
+    frames = visuals.prepare(specs, work)
     _log("4/6", f"เตรียมภาพ {len(frames)} ใบ ({time.time()-t0:.0f} วิ)")
 
     # ── 5. ซับไทย ──
     t0 = time.time()
-    chunks = align.subtitle_chunks(segs, timing,
-                                   max_chars=int(plan.get("sub_chars", 28)))
-    subtitle.render_many(chunks, work / "subs", style=plan.get("style", "brand"),
-                         size=int(plan.get("sub_size", 64)))
+    ss = dict(edit.get("sub_style") or {})
+    sub_style = ss.get("style") or plan.get("style", "brand")
+    sub_size = int(ss.get("size") or plan.get("sub_size", 64))
+    sub_bottom = int(ss.get("bottom") or 430)
+    if edit.get("subtitles"):
+        # ซับที่คนแก้เอง — ใช้ทั้งชุดตามนั้น (ข้อความ/เวลา/การรวม-แยกการ์ด)
+        chunks = [dict(c) for c in edit["subtitles"]]
+    else:
+        chunks = align.subtitle_chunks(segs, timing,
+                                       max_chars=int(plan.get("sub_chars", 28)))
+    subtitle.render_many(chunks, work / "subs", style=sub_style,
+                         size=sub_size, bottom=sub_bottom)
+    he = dict(edit.get("headline") or {})
+    head_text = he.get("text") if "text" in he else plan.get("headline")
+    head_secs = float(he.get("seconds") or plan.get("headline_seconds", 3.0))
     head_png = None
-    if plan.get("headline"):
-        head_png = subtitle.render_headline(plan["headline"], work / "headline.png",
-                                            style=plan.get("style", "brand"))
+    if head_text:
+        head_png = subtitle.render_headline(head_text, work / "headline.png",
+                                            style=sub_style,
+                                            size=int(he.get("size") or 86))
     _log("5/6", f"ซับ {len(chunks)} ชิ้น ({time.time()-t0:.0f} วิ)")
 
     # ── 6. ประกอบ ──
@@ -113,12 +170,28 @@ def build_video(plan, out_mp4=None, skip_align=False):
             dur = timing[i + 1]["start"] - t["start"] + xfade
         else:
             dur = total - t["start"]
+        zoom = None
+        ov = scene_edit.get(str(i)) or {}
+        if "zoom" in ov and ov["zoom"] is not None:
+            zoom = float(ov["zoom"])                 # 0 = ภาพนิ่งไม่ซูม
         clips.append(compose.render_scene(fr, max(0.5, dur),
-                                          clips_dir / f"scene_{i:03d}.mp4"))
+                                          clips_dir / f"scene_{i:03d}.mp4",
+                                          zoom=zoom))
+
+    logo = None
+    lg = edit.get("logo") or {}
+    if lg.get("file"):
+        lf = work / lg["file"]
+        if lf.exists():
+            logo = {"path": lf, "pos": lg.get("pos", "tr"),
+                    "size": int(lg.get("size", 140)),
+                    "opacity": float(lg.get("opacity", 0.9))}
+        else:
+            _log("6/6", f"⚠️ ไม่พบไฟล์โลโก้ {lg['file']} — ข้าม (อัปโหลดใหม่จากห้องตัดต่อ)")
+
     compose.build(clips, timing, chunks, wav, out_mp4,
                   music=plan.get("music"), headline=head_png,
-                  headline_seconds=float(plan.get("headline_seconds", 3.0)),
-                  xfade=xfade)
+                  headline_seconds=head_secs, xfade=xfade, logo=logo)
     _log("6/6", f"ประกอบเสร็จ ({time.time()-t0:.0f} วิ)")
 
     (work / "timing.json").write_text(

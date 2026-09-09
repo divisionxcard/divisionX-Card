@@ -62,12 +62,14 @@ def render_scene(image, seconds, out_mp4, zoom=None, fps=None):
 
 
 def build(scene_clips, timing, subtitles, voice_wav, out_mp4,
-          music=None, headline=None, headline_seconds=3.0, xfade=None):
+          music=None, headline=None, headline_seconds=3.0, xfade=None, logo=None):
     """ต่อทุกอย่างเป็นคลิปสุดท้าย
 
     scene_clips : [path, ...] เรียงตามฉาก (ยาวเกินมาเท่า xfade แล้ว)
     timing      : [{'index','start','end'}, ...] เวลาจริงของแต่ละฉาก
     subtitles   : [{'png','start','end'}, ...]
+    logo        : {'path','pos','size','opacity'} หรือ None
+                  pos ∈ tl|tr|bl|br · size = ความกว้าง px บนเฟรม 1080
     """
     xfade = config.XFADE if xfade is None else xfade
     ff = config.ffmpeg_bin()
@@ -111,6 +113,26 @@ def build(scene_clips, timing, subtitles, voice_wav, out_mp4,
             f"[{last}][{base + k}:v]overlay=0:0:format=auto"
             f":enable='between(t,{ov['start']:.3f},{ov['end']:.3f})'[{out}]")
         last = out
+
+    # ── โลโก้แบรนด์ค้างทั้งคลิป ──
+    if logo:
+        idx = len(scene_clips) + len(overlays)
+        inputs += ["-i", str(logo["path"])]
+        pad = 28                                   # ระยะจากขอบ — พ้นโซนมุมโค้งของจอมือถือ
+        pos = {
+            "tl": f"{pad}:{pad}",
+            "tr": f"main_w-overlay_w-{pad}:{pad}",
+            "bl": f"{pad}:main_h-overlay_h-{pad}",
+            "br": f"main_w-overlay_w-{pad}:main_h-overlay_h-{pad}",
+        }.get(logo.get("pos", "tr"), f"main_w-overlay_w-{pad}:{pad}")
+        op = max(0.0, min(1.0, float(logo.get("opacity", 0.9))))
+        # format=rgba ก่อนคูณ alpha — ไฟล์ jpg ไม่มี alpha ถ้าไม่แปลงจะคูณไม่ติด
+        filters.append(
+            f"[{idx}:v]scale={int(logo.get('size', 140))}:-1,format=rgba,"
+            f"colorchannelmixer=aa={op:.2f}[lg]")
+        filters.append(f"[{last}][lg]overlay={pos}[olg]")
+        last = "olg"
+
     filters.append(f"[{last}]trim=duration={total:.3f},setpts=PTS-STARTPTS[vout]")
 
     # ── เสียง ──
