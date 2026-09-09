@@ -1,7 +1,7 @@
 {
   "mcpServers": {
     "divisionx": {
-      "command": "py",
+      "command": "C:/Users/choog/AppData/Local/Programs/Python/Launcher/py.exe",
       "args": ["-3", "deploy/mcp/dvx_mcp_server.py"],
       "env": {}
     }

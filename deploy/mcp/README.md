@@ -48,6 +48,22 @@ py -3 -m pip install mcp
 
 มี [`.mcp.json`](../../.mcp.json) ที่ root ของ repo อยู่แล้ว — เปิด session ใหม่ก็เห็น tools เลย
 
+> ⚠️ **`command` ต้องเป็น path เต็มของ `py.exe` ห้ามเขียนสั้น ๆ ว่า `py`**
+>
+> ตัว launcher อยู่ที่ `%LOCALAPPDATA%\Programs\Python\Launcher\py.exe` ซึ่ง**ไม่อยู่ใน PATH**
+> ที่ Claude Code ส่งต่อให้ process ลูก (ต่างจาก terminal ปกติ ที่ Hermes/OpenClaw ใช้แล้วเจอ)
+> เขียนว่า `py` เฉย ๆ จะได้ `divisionx (CONNECTION_CLOSED)` ตอนเปิด session **โดยไม่มีข้อความบอกสาเหตุ**
+>
+> เคยพลาดมาแล้ว 28 ส.ค. – 9 ก.ย. 2026 — เงียบไป 12 วัน แล้วมีคนไปนั่งเขียน JSON-RPC client
+> มือเปล่าอ้อมมัน 47 ไฟล์ (`call_mcp*.py`, `get_review*.mjs` …) ทั้งที่ตัว server ไม่เคยพัง
+>
+> เช็กเร็ว ๆ ว่ายังต่อได้ไหม — สั่งรันด้วย config ตัวจริงแล้วดูว่า handshake ผ่านไหม:
+> ```bash
+> echo '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"t","version":"1"}}}' \
+>   | "$(python -c "import json;print(json.load(open('.mcp.json'))['mcpServers']['divisionx']['command'])")" \
+>     -3 deploy/mcp/dvx_mcp_server.py | head -1
+> ```
+
 ### OpenClaw
 
 ลงทะเบียนไว้แล้วด้วย:

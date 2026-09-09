@@ -107,3 +107,14 @@ deploy/agents/.cache/
 
 # เอกสารอ้างอิงขนาดใหญ่ (64 MB) — เก็บไว้ในเครื่องเท่านั้น ห้ามเข้า repo
 docs/
+
+# venv ของ MCP server — สร้างใหม่ได้ ไม่ต้องเข้า repo
+.venv-mcp/
+
+# ─── เศษไฟล์ทดลองที่เผลอทิ้งไว้ (เคยค้าง 47 ไฟล์ 12 วัน · 9 ก.ย. 2026) ──
+# `nul` เกิดจาก redirect แบบ Windows (`> nul`) ใน Git Bash ซึ่งสร้างไฟล์จริง
+# ไม่ใช่ /dev/null · ใน Bash tool ให้ใช้ `> /dev/null`
+nul
+temp/
+deploy/agents/temp/
+tmp_*
