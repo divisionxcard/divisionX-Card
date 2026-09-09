@@ -48,6 +48,10 @@ const CHARS_PER_SEC = 11
 
 const MAX_SCENE_CHARS = 90     // เท่ากับ max_chars ของ segments.split_script
 
+// เพดานเวลาของ runner — timeout-minutes: 45 ใน .github/workflows/video-render.yml
+// งานที่ยังมีชีวิตอยู่จริงจะเกินเลขนี้ไม่ได้เลย เกินเมื่อไหร่คือ "ตายแล้วแต่ไม่มีใครปิดใบให้"
+const RUNNER_CEILING_SEC = 45 * 60
+
 // เพดานเดียวกับ validatePlan ใน app/api/video/render/route.js — ต้องแก้พร้อมกันสองที่
 // ตั้งใจไม่ import จาก route เพราะไฟล์นั้นเป็น server-only (ดึง service key มาด้วย)
 const PROJECT_RE = /^[a-z0-9][a-z0-9_-]{0,63}$/
@@ -469,7 +473,9 @@ export default function VideoStudio() {
       const r = await api("render", { method: "POST", body: JSON.stringify({ plan }) })
       const n = normJob(r)
       if (!n?.id) throw new Error("เซิร์ฟเวอร์ไม่ได้ส่งเลขงานกลับมา — ติดตามสถานะไม่ได้")
-      setJob(n); setSince(Date.now()); setStep(3)
+      // route ตอบกลับแค่ { job_id, status } ไม่มีชื่องานมาด้วย — เติมเองไว้ก่อน
+      // ไม่งั้นพาเนลจะโชว์ uuid ยาว ๆ อยู่ 5 วินาทีจนกว่ารอบ poll แรกจะกลับมา
+      setJob({ ...n, project: n.project || project }); setSince(Date.now()); setStep(3)
       loadJobs()
     } catch (e) {
       setErr({ msg: e.message, hint: e.hint })
@@ -574,6 +580,14 @@ export default function VideoStudio() {
                 </p>
               </div>
             </div>
+          )}
+
+          {leftovers && (
+            <p className="vs-note">
+              มีสัญลักษณ์อย่าง ⭐ ⭕ ⬛ → เหลืออยู่ในบรรทัดที่จะถูกอ่าน
+              {" — "}ตัวพวกนี้ระบบ<u>ไม่ได้ตัดให้</u> (ต่างจากอีโมจิ) มันจะถูกส่งเข้า TTS ตามนั้น
+              {" "}ลบออกเองก่อนส่ง แล้วดูข้อความจริงที่จะถูกอ่านได้ในขั้น 02
+            </p>
           )}
 
           <div className="vs-two">
@@ -698,7 +712,9 @@ export default function VideoStudio() {
       <section className="dx-card vs-card">
         <h2 className="vs-h"><Clock size={16} /> งานที่ผ่านมา</h2>
         {!jobs.length
-          ? <p className="vs-dim vs-fine">ยังไม่มีงาน — หรือหน้านี้ยังอ่านรายการงานไม่ได้</p>
+          ? (jobsErr
+              ? <p className="vs-note">อ่านรายการงานไม่สำเร็จ: {jobsErr} — งานเก่าอาจยังอยู่ครบ กดรีเฟรชอีกครั้ง</p>
+              : <p className="vs-dim vs-fine">ยังไม่มีงาน</p>)
           : (
             <div className="vs-jobs">
               {jobs.map(j => (
@@ -763,8 +779,12 @@ function SceneRow({ i, text, pick, skus, onChange }) {
             skus.length ? (
               <select className="dx-input" value={pick.sku} onChange={e => onChange({ sku: e.target.value })}>
                 <option value="">— เลือกสินค้า —</option>
+                {/* ป้าย "ยังไม่มีรูป" ต้องเห็นตั้งแต่ตอนเลือก ไม่ใช่ไปโผล่เป็น blocker
+                    ทีหลังแล้วต้องเดาว่าตัวไหนใช้ได้บ้าง */}
                 {skus.map(s => (
-                  <option key={s.sku_id} value={s.sku_id}>{s.sku_id} · {s.name}</option>
+                  <option key={s.sku_id} value={s.sku_id}>
+                    {s.sku_id} · {s.name}{!s.image_url && !s.image_url_box ? " (ยังไม่มีรูป)" : ""}
+                  </option>
                 ))}
               </select>
             ) : (
@@ -775,8 +795,11 @@ function SceneRow({ i, text, pick, skus, onChange }) {
           )}
 
           {pick.source === "file" && (
+            /* เครื่องเรนเดอร์คือ ubuntu ของ GitHub ที่ checkout รีโปมา — path เดียวที่มี
+               อยู่จริงคือไฟล์ในรีโป และต้อง relative จาก deploy/ (workflow ตั้ง
+               working-directory: deploy) · ลิงก์ http ยังใช้ไม่ได้ ดู badFilePath() */
             <input className="dx-input" value={pick.file}
-              placeholder="ที่อยู่ไฟล์บนเครื่องเรนเดอร์ หรือ https://..."
+              placeholder="path ในรีโป เช่น public/machine/machine-hero.jpg"
               onChange={e => onChange({ file: e.target.value })} />
           )}
         </div>
@@ -805,6 +828,18 @@ function JobPanel({ job, waited }) {
       {job.status === "rendering" && (
         <p className="vs-dim vs-fine">
           ลำดับงาน: เสียงพากย์ (~3-4 นาที · ช้าสุด) → จับเวลารายคำ → เตรียมภาพ → เรนเดอร์ซับ → ประกอบ
+        </p>
+      )}
+
+      {/* งานค้างเกินเพดานของ runner = ตายไปแล้ว ไม่ใช่ "ยังทำอยู่" — ไม่มีใครไปเขียน
+          failed ให้ (publish.py เขียนได้เฉพาะตอนที่มันยังมีชีวิต) ป้ายจึงค้าง "กำลังทำ"
+          ตลอดกาล ต้องบอกวิธีปลดล็อกด้วย: /api/video/render เก็บกวาดงานค้างให้ตอนมีคน
+          สั่งชื่อเดิมซ้ำ (STALE_MINUTES = 60) ไม่ใช่มีใครไปไล่ปิดให้เอง */}
+      {waited != null && waited > RUNNER_CEILING_SEC && (
+        <p className="vs-note">
+          รอมาเกิน {Math.round(RUNNER_CEILING_SEC / 60)} นาทีแล้ว ซึ่งเกินเพดานเวลาของเครื่องเรนเดอร์
+          {" — "}แปลว่ามันน่าจะตายกลางคันโดยไม่ได้เขียนสถานะกลับมา
+          {" "}สั่งเรนเดอร์ชื่องานเดิมซ้ำอีกครั้งเพื่อปิดใบนี้แล้วเริ่มใหม่ได้เลย
         </p>
       )}
 

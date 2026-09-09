@@ -169,6 +169,12 @@ function badVisual(spec) {
   if (spec.startsWith("file:")) {
     const p = spec.slice(5)
     if (!p) return "file: ต้องระบุ path"
+    // ⚠️ ลิงก์รอดทุกด่านข้างล่าง (ไม่มีไดรฟ์ ไม่มีแบ็กสแลช ไม่ขึ้นต้นด้วย /) แต่
+    //    visuals.resolve() เปิด file: เป็นไฟล์ตรง ๆ ด้วย pathlib ไม่ได้ดาวน์โหลดให้
+    //    ปล่อยผ่าน = FileNotFoundError ที่ขั้น 4 คือหลังจ่ายค่า TTS ไปแล้ว
+    if (/^https?:\/\//i.test(p)) {
+      return `file: ยังรับลิงก์ไม่ได้ ("${p}") — เครื่องเรนเดอร์เปิดเป็นไฟล์ตรง ๆ ไม่ได้ดาวน์โหลด คอมมิตรูปเข้ารีโปแล้วอ้างเป็น path แทน`
+    }
     // "file:C:\ถ่ายเอง\กดตู้.jpg" คือ path บนเครื่องเจ้าของ ซึ่งไม่มีอยู่บน ubuntu
     // path ที่ใช้ได้คือไฟล์ที่อยู่ในรีโป และต้องเป็น relative เพราะ workflow รันด้วย
     // working-directory: deploy (เช่น public/machine/machine-hero.jpg)
