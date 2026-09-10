@@ -120,6 +120,29 @@ def _pop_y(start, rise):
             f"{rise}*(1-(t-{start:.3f})/{_POP_SECS}),0)'")
 
 
+def render_scene_from_clip(src, seconds, out_mp4, fps=None):
+    """ฟุตเทจวิดีโอ (จาก Google Flow/Veo หรือถ่ายเอง) → คลิปฉาก 9:16 ยาวพอดีช่วง
+
+    - ครอปแบบ cover เป็น 1080×1920 (ฟุตเทจแนวนอนถูกตัดข้าง ไม่ใส่แถบดำ)
+    - สั้นกว่าช่วงฉาก → ค้างเฟรมสุดท้าย (tpad clone) · ยาวกว่า → ตัดท้ายทิ้ง
+    - ตัดเสียงทิ้งเสมอ — เสียงของระบบคือเสียงพากย์+เพลง ไม่ใช่เสียงติดฟุตเทจ
+    """
+    fps = fps or config.FPS
+    vf = (
+        f"scale={config.W}:{config.H}:force_original_aspect_ratio=increase,"
+        f"crop={config.W}:{config.H},fps={fps},"
+        f"tpad=stop_mode=clone:stop_duration={seconds:.3f},"
+        f"trim=duration={seconds:.3f},setpts=PTS-STARTPTS,"
+        f"setsar=1,format=yuv420p"
+    )
+    _run([config.ffmpeg_bin(), "-y", "-loglevel", "error",
+          "-i", str(src), "-vf", vf, "-an",
+          "-c:v", "libx264", "-preset", "medium", "-crf", "18",
+          "-pix_fmt", "yuv420p", "-r", str(fps), str(out_mp4)],
+         f"แปลงฟุตเทจ {pathlib.Path(src).name} เป็นฉาก")
+    return out_mp4
+
+
 def build(scene_clips, timing, subtitles, voice_wav, out_mp4,
           music=None, headline=None, headline_seconds=3.0, xfade=None, logo=None,
           transitions=None):

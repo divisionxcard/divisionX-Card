@@ -14,7 +14,7 @@ import {
   VISUAL_CHOICES, SUB_STYLES, LOGO_POS, MIN_SUB, MOTIONS, TRANSITIONS,
   VOICES, VOICE_STYLES, MOTION_TEMPLATES,
   sceneAt, totalOf, fmtTime, effectiveVisual, round3, clamp,
-  autoMotion, autoTransition, parseTpl, buildTpl,
+  autoMotion, autoTransition, parseTpl, buildTpl, isSelfAnimated,
 } from "./editorStore"
 import { getSkus } from "../../lib/supabase"
 
@@ -165,7 +165,10 @@ function SceneTab({ state, dispatch, skus, skuFail }) {
                 if (n) setVisual(`file:${n}`)
               }} />
             <p className={styles.hint}>
-              ใช้ได้เฉพาะไฟล์ที่มีอยู่แล้วในโฟลเดอร์งานนี้ — อัปโหลดไฟล์ใหม่ทำได้ที่แท็บโลโก้เท่านั้น
+              รองรับทั้งภาพ (.jpg .png) และ<strong>ฟุตเทจวิดีโอ</strong> (.mp4 .mov) —
+              เช่นช็อตที่ออกแบบใน Google Flow หรือคลิปถ่ายเอง: วางไฟล์ลงโฟลเดอร์
+              .video-work/{state.project}/ แล้วพิมพ์ชื่อไฟล์ตรงนี้ ระบบครอป 9:16
+              และตัดให้พอดีช่วงฉากเอง (เสียงติดฟุตเทจถูกตัดทิ้ง — ใช้เสียงพากย์ของเรา)
             </p>
           </>
         )}
@@ -224,10 +227,13 @@ function SceneTab({ state, dispatch, skus, skuFail }) {
         )}
       </div>
 
-      {isTpl ? (
+      {isSelfAnimated(vis) ? (
         <div className={styles.group}>
           <div className={styles.label}>ท่ากล้อง</div>
-          <p className={styles.hint}>ฉากกราฟิกเคลื่อนไหวในตัวเอง — ไม่ใช้ท่ากล้อง/ซูมทับ</p>
+          <p className={styles.hint}>
+            {isTpl ? "ฉากกราฟิกเคลื่อนไหวในตัวเอง — ไม่ใช้ท่ากล้อง/ซูมทับ"
+                   : "ฟุตเทจวิดีโอเล่นของมันเอง — ไม่ซ้อนท่ากล้อง/ซูมทับ"}
+          </p>
         </div>
       ) : (
       <div className={styles.group}>

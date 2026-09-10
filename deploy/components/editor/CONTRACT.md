@@ -39,7 +39,10 @@
   มี timing → **ข้าม whisper** → เรนเดอร์เร็ว
 - **subtitles** — แทนที่ทั้งชุด เรียงตามเวลา · `segment` = index ฉากที่สังกัด
 - **scenes** — คีย์เป็น index ฉาก (สตริง เพราะ JSON) · `visual` ใช้รูปแบบเดียวกับ
-  plan.visuals (`machine:hero` / `sku:OP 17` / `file:ชื่อไฟล์ในโฟลเดอร์งาน` /
+  plan.visuals (`machine:hero` / `sku:OP 17` / `file:ชื่อไฟล์ในโฟลเดอร์งาน` —
+  **ไฟล์วิดีโอ .mp4/.mov/.webm/.m4v ใช้เป็นฉากได้ตรง ๆ** เช่นฟุตเทจจาก Google
+  Flow/Veo: ครอป 9:16 ตัดพอดีช่วงฉาก สั้นไปค้างเฟรมสุดท้าย เสียงติดไฟล์ถูกตัดทิ้ง
+  ไม่ซ้อนท่ากล้อง (`isSelfAnimated` ฝั่งเว็บ ↔ `visuals.is_video` ฝั่ง python) /
   `tpl:<เทมเพลต>?img=sku:OP 17&title=...&tag=...` = **ฉากกราฟิกเคลื่อนไหว** —
   เรนเดอร์โดย motion.py จาก motion_templates/*.html · รายชื่อเทมเพลตกระจกอยู่ที่
   `MOTION_TEMPLATES` ใน editorStore + ตัวแปลง spec `parseTpl`/`buildTpl` ·

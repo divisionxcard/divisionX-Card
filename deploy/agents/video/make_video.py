@@ -215,6 +215,11 @@ def build_video(plan, out_mp4=None, skip_align=False):
             clips.append(motion.render_clip(specs[i], max(0.5, dur),
                                             clips_dir / f"scene_{i:03d}.mp4", work))
             continue
+        if specs[i].startswith("file:") and visuals.is_video(specs[i][5:]):
+            # ฟุตเทจวิดีโอ (Google Flow/Veo หรือถ่ายเอง) — ใช้ตรง ๆ ไม่ผ่าน zoompan
+            clips.append(compose.render_scene_from_clip(
+                specs[i][5:], max(0.5, dur), clips_dir / f"scene_{i:03d}.mp4"))
+            continue
         zoom = None
         if "zoom" in ov and ov["zoom"] is not None:
             zoom = float(ov["zoom"])                 # 0 = ภาพนิ่งไม่ซูม

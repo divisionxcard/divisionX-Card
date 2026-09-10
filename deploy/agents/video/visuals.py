@@ -30,6 +30,14 @@ from . import config
 
 BRAND_BG = (10, 26, 58)          # กรมท่า — พื้นหลังเวลาไม่มีอะไรดีกว่านี้
 
+# ไฟล์วิดีโอใช้เป็น "ฉาก" ได้โดยตรง (ฟุตเทจจาก Google Flow/Veo หรือคลิปถ่ายเอง)
+# — ระบบตัด/ครอป 9:16 ให้พอดีช่วงฉากเอง ดู compose.render_scene_from_clip
+VIDEO_EXTS = {".mp4", ".mov", ".webm", ".m4v"}
+
+
+def is_video(path):
+    return pathlib.Path(path).suffix.lower() in VIDEO_EXTS
+
 
 # ── หาไฟล์ต้นทางตามที่ระบุ ──────────────────────────────────────────────
 def resolve(spec, cache_dir):
@@ -187,7 +195,24 @@ def prepare(specs, work):
         if spec.startswith("tpl:"):
             from . import motion                   # lazy — เลี่ยง import วน
             out.append(motion.snapshot(spec, work, frames / f"frame_{i:03d}.png"))
+            continue
+        src = resolve(spec, cache)
+        if is_video(src):
+            # ฟุตเทจวิดีโอ — ดึงหนึ่งเฟรม (วินาทีที่ 1 เลี่ยงเฟรมแรกที่มักดำ/ยังไม่เข้าที่)
+            # มาเป็นภาพนิ่งให้ timeline/พรีวิว ส่วนคลิปจริงประกอบที่ขั้น 6
+            import subprocess
+            tmp = cache / f"vidframe_{i:03d}.png"
+            r = subprocess.run(
+                [config.ffmpeg_bin(), "-y", "-loglevel", "error",
+                 "-ss", "1", "-i", str(src), "-frames:v", "1", str(tmp)],
+                capture_output=True, text=True, encoding="utf-8", errors="replace")
+            if r.returncode != 0 or not tmp.exists():
+                # วินาทีที่ 1 อาจเกินความยาวคลิปสั้นมาก — ถอยไปเฟรมแรก
+                subprocess.run(
+                    [config.ffmpeg_bin(), "-y", "-loglevel", "error",
+                     "-i", str(src), "-frames:v", "1", str(tmp)],
+                    capture_output=True)
+            out.append(to_frame(tmp, frames / f"frame_{i:03d}.png"))
         else:
-            src = resolve(spec, cache)
             out.append(to_frame(src, frames / f"frame_{i:03d}.png"))
     return out

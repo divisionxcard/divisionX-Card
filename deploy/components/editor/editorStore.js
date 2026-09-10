@@ -153,10 +153,20 @@ export function autoTransition(i) {
   return i % 2 ? "fade" : ACCENTS[(Math.floor(i / 2) - 1) % ACCENTS.length]
 }
 
+// ฉากที่ "ขยับเอง" (กราฟิกเทมเพลต / ฟุตเทจวิดีโอจาก Flow หรือถ่ายเอง)
+// — ไม่ซ้อนท่ากล้องทับ และพรีวิวโชว์เฟรมนิ่งแทน
+const VIDEO_EXTS = [".mp4", ".mov", ".webm", ".m4v"]
+export function isSelfAnimated(vis) {
+  if (!vis) return false
+  if (vis.startsWith("tpl:")) return true
+  const v = vis.toLowerCase()
+  return vis.startsWith("file:") && VIDEO_EXTS.some(e => v.endsWith(e))
+}
+
 // ค่าที่มีผลจริงของฉาก i (ของที่คนเลือกชนะ auto เสมอ)
 export function effectiveMotion(state, i) {
   const vis = effectiveVisual(state, i)
-  if (vis.startsWith("tpl:")) return "still"   // ฉากกราฟิกขยับเอง — ไม่ซ้อนท่ากล้องทับ
+  if (isSelfAnimated(vis)) return "still"
   const m = state.edit.scenes?.[String(i)]?.motion
   if (m && m !== "auto") return m
   return autoMotion(i, state.timing.length, vis)
