@@ -889,6 +889,12 @@ function Frame({ children, onRefresh }) {
             <h1>โรงงานวิดีโอ</h1>
             <p>DivisionX Card · สคริปต์ → คลิป 9:16 พร้อมโพสต์</p>
           </div>
+          {/* ห้องตัดต่อทำงานกับไฟล์ในเครื่อง (.video-work) จึงมีเฉพาะตอนรัน dev
+              บน Vercel ลิงก์นี้พาไปเจอ 404 ของ /api/video/local — ยอมรับได้:
+              คนที่ใช้ผ่าน Vercel คือคนสั่งงานผ่านคิว ไม่ใช่คนนั่งตัดต่อ */}
+          <a href="/video/editor" className="vs-back" title="แก้คลิปที่เรนเดอร์แล้วในเครื่องนี้">
+            ✂️ ห้องตัดต่อ
+          </a>
           <a href="/" className="vs-back">← กลับหน้าหลัก</a>
           {onRefresh && (
             <button className="dx-btn dx-btn-ghost" onClick={onRefresh}>

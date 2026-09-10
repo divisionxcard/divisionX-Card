@@ -1,0 +1,212 @@
+/* InspectorPanel — แผงขวาของห้องตัดต่อ (โทนกรมท่า + ฟ้านีออน ตามแบรนด์)
+   ไฟล์นี้เป็นของ InspectorPanel เท่านั้น — component อื่นมี module ของตัวเอง */
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  background: #0a1a3a;
+  border-left: 1px solid rgba(61, 220, 255, 0.12);
+  color: #e8f1ff;
+}
+
+/* ── แถบแท็บ ── */
+.tabs {
+  display: flex;
+  gap: 2px;
+  padding: 8px 10px 0;
+  border-bottom: 1px solid rgba(61, 220, 255, 0.12);
+  flex-shrink: 0;
+}
+.tab {
+  flex: 1;
+  padding: 8px 4px 9px;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: #8aa2c8;
+  font-size: 13px;
+  font-family: inherit;
+  cursor: pointer;
+}
+.tab:hover { color: #e8f1ff; }
+.tabOn {
+  color: #3ddcff;
+  border-bottom-color: #3ddcff;
+  font-weight: 600;
+}
+
+/* เนื้อหาเลื่อนในตัวเอง — timeline ข้างล่างจะได้ไม่โดนดันตกจอ */
+.body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 14px 14px 24px;
+}
+
+/* ── หัวเรื่อง/กลุ่ม/ป้าย ── */
+.head { margin-bottom: 16px; }
+.headTitle { font-size: 16px; font-weight: 700; color: #ffffff; }
+.headMeta {
+  font-size: 12px;
+  color: #8aa2c8;
+  margin-top: 2px;
+  font-variant-numeric: tabular-nums;
+}
+
+.group { margin-bottom: 20px; }
+.label { font-size: 12px; color: #8aa2c8; margin-bottom: 8px; }
+.hint {
+  font-size: 11px;
+  color: #8aa2c8;
+  opacity: 0.85;
+  line-height: 1.55;
+  margin: 6px 0 0;
+}
+.err { font-size: 12px; color: #ff4d6d; margin: 8px 0 0; }
+.empty { font-size: 13px; color: #8aa2c8; }
+
+/* กั้นส่วน "ใบที่เลือก" ออกจากสไตล์ทั้งคลิป */
+.section {
+  border-top: 1px solid rgba(61, 220, 255, 0.12);
+  padding-top: 14px;
+  margin-top: 4px;
+}
+.selText {
+  font-size: 12px;
+  color: #e8f1ff;
+  margin: 0 0 8px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── ปุ่มวิทยุเลือกภาพ ── */
+.radio {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 2px;
+  font-size: 13px;
+  cursor: pointer;
+}
+.radio input { accent-color: #3ddcff; cursor: pointer; }
+
+/* ── แถวปุ่ม / slider ── */
+.btnRow { display: flex; gap: 6px; flex-wrap: wrap; }
+
+.sliderRow { display: flex; align-items: center; gap: 10px; }
+.slider { flex: 1; min-width: 0; accent-color: #3ddcff; cursor: pointer; }
+.sliderVal {
+  font-size: 12px;
+  color: #3ddcff;
+  min-width: 64px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+
+.wide { width: 100%; }
+
+/* ── การ์ดสไตล์ซับ — โชว์สีจริงของแต่ละสไตล์ ── */
+.styleCards { display: flex; flex-direction: column; gap: 8px; }
+.styleCard {
+  text-align: left;
+  background: #081228;
+  border: 1px solid rgba(61, 220, 255, 0.15);
+  border-radius: 10px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  color: #e8f1ff;
+  font-family: inherit;
+  cursor: pointer;
+}
+.styleCard:hover { border-color: rgba(61, 220, 255, 0.4); }
+.styleCardOn {
+  border-color: #3ddcff;
+  box-shadow: 0 0 0 1px #3ddcff inset, 0 0 12px -4px rgba(61, 220, 255, 0.6);
+}
+.stylePrev { font-size: 18px; font-weight: 800; line-height: 1.3; }
+/* สีตรงกับ STYLES ฝั่งตัวเรนเดอร์: brand = ขาวขอบกรมท่าเน้นฟ้า · plain = ขาวขอบดำ · punch = เหลืองขอบดำ */
+.prev_brand {
+  color: #ffffff;
+  text-shadow: -2px 0 #081c46, 2px 0 #081c46, 0 -2px #081c46, 0 2px #081c46;
+}
+.prev_brand em { color: #3ddcff; font-style: normal; }
+.prev_plain {
+  color: #ffffff;
+  text-shadow: -2px 0 #000000, 2px 0 #000000, 0 -2px #000000, 0 2px #000000;
+}
+.prev_punch {
+  color: #ffd400;
+  text-shadow: -2px 0 #000000, 2px 0 #000000, 0 -2px #000000, 0 2px #000000;
+}
+.styleName { font-size: 13px; font-weight: 600; }
+.styleDesc { font-size: 11px; color: #8aa2c8; }
+
+/* ── ช่องเวลาใบซับ ── */
+.timeRow { display: flex; gap: 10px; }
+.timeRow label {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  color: #8aa2c8;
+}
+
+/* ── โซนอัปโหลดโลโก้ ── */
+.dropZone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 30px 12px;
+  border: 1.5px dashed rgba(61, 220, 255, 0.35);
+  border-radius: 12px;
+  background: rgba(61, 220, 255, 0.04);
+  cursor: pointer;
+  text-align: center;
+}
+.dropZone:hover { border-color: #3ddcff; background: rgba(61, 220, 255, 0.08); }
+.dropBig { font-size: 14px; font-weight: 600; color: #3ddcff; }
+.fileInput { display: none; }
+
+/* ── พรีวิว + ผังมุมจอของโลโก้ ── */
+.logoPrev {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 16px;
+  background: #081228;
+  border: 1px solid rgba(61, 220, 255, 0.15);
+  border-radius: 10px;
+  margin-bottom: 16px;
+}
+.logoPrev img { max-width: 140px; max-height: 140px; object-fit: contain; }
+
+/* ผัง 2x2 แทนมุมจอจริง — ตัวหนังสือชิดมุมเดียวกับที่โลโก้จะไปอยู่ */
+.cornerGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+.corner {
+  padding: 12px 10px;
+  background: #081228;
+  border: 1px solid rgba(61, 220, 255, 0.15);
+  border-radius: 8px;
+  color: #8aa2c8;
+  font-size: 12px;
+  font-family: inherit;
+  cursor: pointer;
+}
+.corner:hover { color: #e8f1ff; border-color: rgba(61, 220, 255, 0.4); }
+.cornerOn { color: #3ddcff; border-color: #3ddcff; font-weight: 600; }
+.c_tl { text-align: left; }
+.c_tr { text-align: right; }
+.c_bl { text-align: left; }
+.c_br { text-align: right; }

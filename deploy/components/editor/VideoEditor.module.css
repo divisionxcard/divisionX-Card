@@ -1,0 +1,309 @@
+/* VideoEditor.module.css — โครงห้องตัดต่อ (เฉพาะเชลล์ — ลูกแต่ละตัวมี css ของตัวเอง)
+   สีแบรนด์: พื้นกรมท่า #081228/#0a1a3a · ฟ้านีออน #3ddcff · ตัวรอง #8aa2c8 · เตือน #ff4d6d */
+
+/* ── โครงเต็มจอ: header / แถบแจ้ง / 3 คอลัมน์ / timeline ── */
+.room {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background: #081228;
+  color: #eaf3ff;
+  font-family: var(--dx-font, 'IBM Plex Sans Thai', system-ui, sans-serif);
+}
+
+/* ── top bar ── */
+.top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  background: #0a1a3a;
+  border-bottom: 1px solid #16294d;
+  flex-wrap: wrap;              /* จอแคบ: ปุ่มไหลลงบรรทัดใหม่แทนที่จะล้นออกจอ */
+  flex-shrink: 0;
+}
+.back {
+  color: #8aa2c8;
+  text-decoration: none;
+  font-size: 13px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  white-space: nowrap;
+}
+.back:hover { color: #3ddcff; background: rgba(61, 220, 255, 0.08); }
+
+.title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  font-size: 15px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* จุดส้ม = มีแก้ค้างที่ยังไม่ได้อบลง mp4 — เรืองนิด ๆ ให้เตะตาแต่ไม่กวน */
+.dirtyDot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #ffb84d;
+  box-shadow: 0 0 8px rgba(255, 184, 77, 0.8);
+  flex-shrink: 0;
+}
+
+.group { display: flex; align-items: center; gap: 6px; }
+.spacer { flex: 1; }
+
+.iconBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: transparent;
+  border: 1px solid #16294d;
+  color: #8aa2c8;
+  border-radius: 8px;
+  padding: 6px 9px;
+  font-size: 12px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+  white-space: nowrap;
+}
+.iconBtn:hover:not(:disabled) {
+  color: #3ddcff;
+  border-color: rgba(61, 220, 255, 0.4);
+}
+.iconBtn:disabled { opacity: 0.35; cursor: default; }
+.iconBtn.on {
+  color: #3ddcff;
+  border-color: #3ddcff;
+  background: rgba(61, 220, 255, 0.1);
+}
+
+/* ── progress ระหว่างเรนเดอร์ (แทนที่ปุ่มเรนเดอร์ชั่วคราว) ── */
+.prog {
+  position: relative;
+  width: 280px;
+  max-width: 45vw;
+  height: 34px;
+  border: 1px solid rgba(61, 220, 255, 0.35);
+  border-radius: 8px;
+  overflow: hidden;
+  background: #0f1f3d;
+}
+.progFill {
+  position: absolute;
+  top: 0; bottom: 0; left: 0;
+  background: linear-gradient(90deg, #0e5c74, #3ddcff);
+  transition: width 0.4s ease;
+}
+.progText {
+  position: relative;
+  display: block;
+  font-size: 12px;
+  line-height: 34px;
+  padding: 0 10px;
+  color: #eaf3ff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── แถบช่วยจำคีย์ลัด — เห็นตลอด ไม่ต้องท่อง ── */
+.keys {
+  font-size: 11px;
+  color: #8aa2c8;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  flex-wrap: wrap;
+}
+.keys kbd {
+  background: #0f1f3d;
+  border: 1px solid #2a4472;
+  border-bottom-width: 2px;
+  border-radius: 5px;
+  padding: 1px 5px;
+  font-family: var(--dx-mono, monospace);
+  font-size: 10px;
+  color: #b8c5e0;
+}
+
+/* ── แถบร่างค้าง (เหลืองบาง ๆ ไม่ตะโกน) ── */
+.draftBar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 8px 14px 0;
+  padding: 7px 12px;
+  border: 1px solid rgba(255, 200, 87, 0.55);
+  background: rgba(255, 200, 87, 0.08);
+  color: #ffe9b8;
+  border-radius: 10px;
+  font-size: 13px;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+}
+.draftBar span { flex: 1; min-width: 200px; }
+
+/* ── กล่องแดงตอนพัง — ต้องอ่าน log ท้าย ๆ ได้จริงบนจอ ── */
+.errBox {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 8px 14px 0;
+  padding: 10px 12px;
+  border: 1px solid #ff4d6d;
+  background: rgba(255, 77, 109, 0.1);
+  color: #ffd7de;
+  border-radius: 10px;
+  font-size: 13px;
+  flex-shrink: 0;
+}
+.errBody { flex: 1; min-width: 0; }
+.errBody pre {
+  margin: 6px 0 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 11px;
+  font-family: var(--dx-mono, monospace);
+  max-height: 120px;
+  overflow: auto;
+  color: #ffb3c1;
+}
+
+/* ── ผังกลาง: จอกว้าง = grid 3 คอลัมน์ (ตำแหน่งกำหนดตรง ๆ ไม่พึ่งลำดับ DOM
+   เพราะจอแคบใช้ order สลับเองอีกชุด) ── */
+.main {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 300px minmax(0, 1fr) 320px;
+  grid-template-rows: minmax(0, 1fr);
+  gap: 1px;                      /* เส้นแบ่งบาง ๆ จากพื้นหลังตรงกลาง */
+  background: #16294d;
+}
+.left, .center, .right {
+  background: #081228;
+  min-height: 0;
+  overflow-y: auto;
+}
+.left   { grid-column: 1; grid-row: 1; }
+.center { grid-column: 2; grid-row: 1; display: flex; flex-direction: column; overflow: hidden; }
+.right  { grid-column: 3; grid-row: 1; }
+
+/* แถบแท็บมีตัวตนเฉพาะจอแคบ */
+.tabs { display: none; }
+.tabBtn {
+  flex: 1;
+  padding: 8px;
+  border-radius: 8px;
+  border: 1px solid #16294d;
+  background: transparent;
+  color: #8aa2c8;
+  font-size: 13px;
+  font-family: inherit;
+  cursor: pointer;
+}
+.tabBtn.on {
+  color: #3ddcff;
+  border-color: #3ddcff;
+  background: rgba(61, 220, 255, 0.08);
+}
+
+/* ── timeline ล่างเต็มกว้าง ── */
+.bottom {
+  flex-shrink: 0;
+  max-height: 36vh;
+  overflow: auto;
+  border-top: 1px solid #16294d;
+  background: #0a1a3a;
+}
+
+/* ── จอแคบ <1100px: คอลัมน์เดียว พรีวิวบน แท็บสลับซับ/ปรับแต่งข้างใต้ ── */
+@media (max-width: 1100px) {
+  .main {
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    gap: 0;
+    background: #081228;
+  }
+  .center { order: 1; overflow: visible; flex-shrink: 0; }
+  .tabs {
+    order: 2;
+    display: flex;
+    gap: 8px;
+    padding: 8px 12px;
+    border-top: 1px solid #16294d;
+    border-bottom: 1px solid #16294d;
+    position: sticky;            /* เลื่อนลงไปแก้ของยาว ๆ แล้วแท็บยังอยู่ให้สลับ */
+    top: 0;
+    background: #081228;
+    z-index: 5;
+  }
+  .left  { order: 3; overflow: visible; }
+  .right { order: 3; overflow: visible; }
+  /* โชว์ทีละฝั่งตาม data-tab บน .main — จอกว้างไม่เข้ากฎนี้เลยเห็นทั้งคู่ */
+  .main[data-tab="subs"] .right { display: none; }
+  .main[data-tab="inspect"] .left { display: none; }
+  .bottom { max-height: 30vh; }
+  .keys { display: none; }       /* จอแคบ = จอสัมผัส คีย์ลัดไม่มีที่ใช้ ไม่ต้องกินที่ */
+}
+
+/* ── จอสถานะ/หน้าเลือกงาน (นอกห้อง) ── */
+.screen {
+  min-height: 100vh;
+  background: #081228;
+  color: #eaf3ff;
+  padding: 40px 24px;
+  font-family: var(--dx-font, 'IBM Plex Sans Thai', system-ui, sans-serif);
+}
+.screenMid { max-width: 860px; margin: 0 auto; }
+.pageTitle { font-size: 22px; font-weight: 700; margin: 14px 0 6px; }
+.muted { color: #8aa2c8; font-size: 14px; line-height: 1.7; }
+
+.spin { animation: veSpin 1s linear infinite; vertical-align: -3px; margin-right: 6px; }
+@keyframes veSpin { to { transform: rotate(360deg); } }
+
+/* การ์ดเลือกงาน */
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 12px;
+  margin-top: 18px;
+}
+.card {
+  display: block;
+  border: 1px solid #16294d;
+  background: #0a1a3a;
+  border-radius: 12px;
+  padding: 14px;
+  text-decoration: none;
+  color: #eaf3ff;
+  transition: border-color 0.15s, transform 0.15s, box-shadow 0.15s;
+}
+.card:hover {
+  border-color: #3ddcff;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px -8px rgba(61, 220, 255, 0.35);
+}
+.cardName { font-weight: 600; margin-bottom: 6px; word-break: break-all; }
+.cardMeta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+  color: #8aa2c8;
+}
+.badge {
+  color: #3ddcff;
+  border: 1px solid rgba(61, 220, 255, 0.4);
+  border-radius: 6px;
+  padding: 0 6px;
+  font-size: 11px;
+}
+.cardTime { margin-top: 8px; font-size: 11px; color: #8aa2c8; }

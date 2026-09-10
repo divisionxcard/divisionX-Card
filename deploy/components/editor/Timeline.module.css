@@ -1,0 +1,343 @@
+/* Timeline — สีแบรนด์: พื้นกรมท่า #081228/#0a1a3a · ฟ้านีออน #3ddcff
+   ความสูงรวมทั้งบล็อก ≈ 230px (toolbar 30 + tracks 200) — ถ้าเพิ่มแทร็กต้องไปหักที่อื่น */
+
+.wrap {
+  background: #081228;
+  border-top: 1px solid #16294f;
+  user-select: none; /* ลากบ่อย — ปล่อยให้ select ข้อความได้จะลากติดไฮไลต์รำคาญ */
+}
+
+/* ── toolbar มุมซ้ายบน ── */
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 8px;
+  box-sizing: border-box;
+}
+.tbtn {
+  height: 22px;
+  min-width: 24px;
+  padding: 0 8px;
+  background: #0a1a3a;
+  color: #8aa2c8;
+  border: 1px solid #1b3466;
+  border-radius: 6px;
+  font-size: 12px;
+  line-height: 1;
+  cursor: pointer;
+}
+.tbtn:hover { color: #3ddcff; border-color: #3ddcff; }
+.tbtnOn {
+  color: #081228;
+  background: #3ddcff;
+  border-color: #3ddcff;
+  font-weight: 600;
+}
+.tbtnOn:hover { color: #081228; }
+.zoomLabel {
+  min-width: 38px;
+  text-align: center;
+  color: #8aa2c8;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+.timecode {
+  margin-left: auto;
+  color: #3ddcff;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── scroll แนวนอนอันเดียว ทุกแทร็กใช้ร่วมกัน ── */
+.scroller {
+  position: relative;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+.content {
+  position: relative;
+  height: 200px; /* 26+56+42+22+34+20 — ตัวเลขต้องตรงกับความสูงแทร็กข้างล่าง */
+}
+
+/* ── 1. ruler ── */
+.ruler {
+  position: relative;
+  height: 26px;
+  border-bottom: 1px solid #16294f;
+  cursor: pointer;
+  touch-action: none; /* ไม่งั้นจอสัมผัสจะแพน scroll แทนที่จะ seek */
+}
+.tick {
+  position: absolute;
+  bottom: 0;
+  width: 1px;
+  pointer-events: none; /* ให้คลิกทะลุไปโดน ruler เสมอ */
+}
+.tickMinor { height: 4px; background: #1a3159; }
+.tickSec   { height: 8px; background: #24406f; }
+.tickMajor { height: 12px; background: #3a5f9e; }
+.tickLabel {
+  position: absolute;
+  bottom: 10px;
+  left: 3px;
+  font-style: normal;
+  font-size: 10px;
+  color: #8aa2c8;
+  white-space: nowrap;
+}
+
+/* ── 2. แทร็กฉาก ── */
+.sceneTrack {
+  position: relative;
+  height: 56px;
+  border-bottom: 1px solid #16294f;
+}
+.scene {
+  position: absolute;
+  top: 3px;
+  bottom: 3px;
+  box-sizing: border-box;
+  border: 1px solid #1b3466;
+  border-radius: 6px;
+  overflow: hidden;
+  background-color: #0a1a3a;
+  background-size: cover;
+  background-position: center;
+  cursor: pointer;
+}
+.sceneSel {
+  border-color: #3ddcff;
+  box-shadow: 0 0 8px rgba(61, 220, 255, 0.35);
+}
+.sceneNum {
+  position: absolute;
+  top: 2px;
+  left: 4px;
+  padding: 0 4px;
+  font-size: 10px;
+  line-height: 14px;
+  color: #dff6ff;
+  background: rgba(8, 18, 40, 0.75);
+  border-radius: 4px;
+}
+/* ยังไม่มีรูปของภาพใหม่ (frameFor = -1) — ลายทแยงกรมท่าบอกว่ารอเรนเดอร์ */
+.waiting {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  font-size: 10px;
+  color: #8aa2c8;
+  background: repeating-linear-gradient(45deg, #0a1a3a 0 8px, #0e2148 8px 16px);
+}
+/* จุดตัดฉาก — โซนจับกว้าง 9px แต่เส้นจริง 1px ตรงกลาง จะได้เล็งง่ายโดยไม่บังรูป */
+.cutHandle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 9px;
+  margin-left: -4px;
+  cursor: col-resize;
+  z-index: 3;
+  touch-action: none;
+}
+.cutHandle::after {
+  content: "";
+  position: absolute;
+  left: 4px;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: #24406f;
+}
+.cutHandle:hover::after {
+  background: #3ddcff;
+  box-shadow: 0 0 6px #3ddcff;
+}
+
+/* ── 3. แทร็กเสียง ── */
+.audioTrack {
+  position: relative;
+  height: 42px;
+  border-bottom: 1px solid #16294f;
+  background: rgba(8, 18, 40, 0.6);
+}
+.wave {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: block;
+}
+/* เส้นจุดตัดทับ waveform — เล็งตัดภาพให้ลงช่องเงียบของเสียง */
+.audioCut {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: rgba(61, 220, 255, 0.5);
+  pointer-events: none;
+}
+
+/* ── 4. แทร็กพาดหัว ── */
+.headTrack {
+  position: relative;
+  height: 22px;
+  border-bottom: 1px solid #16294f;
+}
+.headBlock {
+  position: absolute;
+  top: 2px;
+  bottom: 2px;
+  left: 0;
+  box-sizing: border-box;
+  padding: 0 6px;
+  border: 1px solid #1b3466;
+  border-radius: 4px;
+  background: #132a55;
+  color: #cfe7ff;
+  font-size: 10px;
+  line-height: 16px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+.headSel {
+  border-color: #3ddcff;
+  background: #17356b;
+}
+
+/* ── 5. แทร็กซับ ── */
+.subTrack {
+  position: relative;
+  height: 34px;
+  border-bottom: 1px solid #16294f;
+}
+.chip {
+  position: absolute;
+  top: 3px;
+  bottom: 3px;
+  box-sizing: border-box;
+  padding: 0 8px;
+  border: 1px solid #1b3466;
+  border-radius: 5px;
+  background: #10254c;
+  color: #cfe7ff;
+  font-size: 11px;
+  line-height: 26px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: grab;
+  touch-action: none;
+}
+.chipActive {
+  border-color: #3ddcff;
+  box-shadow: 0 0 8px rgba(61, 220, 255, 0.4);
+}
+.chipSel { background: #1b3a74; }
+.chipDrag { opacity: 0.85; cursor: grabbing; }
+.subEdge {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 8px;
+  cursor: ew-resize;
+  z-index: 2;
+  touch-action: none;
+}
+.subEdgeL { left: -2px; }
+.subEdgeR { right: -2px; }
+
+/* ── 6. แทร็กเพลง (ยังว่าง) ── */
+.musicTrack {
+  position: relative;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  color: #4d648f;
+  font-size: 10px;
+}
+.musicText {
+  position: sticky; /* ให้อ่านออกแม้ scroll ไปกลางคลิป */
+  left: 8px;
+}
+
+/* ── playhead / ghost / snap / tooltip ── */
+.playhead {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: #3ddcff;
+  box-shadow: 0 0 6px #3ddcff;
+  z-index: 5;
+  pointer-events: none; /* เส้นห้ามบังคลิกแทร็ก — จับได้เฉพาะหัวสามเหลี่ยม */
+}
+.playHandle {
+  position: absolute;
+  top: 0;
+  left: -6px;
+  width: 13px;
+  height: 14px;
+  pointer-events: auto;
+  cursor: ew-resize;
+  touch-action: none;
+}
+.playHandle::before {
+  content: "";
+  position: absolute;
+  left: 1px;
+  top: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 8px solid #3ddcff;
+}
+.ghostLine {
+  position: absolute;
+  top: 26px; /* เริ่มใต้ ruler — ตัวเลขเวลาไปดูที่ tooltip */
+  bottom: 0;
+  width: 1px;
+  background: #3ddcff;
+  box-shadow: 0 0 8px #3ddcff;
+  opacity: 0.9;
+  z-index: 6;
+  pointer-events: none;
+}
+.snapLine {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: #ffffff;
+  z-index: 6;
+  pointer-events: none;
+  animation: snapPulse 0.35s ease-out infinite alternate;
+}
+@keyframes snapPulse {
+  from { opacity: 0.95; box-shadow: 0 0 10px #3ddcff; }
+  to   { opacity: 0.4;  box-shadow: 0 0 2px #3ddcff; }
+}
+.tip {
+  position: absolute;
+  top: 28px;
+  transform: translateX(-50%);
+  padding: 1px 6px;
+  background: #0a1a3a;
+  border: 1px solid #3ddcff;
+  border-radius: 4px;
+  color: #3ddcff;
+  font-size: 10px;
+  white-space: nowrap;
+  z-index: 7;
+  pointer-events: none;
+}
+
+.empty {
+  padding: 16px;
+  text-align: center;
+  color: #4d648f;
+  font-size: 12px;
+}

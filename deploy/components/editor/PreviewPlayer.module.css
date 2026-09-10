@@ -1,0 +1,226 @@
+/* PreviewPlayer — เวที 9:16 · ฟอนต์ซับต้องเป็น Sarabun ตัวเดียวกับตัวเรนเดอร์
+   ไม่งั้นจุดตัดบรรทัดบนพรีวิวจะไม่ตรงกับ mp4 จริง แล้วคนตัดจะแก้ปัญหาที่ไม่มีอยู่ */
+
+@font-face {
+  font-family: "SarabunDX";
+  src: url("/fonts/Sarabun-Bold.ttf") format("truetype");
+  font-weight: 700;
+  font-display: swap;
+}
+
+.wrap {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0; /* ให้ stageArea หดได้ใน flex column — ไม่งั้นล้นแนวตั้งแล้วดันแถบล่างหาย */
+  gap: 8px;
+}
+
+.stageArea {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.stage {
+  position: relative;
+  aspect-ratio: 9 / 16; /* กว้างมาจาก JS (วัดพื้นที่ว่าง) — สูงให้สัดส่วนคุมเอง */
+  background: #000;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 0 0 1px rgba(61, 220, 255, 0.12), 0 12px 40px rgba(0, 0, 0, 0.45);
+}
+
+/* ── ชั้นภาพฉาก ── */
+.layer {
+  position: absolute;
+  inset: 0;
+  overflow: hidden; /* Ken Burns ขยายรูปเกินขอบ — ต้องตัดทิ้งไม่ให้ทะลักออกนอกเวที */
+}
+.layerFade {
+  animation: ppFadeIn 0.3s ease both; /* crossfade ตอนเปลี่ยนฉาก — ใกล้เคียง xfade ของตัวเรนเดอร์ */
+}
+@keyframes ppFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.frame {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform-origin: 50% 50%;
+  will-change: transform; /* transform ขยับทุกเฟรมตอนเล่น — กัน repaint ทั้งชั้น */
+  user-select: none;
+}
+
+/* ภาพใหม่ที่ยังไม่เรนเดอร์ (frameFor = -1) — โชว์กรอบรอแทน เพราะเฟรมเก่าคือภาพที่โกหก */
+.pending {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #0a1a3a;
+  color: #8aa2c8;
+  font-size: 13px;
+}
+.pending span {
+  border: 1px dashed rgba(61, 220, 255, 0.5);
+  border-radius: 8px;
+  padding: 10px 16px;
+}
+
+/* ── ซับ / พาดหัว (ตำแหน่ง bottom + font-size เป็น inline จาก JS ตามสัดส่วนเวที) ── */
+.subWrap,
+.headWrap {
+  position: absolute;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 3;
+}
+
+.subText {
+  font-family: "SarabunDX", "Sarabun", sans-serif;
+  font-weight: 700;
+  line-height: 1.32;
+  letter-spacing: -0.01em;
+  text-align: center;
+  /* ไทยไม่มีช่องว่างระหว่างคำ — ห้ามเบราว์เซอร์ตัดเอง เดี๋ยวขาดกลางคำ (ตรงกับ template) */
+  word-break: keep-all;
+  overflow-wrap: normal;
+}
+.subText em {
+  font-style: normal;
+  color: var(--accent, #3ddcff); /* *คำเน้น* — ฟ้านีออนตาม brand identity */
+}
+
+.logo {
+  position: absolute;
+  z-index: 4;
+  user-select: none;
+  pointer-events: none;
+}
+
+/* ── เส้นประ safe area — โซนที่ UI ของ TikTok บังจริง ── */
+.safe {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none;
+}
+.safe > div {
+  position: absolute;
+  border: 1px dashed rgba(255, 77, 109, 0.65);
+}
+.safe span {
+  position: absolute;
+  font-size: 9px;
+  color: #ff4d6d;
+  background: rgba(8, 18, 40, 0.75);
+  padding: 1px 5px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+.safeTop { top: 0; left: 0; right: 0; height: 8%; }
+.safeTop span { left: 6px; bottom: 4px; }
+.safeRight { top: 0; bottom: 0; right: 0; width: 12%; }
+.safeRight span { top: 40%; right: 4px; writing-mode: vertical-rl; padding: 5px 1px; }
+.safeBottom { bottom: 0; left: 0; right: 0; height: 18%; }
+.safeBottom span { left: 6px; top: 4px; }
+
+/* ── ปุ่มเล่นกลางจอ — ทั้งเวทีคลิกได้ ตัววงกลมโผล่เฉพาะตอนหยุด ── */
+.playOverlay {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+}
+.playGlyph {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: rgba(8, 18, 40, 0.55);
+  border: 1px solid rgba(61, 220, 255, 0.55);
+  color: #3ddcff;
+  font-size: 26px;
+  padding-left: 6px; /* รูปสามเหลี่ยม ▶ น้ำหนักเทซ้าย — ดันนิดให้ดูอยู่กลางวงพอดี */
+  backdrop-filter: blur(2px);
+}
+.playOverlay:hover .playGlyph {
+  background: rgba(10, 26, 58, 0.78);
+}
+
+/* โหมดผลจริงล่าสุด — mp4 มี controls ของตัวเอง */
+.finalVideo {
+  max-width: 100%;
+  max-height: 100%;
+  aspect-ratio: 9 / 16;
+  background: #000;
+  border-radius: 10px;
+}
+
+/* ── แถบควบคุมล่าง ── */
+.bar {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 2px;
+}
+.time {
+  font-variant-numeric: tabular-nums; /* เลขวิ่งทุก 0.1 วิ — ความกว้างคงที่จะได้ไม่กระตุก */
+  color: #8aa2c8;
+  font-size: 12px;
+  min-width: 92px;
+}
+.nudges {
+  display: flex;
+  gap: 6px;
+}
+.nudges button {
+  font-size: 12px;
+  padding: 3px 10px;
+}
+.modeSwitch {
+  margin-left: auto;
+  display: flex;
+  border: 1px solid rgba(61, 220, 255, 0.25);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.modeBtn {
+  border: 0;
+  background: transparent;
+  color: #8aa2c8;
+  font-size: 12px;
+  padding: 5px 10px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.modeBtn:hover:not(:disabled) {
+  color: #e8f6ff;
+}
+.modeBtn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.modeOn {
+  background: rgba(61, 220, 255, 0.15);
+  color: #3ddcff;
+}
