@@ -84,8 +84,17 @@ def synth(text, out_wav, voice=None, model=None, retries=3, style=None):
                 d = json.load(r)
             break
         except urllib.error.HTTPError as e:
-            detail = e.read()[:300].decode("utf-8", "replace")
-            last = f"HTTP {e.code} · {detail}"
+            raw = e.read().decode("utf-8", "replace")
+            last = f"HTTP {e.code} · {raw[:300]}"
+            # 429 แบบ "ต่อวัน" (ฟรี 10 ครั้ง/วัน/โมเดล) รอกี่วินาทีก็ไม่หาย —
+            # ฟ้องเป็นภาษาคนทันที ข้อความนี้ขึ้นในกล่องแดงของห้องตัดต่อตรง ๆ
+            # (เจอจริง 10 ก.ย. 2026: quotaId GenerateRequestsPerDayPerProjectPerModel-FreeTier)
+            if e.code == 429 and "PerDay" in raw:
+                raise RuntimeError(
+                    "โควตาเสียงฟรีของ Gemini หมดสำหรับวันนี้ (10 ครั้ง/วัน)\n"
+                    "รีเซ็ตราว 14:00 น. ไทย (เที่ยงคืนแคลิฟอร์เนีย) — การแก้ทั้งหมดถูกเก็บ\n"
+                    "ไว้แล้ว ถึงเวลาค่อยกดเรนเดอร์ซ้ำได้เลย ไม่ต้องตั้งค่าใหม่\n"
+                    "(แก้ภาพ/ซับ/จุดตัด/โลโก้ไม่ใช้โควตานี้ — เฉพาะเปลี่ยนเสียงหรือแก้สคริปต์)")
             # 503/429 ต่อนาที = ชั่วคราว รอแล้วลองใหม่ (บทเรียนจาก askGemini ใน route.js)
             if e.code in (429, 500, 503) and attempt < retries - 1:
                 time.sleep(1.5 * (attempt + 1))
