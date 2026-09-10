@@ -8,7 +8,10 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import styles from "./PreviewPlayer.module.css"
-import { clamp, fmtTime, sceneAt, subAt, totalOf } from "./editorStore"
+import {
+  clamp, fmtTime, sceneAt, subAt, totalOf,
+  effectiveMotion, effectiveTransition, PAN_MIN_ZOOM,
+} from "./editorStore"
 
 // ── ค่าที่ต้องสะท้อนฝั่งเรนเดอร์จริงแบบเป๊ะ ๆ ──
 // ที่มา: agents/video/subtitle.py (STYLES, stroke 9px, padding 84, headline H*0.52)
@@ -31,6 +34,33 @@ const PAL = {
 function emphasize(text) {
   const parts = String(text ?? "").split(/\*(.+?)\*/g)
   return parts.map((p, i) => (i % 2 ? <em key={i}>{p}</em> : p))
+}
+
+// transform ของแต่ละท่ากล้อง ณ สัดส่วนเวลา p (0-1) ในฉาก — กระจกของ
+// _motion_exprs ใน compose.py: ทิศทางและระยะต้องตรงกัน ไม่งั้นพรีวิวโกหกตา
+// elapsed (วินาทีในฉาก) ใช้เฉพาะ punch ที่พุ่งตามเวลาจริงไม่ใช่สัดส่วน
+function motionTransform(motion, zoom, p, elapsed) {
+  if (!zoom || zoom <= 0) return "scale(1)"          // สวิตช์ "ภาพนิ่ง" ชนะทุกท่า
+  const k = 1 + Math.max(zoom, PAN_MIN_ZOOM)          // ซูมค้างของท่าแพน/ไต่
+  const t = (50 * (k - 1)) / k                        // % เลื่อนสูงสุดโดยขอบภาพยังไม่โผล่
+  switch (motion) {
+    case "zoom-out":
+      return `scale(${(1 + zoom * (1 - p)).toFixed(4)})`
+    case "punch": {
+      const q = Math.min(1, Math.max(0, elapsed) / 0.35)
+      return `scale(${(1 + zoom * q).toFixed(4)})`
+    }
+    case "pan-lr":
+      return `scale(${k.toFixed(4)}) translateX(${(t * (1 - 2 * p)).toFixed(3)}%)`
+    case "pan-rl":
+      return `scale(${k.toFixed(4)}) translateX(${(t * (2 * p - 1)).toFixed(3)}%)`
+    case "drift-down":
+      return `scale(${k.toFixed(4)}) translateY(${(t * (1 - 2 * p)).toFixed(3)}%)`
+    case "drift-up":
+      return `scale(${k.toFixed(4)}) translateY(${(t * (2 * p - 1)).toFixed(3)}%)`
+    default:                                          // zoom-in — ท่าพื้นฐาน
+      return `scale(${(1 + zoom * p).toFixed(4)})`
+  }
 }
 
 // ขอบตัวอักษรด้วย text-shadow รอบทิศแทน -webkit-text-stroke —
@@ -99,13 +129,13 @@ export default function PreviewPlayer({ state, dispatch, api }) {   // eslint-di
       scnRef.current = { cur: i, prev: scnRef.current.cur }
       setScn(scnRef.current)
     }
-    // Ken Burns สด: scale 1 → 1+zoom ตามสัดส่วนเวลาที่ผ่านไปในฉาก
+    // กล้องเคลื่อนสด: ท่าตาม effectiveMotion (คนเลือกชนะ auto) ตามสัดส่วนเวลาในฉาก
     const sc = s.timing[i]
     const el = frontImgRef.current
     if (el && sc) {
       const zoom = s.edit?.scenes?.[String(i)]?.zoom ?? 0.08
       const p = clamp((t - sc.start) / Math.max(0.001, sc.end - sc.start), 0, 1)
-      el.style.transform = `scale(${(1 + zoom * p).toFixed(4)})`
+      el.style.transform = motionTransform(effectiveMotion(s, i), zoom, p, t - sc.start)
     }
     const si = subAt(s.subtitles, t)
     if (si !== subRef.current) { subRef.current = si; setSubIdx(si) }
@@ -205,6 +235,11 @@ export default function PreviewPlayer({ state, dispatch, api }) {   // eslint-di
     return fi != null && fi >= 0 ? state.assets.frames?.[fi] || null : null
   }
   const prevZoom = state.edit?.scenes?.[String(prev)]?.zoom ?? 0.08
+  // ชั้นหลังตรึงที่ท่าจบของฉากก่อนหน้า (p=1) — ไม่งั้นภาพเด้งกลับจุดเริ่มตอนโดนเฟดทับ
+  const prevFreeze = prev >= 0
+    ? motionTransform(effectiveMotion(state, prev), prevZoom, 1, 9) : null
+  // ทรานสิชันเข้าฉากปัจจุบัน — คลาส CSS ตามชื่อ ไม่รู้จักตกกลับเป็น fade
+  const trClass = styles["tr_" + effectiveTransition(state, cur)] || styles.layerFade
   const lg = state.edit?.logo
   const lgPad = LOGO_PAD * k
   const lgPos = {
@@ -240,14 +275,14 @@ export default function PreviewPlayer({ state, dispatch, api }) {   // eslint-di
                     src={frameOf(prev)}
                     alt=""
                     draggable={false}
-                    style={{ transform: `scale(${(1 + prevZoom).toFixed(4)})` }}
+                    style={{ transform: prevFreeze }}
                   />
                 ) : null}
               </div>
             )}
 
-            {/* ชั้นหน้า: ฉากปัจจุบัน — key ตาม index เพื่อให้เฟดเริ่มใหม่ทุกครั้งที่เปลี่ยนฉาก */}
-            <div key={cur} className={prev >= 0 ? `${styles.layer} ${styles.layerFade}` : styles.layer}>
+            {/* ชั้นหน้า: ฉากปัจจุบัน — key ตาม index เพื่อให้ทรานสิชันเริ่มใหม่ทุกครั้งที่เปลี่ยนฉาก */}
+            <div key={`sc${cur}`} className={prev >= 0 ? `${styles.layer} ${trClass}` : styles.layer}>
               {pendingOf(cur) ? (
                 <div className={styles.pending}><span>ภาพใหม่ — รอเรนเดอร์</span></div>
               ) : frameOf(cur) ? (
@@ -264,8 +299,9 @@ export default function PreviewPlayer({ state, dispatch, api }) {   // eslint-di
             {/* พาดหัวช่วงต้นคลิป — สไตล์เดียวกับซับแต่ตัวใหญ่กว่า วางกลางค่อนบน */}
             {headline && headOn && k > 0 && (
               <div
-                className={styles.headWrap}
-                style={{ bottom: `${(HEAD_BOTTOM / FRAME_H) * 100}%`, padding: `0 ${PAD_X * k}px` }}
+                className={`${styles.headWrap} ${styles.popIn}`}
+                style={{ bottom: `${(HEAD_BOTTOM / FRAME_H) * 100}%`, padding: `0 ${PAD_X * k}px`,
+                         "--pop": `${(24 * k).toFixed(1)}px` }}
               >
                 <div className={styles.subText} style={{ ...textStyle, fontSize: headline.size * k }}>
                   {emphasize(headline.text)}
@@ -276,8 +312,10 @@ export default function PreviewPlayer({ state, dispatch, api }) {   // eslint-di
             {/* ซับ HTML สด — ตำแหน่ง/ขนาดเทียบสัดส่วนเฟรม 1080×1920 เสมอ */}
             {sub && k > 0 && (
               <div
-                className={styles.subWrap}
-                style={{ bottom: `${(subStyle.bottom / FRAME_H) * 100}%`, padding: `0 ${PAD_X * k}px` }}
+                key={`sub${subIdx}`}
+                className={`${styles.subWrap} ${styles.popIn}`}
+                style={{ bottom: `${(subStyle.bottom / FRAME_H) * 100}%`, padding: `0 ${PAD_X * k}px`,
+                         "--pop": `${(16 * k).toFixed(1)}px` }}
               >
                 <div className={styles.subText} style={{ ...textStyle, fontSize: subStyle.size * k }}>
                   {emphasize(sub.text)}

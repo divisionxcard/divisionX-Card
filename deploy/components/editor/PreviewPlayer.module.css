@@ -48,6 +48,56 @@
   to { opacity: 1; }
 }
 
+/* ── ทรานสิชันเข้าฉาก — CSS ประมาณ xfade ของตัวเรนเดอร์ (0.35 วิเท่ากัน)
+   ตัวที่ CSS ทำตรง ๆ ไม่ได้ (circleclose/radial) ใช้ท่าใกล้เคียงแทน:
+   จังหวะกับทิศทางต้องตรง ส่วนลวดลายละเอียดดูจากโหมด "ผลจริงล่าสุด" ── */
+.tr_fade        { animation: ppFadeIn 0.35s ease both; }
+.tr_slideleft   { animation: ppSlideL 0.35s ease-out both; }
+.tr_slideright  { animation: ppSlideR 0.35s ease-out both; }
+.tr_slideup     { animation: ppSlideU 0.35s ease-out both; }
+.tr_circleopen  { animation: ppCircle 0.35s ease-out both; }
+.tr_circleclose { animation: ppFadeIn 0.35s ease both; }
+.tr_wipeleft    { animation: ppWipeL 0.35s linear both; }
+.tr_wiperight   { animation: ppWipeR 0.35s linear both; }
+.tr_smoothup    { animation: ppSmoothU 0.35s ease-out both; }
+.tr_radial      { animation: ppFadeIn 0.35s ease both; }
+.tr_hblur       { animation: ppBlur 0.35s ease both; }
+.tr_fadeblack   { animation: ppFadeBlack 0.35s ease-in both; }
+@keyframes ppSlideL { from { transform: translateX(100%); } }
+@keyframes ppSlideR { from { transform: translateX(-100%); } }
+@keyframes ppSlideU { from { transform: translateY(100%); } }
+@keyframes ppCircle {
+  from { clip-path: circle(0% at 50% 50%); }
+  to { clip-path: circle(75% at 50% 50%); }
+}
+@keyframes ppWipeL {
+  from { clip-path: inset(0 0 0 100%); }
+  to { clip-path: inset(0 0 0 0); }
+}
+@keyframes ppWipeR {
+  from { clip-path: inset(0 100% 0 0); }
+  to { clip-path: inset(0 0 0 0); }
+}
+@keyframes ppSmoothU {
+  from { opacity: 0; transform: translateY(26%); }
+}
+@keyframes ppBlur {
+  from { opacity: 0; filter: blur(18px); }
+  to { opacity: 1; filter: blur(0); }
+}
+@keyframes ppFadeBlack {
+  from { opacity: 0; filter: brightness(0); }
+  55% { opacity: 1; filter: brightness(0); }
+  to { opacity: 1; filter: brightness(1); }
+}
+
+/* ซับ/พาดหัวเด้งเข้า — จังหวะเดียวกับ overlay y-expression ของ compose.py
+   (ลอยขึ้น --pop ใน 0.18 วิ) · --pop เป็น inline จาก JS ตามสเกลเวที */
+.popIn { animation: ppPop 0.18s ease-out both; }
+@keyframes ppPop {
+  from { transform: translateY(var(--pop, 8px)); }
+}
+
 .frame {
   width: 100%;
   height: 100%;

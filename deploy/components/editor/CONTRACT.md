@@ -23,7 +23,8 @@
   "edit": {
     "timing":    [{ "index": 0, "start": 0.0, "end": 3.9 }],
     "subtitles": [{ "text": "ซองการ์ดในตู้เรา", "start": 0.0, "end": 1.62, "segment": 0 }],
-    "scenes":    { "0": { "visual": "sku:OP 17", "zoom": 0.08 } },
+    "scenes":    { "0": { "visual": "sku:OP 17", "zoom": 0.08,
+                          "motion": "punch", "transition": "circleopen" } },
     "headline":  { "text": "...", "seconds": 3.0, "size": 86 },
     "sub_style": { "style": "brand", "size": 64, "bottom": 430 },
     "logo":      { "file": "logo.png", "pos": "tr", "size": 140, "opacity": 0.9 }
@@ -39,7 +40,15 @@
 - **subtitles** — แทนที่ทั้งชุด เรียงตามเวลา · `segment` = index ฉากที่สังกัด
 - **scenes** — คีย์เป็น index ฉาก (สตริง เพราะ JSON) · `visual` ใช้รูปแบบเดียวกับ
   plan.visuals (`machine:hero` / `sku:OP 17` / `file:ชื่อไฟล์ในโฟลเดอร์งาน`) ·
-  `zoom` = Ken Burns ต่อฉาก (0 = ภาพนิ่ง, ค่าปกติ 0.08)
+  `zoom` = ความแรงการเคลื่อนกล้อง (0 = ภาพนิ่งสนิท ชนะทุกท่า, ค่าปกติ 0.08) ·
+  `motion` = ท่ากล้อง (`zoom-in | zoom-out | punch | pan-lr | pan-rl |
+  drift-down | drift-up` — คลังจริงอยู่ที่ `MOTIONS` ใน compose.py) ·
+  `transition` = ทรานสิชันเข้าฉากนี้ (ชื่อ xfade ที่คัดไว้ใน `TRANSITIONS`
+  ของ compose.py · ฉาก 0 ไม่มีความหมาย) · ทั้งคู่ไม่ใส่หรือใส่ `"auto"` =
+  ผู้กำกับอัตโนมัติเลือกให้ (`_auto_motion`/`_auto_transition` ใน make_video.py
+  **ถูกกระจกไว้ที่ `autoMotion`/`autoTransition` ใน editorStore.js —
+  แก้ฝั่งหนึ่งต้องแก้อีกฝั่งเสมอ ไม่งั้นพรีวิวสดไม่ตรงผลเรนเดอร์**)
+  · พรีวิวประมาณทรานสิชันด้วย CSS — จังหวะ/ทิศตรง ลวดลายละเอียดดูโหมด "ผลจริงล่าสุด"
 - **logo** — `file` คือชื่อไฟล์ใน `.video-work/<project>/` (อัปโหลดผ่าน API ข้อ 2.5) ·
   `pos` ∈ `tl | tr | bl | br` · `size` = ความกว้าง px บนเฟรม 1080 · `opacity` 0-1
 - **headline / sub_style** — override ค่าที่เคยอยู่ระดับบนของ plan

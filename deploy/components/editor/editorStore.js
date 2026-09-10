@@ -67,6 +67,63 @@ export const VISUAL_CHOICES = [
   { id: "machine:scene", label: "ตู้ — ในห้างจริง" },
 ]
 
+// ── คลังท่ากล้อง/ทรานสิชัน — กระจกของ MOTIONS/TRANSITIONS ใน compose.py ──
+// และตรรกะ auto เป็นกระจกของ _auto_motion/_auto_transition ใน make_video.py
+// ⚠️ แก้ฝั่งไหนต้องแก้อีกฝั่งให้ตรงกัน ไม่งั้นพรีวิวสดจะเคลื่อนไม่เหมือนผลเรนเดอร์
+export const MOTIONS = [
+  { id: "auto",       label: "อัตโนมัติ — ระบบจัดให้" },
+  { id: "zoom-in",    label: "ซูมเข้า" },
+  { id: "zoom-out",   label: "ซูมออก (ถอยกล้อง)" },
+  { id: "punch",      label: "พุ่งเข้าเร็วแล้วค้าง — เน้นของ" },
+  { id: "pan-lr",     label: "กวาดซ้าย → ขวา" },
+  { id: "pan-rl",     label: "กวาดขวา → ซ้าย" },
+  { id: "drift-down", label: "ไต่ลงตามตัวตู้" },
+  { id: "drift-up",   label: "ไต่ขึ้น" },
+]
+export const TRANSITIONS = [
+  { id: "auto",        label: "อัตโนมัติ — สลับจังหวะให้" },
+  { id: "fade",        label: "เฟดจาง" },
+  { id: "slideleft",   label: "สไลด์ ←" },
+  { id: "slideright",  label: "สไลด์ →" },
+  { id: "slideup",     label: "สไลด์ ↑" },
+  { id: "circleopen",  label: "วงกลมเปิด" },
+  { id: "circleclose", label: "วงกลมหุบ" },
+  { id: "wipeleft",    label: "ปาดจอ ←" },
+  { id: "wiperight",   label: "ปาดจอ →" },
+  { id: "smoothup",    label: "เลื่อนนุ่ม ↑" },
+  { id: "radial",      label: "กวาดตามเข็ม" },
+  { id: "hblur",       label: "เบลอละลาย" },
+  { id: "fadeblack",   label: "มืดแล้วค่อยเข้า" },
+]
+export const PAN_MIN_ZOOM = 0.06   // ซูมค้างขั้นต่ำของท่าแพน/ไต่ (ตรง compose.py)
+
+// ผู้กำกับอัตโนมัติ — ต้องให้ผลเท่ากับ _auto_motion ใน make_video.py ทุกกรณี
+export function autoMotion(i, n, visual) {
+  if (n > 1 && i === n - 1) return "zoom-out"
+  if (i === 0) return "zoom-in"
+  const v = visual || ""
+  if (v.startsWith("sku:")) return i % 2 ? "punch" : "zoom-in"
+  if (v === "machine:scene") return i % 2 ? "pan-rl" : "pan-lr"
+  return ["drift-down", "zoom-in", "pan-lr"][i % 3]
+}
+
+const ACCENTS = ["slideleft", "circleopen", "slideright", "smoothup"]
+export function autoTransition(i) {
+  return i % 2 ? "fade" : ACCENTS[(Math.floor(i / 2) - 1) % ACCENTS.length]
+}
+
+// ค่าที่มีผลจริงของฉาก i (ของที่คนเลือกชนะ auto เสมอ)
+export function effectiveMotion(state, i) {
+  const m = state.edit.scenes?.[String(i)]?.motion
+  if (m && m !== "auto") return m
+  return autoMotion(i, state.timing.length, effectiveVisual(state, i))
+}
+export function effectiveTransition(state, i) {
+  if (i <= 0) return null                       // ฉากแรกไม่มีรอยต่อเข้า
+  const t = state.edit.scenes?.[String(i)]?.transition
+  return t && t !== "auto" ? t : autoTransition(i)
+}
+
 // visual ที่มีผลจริงของฉาก i (edit ทับ plan)
 export function effectiveVisual(state, i) {
   return state.edit.scenes?.[String(i)]?.visual

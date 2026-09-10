@@ -58,6 +58,30 @@ def _edited_timing(raw, segs, total):
     return out
 
 
+# ── ผู้กำกับอัตโนมัติ: เลือกท่ากล้อง/ทรานสิชันให้ฉากที่คนไม่ได้เลือกเอง ──
+# ⚠️ ตรรกะคู่นี้ถูก "กระจก" ไว้ใน editorStore.js (autoMotion/autoTransition)
+#    เพื่อให้พรีวิวสดในห้องตัดต่อตรงกับผลเรนเดอร์ — แก้ที่นี่ต้องแก้ที่นั่นด้วย
+def _auto_motion(i, n, visual):
+    """ท่ากล้องตามบทบาทของฉาก: เปิดมั่นคง ปิดถอยกล้อง ของเน้น punch ห้างให้แพน"""
+    if n > 1 and i == n - 1:
+        return "zoom-out"
+    if i == 0:
+        return "zoom-in"
+    if visual.startswith("sku:"):
+        return "punch" if i % 2 else "zoom-in"
+    if visual == "machine:scene":
+        return "pan-rl" if i % 2 else "pan-lr"
+    return ("drift-down", "zoom-in", "pan-lr")[i % 3]
+
+
+_ACCENTS = ("slideleft", "circleopen", "slideright", "smoothup")
+
+def _auto_transition(i):
+    """ทรานสิชันเข้าฉาก i (i≥1): fade เป็นฐาน คั่นลูกเล่นทุกรอยต่อเว้นรอยต่อ
+    — ลูกเล่นติดกันทุกรอยต่อดูวุ่นวายแบบมือสมัครเล่น"""
+    return "fade" if i % 2 else _ACCENTS[(i // 2 - 1) % len(_ACCENTS)]
+
+
 def build_video(plan, out_mp4=None, skip_align=False):
     project = plan.get("project") or "clip"
     work = config.work_dir(project)
@@ -174,9 +198,18 @@ def build_video(plan, out_mp4=None, skip_align=False):
         ov = scene_edit.get(str(i)) or {}
         if "zoom" in ov and ov["zoom"] is not None:
             zoom = float(ov["zoom"])                 # 0 = ภาพนิ่งไม่ซูม
+        motion = ov.get("motion")
+        if not motion or motion == "auto":
+            motion = _auto_motion(i, len(frames), specs[i])
         clips.append(compose.render_scene(fr, max(0.5, dur),
                                           clips_dir / f"scene_{i:03d}.mp4",
-                                          zoom=zoom))
+                                          zoom=zoom, motion=motion))
+
+    # ทรานสิชันเข้าฉาก i (รายการยาว n-1) — คนเลือกไว้ในห้องตัดต่อชนะ auto เสมอ
+    transitions = []
+    for i in range(1, len(frames)):
+        tr = (scene_edit.get(str(i)) or {}).get("transition")
+        transitions.append(tr if tr and tr != "auto" else _auto_transition(i))
 
     logo = None
     lg = edit.get("logo") or {}
@@ -191,7 +224,8 @@ def build_video(plan, out_mp4=None, skip_align=False):
 
     compose.build(clips, timing, chunks, wav, out_mp4,
                   music=plan.get("music"), headline=head_png,
-                  headline_seconds=head_secs, xfade=xfade, logo=logo)
+                  headline_seconds=head_secs, xfade=xfade, logo=logo,
+                  transitions=transitions)
     _log("6/6", f"ประกอบเสร็จ ({time.time()-t0:.0f} วิ)")
 
     (work / "timing.json").write_text(

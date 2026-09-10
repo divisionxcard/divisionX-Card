@@ -11,8 +11,9 @@
 import { useState, useEffect } from "react"
 import styles from "./InspectorPanel.module.css"
 import {
-  VISUAL_CHOICES, SUB_STYLES, LOGO_POS, MIN_SUB,
+  VISUAL_CHOICES, SUB_STYLES, LOGO_POS, MIN_SUB, MOTIONS, TRANSITIONS,
   sceneAt, totalOf, fmtTime, effectiveVisual, round3, clamp,
+  autoMotion, autoTransition,
 } from "./editorStore"
 import { getSkus } from "../../lib/supabase"
 
@@ -164,10 +165,44 @@ function SceneTab({ state, dispatch, skus, skuFail }) {
       </div>
 
       <div className={styles.group}>
-        <div className={styles.label}>การเคลื่อนกล้อง (ซูมช้า ๆ)</div>
+        <div className={styles.label}>ท่ากล้อง</div>
+        <select className={`dx-input ${styles.wide}`}
+          value={state.edit.scenes?.[String(i)]?.motion ?? "auto"}
+          onChange={e => dispatch({ type: "SCENE_SET", index: i, patch: { motion: e.target.value } })}>
+          {MOTIONS.map(m => <option key={m.id} value={m.id}>{m.label}</option>)}
+        </select>
+        {(state.edit.scenes?.[String(i)]?.motion ?? "auto") === "auto" && (
+          <p className={styles.hint}>
+            {/* บอกว่า auto จะออกท่าไหน — คนจะได้ตัดสินใจได้โดยไม่ต้องเดา */}
+            ฉากนี้ระบบเลือก: {(MOTIONS.find(m =>
+              m.id === autoMotion(i, state.timing.length, vis)) || {}).label}
+          </p>
+        )}
         <CommitSlider min={0} max={0.15} step={0.01} value={zoom}
-          format={v => v === 0 ? "ภาพนิ่ง" : `ซูม ${Math.round(v * 100)}%`}
+          format={v => v === 0 ? "ภาพนิ่ง" : `แรง ${Math.round(v * 100)}%`}
           onCommit={v => dispatch({ type: "SCENE_SET", index: i, patch: { zoom: round3(v) } })} />
+        <p className={styles.hint}>แรง = ระยะซูม/กวาดของท่ากล้อง · 0 = ภาพนิ่งสนิท</p>
+      </div>
+
+      <div className={styles.group}>
+        <div className={styles.label}>การเปลี่ยนภาพเข้าฉากนี้</div>
+        {i === 0 ? (
+          <p className={styles.hint}>ฉากแรกไม่มีรอยต่อเข้า — เริ่มคลิปตรง ๆ</p>
+        ) : (
+          <>
+            <select className={`dx-input ${styles.wide}`}
+              value={state.edit.scenes?.[String(i)]?.transition ?? "auto"}
+              onChange={e => dispatch({ type: "SCENE_SET", index: i, patch: { transition: e.target.value } })}>
+              {TRANSITIONS.map(tr => <option key={tr.id} value={tr.id}>{tr.label}</option>)}
+            </select>
+            {(state.edit.scenes?.[String(i)]?.transition ?? "auto") === "auto" && (
+              <p className={styles.hint}>
+                ฉากนี้ระบบเลือก: {(TRANSITIONS.find(tr =>
+                  tr.id === autoTransition(i)) || {}).label}
+              </p>
+            )}
+          </>
+        )}
       </div>
 
       <div className={styles.group}>

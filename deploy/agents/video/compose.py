@@ -35,21 +35,57 @@ def probe_duration(path):
     return float(json.loads(out)["format"]["duration"])
 
 
-def render_scene(image, seconds, out_mp4, zoom=None, fps=None):
-    """ภาพนิ่งหนึ่งใบ → คลิปสั้นที่ค่อย ๆ ซูมเข้า (Ken Burns)
+# ── คลังการเคลื่อนกล้อง ────────────────────────────────────────────────
+# ชื่อ motion ชุดนี้เป็นสัญญากับห้องตัดต่อ (editorStore.js MOTIONS + CONTRACT.md)
+# — เพิ่ม/เปลี่ยนชื่อที่นี่ต้องไปแก้ฝั่งโน้นให้ครบ ไม่งั้นพรีวิวจะโกหกตา
+#
+# ทุกสูตรวิ่งบนภาพที่ขยาย 2 เท่าแล้ว (กัน zoompan ปัดพิกัดเป็นขั้น) และ
+# แพน/ไต่ต้องมีซูมค้างอย่างน้อย 6% ไม่งั้นไม่มีเนื้อภาพเหลือให้กล้องเดิน
+MOTIONS = ("zoom-in", "zoom-out", "punch", "pan-lr", "pan-rl",
+           "drift-down", "drift-up")
+PAN_MIN_ZOOM = 0.06
+
+def _motion_exprs(motion, zoom, frames, fps):
+    """คืน (z, x, y) ของ zoompan สำหรับ motion หนึ่งแบบ · zoom = ความแรง 0-0.15"""
+    z = max(zoom, PAN_MIN_ZOOM)                 # ระยะเดินกล้องของท่าแพน/ไต่
+    center = ("iw/2-(iw/zoom/2)", "ih/2-(ih/zoom/2)")
+    if motion == "zoom-out":
+        return (f"(1+{zoom})-{zoom}*on/{frames}", *center)
+    if motion == "punch":       # พุ่งเข้าเร็วช่วงแรกแล้วค้าง — ไว้เน้นของ
+        k = max(1, int(round(0.35 * fps)))
+        return (f"1+{zoom}*min(1,on/{k})", *center)
+    if motion == "pan-lr":      # กล้องกวาดซ้าย → ขวา (ซูมค้างคงที่)
+        return (f"{1 + z:.4f}", f"(iw-iw/zoom)*on/{frames}", center[1])
+    if motion == "pan-rl":
+        return (f"{1 + z:.4f}", f"(iw-iw/zoom)*(1-on/{frames})", center[1])
+    if motion == "drift-down":  # กล้องไต่ลงตามตัวตู้ — เข้ากับภาพแนวตั้ง
+        return (f"{1 + z:.4f}", center[0], f"(ih-ih/zoom)*on/{frames}")
+    if motion == "drift-up":
+        return (f"{1 + z:.4f}", center[0], f"(ih-ih/zoom)*(1-on/{frames})")
+    # ค่าปริยาย: zoom-in แบบเดิม
+    return (f"1+{zoom}*on/{frames}", *center)
+
+
+def render_scene(image, seconds, out_mp4, zoom=None, fps=None, motion="zoom-in"):
+    """ภาพนิ่งหนึ่งใบ → คลิปสั้นที่กล้องเคลื่อนตามท่าที่เลือก (Ken Burns และญาติ ๆ)
 
     ขยายภาพเป็น 2 เท่าก่อนเข้า zoompan เพราะ zoompan ปัดพิกัดเป็นจำนวนเต็ม
     ถ้าทำบนภาพขนาดจริงจะเห็นภาพกระตุกเป็นขั้น ๆ ตอนซูม
+    zoom=0 = ภาพนิ่งสนิท (เคารพสวิตช์ "ภาพนิ่ง" ของห้องตัดต่อ ไม่ว่า motion จะเป็นอะไร)
     """
     zoom = config.KEN_BURNS_ZOOM if zoom is None else zoom
     fps = fps or config.FPS
     frames = max(2, int(round(seconds * fps)))
+    if zoom <= 0:
+        zx, xx, yx = "1", "0", "0"
+    else:
+        zx, xx, yx = _motion_exprs(motion, zoom, frames, fps)
     vf = (
         f"scale={config.W}:{config.H}:force_original_aspect_ratio=increase,"
         f"crop={config.W}:{config.H},"
         f"scale={config.W*2}:{config.H*2}:flags=lanczos,"
-        f"zoompan=z='1+{zoom}*on/{frames}':d={frames}"
-        f":x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)'"
+        f"zoompan=z='{zx}':d={frames}"
+        f":x='{xx}':y='{yx}'"
         f":s={config.W}x{config.H}:fps={fps},"
         f"setsar=1,format=yuv420p"
     )
@@ -61,8 +97,32 @@ def render_scene(image, seconds, out_mp4, zoom=None, fps=None):
     return out_mp4
 
 
+# ── คลังทรานสิชัน ──────────────────────────────────────────────────────
+# ชุดที่คัดแล้วว่าดูดีบนคลิปแนวตั้ง 9:16 (ชื่อตรงกับ xfade ของ ffmpeg เป๊ะ ๆ)
+# เป็นสัญญากับห้องตัดต่อเช่นเดียวกับ MOTIONS — แก้ที่นี่ต้องแก้ editorStore.js ด้วย
+TRANSITIONS = ("fade", "slideleft", "slideright", "slideup", "circleopen",
+               "circleclose", "wipeleft", "wiperight", "smoothup", "radial",
+               "hblur", "fadeblack")
+
+# จังหวะเด้งเข้าของซับ/พาดหัว (วินาที · px บนเฟรม 1080×1920)
+_POP_SECS = 0.18
+_POP_RISE_SUB = 16
+_POP_RISE_HEAD = 24
+
+
+def _pop_y(start, rise):
+    """สูตร y ของ overlay: ลอยขึ้น `rise`px ในช่วง _POP_SECS แรกแล้วนิ่งที่ 0
+
+    PNG ซับเป็นเฟรมโปร่งใสเต็มจอ การเลื่อนลงชั่วคราวจึงไม่เผยขอบอะไร
+    (ส่วนที่พ้นล่างจอถูก crop ทิ้งเฉย ๆ)
+    """
+    return (f"'if(lt(t-{start:.3f},{_POP_SECS}),"
+            f"{rise}*(1-(t-{start:.3f})/{_POP_SECS}),0)'")
+
+
 def build(scene_clips, timing, subtitles, voice_wav, out_mp4,
-          music=None, headline=None, headline_seconds=3.0, xfade=None, logo=None):
+          music=None, headline=None, headline_seconds=3.0, xfade=None, logo=None,
+          transitions=None):
     """ต่อทุกอย่างเป็นคลิปสุดท้าย
 
     scene_clips : [path, ...] เรียงตามฉาก (ยาวเกินมาเท่า xfade แล้ว)
@@ -70,6 +130,9 @@ def build(scene_clips, timing, subtitles, voice_wav, out_mp4,
     subtitles   : [{'png','start','end'}, ...]
     logo        : {'path','pos','size','opacity'} หรือ None
                   pos ∈ tl|tr|bl|br · size = ความกว้าง px บนเฟรม 1080
+    transitions : [ชื่อ xfade ของรอยต่อเข้าฉาก 1..n-1] หรือ None = fade ทั้งหมด
+                  ชื่อที่ไม่อยู่ใน TRANSITIONS ถูกปัดกลับเป็น fade (กัน ffmpeg ล้ม
+                  เพราะค่าที่พิมพ์เองใน plan.json)
     """
     xfade = config.XFADE if xfade is None else xfade
     ff = config.ffmpeg_bin()
@@ -94,9 +157,12 @@ def build(scene_clips, timing, subtitles, voice_wav, out_mp4,
         for i in range(1, n):
             # offset = เวลาเริ่มของฉากนี้ → ทำให้ภาพเปลี่ยนตรงกับที่เสียงเปลี่ยนประโยค
             off = max(0.0, timing[i]["start"])
+            tr = (transitions or [])[i - 1] if i - 1 < len(transitions or []) else "fade"
+            if tr not in TRANSITIONS:
+                tr = "fade"
             out = f"x{i}"
             filters.append(
-                f"[{last}][{i}:v]xfade=transition=fade:duration={xfade}"
+                f"[{last}][{i}:v]xfade=transition={tr}:duration={xfade}"
                 f":offset={off:.3f}[{out}]")
             last = out
 
@@ -109,8 +175,11 @@ def build(scene_clips, timing, subtitles, voice_wav, out_mp4,
     for k, ov in enumerate(overlays):
         inputs += ["-i", str(ov["png"])]
         out = f"o{k}"
+        # y เป็นสูตรตามเวลา — ซับ/พาดหัวลอยเด้งขึ้นตอนเข้า ไม่โผล่นิ่ง ๆ แบบเดิม
+        rise = _POP_RISE_HEAD if (headline and k == 0) else _POP_RISE_SUB
         filters.append(
-            f"[{last}][{base + k}:v]overlay=0:0:format=auto"
+            f"[{last}][{base + k}:v]overlay=x=0:y={_pop_y(ov['start'], rise)}"
+            f":format=auto"
             f":enable='between(t,{ov['start']:.3f},{ov['end']:.3f})'[{out}]")
         last = out
 
