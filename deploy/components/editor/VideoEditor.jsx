@@ -52,6 +52,8 @@ function shellReducer(state, action) {
       } : base.edit,
       frameFor: Array.isArray(d.frameFor) && d.frameFor.length === base.frameFor.length
         ? [...d.frameFor] : base.frameFor,
+      voice: typeof d.voice === "string" && d.voice ? d.voice : base.voice,
+      voiceStyle: typeof d.voiceStyle === "string" ? d.voiceStyle : base.voiceStyle,
       ui: { ...base.ui, dirty: true },   // ร่างคือของที่ยังไม่ได้เรนเดอร์เสมอ
     }
   }
@@ -179,11 +181,13 @@ function EditorRoom({ project }) {
         localStorage.setItem("ve-draft-" + s.project, JSON.stringify({
           saved_at: Date.now(),
           timing: s.timing, subtitles: s.subtitles, edit: s.edit, frameFor: s.frameFor,
+          voice: s.voice, voiceStyle: s.voiceStyle,
         }))
       } catch { /* localStorage เต็ม/ถูกปิด — ร่างเป็นของแถม ห้ามทำห้องพัง */ }
     }, 800)
     return () => clearTimeout(id)
-  }, [state?.timing, state?.subtitles, state?.edit, state?.frameFor, state?.ui.dirty])
+  }, [state?.timing, state?.subtitles, state?.edit, state?.frameFor,
+      state?.voice, state?.voiceStyle, state?.ui.dirty])
 
   const restoreDraft = () => {
     if (!payloadRef.current || !draft) return

@@ -12,6 +12,7 @@ import { useState, useEffect } from "react"
 import styles from "./InspectorPanel.module.css"
 import {
   VISUAL_CHOICES, SUB_STYLES, LOGO_POS, MIN_SUB, MOTIONS, TRANSITIONS,
+  VOICES, VOICE_STYLES,
   sceneAt, totalOf, fmtTime, effectiveVisual, round3, clamp,
   autoMotion, autoTransition,
 } from "./editorStore"
@@ -21,6 +22,7 @@ const TABS = [
   { id: "scene", label: "ฉาก" },
   { id: "sub", label: "ซับ" },
   { id: "headline", label: "พาดหัว" },
+  { id: "voice", label: "เสียง" },
   { id: "logo", label: "โลโก้" },
 ]
 
@@ -68,6 +70,7 @@ export default function InspectorPanel({ state, dispatch, api }) {
         {tab === "scene" && <SceneTab state={state} dispatch={dispatch} skus={skus} skuFail={skuFail} />}
         {tab === "sub" && <SubTab state={state} dispatch={dispatch} />}
         {tab === "headline" && <HeadlineTab state={state} dispatch={dispatch} />}
+        {tab === "voice" && <VoiceTab state={state} dispatch={dispatch} />}
         {tab === "logo" && <LogoTab state={state} dispatch={dispatch} api={api} />}
       </div>
     </aside>
@@ -346,6 +349,59 @@ function HeadlineTab({ state, dispatch }) {
         onClick={() => dispatch({ type: "HEADLINE_SET", patch: null })}>
         ไม่ใช้พาดหัว
       </button>
+    </div>
+  )
+}
+
+// ── แท็บ เสียง ──────────────────────────────────────────────────────────
+function VoiceTab({ state, dispatch }) {
+  // "กำหนดเอง" ต้องกดได้ก่อนพิมพ์เสร็จ — ถือโหมดไว้ในตัวเองแบบเดียวกับ SceneTab
+  const isPreset = VOICE_STYLES.some(s => s.id === state.voiceStyle)
+  const [customOn, setCustomOn] = useState(false)
+  const showCustom = customOn || !isPreset
+  const set = (patch) => dispatch({ type: "VOICE_SET", patch })
+
+  return (
+    <div>
+      <div className={styles.group}>
+        <div className={styles.label}>เสียงพากย์</div>
+        {VOICES.map(v => (
+          <label key={v.id} className={styles.radio}>
+            <input type="radio" name="voice-id" checked={state.voice === v.id}
+              onChange={() => set({ voice: v.id })} />
+            <span>{v.label} <span className={styles.hintInline}>· {v.desc}</span></span>
+          </label>
+        ))}
+      </div>
+
+      <div className={styles.group}>
+        <div className={styles.label}>อารมณ์การอ่าน</div>
+        {VOICE_STYLES.map(s => (
+          <label key={s.label} className={styles.radio}>
+            <input type="radio" name="voice-style"
+              checked={!showCustom && state.voiceStyle === s.id}
+              onChange={() => { setCustomOn(false); set({ style: s.id }) }} />
+            <span>{s.label} <span className={styles.hintInline}>· {s.desc}</span></span>
+          </label>
+        ))}
+        <label className={styles.radio}>
+          <input type="radio" name="voice-style" checked={showCustom}
+            onChange={() => setCustomOn(true)} />
+          <span>กำหนดเอง</span>
+        </label>
+        {showCustom && (
+          <CommitText value={isPreset ? "" : state.voiceStyle}
+            placeholder="เช่น อ่านแบบกระซิบ ลึกลับ เหมือนเล่าข่าวลือ"
+            onCommit={v => set({ style: v.trim() })} />
+        )}
+      </div>
+
+      {/* เสียงเป็นของแพงและพ่วงผลข้างเคียง — บอกให้ครบก่อนกดเรนเดอร์ ไม่ใช่ให้ไปเจอเอง */}
+      <p className={styles.hint}>
+        พรีวิวสดยังเล่นเสียงเดิมจนกว่าจะเรนเดอร์ใหม่ · เปลี่ยนเสียง/อารมณ์แล้วเรนเดอร์
+        = สร้างเสียงพากย์ใหม่ (ใช้โควตา TTS และจังหวะอ่านจะเปลี่ยน —
+        เวลาตัด/ซับที่แก้มือไว้จะถูกจับใหม่จากเสียงจริงโดยอัตโนมัติ)
+      </p>
     </div>
   )
 }

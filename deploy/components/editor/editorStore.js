@@ -30,6 +30,20 @@ export const VOICES = [
   { id: "Sulafat",    label: "ซูลาฟัต",     desc: "หญิง · อบอุ่น" },
 ]
 
+// อารมณ์การอ่านของ TTS (Gemini รับคำสั่งนำภาษาธรรมชาติ) — ทดสอบกับไทยแล้ว
+// 10 ก.ย. 2026 ว่าไม่อ่านตัวคำสั่งออกเสียง · id = ข้อความที่ส่งจริง
+export const VOICE_STYLES = [
+  { id: "", label: "ปกติ", desc: "อ่านเรียบ ๆ แบบเดิม" },
+  { id: "อ่านแบบเพื่อนเล่าให้เพื่อนฟัง ตื่นเต้นนิด ๆ ไม่ใช่อ่านประกาศ",
+    label: "เพื่อนเล่า", desc: "เป็นกันเอง ตื่นเต้นนิด ๆ" },
+  { id: "อ่านแบบพิธีกรรายการเกม เสียงมีพลัง เร้าใจ",
+    label: "พิธีกรเกม", desc: "มีพลัง เร้าใจ" },
+  { id: "อ่านนุ่ม ๆ ชวนฟัง เหมือนเล่าเรื่องให้ฟังสบาย ๆ",
+    label: "นุ่มชวนฟัง", desc: "ผ่อนคลาย สบายหู" },
+  { id: "อ่านช้าลงเล็กน้อย ชัดถ้อยชัดคำ น่าเชื่อถือ",
+    label: "ชัดคำ", desc: "ช้าลงนิด น่าเชื่อถือ" },
+]
+
 export const SUB_STYLES = [
   { id: "brand", label: "แบรนด์",  desc: "ขาว ขอบกรมท่า เน้นคำเป็นฟ้านีออน" },
   { id: "plain", label: "เรียบ",   desc: "ขาว ขอบดำ แบบสากล" },
@@ -150,6 +164,10 @@ export function initFromProject(payload) {
       sub_style: ed.sub_style ? { ...ed.sub_style } : null,
       logo: ed.logo ? { ...ed.logo } : null,
     },
+    // เสียงพากย์เป็นของระดับ plan (ไม่ใช่ edit) — เปลี่ยนแล้วเรนเดอร์ = TTS ใหม่
+    // และตัวเรนเดอร์จะทิ้ง edit.timing/subtitles ให้เอง (จังหวะอ่านเปลี่ยนหมด)
+    voice: plan.voice || "Aoede",
+    voiceStyle: plan.voice_style || "",
     // เฟรมพรีวิวของฉาก i คือรูปจากการเรนเดอร์รอบก่อน — สลับภาพแล้วให้รูปตามไปด้วย
     frameFor: Array.from({ length: n }, (_, i) => i),
     assets: {
@@ -173,6 +191,8 @@ const snap = (s) => ({
   subtitles: s.subtitles.map(c => ({ ...c })),
   edit: JSON.parse(JSON.stringify(s.edit)),
   frameFor: [...s.frameFor],
+  voice: s.voice,
+  voiceStyle: s.voiceStyle,
 })
 const withUndo = (s, next) => ({
   ...s, ...next,
@@ -298,6 +318,13 @@ export function reducer(state, action) {
       return withUndo(state, { edit: { ...state.edit,
         logo: A.patch === null ? null : { ...(state.edit.logo || {}), ...A.patch } } })
 
+    // ── เสียงพากย์ ── patch: {voice?|style?} — เข้า undo เหมือนการแก้เนื้อหาอื่น
+    case "VOICE_SET":
+      return withUndo(state, {
+        ...(A.patch.voice !== undefined ? { voice: A.patch.voice } : {}),
+        ...(A.patch.style !== undefined ? { voiceStyle: A.patch.style } : {}),
+      })
+
     // ── undo / redo ──
     case "UNDO": {
       if (!state.undo.length) return state
@@ -326,6 +353,9 @@ export function reducer(state, action) {
 export function buildPlanForRender(state) {
   const plan = JSON.parse(JSON.stringify(state.plan || {}))
   plan.project = state.project
+  plan.voice = state.voice
+  if (state.voiceStyle && state.voiceStyle.trim()) plan.voice_style = state.voiceStyle.trim()
+  else delete plan.voice_style
   const headline = state.edit.headline
   plan.edit = {
     timing: state.timing.map(t => ({ index: t.index, start: t.start, end: t.end })),

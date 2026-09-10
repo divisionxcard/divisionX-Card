@@ -105,11 +105,26 @@ def build_video(plan, out_mp4=None, skip_align=False):
     t0 = time.time()
     wav = work / "voice.wav"
     from . import voice as voice_mod
+    # จับว่ารอบนี้เสียงถูกสร้างใหม่ไหม (เทียบ stamp ก่อน-หลัง) — ถ้าใหม่ แปลว่า
+    # จังหวะการอ่านเปลี่ยนหมด เวลา/ซับที่คนแก้มือไว้กับเสียงเก่าใช้ต่อไม่ได้
+    stamp_f = wav.with_suffix(".stamp.json")
+    stamp_before = stamp_f.read_text(encoding="utf-8") if stamp_f.exists() else None
     voice_mod.synth(segments.speech_text(segs), wav,
                     voice=plan.get("voice"), model=plan.get("tts_model"),
                     style=plan.get("voice_style"))
+    voice_changed = (stamp_f.read_text(encoding="utf-8") if stamp_f.exists()
+                     else None) != stamp_before
     total = voice_mod.duration(wav)
-    _log("2/6", f"เสียงพากย์ {total:.1f} วินาที ({time.time()-t0:.0f} วิ)")
+    _log("2/6", f"เสียงพากย์ {total:.1f} วินาที ({time.time()-t0:.0f} วิ)"
+         + (" · เสียงใหม่" if voice_changed else ""))
+    if voice_changed and (edit.get("timing") or edit.get("subtitles")):
+        _log("2/6", "⚠️ เสียงเปลี่ยน — เวลาตัด/ซับที่แก้มือไว้ผูกกับเสียงเก่า "
+                    "ทิ้งแล้วจับเวลาใหม่จากเสียงจริง")
+        edit = {k: v for k, v in edit.items() if k not in ("timing", "subtitles")}
+        # ล้างในไฟล์ด้วย — ไม่งั้นห้องตัดต่อโหลด plan.edit.timing ค้าง มาทับเวลาชุดใหม่
+        plan["edit"] = edit
+        (work / "plan.json").write_text(
+            json.dumps(plan, ensure_ascii=False, indent=2), encoding="utf-8")
 
     # ── 3. จับเวลาแต่ละบรรทัด ──
     t0 = time.time()

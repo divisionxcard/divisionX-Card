@@ -111,6 +111,8 @@ state = {
   segments: [...],                // จาก timing.json (อ่านอย่างเดียว — ข้อความบทพากย์)
   timing: [...],                  // ใช้งานจริง = plan.edit.timing ?? timing.json.timing
   subtitles: [...],               // ใช้งานจริง = plan.edit.subtitles ?? timing.json.subtitles
+  voice: "Aoede",                 // เสียงพากย์ (ระดับ plan ไม่ใช่ edit) — VOICES ใน store
+  voiceStyle: "",                 // อารมณ์การอ่าน (plan.voice_style) — "" = ปกติ
   assets: { videoUrl, voiceUrl, frames: [] },
   ui: {
     t: 0,                         // เวลาปัจจุบัน (วินาที)
@@ -139,8 +141,15 @@ CUT_NUDGE {index, by}             // ขยับจุดตัดหน้า�
 SCENE_SET {index, patch}          // patch: {visual?|zoom?}
 SCENE_SWAP {index, dir:+1|-1}     // สลับ "ภาพ" กับฉากข้างเคียง (เสียงไม่ขยับ)
 HEADLINE_SET {patch}              SUBSTYLE_SET {patch}     LOGO_SET {patch|null}
+VOICE_SET {patch}                 // patch: {voice?|style?} — เขียนลง plan.voice /
+                                  // plan.voice_style ตอน buildPlanForRender
 UNDO / REDO                       RENDER_STATUS {payload}
 ```
+
+⚠️ **กติกาเสียง**: เปลี่ยน voice/voice_style แล้วเรนเดอร์ = TTS สร้าง voice.wav ใหม่
+ตัวเรนเดอร์ (make_video ขั้น 2) ตรวจจับเองจาก voice.stamp แล้ว**ทิ้ง edit.timing กับ
+edit.subtitles ทั้งในรอบนั้นและใน plan.json** (จังหวะอ่านเปลี่ยน เวลาเก่าใช้ไม่ได้) —
+ห้องตัดต่อไม่ต้องจัดการเอง แค่โหลดผลใหม่หลังเรนเดอร์เสร็จตามปกติ
 
 - ทุก action ที่แก้เนื้อหา (SUB_* CUT_* SCENE_* HEADLINE_* SUBSTYLE_* LOGO_*)
   ต้อง push snapshot ลง undo stack (เก็บเฉพาะส่วนที่แก้ได้: timing/subtitles/edit)
