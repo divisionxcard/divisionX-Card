@@ -39,7 +39,12 @@
   มี timing → **ข้าม whisper** → เรนเดอร์เร็ว
 - **subtitles** — แทนที่ทั้งชุด เรียงตามเวลา · `segment` = index ฉากที่สังกัด
 - **scenes** — คีย์เป็น index ฉาก (สตริง เพราะ JSON) · `visual` ใช้รูปแบบเดียวกับ
-  plan.visuals (`machine:hero` / `sku:OP 17` / `file:ชื่อไฟล์ในโฟลเดอร์งาน`) ·
+  plan.visuals (`machine:hero` / `sku:OP 17` / `file:ชื่อไฟล์ในโฟลเดอร์งาน` /
+  `tpl:<เทมเพลต>?img=sku:OP 17&title=...&tag=...` = **ฉากกราฟิกเคลื่อนไหว** —
+  เรนเดอร์โดย motion.py จาก motion_templates/*.html · รายชื่อเทมเพลตกระจกอยู่ที่
+  `MOTION_TEMPLATES` ใน editorStore + ตัวแปลง spec `parseTpl`/`buildTpl` ·
+  ฉาก tpl ไม่ใช้ motion/zoom (ขยับเอง — effectiveMotion ฝั่งเว็บคืน "still")
+  และเฟรมพรีวิวคือภาพนิ่งที่ motion.snapshot ถ่ายไว้ตอนเรนเดอร์) ·
   `zoom` = ความแรงการเคลื่อนกล้อง (0 = ภาพนิ่งสนิท ชนะทุกท่า, ค่าปกติ 0.08) ·
   `motion` = ท่ากล้อง (`zoom-in | zoom-out | punch | pan-lr | pan-rl |
   drift-down | drift-up` — คลังจริงอยู่ที่ `MOTIONS` ใน compose.py) ·

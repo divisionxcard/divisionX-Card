@@ -30,7 +30,7 @@ if __package__ in (None, ""):                       # ให้รันตร�
     sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[2]))
     __package__ = "agents.video"
 
-from . import align, compose, config, segments, subtitle, visuals   # noqa: E402
+from . import align, compose, config, motion, segments, subtitle, visuals   # noqa: E402
 
 
 def _log(step, msg):
@@ -209,16 +209,21 @@ def build_video(plan, out_mp4=None, skip_align=False):
             dur = timing[i + 1]["start"] - t["start"] + xfade
         else:
             dur = total - t["start"]
-        zoom = None
         ov = scene_edit.get(str(i)) or {}
+        if motion.is_tpl(specs[i]):
+            # ฉากกราฟิกเคลื่อนไหว — เทมเพลตขยับเองอยู่แล้ว ไม่ผ่าน zoompan/ท่ากล้อง
+            clips.append(motion.render_clip(specs[i], max(0.5, dur),
+                                            clips_dir / f"scene_{i:03d}.mp4", work))
+            continue
+        zoom = None
         if "zoom" in ov and ov["zoom"] is not None:
             zoom = float(ov["zoom"])                 # 0 = ภาพนิ่งไม่ซูม
-        motion = ov.get("motion")
-        if not motion or motion == "auto":
-            motion = _auto_motion(i, len(frames), specs[i])
+        cam = ov.get("motion")
+        if not cam or cam == "auto":
+            cam = _auto_motion(i, len(frames), specs[i])
         clips.append(compose.render_scene(fr, max(0.5, dur),
                                           clips_dir / f"scene_{i:03d}.mp4",
-                                          zoom=zoom, motion=motion))
+                                          zoom=zoom, motion=cam))
 
     # ทรานสิชันเข้าฉาก i (รายการยาว n-1) — คนเลือกไว้ในห้องตัดต่อชนะ auto เสมอ
     transitions = []

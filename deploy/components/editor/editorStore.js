@@ -81,6 +81,33 @@ export const VISUAL_CHOICES = [
   { id: "machine:scene", label: "ตู้ — ในห้างจริง" },
 ]
 
+// ── ฉากกราฟิกเคลื่อนไหว (motion.py + motion_templates/*.html) ──
+// spec: `tpl:<ชื่อ>?img=sku:OP 17&title=...&tag=...` — img ใช้รูปแบบเดียวกับ visual
+export const MOTION_TEMPLATES = [
+  { id: "intro",    label: "เปิดแบรนด์สายฟ้า ⚡",
+    desc: "ฟ้าผ่ากลางจอ วาบแสง ชื่อโครเมียม — เหมาะเป็นฉากแรก" },
+  { id: "showcase", label: "เวทีสินค้า ✨",
+    desc: "ซองจริงลอยกลางแสงนีออน + พาดชื่อ + ป้ายกำกับ" },
+]
+
+export function parseTpl(spec) {
+  if (!spec || !spec.startsWith("tpl:")) return null
+  const body = spec.slice(4)
+  const q = body.indexOf("?")
+  const p = new URLSearchParams(q < 0 ? "" : body.slice(q + 1))
+  return { name: q < 0 ? body : body.slice(0, q),
+           img: p.get("img") || "", title: p.get("title") || "", tag: p.get("tag") || "" }
+}
+export function buildTpl(t) {
+  // URLSearchParams เข้ารหัสช่องว่างเป็น '+' ซึ่ง parse_qs ฝั่ง python ถอดกลับตรงกัน
+  const p = new URLSearchParams()
+  if (t.img) p.set("img", t.img)
+  if (t.title) p.set("title", t.title)
+  if (t.tag) p.set("tag", t.tag)
+  const qs = p.toString()
+  return "tpl:" + t.name + (qs ? "?" + qs : "")
+}
+
 // ── คลังท่ากล้อง/ทรานสิชัน — กระจกของ MOTIONS/TRANSITIONS ใน compose.py ──
 // และตรรกะ auto เป็นกระจกของ _auto_motion/_auto_transition ใน make_video.py
 // ⚠️ แก้ฝั่งไหนต้องแก้อีกฝั่งให้ตรงกัน ไม่งั้นพรีวิวสดจะเคลื่อนไม่เหมือนผลเรนเดอร์
@@ -128,9 +155,11 @@ export function autoTransition(i) {
 
 // ค่าที่มีผลจริงของฉาก i (ของที่คนเลือกชนะ auto เสมอ)
 export function effectiveMotion(state, i) {
+  const vis = effectiveVisual(state, i)
+  if (vis.startsWith("tpl:")) return "still"   // ฉากกราฟิกขยับเอง — ไม่ซ้อนท่ากล้องทับ
   const m = state.edit.scenes?.[String(i)]?.motion
   if (m && m !== "auto") return m
-  return autoMotion(i, state.timing.length, effectiveVisual(state, i))
+  return autoMotion(i, state.timing.length, vis)
 }
 export function effectiveTransition(state, i) {
   if (i <= 0) return null                       // ฉากแรกไม่มีรอยต่อเข้า

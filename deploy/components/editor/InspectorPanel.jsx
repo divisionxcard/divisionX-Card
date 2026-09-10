@@ -12,9 +12,9 @@ import { useState, useEffect } from "react"
 import styles from "./InspectorPanel.module.css"
 import {
   VISUAL_CHOICES, SUB_STYLES, LOGO_POS, MIN_SUB, MOTIONS, TRANSITIONS,
-  VOICES, VOICE_STYLES,
+  VOICES, VOICE_STYLES, MOTION_TEMPLATES,
   sceneAt, totalOf, fmtTime, effectiveVisual, round3, clamp,
-  autoMotion, autoTransition,
+  autoMotion, autoTransition, parseTpl, buildTpl,
 } from "./editorStore"
 import { getSkus } from "../../lib/supabase"
 
@@ -94,10 +94,14 @@ function SceneTab({ state, dispatch, skus, skuFail }) {
   if (!t) return <p className={styles.empty}>ยังไม่มีข้อมูลฉาก</p>
 
   const vis = effectiveVisual(state, i)
-  const visMode = vis.startsWith("sku:") ? "sku" : vis.startsWith("file:") ? "file" : vis
+  const isTpl = vis.startsWith("tpl:")
+  const visMode = isTpl ? "tpl"
+    : vis.startsWith("sku:") ? "sku" : vis.startsWith("file:") ? "file" : vis
   const shownMode = mode ?? visMode
   const setVisual = (v) => { setMode(null); dispatch({ type: "SCENE_SET", index: i, patch: { visual: v } }) }
   const zoom = state.edit.scenes?.[String(i)]?.zoom ?? 0.08   // ค่าปกติของตัวเรนเดอร์
+  const tpl = parseTpl(vis) || { name: "", img: "", title: "", tag: "" }
+  const setTpl = (patch) => setVisual(buildTpl({ ...tpl, ...patch }))
 
   return (
     <div>
@@ -165,8 +169,67 @@ function SceneTab({ state, dispatch, skus, skuFail }) {
             </p>
           </>
         )}
+
+        <label className={styles.radio}>
+          <input type="radio" name="scene-visual" checked={shownMode === "tpl"}
+            onChange={() => setMode("tpl")} />
+          <span>ฉากกราฟิกเคลื่อนไหว ✨</span>
+        </label>
+        {shownMode === "tpl" && (
+          <>
+            <select className={`dx-input ${styles.wide}`}
+              value={isTpl ? tpl.name : ""}
+              onChange={e => e.target.value &&
+                setVisual(buildTpl({ ...tpl, name: e.target.value }))}>
+              <option value="">— เลือกแบบฉาก —</option>
+              {MOTION_TEMPLATES.map(m => (
+                <option key={m.id} value={m.id}>{m.label} — {m.desc}</option>
+              ))}
+            </select>
+
+            {isTpl && tpl.name === "showcase" && (
+              skus.length ? (
+                <select className={`dx-input ${styles.wide}`}
+                  value={tpl.img.startsWith("sku:") ? tpl.img.slice(4) : ""}
+                  onChange={e => e.target.value && setTpl({ img: `sku:${e.target.value}` })}>
+                  <option value="">— เลือกสินค้าบนเวที —</option>
+                  {skus.map(s => (
+                    <option key={s.sku_id} value={s.sku_id}>
+                      {s.sku_id} · {s.name}{!s.image_url && !s.image_url_box ? " (ยังไม่มีรูป)" : ""}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <CommitText value={tpl.img.startsWith("sku:") ? tpl.img.slice(4) : ""}
+                  placeholder="รหัสสินค้าบนเวที เช่น OP 17" mono
+                  onCommit={v => { const s = v.trim(); if (s) setTpl({ img: `sku:${s}` }) }} />
+              )
+            )}
+            {isTpl && (
+              <>
+                <CommitText value={tpl.title}
+                  placeholder={tpl.name === "intro" ? "ชื่อใหญ่ (เว้นว่าง = DIVISION X)" : "พาดชื่อบนฉาก เช่น อันดับ 1"}
+                  onCommit={v => setTpl({ title: v.trim() })} />
+                <CommitText value={tpl.tag}
+                  placeholder={tpl.name === "intro" ? "บรรทัดรอง (เว้นว่าง = CARD GAME)" : "ป้ายกำกับ เช่น วันพีซ OP-17"}
+                  onCommit={v => setTpl({ tag: v.trim() })} />
+              </>
+            )}
+            <p className={styles.hint}>
+              ฉากนี้เคลื่อนไหวในตัวเอง (แสง อนุภาค ของลอย) — พรีวิวสดเห็นเป็นภาพนิ่ง
+              ผลจริงดูหลังเรนเดอร์ · เรนเดอร์รอบแรกช้ากว่าฉากรูปถ่าย (~30-60 วิ)
+              รอบต่อไปใช้แคชถ้าไม่ได้แก้ฉากนี้
+            </p>
+          </>
+        )}
       </div>
 
+      {isTpl ? (
+        <div className={styles.group}>
+          <div className={styles.label}>ท่ากล้อง</div>
+          <p className={styles.hint}>ฉากกราฟิกเคลื่อนไหวในตัวเอง — ไม่ใช้ท่ากล้อง/ซูมทับ</p>
+        </div>
+      ) : (
       <div className={styles.group}>
         <div className={styles.label}>ท่ากล้อง</div>
         <select className={`dx-input ${styles.wide}`}
@@ -186,6 +249,7 @@ function SceneTab({ state, dispatch, skus, skuFail }) {
           onCommit={v => dispatch({ type: "SCENE_SET", index: i, patch: { zoom: round3(v) } })} />
         <p className={styles.hint}>แรง = ระยะซูม/กวาดของท่ากล้อง · 0 = ภาพนิ่งสนิท</p>
       </div>
+      )}
 
       <div className={styles.group}>
         <div className={styles.label}>การเปลี่ยนภาพเข้าฉากนี้</div>

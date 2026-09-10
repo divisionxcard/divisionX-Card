@@ -44,6 +44,8 @@ function motionTransform(motion, zoom, p, elapsed) {
   const k = 1 + Math.max(zoom, PAN_MIN_ZOOM)          // ซูมค้างของท่าแพน/ไต่
   const t = (50 * (k - 1)) / k                        // % เลื่อนสูงสุดโดยขอบภาพยังไม่โผล่
   switch (motion) {
+    case "still":                                     // ฉากกราฟิก — เฟรมนิ่งไม่ต้องขยับ
+      return "scale(1)"
     case "zoom-out":
       return `scale(${(1 + zoom * (1 - p)).toFixed(4)})`
     case "punch": {

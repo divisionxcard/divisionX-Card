@@ -173,13 +173,21 @@ def to_frame(src, out_png, blur_fill=True):
 
 
 def prepare(specs, work):
-    """รายการ spec → รายการไฟล์ภาพ 9:16 พร้อมใช้"""
+    """รายการ spec → รายการไฟล์ภาพ 9:16 พร้อมใช้
+
+    ฉากกราฟิกเคลื่อนไหว (tpl:) ไม่มี "ภาพต้นทาง" — ถ่ายเฟรมนิ่งจากเทมเพลตแทน
+    (ไว้ให้ timeline/พรีวิวของห้องตัดต่อ ส่วนคลิปจริงเรนเดอร์ที่ขั้นประกอบ)
+    """
     work = pathlib.Path(work)
     cache = work / "src"
     frames = work / "frames"
     frames.mkdir(parents=True, exist_ok=True)
     out = []
     for i, spec in enumerate(specs):
-        src = resolve(spec, cache)
-        out.append(to_frame(src, frames / f"frame_{i:03d}.png"))
+        if spec.startswith("tpl:"):
+            from . import motion                   # lazy — เลี่ยง import วน
+            out.append(motion.snapshot(spec, work, frames / f"frame_{i:03d}.png"))
+        else:
+            src = resolve(spec, cache)
+            out.append(to_frame(src, frames / f"frame_{i:03d}.png"))
     return out
