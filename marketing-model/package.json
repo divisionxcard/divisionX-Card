@@ -1,0 +1,18 @@
+{
+  "name": "marketing-model",
+  "version": "1.0.0",
+  "description": "ตัวสร้างคอนเทนต์การตลาดสำหรับธุรกิจอสังหาริมทรัพย์ไทย — ไม่ผูกกับ UI framework และไม่ผูกกับผู้ให้บริการ LLM",
+  "type": "module",
+  "main": "./index.js",
+  "exports": {
+    ".": "./index.js",
+    "./templates": "./templates.js",
+    "./prompts": "./prompts.js",
+    "./rules": "./rules.js",
+    "./scoring": "./scoring.js",
+    "./examples": "./examples.json"
+  },
+  "sideEffects": false,
+  "license": "UNLICENSED",
+  "private": true
+}
