@@ -1,8 +1,8 @@
 // PageMachineStockView — Dark Theme
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import {
   RefreshCw, ArrowUpCircle, CheckCircle, AlertTriangle, Monitor, Package,
-  ChevronUp, ChevronDown,
+  ChevronUp, ChevronDown, MonitorDown,
 } from "lucide-react"
 import { CHART_COLORS } from "../shared/constants"
 import { fmt, sortSkus } from "../shared/helpers"
@@ -15,6 +15,74 @@ import { thaiDateTime } from "../../lib/thaiDate"
 // 3 วัน = ผ่านรอบเติมปกติไปแล้วอย่างน้อย 1 รอบ · ต่ำกว่านี้จะติดธงของที่เพิ่งหมดเมื่อวาน
 // (ค่ามาจาก machine_stock.empty_since ซึ่งตัว sync จำให้ — migration 072)
 const STUCK_DAYS = 3
+
+// ── ปุ่ม "ซิงค์จากเครื่องนี้" — ทางสำรองตอน GitHub Actions โดนแฟล็ก (ก.ย. 2026) ──
+// โผล่เฉพาะตอนเปิดผ่าน dev ในเครื่อง (production /api/sync/local ตอบ 404 → ซ่อนตัวเอง)
+// ต่างจากปุ่มดึงข้อมูลปกติ: รันจริงบนเครื่องนี้ทุกยี่ห้อรวด (ยอดขายก่อนแล้วค่อยสต็อก
+// ตามลำดับที่ตัวเลขการเติมต้องการ) และรายงานผลจบในตัว ไม่ต้องเดาว่าเสร็จหรือยัง
+function LocalSyncButton({ setSyncMsg, onRefresh }) {
+  const [available, setAvailable] = useState(false)
+  const [running, setRunning] = useState(false)
+  const timer = useRef(null)
+
+  useEffect(() => {
+    let gone = false
+    fetch("/api/sync/local")
+      .then(r => {
+        if (gone || !r.ok) return
+        return r.json().then(j => {
+          setAvailable(true)
+          if (j.running) { setRunning(true); poll() }   // เปิดหน้ามาเจองานที่รันค้าง — เกาะต่อเลย
+        })
+      })
+      .catch(() => {})
+    return () => { gone = true; clearInterval(timer.current) }
+  }, [])
+
+  const poll = () => {
+    clearInterval(timer.current)
+    timer.current = setInterval(async () => {
+      try {
+        const j = await (await fetch("/api/sync/local")).json()
+        if (j.running) return
+        clearInterval(timer.current)
+        setRunning(false)
+        if (j.ok) {
+          setSyncMsg({ type: "success", msg: "ซิงค์จากเครื่องนี้ครบทุกยี่ห้อแล้ว — กำลังโหลดข้อมูลใหม่" })
+          onRefresh?.()
+        } else {
+          setSyncMsg({ type: "error", msg: "ซิงค์จากเครื่องนี้มีบางงานล้ม — ดูรายละเอียดใน .sync-local.log" })
+        }
+      } catch { /* dev server สะดุดชั่วคราว — รอบหน้า */ }
+    }, 5000)
+  }
+
+  const start = async () => {
+    try {
+      setSyncMsg(null)
+      const res = await fetch("/api/sync/local", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ job: "all" }),
+      })
+      const j = await res.json()
+      if (!res.ok) { setSyncMsg({ type: "error", msg: j.error || "เริ่มซิงค์ไม่สำเร็จ" }); return }
+      setRunning(true)
+      setSyncMsg({ type: "success", msg: "เริ่มซิงค์จากเครื่องนี้ (ทุกยี่ห้อ ยอดขาย+สต็อก) — ราว 2-5 นาที เสร็จแล้วหน้าจะรีเฟรชเอง" })
+      poll()
+    } catch (err) { setSyncMsg({ type: "error", msg: err.message }) }
+  }
+
+  if (!available) return null
+  return (
+    <button onClick={start} disabled={running} className="dx-btn dx-btn-secondary"
+      title="รันซิงค์บนเครื่องนี้โดยตรง — ใช้แทนปุ่มดึงข้อมูลปกติระหว่าง GitHub ใช้ไม่ได้"
+      style={{ opacity: running ? 0.6 : 1, cursor: running ? "not-allowed" : "pointer" }}>
+      <MonitorDown size={13} className={running ? "animate-spin" : ""}/>
+      {running ? "กำลังซิงค์จากเครื่องนี้..." : "ซิงค์จากเครื่องนี้"}
+    </button>
+  )
+}
 
 export default function PageMachineStockView({ machines, machineStock, skus, onRefresh, profile }) {
   const [selectedMachine, setSelectedMachine] = useState("all")
@@ -170,6 +238,7 @@ export default function PageMachineStockView({ machines, machineStock, skus, onR
         subtitle="ข้อมูลคงเหลือจริงที่หน้าตู้ขาย ดึงจากระบบ VMS"
         actions={
           <>
+            <LocalSyncButton setSyncMsg={setSyncMsg} onRefresh={onRefresh} />
             <button onClick={() => triggerStockSync("/api/stock-sync", "VMS", setSyncingVms)} disabled={syncingVms} className="dx-btn dx-btn-primary"
               style={{ opacity: syncingVms ? 0.5 : 1, cursor: syncingVms ? "not-allowed" : "pointer" }}>
               <RefreshCw size={13} className={syncingVms ? "animate-spin" : ""}/>
