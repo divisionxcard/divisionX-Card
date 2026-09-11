@@ -70,7 +70,9 @@ def load_env():
     """อ่าน .env.local เข้า os.environ แล้วเติมชื่อที่ scraper คาดหวัง"""
     if not ENV_FILE.exists():
         sys.exit(f"ไม่พบ {ENV_FILE}")
-    for line in ENV_FILE.read_text(encoding="utf-8").splitlines():
+    # utf-8-sig: เผื่อไฟล์ถูกเซฟแบบมี BOM — ไม่งั้นคีย์บรรทัดแรกเพี้ยนแบบเงียบ ๆ
+    # (เจอจริง 11 ก.ย. 2026: BOM ทำ NEXT_PUBLIC_SUPABASE_URL หายทั้งที่อยู่ในไฟล์)
+    for line in ENV_FILE.read_text(encoding="utf-8-sig").splitlines():
         line = line.strip()
         if line.startswith("#") or "=" not in line:
             continue
