@@ -496,10 +496,22 @@ export default function DivisionXApp() {
     }
   }, [])
 
-  // จงใจไม่ผูก effect นี้กับ profile — ตอนเพิ่งล็อกอิน profile ยังเป็น null
-  // ถ้าเพิ่มเข้า deps ทุกคนจะโหลดข้อมูลสองรอบ (ก่อนและหลังรู้ role) ซึ่งหนักฟรี ๆ
-  // บัญชี marketing ยิงไปก็ได้ค่าว่างจาก RLS แล้วจอ MarketingOnlyScreen เข้าคลุมทันที
-  useEffect(() => { loadAll() }, [loadAll])
+  // ⚠️ ต้องรอให้รู้สถานะล็อกอินก่อนเสมอ — ห้ามยิงตั้งแต่ mount
+  //
+  // เดิมเรียก loadAll() ทันทีที่ component ขึ้น ซึ่งเร็วกว่า supabase.auth.getSession()
+  // ที่เป็น async → คำขอชุดแรกออกไปแบบยังไม่มี token = สิทธิ์ anon
+  // RLS ปฏิเสธ แล้ว Promise.all ล้มทั้งชุด ขึ้นจอ "เชื่อมต่อฐานข้อมูลไม่ได้:
+  // permission denied for view v_stock_balance" ทั้งที่ผู้ใช้ล็อกอินถูกต้อง
+  // (กด "ลองใหม่" แล้วผ่าน เพราะรอบสองมี token แล้ว — อาการคลาสสิกของ race)
+  //
+  // ผูกกับ user id ไม่ใช่ตัว session — session เปลี่ยน object ทุกครั้งที่ต่ออายุ token
+  // ถ้าผูกกับ session ตรง ๆ จะโหลดข้อมูลใหม่ทั้งชุดทุกชั่วโมงโดยไม่มีเหตุผล
+  const userId = session?.user?.id || null
+  useEffect(() => {
+    if (authLoading) return                      // ยังไม่รู้ว่าล็อกอินอยู่ไหม
+    if (!userId) { setLoading(false); return }   // ไม่ได้ล็อกอิน — ปล่อยให้จอล็อกอินขึ้น
+    loadAll()
+  }, [loadAll, authLoading, userId])
 
   // ── Write Operations ──
   // ── คำนวณ avg_cost ใหม่จาก stock_in ทั้งหมดของ SKU (ใช้ตอนแก้ไข/ลบ/เพิ่ม) ──
