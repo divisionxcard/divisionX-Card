@@ -38,11 +38,34 @@ export async function requireUser(req) {
   return { user: data.user, profile }
 }
 
+// ── สิทธิ์ที่ระบบรู้จัก ───────────────────────────────────────
+// admin     = ทำได้ทุกอย่าง
+// user      = หน้าสต็อก/ยอดขาย/เตรียมของ (ไม่เห็นการตลาด ไม่เห็นจัดการผู้ใช้)
+// marketing = **เห็นเฉพาะการตลาดกับโรงงานวิดีโอ** ไม่เห็นข้อมูลธุรกิจเลย
+//             (เพิ่ม 12 ก.ย. 2026 — ดู migration 076)
+export const ROLES = ["admin", "user", "marketing"]
+
 // ต้องเป็น admin เท่านั้น
 export async function requireAdmin(req) {
   const gate = await requireUser(req)
   if (gate.error) return gate
   if (gate.profile?.role !== "admin") {
+    return { error: NextResponse.json({ error: "forbidden" }, { status: 403 }) }
+  }
+  return gate
+}
+
+// งานการตลาด/วิดีโอ — admin หรือ marketing
+//
+// ⚠️ ใช้กับ route ของ /api/marketing/* และ /api/video/* เท่านั้น
+//    route ที่แตะข้อมูลธุรกิจ (สต็อก ยอดขาย ซิงค์ตู้ จัดการผู้ใช้) ต้องคง requireAdmin ไว้
+//    เพราะนี่คือด่านจริงที่กันบัญชีการตลาดออกจากข้อมูลพวกนั้น — การซ่อนเมนู
+//    ในหน้าเว็บเป็นแค่ความสะดวก ไม่ใช่ความปลอดภัย
+export async function requireMarketing(req) {
+  const gate = await requireUser(req)
+  if (gate.error) return gate
+  const role = gate.profile?.role
+  if (role !== "admin" && role !== "marketing") {
     return { error: NextResponse.json({ error: "forbidden" }, { status: 403 }) }
   }
   return gate

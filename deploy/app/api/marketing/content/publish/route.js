@@ -8,7 +8,7 @@
 // POST → โพสต์จริง · { id, dryRun? }
 import { createClient } from "@supabase/supabase-js"
 import { NextResponse } from "next/server"
-import { requireAdmin } from "../../../../../lib/apiAuth"
+import { requireMarketing } from "../../../../../lib/apiAuth"
 import { checkPage, fbConfig } from "../../../../../lib/facebook"
 import { publishOne } from "../../../../../lib/publishContent"
 
@@ -21,7 +21,7 @@ const db = createClient(
 const TABLE = "marketing_content"
 
 export async function GET(req) {
-  const gate = await requireAdmin(req)
+  const gate = await requireMarketing(req)
   if (gate.error) return gate.error
   const cfg = fbConfig()
   if (!cfg.ready) {
@@ -40,7 +40,7 @@ export async function GET(req) {
 }
 
 export async function POST(req) {
-  const gate = await requireAdmin(req)
+  const gate = await requireMarketing(req)
   if (gate.error) return gate.error
 
   let body

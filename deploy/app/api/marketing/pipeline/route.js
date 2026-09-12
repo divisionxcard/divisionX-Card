@@ -4,7 +4,7 @@
 //
 // ตอบคำถามเดียว: "ระบบยังทำงานอยู่ไหม" — ไม่ใช่หน้ารายงานละเอียด
 import { NextResponse } from "next/server"
-import { requireAdmin } from "../../../../lib/apiAuth"
+import { requireMarketing } from "../../../../lib/apiAuth"
 
 const REPO = process.env.GH_REPO || "divisionxcard/divisionX-Card"
 const GH_PAT = process.env.GH_PAT
@@ -47,7 +47,7 @@ async function latestRun(file) {
 }
 
 export async function GET(req) {
-  const gate = await requireAdmin(req)
+  const gate = await requireMarketing(req)
   if (gate.error) return gate.error
 
   if (!GH_PAT) {

@@ -7,7 +7,7 @@
 // (ตัวเขียนแคปชั่นจริงใช้ Ollama ซึ่งรันในเครื่องเท่านั้น — เว็บทำได้แค่ตั้งต้นให้)
 import { createClient } from "@supabase/supabase-js"
 import { NextResponse } from "next/server"
-import { requireAdmin } from "../../../../lib/apiAuth"
+import { requireMarketing } from "../../../../lib/apiAuth"
 
 const db = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -18,7 +18,7 @@ const db = createClient(
 const STATUSES = ["new", "picked", "dismissed"]
 
 export async function GET(req) {
-  const gate = await requireAdmin(req)
+  const gate = await requireMarketing(req)
   if (gate.error) return gate.error
 
   const { searchParams } = new URL(req.url)
@@ -114,7 +114,7 @@ const OEMBED = [
 ]
 
 export async function POST(req) {
-  const gate = await requireAdmin(req)
+  const gate = await requireMarketing(req)
   if (gate.error) return gate.error
 
   let body
@@ -179,7 +179,7 @@ export async function POST(req) {
 }
 
 export async function PATCH(req) {
-  const gate = await requireAdmin(req)
+  const gate = await requireMarketing(req)
   if (gate.error) return gate.error
 
   let body

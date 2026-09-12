@@ -6,7 +6,7 @@
 // ไม่งั้น API จัดโพสต์ไว้วันนึง หน้าเว็บวาดอีกวันนึง (ดูเหตุผลเต็ม ๆ ในไฟล์นั้น)
 import { createClient } from "@supabase/supabase-js"
 import { NextResponse } from "next/server"
-import { requireAdmin } from "../../../../lib/apiAuth"
+import { requireMarketing } from "../../../../lib/apiAuth"
 import { thaiDay, thaiMonthNow, monthRange } from "../../../../lib/thaiDate"
 
 const db = createClient(
@@ -38,7 +38,7 @@ function autoPostState(r) {
 }
 
 export async function GET(req) {
-  const gate = await requireAdmin(req)
+  const gate = await requireMarketing(req)
   if (gate.error) return gate.error
 
   const { searchParams } = new URL(req.url)

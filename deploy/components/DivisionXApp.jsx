@@ -85,6 +85,43 @@ function LoadingScreen() {
   )
 }
 
+// จอสำหรับบัญชีที่ทำงานเฉพาะการตลาด/วิดีโอ
+//
+// ⚠️ ตั้งใจ "ไม่" เขียนว่าไม่มีสิทธิ์หรือถูกปฏิเสธ — บัญชีนี้ไม่ได้ทำอะไรผิด
+//    หน้านี้แค่ไม่ใช่ที่ทำงานของเขา · พาไปที่ที่ใช่เลยดีกว่าให้กดหาเอง
+// ⚠️ และไม่บอกด้วยว่าหน้านี้มีอะไรอยู่ — ไม่มีประโยชน์กับเขา และไม่ควรบอกอยู่แล้ว
+function MarketingOnlyScreen({ profile }) {
+  useEffect(() => {
+    // พาไปเองใน 2 วินาที เผื่อคนกดลิงก์เก่าหรือพิมพ์ URL มา จะได้ไม่ต้องทำอะไร
+    const t = setTimeout(() => { window.location.href = "/marketing" }, 2000)
+    return () => clearTimeout(t)
+  }, [])
+  const name = profile?.display_name || profile?.username || ""
+  return (
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 max-w-md text-center">
+        <Megaphone size={40} className="text-blue-500 mx-auto mb-4"/>
+        <h2 className="font-bold text-gray-700 mb-2">
+          สวัสดี{name ? ` ${name}` : ""} — กำลังพาไปห้องการตลาด
+        </h2>
+        <p className="text-sm text-gray-400 mb-6">
+          บัญชีนี้ใช้สำหรับงานการตลาดและวิดีโอ
+        </p>
+        <div className="flex gap-2 justify-center">
+          <a href="/marketing"
+            className="bg-blue-600 text-white px-5 py-2.5 rounded-xl text-sm font-semibold hover:bg-blue-700">
+            ห้องการตลาด
+          </a>
+          <a href="/video"
+            className="bg-gray-100 text-gray-700 px-5 py-2.5 rounded-xl text-sm font-semibold hover:bg-gray-200">
+            โรงงานวิดีโอ
+          </a>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function ErrorScreen({ msg, onRetry }) {
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
@@ -386,6 +423,8 @@ export default function DivisionXApp() {
   }, [])
 
   const isAdmin = profile?.role === "admin"
+  // บัญชีที่ทำงานเฉพาะการตลาด/วิดีโอ — ไม่ให้เข้าหน้านี้เลย (ดู MarketingOnlyScreen)
+  const isMarketingOnly = profile?.role === "marketing"
   const NAV = isAdmin ? [...NAV_BASE, ...NAV_ADMIN_ITEMS] : NAV_BASE.filter(n => !n.adminOnly)
   const hiddenCount = NAV.filter(n => n.hidden).length
 
@@ -457,6 +496,9 @@ export default function DivisionXApp() {
     }
   }, [])
 
+  // จงใจไม่ผูก effect นี้กับ profile — ตอนเพิ่งล็อกอิน profile ยังเป็น null
+  // ถ้าเพิ่มเข้า deps ทุกคนจะโหลดข้อมูลสองรอบ (ก่อนและหลังรู้ role) ซึ่งหนักฟรี ๆ
+  // บัญชี marketing ยิงไปก็ได้ค่าว่างจาก RLS แล้วจอ MarketingOnlyScreen เข้าคลุมทันที
   useEffect(() => { loadAll() }, [loadAll])
 
   // ── Write Operations ──
@@ -706,6 +748,10 @@ export default function DivisionXApp() {
   if (authLoading) return <LoadingScreen/>
   if (resetMode)   return <ResetPasswordPage onDone={() => setResetMode(false)}/>
   if (!session)    return <LoginPage/>
+  // บัญชีการตลาดไม่มีอะไรให้ดูในหน้านี้ — พาไปหน้าที่เขาใช้จริงเลย
+  // ⚠️ ต้องเช็คก่อน `loading` ไม่งั้นจะค้างที่จอโหลดตลอดกาล เพราะ RLS ปิดไม่ให้
+  //    บัญชีนี้อ่านตารางธุรกิจ loadAll จึงล้มทุกครั้ง (ดู migration 076)
+  if (isMarketingOnly) return <MarketingOnlyScreen profile={profile}/>
   if (loading)     return <LoadingScreen/>
   if (dataError)   return <ErrorScreen msg={dataError} onRetry={loadAll}/>
 

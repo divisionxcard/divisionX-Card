@@ -5,7 +5,7 @@
 // ยังไม่มีค่าโฆษณา (เฟส 4) → ไม่คำนวณ ROAS/กำไรสุทธิ และไม่แสดงช่องเปล่าหลอกตา
 import { createClient } from "@supabase/supabase-js"
 import { NextResponse } from "next/server"
-import { requireAdmin } from "../../../../lib/apiAuth"
+import { requireMarketing } from "../../../../lib/apiAuth"
 
 const db = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -42,7 +42,7 @@ async function fetchAll(build) {
 }
 
 export async function GET(req) {
-  const gate = await requireAdmin(req)
+  const gate = await requireMarketing(req)
   if (gate.error) return gate.error
 
   const { searchParams } = new URL(req.url)

@@ -10,7 +10,7 @@
 // ระหว่างรอจะเห็นอนิเมชั่นโหลด + ตัวเลขวินาทีเดินขึ้นในช่องรูป แล้วรูปโผล่เองเมื่อเสร็จ
 import { NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
-import { requireAdmin } from "../../../../../lib/apiAuth"
+import { requireMarketing } from "../../../../../lib/apiAuth"
 import { detectFranchise } from "../../../../../lib/franchiseDetect"
 import { topSkusByFranchise } from "../../../../../lib/skuPicker"
 
@@ -24,7 +24,7 @@ const REPO = process.env.GH_REPO || "divisionxcard/divisionX-Card"
 const WORKFLOW = "poster-render.yml"
 
 export async function POST(req) {
-  const gate = await requireAdmin(req)
+  const gate = await requireMarketing(req)
   if (gate.error) return gate.error
 
   const token = process.env.GH_PAT

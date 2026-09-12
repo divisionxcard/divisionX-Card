@@ -11,7 +11,7 @@
 // ใช้กฎชุดเดียวกับที่ Hermes ใช้ (tasks/content_voice.json) จึงได้ผลแนวเดียวกัน
 import { createClient } from "@supabase/supabase-js"
 import { NextResponse } from "next/server"
-import { requireAdmin } from "../../../../../lib/apiAuth"
+import { requireMarketing } from "../../../../../lib/apiAuth"
 import { askGeminiText } from "../../../../../lib/geminiText"
 import { fetchAll } from "../../../../../lib/fetchAll"
 import { readFile } from "fs/promises"
@@ -75,7 +75,7 @@ async function askGemini(prompt) {
 }
 
 export async function POST(req) {
-  const gate = await requireAdmin(req)
+  const gate = await requireMarketing(req)
   if (gate.error) return gate.error
 
   let body

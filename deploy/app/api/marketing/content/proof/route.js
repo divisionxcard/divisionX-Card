@@ -11,7 +11,7 @@
 // ภาพถูกซอยเป็นแถบและขยายมาจากฝั่งเบราว์เซอร์แล้ว (canvas) — ที่นี่รับเป็น data URL
 // เหตุผลที่ไม่ซอยฝั่ง server: จะต้องลงไลบรารีประมวลผลภาพเพิ่มบน Vercel โดยไม่จำเป็น
 import { NextResponse } from "next/server"
-import { requireAdmin } from "../../../../../lib/apiAuth"
+import { requireMarketing } from "../../../../../lib/apiAuth"
 import { readFile } from "fs/promises"
 import path from "path"
 
@@ -58,7 +58,7 @@ ${phrases}
 }
 
 export async function POST(req) {
-  const gate = await requireAdmin(req)
+  const gate = await requireMarketing(req)
   if (gate.error) return gate.error
 
   if (!process.env.OPENAI_API_KEY) {

@@ -14,7 +14,7 @@ import { NextResponse } from "next/server"
 import { readFile } from "fs/promises"
 import path from "path"
 import Anthropic from "@anthropic-ai/sdk"
-import { requireAdmin } from "../../../../../lib/apiAuth"
+import { requireMarketing } from "../../../../../lib/apiAuth"
 
 const db = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -155,7 +155,7 @@ async function askOllama(voice, prompt) {
 }
 
 export async function POST(req) {
-  const gate = await requireAdmin(req)
+  const gate = await requireMarketing(req)
   if (gate.error) return gate.error
 
   let body

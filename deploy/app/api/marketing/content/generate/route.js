@@ -18,7 +18,7 @@ import { NextResponse } from "next/server"
 import { readFile } from "fs/promises"
 import path from "path"
 import Anthropic from "@anthropic-ai/sdk"
-import { requireAdmin } from "../../../../../lib/apiAuth"
+import { requireMarketing } from "../../../../../lib/apiAuth"
 import { knowledgeBlock } from "../../../../../lib/opcgKnowledge"
 import { pkmKnowledgeBlock } from "../../../../../lib/pkmKnowledge"
 import { tcgKnowledgeBlock } from "../../../../../lib/tcgKnowledge"
@@ -553,7 +553,7 @@ const CARE_HINT = {
 const SIMILAR_LIMIT = 0.5
 
 export async function POST(req) {
-  const gate = await requireAdmin(req)
+  const gate = await requireMarketing(req)
   if (gate.error) return gate.error
 
   let body

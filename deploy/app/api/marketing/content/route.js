@@ -7,7 +7,7 @@
 // admin เท่านั้น · ใช้ service key ฝั่ง server (ห้ามให้ browser แตะตารางนี้ตรง ๆ)
 import { createClient } from "@supabase/supabase-js"
 import { NextResponse } from "next/server"
-import { requireAdmin } from "../../../../lib/apiAuth"
+import { requireMarketing } from "../../../../lib/apiAuth"
 
 const db = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -20,7 +20,7 @@ const STATUSES = ["draft", "pending", "approved", "scheduled", "posted", "reject
 const PLATFORMS = ["fb", "line", "ig", "tiktok"]
 
 export async function GET(req) {
-  const gate = await requireAdmin(req)
+  const gate = await requireMarketing(req)
   if (gate.error) return gate.error
 
   const { searchParams } = new URL(req.url)
@@ -58,7 +58,7 @@ export async function GET(req) {
 }
 
 export async function PATCH(req) {
-  const gate = await requireAdmin(req)
+  const gate = await requireMarketing(req)
   if (gate.error) return gate.error
 
   let body
@@ -138,7 +138,7 @@ export async function PATCH(req) {
 }
 
 export async function POST(req) {
-  const gate = await requireAdmin(req)
+  const gate = await requireMarketing(req)
   if (gate.error) return gate.error
 
   let body

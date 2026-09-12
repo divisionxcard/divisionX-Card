@@ -223,6 +223,7 @@ export default function PageUsers({ currentProfile, machines, machineAssignments
                             onChange={e => setEditingUser({ ...editingUser, role: e.target.value })}
                             className="dx-input" style={{ flex: 1, padding: "6px 10px", fontSize: 12, opacity: isSelf ? 0.5 : 1 }}>
                             <option value="user">User — ใช้งานทั่วไป</option>
+                            <option value="marketing">Marketing — เฉพาะการตลาดและวิดีโอ</option>
                             <option value="admin">Admin — จัดการผู้ใช้ได้</option>
                           </select>
                         </div>
@@ -273,10 +274,12 @@ export default function PageUsers({ currentProfile, machines, machineAssignments
                           fontSize: 10, fontWeight: 600, padding: "2px 8px", borderRadius: 999, flexShrink: 0,
                           ...(u.role === "admin"
                             ? { background: "rgba(183,148,246,0.12)", color: "#B794F6", border: "1px solid rgba(183,148,246,0.25)" }
+                            : u.role === "marketing"
+                            ? { background: "rgba(61,220,255,0.12)", color: "#3DDCFF", border: "1px solid rgba(61,220,255,0.25)" }
                             : { background: "var(--dx-bg-elevated)", color: "var(--dx-text-muted)", border: "1px solid var(--dx-border)" }
                           ),
-                        }}>
-                          {u.role === "admin" ? "Admin" : "User"}
+                        }} title={u.role === "marketing" ? "เห็นเฉพาะการตลาดและวิดีโอ ไม่เห็นข้อมูลธุรกิจ" : undefined}>
+                          {u.role === "admin" ? "Admin" : u.role === "marketing" ? "Marketing" : "User"}
                         </span>
                         <button onClick={() => setEditingUser({ id: u.id, username: u.username || "", display_name: u.display_name || "", role: u.role || "user" })}
                           style={{
@@ -382,7 +385,8 @@ export default function PageUsers({ currentProfile, machines, machineAssignments
               <div>
                 <label style={labelStyle}>สิทธิ์การใช้งาน</label>
                 <select value={form.role} onChange={e => setForm({ ...form, role: e.target.value })} className="dx-input">
-                  <option value="user">User — ใช้งานทั่วไป</option>
+                  <option value="user">User — ใช้งานทั่วไป (สต็อก · ยอดขาย · เตรียมของ)</option>
+                  <option value="marketing">Marketing — เฉพาะการตลาดและวิดีโอ (ไม่เห็นข้อมูลธุรกิจ)</option>
                   <option value="admin">Admin — จัดการผู้ใช้ได้</option>
                 </select>
               </div>

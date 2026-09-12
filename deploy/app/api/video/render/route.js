@@ -22,7 +22,7 @@
 //    งานที่กำลังเรนเดอร์อยู่เลย เพราะไปหาคำว่า running ซึ่งไม่มีในระบบ
 import { NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
-import { requireAdmin } from "../../../../lib/apiAuth"
+import { requireMarketing } from "../../../../lib/apiAuth"
 
 const db = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -191,7 +191,7 @@ function badVisual(spec) {
 }
 
 export async function POST(req) {
-  const gate = await requireAdmin(req)
+  const gate = await requireMarketing(req)
   if (gate.error) return gate.error
 
   const token = process.env.GH_PAT

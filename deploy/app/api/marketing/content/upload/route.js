@@ -8,7 +8,7 @@
 // แต่มันวาดสินค้าขึ้นเองที่ไม่ใช่ของเรา และมีตัวหนังสือมั่วทั้งที่สั่งห้าม → ใช้จริงไม่ได้
 import { createClient } from "@supabase/supabase-js"
 import { NextResponse } from "next/server"
-import { requireAdmin } from "../../../../../lib/apiAuth"
+import { requireMarketing } from "../../../../../lib/apiAuth"
 
 const SB_URL = process.env.NEXT_PUBLIC_SUPABASE_URL
 const SB_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -21,7 +21,7 @@ const MAX_BYTES = 12 * 1024 * 1024
 const OK_TYPES = ["image/png", "image/jpeg", "image/webp", "image/gif"]
 
 export async function POST(req) {
-  const gate = await requireAdmin(req)
+  const gate = await requireMarketing(req)
   if (gate.error) return gate.error
 
   let form

@@ -258,7 +258,8 @@ export default function VideoStudio() {
       // ล็อกแอดมินตัวจริงออกเพราะ query พลาดครั้งเดียว แย่กว่าปล่อยให้ไปเจอ 403 ตอนกด
       try { role = (await getProfile(user.id))?.role } catch { role = undefined }
       if (stop) return
-      setAuthState(role && role !== "admin" ? "forbidden" : "ok")
+      // admin กับ marketing ใช้โรงงานวิดีโอได้ · role อื่นไม่ได้
+      setAuthState(role && role !== "admin" && role !== "marketing" ? "forbidden" : "ok")
     }).catch(() => {
       // getSession() พังเอง (localStorage ถูกปิด / โดเมนแปลก) — ถ้าไม่รับไว้ตรงนี้
       // authState จะค้างที่ "checking" คือจอ "กำลังตรวจสิทธิ์…" ตลอดกาล ไม่มี error ให้เห็น

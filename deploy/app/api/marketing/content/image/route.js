@@ -16,7 +16,7 @@ import { createClient } from "@supabase/supabase-js"
 import { NextResponse } from "next/server"
 import { readFile } from "fs/promises"
 import path from "path"
-import { requireAdmin } from "../../../../../lib/apiAuth"
+import { requireMarketing } from "../../../../../lib/apiAuth"
 import { planVisual, ideaToPrompt } from "../../../../../lib/artDirector"
 import { detectFranchise, FRANCHISE_LABEL } from "../../../../../lib/franchiseDetect"
 import { topSkusByFranchise } from "../../../../../lib/skuPicker"
@@ -516,7 +516,7 @@ const MIN_GEN_MS = 170_000
 
 export async function POST(req) {
   const deadline = Date.now() + TIME_BUDGET_MS
-  const gate = await requireAdmin(req)
+  const gate = await requireMarketing(req)
   if (gate.error) return gate.error
 
   let body

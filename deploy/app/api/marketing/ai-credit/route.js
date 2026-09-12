@@ -17,7 +17,7 @@
 //    key ปกติจะได้ 403 missing scope ซึ่งอ่านแล้วเหมือน key ผิด ทั้งที่ key ถูก
 import { NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
-import { requireAdmin } from "../../../../lib/apiAuth"
+import { requireMarketing } from "../../../../lib/apiAuth"
 
 const db = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -87,7 +87,7 @@ async function latestReading() {
 }
 
 export async function GET(req) {
-  const gate = await requireAdmin(req)
+  const gate = await requireMarketing(req)
   if (gate.error) return gate.error
 
   const key = process.env.OPENAI_ADMIN_KEY
@@ -187,7 +187,7 @@ export async function GET(req) {
 }
 
 export async function POST(req) {
-  const gate = await requireAdmin(req)
+  const gate = await requireMarketing(req)
   if (gate.error) return gate.error
 
   let body
