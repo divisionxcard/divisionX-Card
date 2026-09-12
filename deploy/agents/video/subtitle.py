@@ -32,8 +32,40 @@ def _markup(text):
     return _EM.sub(r"<em>\1</em>", safe)
 
 
-def render_many(chunks, out_dir, style="brand", size=64, bottom=430):
-    """chunks: [{'text': ..., 'start':, 'end':}] → เติมคีย์ 'png' ให้ทุกชิ้น"""
+def _karaoke_markup(text, upto):
+    """ข้อความเดียวกัน แต่แบ่งเป็นส่วนที่พูดไปแล้วกับส่วนที่ยังไม่ถึง
+
+    ⚠️ ตัดที่ "จำนวนอักขระ" ของข้อความที่ตัดช่องว่างออกแล้ว (ตรงกับที่ align นับ)
+       แต่ต้องแมปกลับไปยังตำแหน่งจริงในข้อความที่มีช่องว่าง ไม่งั้นจุดตัดจะเลื่อน
+       ทุกครั้งที่ประโยคมีช่องว่าง
+    """
+    raw = str(text or "").replace("*", "")
+    seen = 0
+    cut = len(raw)
+    for i, ch in enumerate(raw):
+        if seen >= upto:
+            cut = i
+            break
+        if not ch.isspace():
+            seen += 1
+    else:
+        cut = len(raw)
+    said, rest = raw[:cut], raw[cut:]
+    out = ""
+    if said:
+        out += f'<span class="said">{_html.escape(said)}</span>'
+    if rest:
+        out += f'<span class="rest">{_html.escape(rest)}</span>'
+    return out or _html.escape(raw)
+
+
+def render_many(chunks, out_dir, style="brand", size=64, bottom=430, karaoke=False):
+    """chunks: [{'text','start','end'}] → เติมคีย์ 'png' ให้ทุกชิ้น
+
+    karaoke=True และชิ้นนั้นมีคีย์ 'steps' → เรนเดอร์หลายใบต่อหนึ่งซับ
+    แล้วเติมคีย์ 'frames' = [{'png','start','end'}, ...] ให้แทน
+    (ยังเติม 'png' ของใบแรกไว้ด้วย เผื่อโค้ดเก่าที่อ่านคีย์นั้น)
+    """
     out_dir = pathlib.Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
     pal = STYLES.get(style, STYLES["brand"])
@@ -48,10 +80,11 @@ def render_many(chunks, out_dir, style="brand", size=64, bottom=430):
             viewport={"width": config.W, "height": config.H},
             device_scale_factor=1,
         )
-        for i, c in enumerate(chunks):
+
+        def shoot(markup, path):
             body = (tpl
                     .replace("{{FONT_BOLD}}", font)
-                    .replace("{{TEXT}}", _markup(c["text"]))
+                    .replace("{{TEXT}}", markup)
                     .replace("{{SIZE}}", str(size))
                     .replace("{{BOTTOM}}", str(bottom))
                     .replace("{{FILL}}", pal["fill"])
@@ -61,9 +94,22 @@ def render_many(chunks, out_dir, style="brand", size=64, bottom=430):
                     .replace("{{H}}", str(config.H)))
             page.set_content(body, wait_until="load")
             page.wait_for_timeout(30)              # ให้ @font-face โหลดจบก่อนถ่าย
-            f = out_dir / f"sub_{i:03d}.png"
-            page.screenshot(path=str(f), type="png", omit_background=True)
-            c["png"] = str(f)
+            page.screenshot(path=str(path), type="png", omit_background=True)
+
+        for i, c in enumerate(chunks):
+            steps = c.get("steps") if karaoke else None
+            if steps:
+                frames = []
+                for k, st in enumerate(steps):
+                    f = out_dir / f"sub_{i:03d}_{k:02d}.png"
+                    shoot(_karaoke_markup(c["text"], st["upto"]), f)
+                    frames.append({"png": str(f), "start": st["start"], "end": st["end"]})
+                c["frames"] = frames
+                c["png"] = frames[0]["png"]
+            else:
+                f = out_dir / f"sub_{i:03d}.png"
+                shoot(_markup(c["text"]), f)
+                c["png"] = str(f)
         browser.close()
     return chunks
 

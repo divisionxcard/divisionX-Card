@@ -44,6 +44,38 @@ export const VOICE_STYLES = [
     label: "ชัดคำ", desc: "ช้าลงนิด น่าเชื่อถือ" },
 ]
 
+// ── คาราโอเกะ: ไล่สีตามคำที่พูดไปแล้ว ────────────────────────────────
+// คำนวณว่า ณ เวลา t ควรไล่สีถึงอักขระที่เท่าไหร่ของซับใบนั้น
+//
+// ⚠️ ตรรกะนี้เป็นกระจกของ align.karaoke_steps ฝั่ง python (เฉพาะส่วนที่ตาเห็น)
+//    ฝั่งโน้นแบ่งเป็นช่วง ๆ เพราะต้องเรนเดอร์เป็นภาพนิ่งทีละใบ
+//    ฝั่งนี้คืนค่าต่อเนื่องได้ เพราะวาดสดทุกเฟรม — ผลที่ตาเห็นตรงกัน
+export function karaokeUpto(sub, words, t) {
+  const text = String(sub?.text || "").replace(/\*/g, "").replace(/\s+/g, "")
+  const n = text.length
+  if (!n) return 0
+  const start = sub.start, end = sub.end
+  if (t <= start) return 0
+  if (t >= end) return n
+
+  const inside = (words || []).filter(([, ws, we]) => {
+    const mid = (ws + we) / 2
+    return mid >= start && mid < end
+  })
+  const heard = inside.reduce((s, [w]) => s + String(w).replace(/\s+/g, "").length, 0)
+  // ได้ยินคนละเรื่องกับข้อความบนจอ (คนแก้ซับเอง) → ถอยไปไล่สีแบบเฉลี่ย
+  if (!inside.length || heard / n < 0.5 || heard / n > 1.8) {
+    return Math.min(n, Math.round(n * (t - start) / Math.max(0.001, end - start)))
+  }
+  let acc = 0
+  for (const [w, , we] of inside) {
+    const share = Math.max(1, Math.round(n * String(w).replace(/\s+/g, "").length / heard))
+    if (t < we) return Math.min(n, acc)
+    acc = Math.min(n, acc + share)
+  }
+  return n
+}
+
 export const SUB_STYLES = [
   { id: "brand", label: "แบรนด์",  desc: "ขาว ขอบกรมท่า เน้นคำเป็นฟ้านีออน" },
   { id: "plain", label: "เรียบ",   desc: "ขาว ขอบดำ แบบสากล" },
@@ -203,6 +235,9 @@ export function initFromProject(payload) {
       sub_style: ed.sub_style ? { ...ed.sub_style } : null,
       logo: ed.logo ? { ...ed.logo } : null,
     },
+    // เวลารายคำจาก whisper — ใช้ทำพรีวิวคาราโอเกะให้ตรงจังหวะพูดจริง
+    // null = ยังไม่เคยจับเวลารายคำ (พรีวิวจะไล่สีแบบเฉลี่ยแทน ซึ่งยังดูได้)
+    words: payload.words || null,
     // เสียงพากย์เป็นของระดับ plan (ไม่ใช่ edit) — เปลี่ยนแล้วเรนเดอร์ = TTS ใหม่
     // และตัวเรนเดอร์จะทิ้ง edit.timing/subtitles ให้เอง (จังหวะอ่านเปลี่ยนหมด)
     voice: plan.voice || "Aoede",

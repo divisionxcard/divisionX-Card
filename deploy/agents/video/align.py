@@ -176,6 +176,79 @@ def subtitle_chunks(segments, timing, max_chars=28):
     return out
 
 
+def karaoke_steps(chunk, words=None, min_step=0.12):
+    """แบ่งซับหนึ่งใบเป็น "ช่วงไล่สี" ตามจังหวะที่คนพูดจริง
+
+    คืน [{"upto": จำนวนอักขระที่ไล่สีถึง, "start": วิ, "end": วิ}, ...]
+    ช่วงสุดท้ายจบพร้อมซับใบนั้นเสมอ และช่วงแรกเริ่มพร้อมซับเสมอ (ไม่มีรู)
+
+    ⚠️ ใช้ "เวลาจริงของคำจาก whisper" เมื่อหาได้ ไม่ใช่หารเฉลี่ย เพราะคนพูดไม่ได้
+       พูดทุกคำยาวเท่ากัน — ไล่สีแบบเฉลี่ยจะหลุดจังหวะจนดูเหมือนเสียงกับซับคนละอัน
+       แต่ต้องมีทางถอยเสมอ เพราะซับที่คนแก้เองในห้องตัดต่ออาจไม่ตรงกับที่ whisper ได้ยิน
+
+    ⚠️ จับคู่ด้วย "ช่วงเวลา" ไม่ใช่จับคู่ข้อความ — คำที่อยู่ในกรอบเวลาของซับใบนี้
+       คือคำที่ถูกพูดตอนซับใบนี้อยู่บนจอ ซึ่งเป็นสิ่งที่คนดูเห็นจริง
+       (จับคู่ข้อความจะพังทันทีเมื่อคนแก้ถ้อยคำในห้องตัดต่อ)
+    """
+    text = _NOSPACE.sub("", str(chunk.get("text") or "").replace("*", ""))
+    n = len(text)
+    start = float(chunk.get("start") or 0.0)
+    end = float(chunk.get("end") or start)
+    span = max(0.001, end - start)
+    if n == 0:
+        return []
+
+    # คำที่ถูกพูดระหว่างซับใบนี้อยู่บนจอ (ใช้จุดกึ่งกลางของคำเป็นเกณฑ์)
+    inside = []
+    for w, ws, we in (words or []):
+        mid = (ws + we) / 2
+        if start <= mid < end:
+            inside.append((_NOSPACE.sub("", w), ws, we))
+
+    heard = sum(len(w) for w, _, _ in inside)
+    # ยาวต่างกันเกินครึ่ง = whisper ได้ยินคนละเรื่องกับข้อความบนจอ (คนแก้ซับเอง)
+    use_words = bool(inside) and 0.5 <= (heard / n) <= 1.8
+
+    steps = []
+    if use_words:
+        acc = 0
+        for i, (w, ws, we) in enumerate(inside):
+            # แบ่งอักขระบนจอตามสัดส่วนความยาวของคำที่ได้ยิน
+            share = max(1, round(n * len(w) / heard))
+            acc = min(n, acc + share)
+            steps.append({"upto": acc,
+                          "start": max(start, ws if i else start),
+                          "end": min(end, we)})
+        if steps:
+            steps[-1]["upto"] = n
+            steps[-1]["end"] = end
+    else:
+        # ทางถอย: ไล่ทีละ ~4 อักขระ แบ่งเวลาเท่า ๆ กัน — ยังดูเป็นคาราโอเกะ ไม่หลุดจังหวะมาก
+        groups = max(1, round(n / 4))
+        for i in range(groups):
+            steps.append({
+                "upto": n if i == groups - 1 else max(1, round(n * (i + 1) / groups)),
+                "start": start + span * i / groups,
+                "end": start + span * (i + 1) / groups,
+            })
+
+    # รวมช่วงที่สั้นจนตาไม่ทัน — กะพริบหนึ่งเฟรมดูเหมือนภาพกระตุก ไม่ใช่ไล่สี
+    merged = []
+    for s in steps:
+        if merged and (s["end"] - merged[-1]["start"]) < min_step:
+            merged[-1]["upto"] = s["upto"]
+            merged[-1]["end"] = s["end"]
+        else:
+            merged.append(dict(s))
+    # ปิดรูระหว่างช่วง — ปล่อยไว้จะเห็นซับหายวับตอนข้ามช่วง
+    for i in range(len(merged) - 1):
+        merged[i]["end"] = merged[i + 1]["start"]
+    if merged:
+        merged[0]["start"] = start
+        merged[-1]["end"] = end
+    return [s for s in merged if s["end"] > s["start"]]
+
+
 def _chunk(text, limit):
     if len(text) <= limit:
         return [text]

@@ -26,7 +26,7 @@
     "scenes":    { "0": { "visual": "sku:OP 17", "zoom": 0.08,
                           "motion": "punch", "transition": "circleopen" } },
     "headline":  { "text": "...", "seconds": 3.0, "size": 86 },
-    "sub_style": { "style": "brand", "size": 64, "bottom": 430 },
+    "sub_style": { "style": "brand", "size": 64, "bottom": 430, "karaoke": true },
     "logo":      { "file": "logo.png", "pos": "tr", "size": 140, "opacity": 0.9 }
   }
 }
@@ -59,7 +59,11 @@
   · พรีวิวประมาณทรานสิชันด้วย CSS — จังหวะ/ทิศตรง ลวดลายละเอียดดูโหมด "ผลจริงล่าสุด"
 - **logo** — `file` คือชื่อไฟล์ใน `.video-work/<project>/` (อัปโหลดผ่าน API ข้อ 2.5) ·
   `pos` ∈ `tl | tr | bl | br` · `size` = ความกว้าง px บนเฟรม 1080 · `opacity` 0-1
-- **headline / sub_style** — override ค่าที่เคยอยู่ระดับบนของ plan
+- **headline / sub_style** — override ค่าที่เคยอยู่ระดับบนของ plan ·
+  `sub_style.karaoke` = ไล่สีซับตามคำที่พูดไปแล้ว (ค่าปริยายปิด เพราะเพิ่มจำนวนภาพ
+  ซับหลายเท่า) · ใช้เวลารายคำจาก `words.json` ในโฟลเดอร์งาน ซึ่ง make_video
+  เก็บไว้ตอนรัน whisper แล้วผูกกับ stamp ของเสียง — รอบที่คนแก้เวลาเองจะข้าม
+  whisper แต่ยังไล่สีตรงจังหวะได้เพราะอ่านจากแคชนี้
 
 ## 2. API routes (dev เท่านั้น — บน Vercel ตอบ 404)
 
@@ -80,6 +84,8 @@ if (gate) return gate
 → `{ name, plan, timing, videoUrl, voiceUrl, frames }`
 - `plan` = plan.json ทั้งก้อน (รวม edit ถ้ามี)
 - `timing` = timing.json ทั้งก้อน `{ segments, timing, subtitles }`
+- `words` = `[[คำ, เริ่ม, จบ], ...]` จาก words.json หรือ `null`
+  (ส่งเฉพาะเมื่อ stamp ตรงกับเสียงปัจจุบัน — ไม่ตรงแปลว่าไล่สีจะหลุดจังหวะ ต้องถอยไปเฉลี่ยแทน)
 - `videoUrl` = `/api/video/local/asset?name=X&file=X.mp4` (null ถ้ายังไม่มี)
 - `voiceUrl` = `.../asset?name=X&file=voice.wav`
 - `frames` = [`.../asset?name=X&file=frames/frame_000.png`, ...] เรียงตามฉาก

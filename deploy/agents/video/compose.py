@@ -190,7 +190,17 @@ def build(scene_clips, timing, subtitles, voice_wav, out_mp4,
             last = out
 
     # ── ซ้อนซับ + พาดหัว ──
-    overlays = list(subtitles)
+    # ซับโหมดคาราโอเกะมีหลายเฟรมต่อหนึ่งใบ (frames) — แผ่ออกเป็นชั้นซ้อนทีละเฟรม
+    # ใบธรรมดามีภาพเดียว (png) ใช้ช่วงเวลาของตัวมันเอง
+    overlays = []
+    for c in subtitles:
+        if c.get("frames"):
+            # ⚠️ จังหวะเด้งเข้าต้องอ้าง "เวลาเริ่มของซับใบนั้น" ไม่ใช่ของเฟรมย่อย
+            #    ไม่งั้นข้อความจะเด้งใหม่ทุกครั้งที่ไล่สีไปอีกคำ กลายเป็นตัวหนังสือกระตุกทั้งประโยค
+            for fr in c["frames"]:
+                overlays.append({**fr, "pop_from": c["start"]})
+        elif c.get("png"):
+            overlays.append(c)
     if headline:
         overlays = [{"png": str(headline), "start": 0.0,
                      "end": float(headline_seconds)}] + overlays
@@ -201,7 +211,7 @@ def build(scene_clips, timing, subtitles, voice_wav, out_mp4,
         # y เป็นสูตรตามเวลา — ซับ/พาดหัวลอยเด้งขึ้นตอนเข้า ไม่โผล่นิ่ง ๆ แบบเดิม
         rise = _POP_RISE_HEAD if (headline and k == 0) else _POP_RISE_SUB
         filters.append(
-            f"[{last}][{base + k}:v]overlay=x=0:y={_pop_y(ov['start'], rise)}"
+            f"[{last}][{base + k}:v]overlay=x=0:y={_pop_y(ov.get('pop_from', ov['start']), rise)}"
             f":format=auto"
             f":enable='between(t,{ov['start']:.3f},{ov['end']:.3f})'[{out}]")
         last = out

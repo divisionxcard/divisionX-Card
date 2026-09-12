@@ -317,6 +317,7 @@ function SubTab({ state, dispatch }) {
   const styleId = ss.style ?? state.plan?.style ?? "brand"
   const size = ss.size ?? state.plan?.sub_size ?? 64
   const bottom = ss.bottom ?? 430
+  const karaoke = !!(ss.karaoke ?? state.plan?.sub_karaoke)
   const set = (patch) => dispatch({ type: "SUBSTYLE_SET", patch })
 
   const selIdx = state.ui.selected.kind === "sub" ? state.ui.selected.index : null
@@ -340,6 +341,21 @@ function SubTab({ state, dispatch }) {
             </button>
           ))}
         </div>
+      </div>
+
+      <div className={styles.group}>
+        <div className={styles.label}>ไล่สีตามคำที่พูด (คาราโอเกะ)</div>
+        <label className={styles.radio}>
+          <input type="checkbox" checked={karaoke}
+            onChange={e => set({ karaoke: e.target.checked })} />
+          <span>เปิดใช้ <span className={styles.hintInline}>· ลุคมาตรฐานของคลิปสั้น คนดูแบบปิดเสียงตามง่ายขึ้น</span></span>
+        </label>
+        <p className={styles.hint}>
+          {state.words?.length
+            ? `ไล่สีตามจังหวะพูดจริง (มีเวลารายคำ ${state.words.length} คำ)`
+            : "ยังไม่มีเวลารายคำของงานนี้ — จะไล่สีแบบเฉลี่ยไปก่อน เรนเดอร์อีกรอบแล้วจะแม่นขึ้น"}
+          {" · "}เรนเดอร์นานขึ้นเล็กน้อยเพราะต้องวาดซับหลายเฟรมต่อหนึ่งใบ
+        </p>
       </div>
 
       <div className={styles.group}>

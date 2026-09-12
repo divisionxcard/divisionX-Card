@@ -127,12 +127,40 @@ def build_video(plan, out_mp4=None, skip_align=False):
             json.dumps(plan, ensure_ascii=False, indent=2), encoding="utf-8")
 
     # ── 3. จับเวลาแต่ละบรรทัด ──
+    #
+    # เวลารายคำจาก whisper ถูกเก็บลง words.json ผูกกับ stamp ของเสียง
+    # เหตุผล: ซับคาราโอเกะต้องใช้เวลารายคำ แต่รอบที่คนแก้เวลาเองจากห้องตัดต่อ
+    # เราข้าม whisper ทิ้ง (เพื่อความเร็ว) ถ้าไม่แคชไว้ คาราโอเกะจะหลุดจังหวะ
+    # ทันทีที่คนแตะจุดตัดสักครั้ง — ซึ่งคือรอบที่สองของทุกงาน
+    words_f = work / "words.json"
+    voice_stamp = stamp_f.read_text(encoding="utf-8") if stamp_f.exists() else ""
+    words = None
+
+    def _load_words():
+        try:
+            d = json.loads(words_f.read_text(encoding="utf-8"))
+            if d.get("stamp") == voice_stamp:
+                return [(w, float(s), float(e)) for w, s, e in d["words"]]
+        except Exception:
+            pass
+        return None
+
+    def _save_words(ws):
+        try:
+            words_f.write_text(json.dumps(
+                {"stamp": voice_stamp, "words": [[w, s, e] for w, s, e in ws]},
+                ensure_ascii=False), encoding="utf-8")
+        except Exception:
+            pass    # แคชพังไม่ใช่เหตุให้ทั้งงานล้ม — แค่รอบหน้าต้องจับเวลาใหม่
+
     t0 = time.time()
     if edit.get("timing"):
         # คนตัดสินเวลาเองจากห้องตัดต่อ — เชื่อคนก่อนเครื่องเสมอ และได้ของแถมคือ
         # ข้ามขั้นที่ช้าที่สุด (whisper) → วนแก้-เรนเดอร์ได้เร็ว
         timing = _edited_timing(edit["timing"], segs, total)
-        _log("3/6", f"ใช้เวลาที่แก้มือจากห้องตัดต่อ {len(timing)} ฉาก")
+        words = _load_words()
+        _log("3/6", f"ใช้เวลาที่แก้มือจากห้องตัดต่อ {len(timing)} ฉาก"
+             + (f" · เวลารายคำจากแคช {len(words)} คำ" if words else ""))
     elif skip_align:
         timing = align._even(segs, total)
         _log("3/6", "ข้ามการจับเวลา — แบ่งตามสัดส่วนตัวอักษรแทน")
@@ -140,6 +168,7 @@ def build_video(plan, out_mp4=None, skip_align=False):
         try:
             words = align.word_times(wav, model_size=plan.get("whisper", "large-v3-turbo"))
             timing = align.map_segments(segs, words, total)
+            _save_words(words)                       # ให้รอบแก้ถัด ๆ ไปใช้ต่อโดยไม่ต้องรัน whisper ซ้ำ
             _log("3/6", f"จับเวลาจากเสียงจริง {len(words)} คำ ({time.time()-t0:.0f} วิ)")
         except Exception as e:
             timing = align._even(segs, total)
@@ -177,8 +206,15 @@ def build_video(plan, out_mp4=None, skip_align=False):
     else:
         chunks = align.subtitle_chunks(segs, timing,
                                        max_chars=int(plan.get("sub_chars", 28)))
+
+    # โหมดคาราโอเกะ — ไล่สีตามคำที่พูดไปแล้ว (ลุคมาตรฐานของคลิปสั้นยุคนี้)
+    # ค่าปริยายคือปิด เพราะเพิ่มจำนวนภาพซับหลายเท่า ทำให้ขั้นประกอบช้าลง
+    karaoke = bool(ss.get("karaoke", plan.get("sub_karaoke", False)))
+    if karaoke:
+        for c in chunks:
+            c["steps"] = align.karaoke_steps(c, words)
     subtitle.render_many(chunks, work / "subs", style=sub_style,
-                         size=sub_size, bottom=sub_bottom)
+                         size=sub_size, bottom=sub_bottom, karaoke=karaoke)
     he = dict(edit.get("headline") or {})
     head_text = he.get("text") if "text" in he else plan.get("headline")
     head_secs = float(he.get("seconds") or plan.get("headline_seconds", 3.0))
@@ -187,7 +223,9 @@ def build_video(plan, out_mp4=None, skip_align=False):
         head_png = subtitle.render_headline(head_text, work / "headline.png",
                                             style=sub_style,
                                             size=int(he.get("size") or 86))
-    _log("5/6", f"ซับ {len(chunks)} ชิ้น ({time.time()-t0:.0f} วิ)")
+    n_frames = sum(len(c.get("frames") or [1]) for c in chunks)
+    _log("5/6", f"ซับ {len(chunks)} ชิ้น ({time.time()-t0:.0f} วิ)"
+         + (f" · คาราโอเกะ {n_frames} เฟรม" if karaoke else ""))
 
     # ── 6. ประกอบ ──
     t0 = time.time()

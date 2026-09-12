@@ -10,7 +10,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import styles from "./PreviewPlayer.module.css"
 import {
   clamp, fmtTime, sceneAt, subAt, totalOf,
-  effectiveMotion, effectiveTransition, PAN_MIN_ZOOM,
+  effectiveMotion, effectiveTransition, PAN_MIN_ZOOM, karaokeUpto,
 } from "./editorStore"
 
 // ── ค่าที่ต้องสะท้อนฝั่งเรนเดอร์จริงแบบเป๊ะ ๆ ──
@@ -34,6 +34,20 @@ const PAL = {
 function emphasize(text) {
   const parts = String(text ?? "").split(/\*(.+?)\*/g)
   return parts.map((p, i) => (i % 2 ? <em key={i}>{p}</em> : p))
+}
+
+// โหมดคาราโอเกะ — แบ่งข้อความที่จุด upto (นับเฉพาะอักขระที่ไม่ใช่ช่องว่าง)
+// ให้ตรงกับที่ subtitle.py นับ ไม่งั้นจุดตัดบนพรีวิวกับบนคลิปจริงจะไม่ตรงกัน
+// ⚠️ ทั้งสองส่วนต้องขนาดเท่ากันเสมอ — เปลี่ยนขนาดตัวอักษรตอนไล่สีจะทำให้
+//    ทั้งบรรทัดขยับซ้าย-ขวาทุกคำ ดูเหมือนตัวหนังสือสั่น
+function karaokeSplit(text, upto) {
+  const raw = String(text ?? "").replace(/\*/g, "")
+  let seen = 0, cut = raw.length
+  for (let i = 0; i < raw.length; i++) {
+    if (seen >= upto) { cut = i; break }
+    if (!/\s/.test(raw[i])) seen++
+  }
+  return [raw.slice(0, cut), raw.slice(cut)]
 }
 
 // transform ของแต่ละท่ากล้อง ณ สัดส่วนเวลา p (0-1) ในฉาก — กระจกของ
@@ -93,9 +107,11 @@ export default function PreviewPlayer({ state, dispatch, api }) {   // eslint-di
   const [stageW, setStageW] = useState(0)             // ความกว้างเวทีจริง (px) — ฐานของทุกสัดส่วน
   const [scn, setScn] = useState({ cur: 0, prev: -1 })
   const [subIdx, setSubIdx] = useState(-1)
+  const [upto, setUpto] = useState(-1)        // -1 = ไม่ได้เปิดคาราโอเกะ
   const [headOn, setHeadOn] = useState(true)
   const scnRef = useRef(scn)
   const subRef = useRef(subIdx)
+  const uptoRef = useRef(upto)
   const headRef = useRef(headOn)
 
   // พาดหัวที่มีผลจริง — ตรรกะเดียวกับ make_video.py: edit มีคีย์ text เมื่อไหร่
@@ -120,8 +136,11 @@ export default function PreviewPlayer({ state, dispatch, api }) {   // eslint-di
       style: ss.style || state.plan?.style || "brand",
       size: Number(ss.size ?? 64),
       bottom: Number(ss.bottom ?? 430),
+      karaoke: !!(ss.karaoke ?? state.plan?.sub_karaoke),
     }
   }, [state.edit?.sub_style, state.plan])
+  const karaokeRef = useRef(false)
+  karaokeRef.current = subStyle.karaoke
 
   // ── วาดหนึ่งเฟรม ณ เวลา t — ใช้ทั้งตอนเล่น (จาก audio) และตอนหยุด (จาก ui.t) ──
   const paint = useCallback((t) => {
@@ -141,6 +160,11 @@ export default function PreviewPlayer({ state, dispatch, api }) {   // eslint-di
     }
     const si = subAt(s.subtitles, t)
     if (si !== subRef.current) { subRef.current = si; setSubIdx(si) }
+    // จุดไล่สีเปลี่ยนแค่ตอนข้ามคำ (ไม่กี่สิบครั้งต่อคลิป) จึงตั้ง state ได้โดยไม่หน่วง
+    // — เทียบก่อนตั้งเสมอ ไม่งั้นจะ re-render ทุกเฟรมตอนเล่น
+    const up = karaokeRef.current && si >= 0
+      ? karaokeUpto(s.subtitles[si], s.words, t) : -1
+    if (up !== uptoRef.current) { uptoRef.current = up; setUpto(up) }
     const on = t < headSecsRef.current
     if (on !== headRef.current) { headRef.current = on; setHeadOn(on) }
   }, [])
@@ -320,7 +344,15 @@ export default function PreviewPlayer({ state, dispatch, api }) {   // eslint-di
                          "--pop": `${(16 * k).toFixed(1)}px` }}
               >
                 <div className={styles.subText} style={{ ...textStyle, fontSize: subStyle.size * k }}>
-                  {emphasize(sub.text)}
+                  {subStyle.karaoke && upto >= 0
+                    ? (() => {
+                        const [said, rest] = karaokeSplit(sub.text, upto)
+                        return <>
+                          {said && <span className={styles.said}>{said}</span>}
+                          {rest && <span className={styles.rest}>{rest}</span>}
+                        </>
+                      })()
+                    : emphasize(sub.text)}
                 </div>
               </div>
             )}

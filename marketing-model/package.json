@@ -13,6 +13,7 @@
     "./examples": "./examples.json"
   },
   "sideEffects": false,
+  "scripts": { "test": "node selftest.mjs" },
   "license": "UNLICENSED",
   "private": true
 }

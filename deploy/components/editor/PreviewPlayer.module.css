@@ -151,6 +151,11 @@
   color: var(--accent, #3ddcff); /* *คำเน้น* — ฟ้านีออนตาม brand identity */
 }
 
+/* โหมดคาราโอเกะ — ต้องตรงกับ subtitle_template.html ฝั่งเรนเดอร์จริง
+   said = พูดไปแล้ว · rest = ยังไม่ถึง (จางลงแต่ยังอ่านออก ขนาดเท่าเดิมเสมอ) */
+.said { color: var(--accent, #3ddcff); }
+.rest { opacity: 0.68; }
+
 .logo {
   position: absolute;
   z-index: 4;

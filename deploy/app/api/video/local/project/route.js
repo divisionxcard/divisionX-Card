@@ -36,11 +36,21 @@ export async function GET(req) {
       .map(f => asset(`frames/${f}`))
   } catch { /* ไม่มีโฟลเดอร์ frames — พรีวิวจะโชว์พื้นเปล่าแทน */ }
 
+  // เวลารายคำจาก whisper (ถ้าเคยเรนเดอร์แล้ว) — พรีวิวคาราโอเกะต้องใช้
+  // ส่งเฉพาะเมื่อ stamp ตรงกับเสียงปัจจุบัน ไม่งั้นไล่สีจะหลุดจังหวะแบบเงียบ ๆ
+  let words = null
+  try {
+    const w = read("words.json")
+    const stamp = fs.readFileSync(path.join(dir, "voice.stamp.json"), "utf8")
+    if (w?.stamp === stamp && Array.isArray(w.words)) words = w.words
+  } catch { /* ยังไม่เคยจับเวลารายคำ — พรีวิวจะไล่สีแบบเฉลี่ยแทน */ }
+
   const mp4 = `${name}.mp4`
   return NextResponse.json({
     name,
     plan: read("plan.json"),          // null ได้ ถ้าเป็นงานยุคก่อนที่ยังไม่เก็บ plan
     timing,
+    words,                            // [[คำ, เริ่ม, จบ], ...] หรือ null
     videoUrl: fs.existsSync(path.join(dir, mp4)) ? asset(mp4) : null,
     voiceUrl: fs.existsSync(path.join(dir, "voice.wav")) ? asset("voice.wav") : null,
     frames,
