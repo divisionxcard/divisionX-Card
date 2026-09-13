@@ -33,6 +33,23 @@ import subprocess
 import sys
 from datetime import date, timedelta
 
+# ⚠️ ข้อความในสคริปต์นี้เป็นภาษาไทยล้วน แต่ Python บน Windows เลือก encoding ของ
+#    stdout จาก ACP ของเครื่อง (เครื่องนี้ = cp1252 เพราะเป็นวินโดวส์อังกฤษ) ซึ่ง
+#    **เข้ารหัสไทยไม่ได้** → print บรรทัดแรกของ main() ก็ตายแล้วด้วย UnicodeEncodeError
+#    เห็นชัดเฉพาะตอนถูกเรียกแบบดักเอาต์พุต (บอท Telegram) หรือรันจาก cmd
+#    ที่ผ่านมารอดมาได้เพราะบังเอิญมี PYTHONIOENCODING ติดมาจาก shell ที่สตาร์ต — ไม่ใช่
+#    ของที่ตั้งค้างไว้ในเครื่อง พอบอทขึ้นเองจาก Startup หลังรีบูตก็จะพังทันที (13 ก.ย. 2026)
+for _s in (sys.stdout, sys.stderr):
+    if _s is not None:
+        try:
+            _s.reconfigure(encoding="utf-8", errors="replace")
+        except Exception:
+            pass
+
+# reconfigure ข้างบนแก้ให้ตัวเองเท่านั้น ไม่ตกทอดถึงลูก — สคริปต์ scraper ที่เราไปเรียก
+# ก็พิมพ์ไทยเหมือนกันและเขียนลง pipe เดียวกัน จึงต้องยัดผ่าน env ให้ทั้งสายด้วย
+os.environ.setdefault("PYTHONIOENCODING", "utf-8:replace")
+
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 ENV_FILE = ROOT / "deploy" / ".env.local"
 
