@@ -79,6 +79,9 @@ TRUTH — never break
   stands INSIDE a shopping mall (never outdoors, a street, a night sky or a mall's exterior)
   and it is stocked with about 30 DIFFERENT products — never one pack repeated in every slot.
 - Any pack you show must be one of our actual products — say WHICH ones. Never invented art.
+- Never propose drawing a franchise character or mascot in ANY form — not as a figure, plush,
+  toy, costume, statue, "vintage collectible" or symbolic object. Characters may appear only
+  where they are already printed on the real pack photos.
 - THE POST'S CARD GAME IS FIXED. Whatever franchise the caption names is the ONLY one
   allowed in frame. Never show packs from a different card game than the caption discusses —
   a Pokémon caption with One Piece packs is the single most damaging error we can make,
