@@ -2,7 +2,7 @@
 type: worklog
 date: 2026-09-14
 tags: [marketing, image, poster, art-direction, prompt, creativity]
-commits: []
+commits: [59d15cb]
 status: ✅ แก้แล้ว · ทดสอบขั้นคิดไอเดียก่อน/หลังแล้ว
 ---
 
