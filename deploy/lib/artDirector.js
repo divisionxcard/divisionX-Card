@@ -14,6 +14,13 @@
 //   พอบอกไอเดียให้ โมเดลออกแบบเป็นภาพแบ่งซ้าย-ขวา ซ้ายมือคนจัดเด็คบนเพลย์แมต
 //   ขวามือคนใส่การ์ดลงแฟ้ม — อ่านเข้าใจได้ก่อนอ่านตัวหนังสือ
 //
+// ⚠️ 14 ก.ย. 2026 — แก้เพราะภาพ "จำเจ" (เจ้าของบอกว่ากฎบังคับ AI มากเกินไป)
+//    ยิงขั้นนี้กับแคปชั่นจริง 6 ใบก่อนแก้: เนื้อหาไอเดียต่างกันก็จริง แต่ทุกใบได้
+//    มือถือซองเรียงพัด · ตู้ในห้าง · สินค้ากิน 60% · เลย์เอาต์ข้อความสูตรเดียวกัน
+//    ต้นเหตุคือกฎสไตล์ 30 ข้อต่อท้ายพร้อมคำสั่ง "obey all" + เมนูท่า 7 แบบ +
+//    ประโยค "มือถือซองพัด ใช้ได้เลย" — มันจึงหยิบของที่อนุญาตชัดที่สุดทุกครั้ง
+//    ตอนนี้ส่งเฉพาะกฎเหล็ก + ลายเซ็นแบรนด์สั้น ๆ + แนวภาพที่หมุนตาม id
+//
 // ⚠️ ขั้นนี้ห้ามคิดข้อความบนภาพเอง — ข้อความมาจาก FACTS เท่านั้น
 //    ถ้าปล่อยให้มันเสนอคำ โมเดลวาดจะเอาไปเขียนจริง แล้วเราจะได้ข้อความไทย
 //    ที่ไม่เคยผ่านด่านตรวจคำเว่อร์ (ดู content_voice.json → overclaim)
@@ -31,24 +38,16 @@ const MODEL_CHAIN = [
 const SYSTEM = `You are the art director for DivisionX Card, a Thai trading-card vending machine brand.
 
 You receive an approved Thai social caption. Decide the ONE visual idea that makes a
-scrolling reader understand the point in under 1 second — before reading any text.
+scrolling reader understand the point in under 1 second — before reading any text — and
+a visual style that makes this poster look unlike the ones before it.
 
-HARD RULES
+MEANING
 - The image must carry the MEANING of the caption. A product sitting on a podium is a
   failure unless the caption is genuinely about the product's appearance.
-- Choose a concrete compositional device that encodes the idea: split screen, before/after,
-  POV hands, two paths, scale comparison, one lit among many, sequence of steps.
-- We sell the same sealed packs as every other shop. NEVER imply our packs are rarer,
-  special, or better. Our only real advantage is convenience: self-serve, open every day
-  during mall hours, in a mall near you, no queue, pick it yourself off the screen.
-  (Never "24 hours" — the machines sit inside malls and close when the mall closes.)
-- Our machines are stocked with about 30 DIFFERENT products each. Never picture a machine
-  filled with one identical pack repeated in every slot — that looks fake to our customers.
-- Every machine stands INSIDE a shopping-mall concourse. Never propose an outdoor scene,
-  a street, a night sky, or a mall's exterior facade — all 12 machines are indoors.
-  A landmark may appear, but as the mall's INTERIOR.
-- A hand fanning out several packs is a good composition — use it freely. Just say WHICH
-  real products are in the fan; the packs must be our actual products, never invented art.
+- Invent the compositional device that encodes this idea best. Split screens, before/after,
+  POV, scale, sequences, visual metaphors, diagrams, one symbolic object — these are only
+  examples, not a menu. Reject your first idea if it would work equally well for any other
+  caption. Specific beats generic.
 - THE IDEA MUST DELIVER WHAT THE CAPTION PROMISES. If the caption announces a list, a
   ranking, a comparison or a number, the image has to show that thing — not a mood shot
   that happens to share the topic. A caption promising "top 10 cards" with an image of
@@ -59,41 +58,68 @@ HARD RULES
   viewer spots instantly — it destroys trust faster than a plain product shot ever could.
   If you only have reference photos of ONE product, do NOT build a split-screen; pick a
   composition that works honestly with what you actually have.
+
+CREATIVE FREEDOM
+- Our recent posters all looked alike. Unless THIS caption genuinely needs one of them,
+  do NOT fall back on: a hand fanning out packs · a vending machine in a mall concourse ·
+  a pack on a podium or pedestal · lightning behind the product · the product filling most
+  of the frame · a headline-on-top, info-block, bottom-line template layout.
+- Rendering style, palette balance, lighting, camera angle and layout are yours to choose.
+  Photography, illustration, 3D, collage, graphic design and typography-led posters are all
+  welcome.
+- You are given a SUGGESTED STYLE for this poster. Use it unless it fights the idea; if it
+  does, choose a different distinctive style yourself.
+
+TRUTH — never break
+- We sell the same sealed packs as every other shop. NEVER imply our packs are rarer,
+  special, or better. Our only real advantage is convenience: self-serve, open every day
+  during mall hours, in a mall near you, no queue, pick it yourself off the screen.
+  (Never "24 hours" — the machines sit inside malls and close when the mall closes.)
+- A poster does not need to show a machine or a mall. But IF a vending machine appears, it
+  stands INSIDE a shopping mall (never outdoors, a street, a night sky or a mall's exterior)
+  and it is stocked with about 30 DIFFERENT products — never one pack repeated in every slot.
+- Any pack you show must be one of our actual products — say WHICH ones. Never invented art.
 - THE POST'S CARD GAME IS FIXED. Whatever franchise the caption names is the ONLY one
   allowed in frame. Never show packs from a different card game than the caption discusses —
   a Pokémon caption with One Piece packs is the single most damaging error we can make,
   because it proves nobody checked.
 - Do NOT invent any text, wording, slogan, price, percentage, or number. Text is supplied
   separately and is already approved. Describe WHERE text blocks sit, never WHAT they say.
-- Reject your own first idea if it would work equally well for any other caption.
-  Specific beats generic.
 
 Reply as JSON with exactly these keys:
 {
-  "big_idea":      "<Thai, one sentence: what the viewer understands in 1 second>",
-  "visual_device": "<English, the compositional device>",
-  "subject":       "<English, what is physically in frame>",
-  "composition":   "<English, layout, framing, where the text blocks sit>",
-  "why_it_works":  "<Thai, one sentence>"
+  "big_idea":        "<Thai, one sentence: what the viewer understands in 1 second>",
+  "visual_device":   "<English, the compositional device>",
+  "style_direction": "<English, the rendering style, palette balance and lighting you chose>",
+  "subject":         "<English, what is physically in frame>",
+  "composition":     "<English, layout, framing, where the text blocks sit>",
+  "why_it_works":    "<Thai, one sentence>"
 }`
 
 /**
  * @param {object} o
- * @param {string} o.caption   แคปชั่นที่อนุมัติแล้ว
- * @param {string} [o.format]  รูปแบบโพสต์ (compare/question/ranking/...)
- * @param {string} [o.sku]     ชื่อสินค้าที่โยงถึง
- * @param {string[]} [o.rules] กฎออกแบบจาก tasks/art_direction.json
+ * @param {string} o.caption      แคปชั่นที่อนุมัติแล้ว
+ * @param {string} [o.format]     รูปแบบโพสต์ (compare/question/ranking/...)
+ * @param {string} [o.sku]        ชื่อสินค้าที่โยงถึง
+ * @param {string[]} [o.rules]    กฎเหล็กจาก tasks/art_direction.json → hard_rules
+ * @param {string[]} [o.signature] ลายเซ็นแบรนด์จาก art_direction.json → brand_signature
+ * @param {string} [o.styleHint]  แนวภาพที่เสนอให้ใบนี้ (หมุนตาม id)
  * @returns {Promise<object|null>} null = ล้มเหลว ให้ผู้เรียกไปต่อโดยไม่มีไอเดียภาพ
  */
-export async function planVisual({ caption, format, sku, franchise, rules = [] }) {
+export async function planVisual({ caption, format, sku, franchise, rules = [], signature = [], styleHint = null }) {
   const key = process.env.OPENAI_API_KEY
   if (!key || !caption?.trim()) return null
 
-  // กฎแบรนด์ที่ถอดมาจากงานจริง — ใส่เข้าไปให้ตัวคิดไอเดียเห็นตั้งแต่แรก
-  // ดีกว่าไปดักตอนวาดเสร็จแล้ว เพราะไอเดียที่ผิดกฎจะถูกทิ้งตั้งแต่ยังไม่เสียเงินวาด
-  const brand = rules.length
-    ? `\n\nBRAND DESIGN RULES (derived from the brand's real work — obey all):\n` +
+  // กฎเหล็กใส่ให้ตัวคิดไอเดียเห็นตั้งแต่แรก — ไอเดียที่ผิดความจริงจะถูกทิ้งก่อนเสียเงินวาด
+  // ⚠️ ส่งเฉพาะกฎเหล็ก ห้ามส่งกฎสไตล์ปนมา — ตัวคิดไอเดียเคารพทุกข้อที่เห็นแบบตามตัวอักษร
+  //    แล้วลอกสูตรเลย์เอาต์ออกมาทุกใบ (ดู art_direction.json → _restructure_note)
+  const hard = rules.length
+    ? `\n\nHARD RULES (truth, legal and accuracy — obey all):\n` +
       rules.map((r, i) => `${i + 1}. ${r}`).join("\n")
+    : ""
+  const sig = signature.length
+    ? `\n\nBRAND SIGNATURE (keep the poster recognisably ours — a starting point, never a template):\n` +
+      signature.map(s => `- ${s}`).join("\n")
     : ""
 
   const user = [
@@ -102,6 +128,7 @@ export async function planVisual({ caption, format, sku, franchise, rules = [] }
     // บอกค่ายให้ตัวคิดรู้ตั้งแต่แรก ไม่งั้นมันจะเสนอไอเดียกลาง ๆ ที่ไปได้กับทุกค่าย
     // แล้วตัววาดค่อยไปหยิบลายผิดค่ายมาใส่ทีหลัง (เคสจริง: Dragon Ball ได้สมอกับคลื่น)
     franchise ? `ค่ายการ์ด: ${franchise} — องค์ประกอบภาพต้องเข้ากับค่ายนี้ ห้ามหยิบสัญลักษณ์ของค่ายอื่นมาปน` : null,
+    styleHint ? `SUGGESTED STYLE for this poster: ${styleHint}` : null,
     `\nแคปชั่นที่อนุมัติแล้ว:\n${caption.trim()}`,
   ].filter(Boolean).join("\n")
 
@@ -115,7 +142,7 @@ export async function planVisual({ caption, format, sku, franchise, rules = [] }
           model,
           response_format: { type: "json_object" },
           messages: [
-            { role: "system", content: SYSTEM + brand },
+            { role: "system", content: SYSTEM + hard + sig },
             { role: "user", content: user },
           ],
         }),
@@ -132,7 +159,7 @@ export async function planVisual({ caption, format, sku, franchise, rules = [] }
       if (!txt) { lastErr = `${model}: ไม่มีเนื้อหากลับมา`; continue }
       const idea = JSON.parse(txt)
       if (!idea?.big_idea) { lastErr = `${model}: ผลลัพธ์ไม่มี big_idea`; continue }
-      return { ...idea, _model: model }
+      return { ...idea, _model: model, _style_hint: styleHint }
     } catch (e) {
       lastErr = `${model}: ${String(e.message || e).slice(0, 120)}`
     }
@@ -149,6 +176,7 @@ export function ideaToPrompt(idea) {
   return [
     `THE ONE IDEA THIS POSTER MUST COMMUNICATE: ${idea.big_idea}`,
     idea.visual_device ? `Visual device: ${idea.visual_device}` : null,
+    idea.style_direction ? `Visual style: ${idea.style_direction}` : null,
     idea.subject ? `Subject in frame: ${idea.subject}` : null,
     idea.composition ? `Composition: ${idea.composition}` : null,
     "A viewer scrolling past must grasp this idea from the picture alone, " +

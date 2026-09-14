@@ -143,25 +143,34 @@ function pickConcept(cfg, { format, franchise, id }) {
   return byKey[keys[Math.abs(Number(id) || 0) % keys.length]]
 }
 
-function buildPrompt(style, concept, facts, mode, hasRefs = false, idea = null, brandRules = [], fr = null, hasMachineRef = false, branch = null) {
+function buildPrompt(style, concept, facts, mode, hasRefs = false, idea = null, brandRules = [], fr = null, hasMachineRef = false, branch = null, signature = []) {
   const wantsText = mode !== "art"
   const p = []
 
+  // ⚠️ 14 ก.ย. 2026 — บรรทัดนี้เคยล็อกแนว "high-energy Thai retail advertising — layered,
+  //    dramatic lighting" ให้ทุกใบ แล้วตามด้วยกฎสไตล์ 30 ข้อ เจ้าของบอกว่าภาพจำเจ
+  //    ไม่ได้ห้ามโมเดล "ทำสวย" แต่เลิกบอกว่า "สวยต้องหน้าตาแบบนี้"
   p.push(
-    "You are a senior graphic designer creating a square 1:1 social media poster " +
-    "for a Thai trading-card vending machine brand. Output a finished, polished poster " +
-    "in the style of high-energy Thai retail advertising — layered, dramatic lighting, " +
-    "strong focal hierarchy. Not a plain product photo, not a minimal web card."
+    "You are an award-winning art director creating a square 1:1 social media poster " +
+    "for a Thai trading-card vending machine brand. Output a finished, scroll-stopping poster. " +
+    "Our recent posters looked too alike — choose the rendering style, palette balance, " +
+    "lighting, camera and layout that best serve THE IDEA at the end of this brief, so this " +
+    "one looks clearly different. Not a plain product photo on a pedestal, not a generic template."
   )
 
-  // กฎออกแบบที่ถอดจากงานจริงของแบรนด์ — tasks/art_direction.json
+  // กฎเหล็ก — ข้อเท็จจริง กฎหมาย ความถูกต้องของภาษาไทย (tasks/art_direction.json → hard_rules)
   // ⚠️ ต้องอยู่ *ก่อน* ไอเดียภาพ — ทดสอบ 20 ส.ค. 2026 วางกฎไว้ท้ายแล้วกฎกินไอเดีย
   //    (กฎข้อ "สินค้าต้องกินพื้นที่ ≥60%" ทำให้ภาพกลับไปเป็นซองลอยเฉย ๆ
   //     ทั้งที่ตัวคิดเสนอให้เล่าเป็นสองโลกของนักสะสมพร้อมมือคนจัดเด็ค/แฟ้มสะสม)
   //    โมเดลให้น้ำหนักกับสิ่งที่อยู่ท้ายพรอมต์มากกว่า จึงต้องให้ไอเดียปิดท้าย
   if (brandRules.length) {
-    p.push("BRAND DESIGN RULES (obey unless they clash with THE ONE IDEA below):\n" +
+    p.push("HARD RULES (truth, legal and accuracy — never break these):\n" +
       brandRules.map((r, i) => `${i + 1}. ${r}`).join("\n"))
+  }
+  // ลายเซ็นแบรนด์ — บอกว่า "ต้องมีอะไร" ไม่บอกว่า "ต้องจัดวางยังไง"
+  if (signature.length) {
+    p.push("BRAND SIGNATURE (keep it recognisably ours — a starting point, never a template):\n" +
+      signature.map(s => `- ${s}`).join("\n"))
   }
 
   // ⚠️ คอนเซปต์ค่าเริ่มต้นคือ treasure = "ล่าสมบัติ One Piece" ซึ่งผูกกับค่าย OP ทั้งก้อน
@@ -179,17 +188,23 @@ function buildPrompt(style, concept, facts, mode, hasRefs = false, idea = null, 
     //    โปสเตอร์จึงถูกจัดวางแบบเดียวกันหมด ต่อให้เปลี่ยนคอนเซปต์
     //    ส่งเสมอแม้คอนเซปต์ไม่เข้ากับค่าย เพราะโครงจัดวางไม่ผูกกับธีมค่าย
     //    diagonal_clash = แบ่งทแยงสองฝั่งปะทะกัน (กิมมิคแบบ VS)
+    // ⚠️ 14 ก.ย. 2026 — เดิมสั่ง "LAYOUT — arrange the poster this way" + "Visual elements to include"
+    //    แต่คอนเซปต์ถูกเลือกอัตโนมัติจากรูปแบบโพสต์ ไม่ได้มาจากคนตัดสิน การใช้คำบังคับจึงเท่ากับ
+    //    ให้เครื่องสุ่มกฎมาล็อกภาพ แล้วแย่งที่ไอเดียของใบนั้น → ลดเป็นข้อเสนอ
     const layoutLine = concept.layoutText
-      ? `\nLAYOUT — arrange the poster this way: ${concept.layoutText}`
+      ? `\nOne layout that could work: ${concept.layoutText}`
       : ""
-    p.push((conceptFits
-      ? `POSTER CONCEPT: ${concept.label} — ${concept.mood}.\n` +
-        ((concept.decor || []).length ? `Visual elements to include: ${concept.decor.join(", ")}.\n` : "") +
+    p.push("SUGGESTED DIRECTION (optional — use, adapt, or ignore it if the idea is stronger without):\n" +
+      (conceptFits
+      ? `Concept: ${concept.label} — ${concept.mood}.\n` +
+        ((concept.decor || []).length ? `Possible elements: ${concept.decor.join(", ")}.\n` : "") +
         palette
       : palette) + layoutLine)
   }
 
-  p.push(`BRAND STYLE: ${style.style}`)
+  // ลายเซ็นแบรนด์ใน art_direction.json แทนบรรทัดนี้แล้ว — ส่งทั้งสองชุดเท่ากับดันกรมท่าเข้าไปสองรอบ
+  // เก็บไว้เป็นทางสำรองตอนไฟล์นั้นไม่มี brand_signature
+  if (!signature.length) p.push(`BRAND STYLE: ${style.style}`)
   p.push(
     // ⚠️ 20 ส.ค. 2026 — ประโยคนี้เคยเขียนว่า "a One Piece nautical theme" ลอย ๆ
     //    ผลคือโปสเตอร์ Dragonball FB-09 ออกมามีสมอ คลื่น เข็มทิศ นกนางนวลเต็มใบ
@@ -206,12 +221,17 @@ function buildPrompt(style, concept, facts, mode, hasRefs = false, idea = null, 
   //    ผลคือโปสเตอร์ #35 วาดตู้ตั้งอยู่ "นอกห้าง" ริมถนนตอนกลางคืนหน้าไอคอนสยาม
   //    ทั้งที่แคปชั่นเขียนว่า "เดินห้างชิล ๆ แวะมากดตรงนี้" — ขัดกันเองต่อหน้า
   //    ตู้ทั้ง 12 ตู้อยู่ในห้างทั้งหมด ไม่มีตู้ไหนอยู่นอกอาคารเลยสักตู้
+  // ⚠️ 14 ก.ย. 2026 — เดิมเขียนว่า "every machine..." แต่ตามด้วย "never floating in an empty
+  //    void or studio backdrop" ซึ่งโมเดลอ่านเป็น "ทุกโปสเตอร์ต้องมีฉากห้าง" — ภาพจริง 5/5 ใบ
+  //    ล่าสุดมีตู้กลางห้างเป็นองค์ประกอบใหญ่ แม้แคปชั่นจะไม่ได้พูดถึงตู้เลย
+  //    ความจริงที่ต้องคุมคือ "ตู้อยู่ในห้าง" ไม่ใช่ "โปสเตอร์ต้องอยู่ในห้าง"
   p.push(
-    "SETTING — non-negotiable: every machine stands INSIDE a Thai shopping-mall concourse. " +
-    "Polished indoor floor, warm mall ceiling lighting, softly blurred storefronts, " +
-    "escalators or walkways behind. Never outdoors, never a street or sidewalk, never a " +
-    "night sky, never a parking lot, never floating in an empty void or studio backdrop. " +
-    "If a landmark is referenced it is the mall's INTERIOR, not its exterior facade." +
+    "SETTING: IF a vending machine or a real place appears, it is INSIDE a Thai shopping mall — " +
+    "polished indoor floor, warm mall lighting, softly blurred storefronts. Never put a machine " +
+    "outdoors, on a street or sidewalk, under a night sky or in a parking lot, and if a landmark " +
+    "is referenced show the mall's INTERIOR, not its exterior facade. A poster that shows no " +
+    "machine and no real place may use any backdrop that serves the idea — studio, abstract, " +
+    "illustrated or graphic." +
     // จุดสังเกตจริงของสาขานั้น ถ้าแคปชั่นเอ่ยชื่อห้างมา — ของจริงจากฐานข้อมูล ไม่ใช่ของที่โมเดลเดา
     (branch
       ? `\nTHIS POST NAMES A REAL BRANCH — draw THAT spot, not a generic mall: ` +
@@ -224,20 +244,24 @@ function buildPrompt(style, concept, facts, mode, hasRefs = false, idea = null, 
 
   // จาก #35 — ถือซองเรียงเป็นพัดได้ (เจ้าของชอบองค์ประกอบนี้) แต่ลายบนซอง
   // ต้องเป็นซองจริงของเรา ไม่ใช่ลายที่โมเดลแต่งขึ้นเอง
+  // ⚠️ 14 ก.ย. 2026 — เลิกเชียร์ท่านี้ ("that composition is welcome") ไอเดียที่ทดสอบได้
+  //    มือถือซองพัด 6/6 ใบ · ยังใช้ได้ถ้าเข้ากับเรื่อง แค่ไม่ใช่ท่าตั้งต้นอีกต่อไป
   p.push(
-    "PACKS IN HAND: a hand may hold several packs fanned out — that composition is welcome. " +
-    "But every pack must be one of the REAL products from the reference photos, copied " +
+    "PACKS: every pack shown must be one of the REAL products from the reference photos, copied " +
     "faithfully. Never invent pack artwork, never invent a card game that is not ours. " +
     "If several packs are shown they should be different real products, each recognisable."
   )
 
   // ตกแต่งตามค่ายของสินค้าที่โพสต์นี้พูดถึง — จาก skus.franchise (tasks/franchise_style.json)
   // เดิมไม่มีขั้นนี้ ทุกโพสต์จึงได้ลายเดินเรือเหมือนกันหมดไม่ว่าจะขาย Dragon Ball หรือ Pokemon
+  // ⚠️ 14 ก.ย. 2026 — เดิมสั่ง "set the mood, ornament and lighting of the whole poster" ทุกใบ
+  //    โปสเตอร์ค่ายเดียวกันจึงได้ของตกแต่งชุดเดิมเสมอ (One Piece = คลื่น เชือก เข็มทิศทุกใบ)
+  //    ส่วนที่ต้องคุมจริงคือ "ห้ามปนค่าย" ซึ่งยังเป็นคำสั่งเหมือนเดิม
   if (fr?.decor) {
     p.push(
-      `FRANCHISE ATMOSPHERE — this post is about ${fr.label}:\n${fr.decor}\n` +
-      "Use this to set the mood, ornament and lighting of the whole poster. " +
-      "Do not mix in motifs belonging to a different franchise."
+      `FRANCHISE MOOD — this post is about ${fr.label}. Optional inspiration; use sparingly or not at all:\n` +
+      `${fr.decor}\n` +
+      "Never mix in motifs belonging to a different franchise."
     )
   }
 
@@ -309,9 +333,13 @@ function buildPrompt(style, concept, facts, mode, hasRefs = false, idea = null, 
 
   // ไอเดียภาพปิดท้ายพรอมต์ — โมเดลให้น้ำหนักกับสิ่งที่อยู่ท้ายสุดมากที่สุด
   // ถ้าวางไว้ต้น ๆ กฎแบรนด์ 29 ข้อที่ตามมาจะกลบจนภาพกลับไปเป็นซองวางบนแท่นเหมือนเดิม
+  // ⚠️ 14 ก.ย. 2026 — ประโยคเดิมคือ "ถ้ากฎแบรนด์ทำให้ไอเดียแบน ให้ทำตามไอเดีย" ซึ่งถูกตอนที่
+  //    brandRules เป็นกฎสไตล์ แต่ตอนนี้ตัวแปรเดียวกันคือกฎเหล็ก (ซองจริง ไทยถูก ห้ามแต่งตัวเลข)
+  //    ถ้าไม่แยกให้ชัด = อนุญาตให้โมเดลแหกกฎเหล็กเพื่อไอเดีย
   if (idea) {
-    p.push(idea + "\n\nThis idea outranks every stylistic preference above. " +
-      "If a brand rule would flatten it into a plain product shot, follow the idea.")
+    p.push(idea + "\n\nThis idea outranks the brand signature, the suggested direction and every " +
+      "stylistic habit above — if any of them would flatten it into a plain product shot or a " +
+      "template, follow the idea. The HARD RULES and FACTS still apply without exception.")
   }
   return p.join("\n\n")
 }
@@ -821,7 +849,19 @@ export async function POST(req) {
     // ค่าใช้จ่ายหลักหลักสตางค์ต่อครั้ง เทียบกับค่าวาด ~$0.06 (flare) → คุ้มมากถ้าช่วยให้ไม่ต้องวาดซ้ำ
     // ล้มแล้วไม่ทำให้ทั้งงานล้ม — planVisual คืน null แล้วเราวาดต่อแบบเดิม
     const artCfg = await loadJson("art_direction.json")
-    const brandRules = artCfg?.rules || []
+    // ⚠️ 14 ก.ย. 2026 — กฎแยกเป็นชั้นแล้ว (ดู art_direction.json → _restructure_note)
+    //    คำบังคับมีแค่กฎเหล็ก · กฎสไตล์เดิมอยู่ใน retired_rules และตั้งใจไม่อ่าน —
+    //    ห้าม fallback ไปหยิบ retired_rules เด็ดขาด นั่นคือการเอาสูตรที่ทำให้ภาพจำเจกลับมาเงียบ ๆ
+    const brandRules = artCfg?.hard_rules || artCfg?.rules || []
+    const signature = artCfg?.brand_signature || []
+    // แนวภาพหมุนตาม id — ใบเดิมได้แนวเดิมเสมอ (เทียบผลได้) · คนละใบได้คนละแนว
+    // ตัวคูณต้องไม่มีตัวหารร่วมกับจำนวนแนว ไม่งั้นบางแนวจะไม่มีวันถูกเลือก
+    // (เช่นมี 14 แนวแล้วคูณ 7 = ได้แค่ 2 แนววนไปมา) · 7 เป็นจำนวนเฉพาะ จึงเช็กแค่หารลงตัวไหม
+    const styles = artCfg?.style_directions || []
+    const step = styles.length % 7 === 0 ? 1 : 7
+    const styleHint = styles.length
+      ? styles[(Math.abs(Number(content.id) || 0) * step + 3) % styles.length]
+      : null
 
     // ธีมตามค่ายของสินค้า — ถ้าโพสต์ไม่ผูกกับ SKU ไหนเลยก็ใช้ค่ากลางที่ไม่มีลายค่ายใด
     const frCfg = await loadJson("franchise_style.json")
@@ -834,6 +874,8 @@ export async function POST(req) {
       sku: sku?.name,
       franchise: fr?.label,
       rules: brandRules,
+      signature,
+      styleHint,
     })
 
     // ── รูปตู้จริง — ต้องตัดสินใจ *หลัง* ได้ไอเดียแล้ว ──
@@ -915,7 +957,7 @@ export async function POST(req) {
     const prompt = buildPrompt(
       style, concept, facts, mode, refs.length > 0,
       idea ? ideaToPrompt(idea) : null,
-      brandRules, frBlock, wantsMachine, branch,
+      brandRules, frBlock, wantsMachine, branch, signature,
     )
 
     // ── โหมดขอบรีฟอย่างเดียว — ไม่วาด ไม่เสียเครดิต ──
@@ -945,7 +987,8 @@ export async function POST(req) {
           branch: branch?.display_name || null,
           headline: head.headline || null,
           sub: head.sub || null,
-          idea: idea ? { big_idea: idea.big_idea, visual_device: idea.visual_device } : null,
+          idea: idea ? { big_idea: idea.big_idea, visual_device: idea.visual_device,
+                         style_direction: idea.style_direction, style_hint: idea._style_hint } : null,
         },
       })
     }
@@ -1054,6 +1097,10 @@ export async function POST(req) {
         idea: idea ? {
           big_idea: idea.big_idea,
           visual_device: idea.visual_device,
+          // แนวที่ระบบเสนอ กับแนวที่ตัวคิดไอเดียเลือกจริง — ถ้าภาพยังจำเจ ดูคู่นี้ก่อนว่า
+          // แนวถูกหมุนจริงไหม และตัวคิดไอเดียปัดทิ้งบ่อยแค่ไหน
+          style_hint: idea._style_hint,
+          style_direction: idea.style_direction,
           why_it_works: idea.why_it_works,
           model: idea._model,
         } : null,

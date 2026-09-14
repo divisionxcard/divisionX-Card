@@ -22,13 +22,14 @@
   "_gemini_note": "Nano Banana 2 = gemini-3.1-flash-image · รับภาพอ้างอิงได้ถึง 14 รูป · ต้องเปิด billing เหมือนกัน (free tier โควตาภาพ = 0)",
   "model": "gemini-3.1-flash-image",
   "_identity_note": "อัตลักษณ์แบรนด์ — ฟ้านีออนไฟฟ้า + สายฟ้า + โครเมียม บนกรมท่า (ไม่ใช่ดำ-ทอง) · ตรงกับที่ใช้ในงานออกแบบชิ้นอื่นของแบรนด์",
-  "style": "Premium trading-card retail brand visual. Deep navy blue background (#0B1B3A to #12264F gradient), electric neon blue accents (#00C2FF), sharp lightning-bolt motifs, brushed chrome metallic edges with subtle reflections. Dramatic studio lighting with rim light. Clean, high contrast, modern, slightly futuristic. Square 1:1 composition with the subject centered and breathing room around it.",
+  "_style_note": "14 ก.ย. 2026 — เดิมระบุพื้นหลัง gradient สายฟ้า โครเมียม แสงสตูดิโอ และ 'วางของกลางภาพ' ครบทุกอย่าง ทุกใบจึงหน้าตาเดียวกัน (เจ้าของบอกว่าจำเจ) · ตอนนี้เป็นแค่ค่าสำรองตอนไม่มี brand_signature ใน art_direction.json · แนวภาพให้ไอเดียกับ style_directions เป็นคนเลือก",
+  "style": "Recognisably DivisionX Card: deep navy and electric neon cyan (#00C2FF) appear somewhere in the piece — as the ground, the light, a frame or an accent. Gold is a welcome secondary colour. Rendering style, lighting, composition and palette balance change from poster to poster to serve the idea.",
   "_negative_note": "⚠️ ต้องแยก 2 ชุด ห้ามรวมกลับเป็นก้อนเดียว — 19 ส.ค. 2026 พบว่าเดิมรวมกันแล้วส่งทุกโหมด ทำให้โหมด full ได้พรอมต์ที่บอก 'วาดตัวอักษรไทยให้ตรงเป๊ะ' แล้วต่อท้ายด้วย 'no text, no letters' ในพรอมต์เดียวกัน = สั่งขัดกันเอง · negative_always ใช้ได้ทุกโหมด (กฎหมาย+คุณภาพ) · negative_no_text ใช้เฉพาะโหมด art ที่ให้เทมเพลตวางตัวอักษรเอง · 21 ส.ค. 2026 เพิ่ม 3 ข้อเรื่องซองต้องไม่ขาด/มือต้องถูกกายวิภาค/การ์ดต้องไม่ยับ — เจ้าของทักว่าภาพที่ได้ซองดูขาดและมีมือที่สามโผล่มา ต้นเหตุคือแคปชั่นเขียนว่า 'ฉีกซอง' แล้วตัวคิดฉากสั่งวาดตามตรง ๆ โดยไม่มีอะไรกันไว้",
   "negative_always": [
     "do not draw or invent any anime/manga characters",
     "do not recreate copyrighted card artwork or brand logos",
     "no people's faces",
-    "not cluttered, not busy, no random objects",
+    "no random objects unrelated to the idea",
     "sealed booster packs must look factory-fresh and intact — never torn, ripped, crumpled, creased or damaged, and never shown mid-tear or being opened",
     "if hands appear: at most two hands, five fingers each, correct human anatomy, both attached to the same person — no extra hands, no floating or disembodied hands or arms",
     "trading cards must be flat, rectangular and undamaged — no bent, folded or shredded cards"

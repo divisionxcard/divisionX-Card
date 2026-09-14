@@ -1,9 +1,48 @@
 {
-  "_comment": "กฎออกแบบที่ถอดจากงานจริงของแบรนด์ 19 ส.ค. 2026 · ต้นฉบับที่คนอ่านคือ wiki/knowledge-base/05-visual-identity.md · แก้ไฟล์นี้แล้วมีผลกับภาพที่ระบบสร้างทันที แต่ต้องแก้ที่ wiki ให้ตรงกันด้วย ไม่งั้นคนกับเครื่องจะใช้กฎคนละชุด",
-  "_source_note": "ผ่านด่านคัดค้านแล้ว 23 ข้อจากที่เสนอมา 48 ข้อ · ที่ตัดทิ้งคือข้อที่สรุปเกินฐานข้อมูล (เพจมีผู้ติดตาม 97 คน) หรือสั่งงานออกแบบจริงไม่ได้ (เช่น 'ให้ดูพรีเมียม')",
-  "_usage": "ต่อท้าย system prompt ของขั้นคิดไอเดียภาพ (art director) และของตัวสร้างภาพ",
-  "updated": "2026-08-19",
-  "rules": [
+  "_comment": "กฎออกแบบของโปสเตอร์ AI · ต้นฉบับที่คนอ่านคือ wiki/knowledge-base/05-visual-identity.md (ภาคผนวก ข) · แก้ไฟล์นี้แล้วมีผลกับภาพที่ระบบสร้างทันที แต่ต้องแก้ที่ wiki ให้ตรงกันด้วย ไม่งั้นคนกับเครื่องจะใช้กฎคนละชุด",
+  "_source_note": "ชุดแรก 19 ส.ค. 2026 ผ่านด่านคัดค้าน 23 ข้อจากที่เสนอมา 48 ข้อ แล้วเพิ่มเป็น 30 ข้อ",
+  "_restructure_note": "14 ก.ย. 2026 — เจ้าของบอกว่าบรีฟ 'บังคับ AI ออกแบบมากเกินไป ไม่มีอิสระ ภาพจำเจ' · ยิงขั้นคิดไอเดียกับแคปชั่นจริง 6 ใบก่อนแก้: 6/6 ได้ 1080x1350 พื้นกรมท่า · 6/6 มีมือถือซองเรียงพัด · 5/6 ตู้ในห้าง + สินค้ากินเกิน 60% + แสงขวาหลัง · 6/6 วางข้อความสูตรเดียวกัน (พาดหัวหนึ่งในสามบน → แท็ก → กล่องข้อมูล → บรรทัดวันที่ล่างสุด ทั้งที่โพสต์ไม่มีวันที่) = กฎข้อ 6-8 และ 13-15 ถูกลอกออกมาตรง ๆ · สาเหตุ: กฎ 30 ข้อถูกส่งเข้าทั้งขั้นคิดไอเดีย (สั่ง 'obey all') และขั้นวาด โดยไม่แยกว่าข้อไหนคือความจริงที่ห้ามพลาด ข้อไหนคือสูตรสไตล์ · แยกใหม่เป็น hard_rules / brand_signature / style_directions · กฎสไตล์ที่เป็นสูตรย้ายไป retired_rules ไม่ส่งเข้าพรอมต์แล้ว",
+  "updated": "2026-09-14",
+  "_usage": "hard_rules + brand_signature ส่งเข้าทั้งขั้นคิดไอเดีย (lib/artDirector.js) และขั้นวาด (image/route.js) · style_directions ถูกหยิบใบละหนึ่งแนวเป็นข้อเสนอให้ขั้นคิดไอเดีย",
+
+  "_hard_note": "ข้อเท็จจริง กฎหมาย และความถูกต้องของภาษาไทย — ทุกข้อมีเหตุการณ์จริงหรือความเสี่ยงทางกฎหมายรองรับ · ⚠️ ห้ามย้ายกฎสไตล์ (สี เลย์เอาต์ แสง สัดส่วน) กลับเข้ามาที่นี่ นั่นคือต้นเหตุที่ภาพจำเจ · จะเพิ่มข้อใหม่ ถามก่อนว่า 'ถ้าละเมิดแล้วผิดความจริงหรือผิดกฎหมายไหม' ถ้าแค่ไม่สวย ไม่ใช่กฎเหล็ก",
+  "hard_rules": [
+    "Use only the supplied real product photography. Never draw, redraw, restyle, or invent a card pack, card artwork, character, or publisher logo.",
+    "Render Thai text only when copying it character-by-character from supplied text. Thai has vowels above and below consonants plus tone marks. If accurate rendering is uncertain, leave the area empty rather than writing wrong Thai.",
+    "Leave room above and below Thai text for upper vowels, tone marks and lower vowels — they must never clip, collide or overlap other elements.",
+    "Never invent numbers. No prices, branch counts, percentages, card values, dates, or quantities that were not supplied.",
+    "Never print a branch, store or vending-machine count anywhere in the artwork — not in a badge, not in body copy. The number changes weekly and a poster outlives it. Availability is supplied as a fact for your understanding only.",
+    "Never depict scarcity, guaranteed rarity, or superiority over other sellers. No SOLD OUT, GUARANTEED, LAST DAY, or BEST IN THAILAND devices. The selling point is convenience (self-serve, no queue, in a nearby mall, open every day during mall hours), never the product itself. NEVER say or imply 24 hours — the machines sit inside malls and close when the mall closes.",
+    "Print set codes only when they are the publisher's official code, formatted as 'Official Set Name [OP-15]'. Never print internal inventory codes such as PRB 01, YGH UT01, MLP SEA02, or MLP BP-01.",
+    "The main Thai text must stay readable when the whole image is shown only 320px wide on a phone.",
+    "The brand LINE ID is exactly '@divisionxcard' — all lowercase. Never render any other spelling or capitalisation.",
+    "Never render phone numbers, website addresses, QR codes or social-media handles that are not supplied in FACTS. Do not add a contact strip or contact buttons with invented details — they send customers to strangers."
+  ],
+  "_contact_rule_note": "เพิ่ม 14 ก.ย. 2026 — ดูโปสเตอร์จริง 5 ใบล่าสุด (#39-#45) 4 ใบมีแถบติดต่อด้านล่าง และเบอร์โทรไม่ซ้ำกันเลยสักใบ (096-396-3210 · 098-268-8210 · 086-386-3219) บวกเว็บ www.divisionxcard.com — โมเดลแต่งเองทั้งหมด เพราะกฎสไตล์เดิมข้อ 12 สั่งให้มี 'contact strip 3 capsules' แต่ไม่เคยให้ข้อมูลติดต่อจริงไป · กฎข้อ 'ห้ามแต่งตัวเลข' ไม่พอ เพราะโมเดลไม่ได้มองเบอร์โทรเป็นตัวเลขข้อมูลธุรกิจ",
+
+  "_signature_note": "สิ่งที่ทำให้คนเห็นแล้วรู้ว่าเป็น DivisionX — สั้นโดยตั้งใจ · สีกรมท่า+ฟ้านีออนไฟฟ้ามาจากเจ้าของ (อัตลักษณ์ที่ใช้กับงานออกแบบทุกชิ้น) ห้ามตัดทิ้ง แต่บอกแค่ว่า 'ต้องมี' ไม่บอกว่า 'ต้องจัดยังไง'",
+  "brand_signature": [
+    "Deep navy and electric cyan (#00D4FF) must appear somewhere in the piece — as the ground, the light, a frame, or an accent. How much, and which other colours join them, is a design decision for this poster.",
+    "Gold (#E0B457) is a welcome secondary colour. Lightning, chrome and rim light belong to our visual language — use them when they help the idea, never by default.",
+    "Each poster should look clearly different from the last one. A template look — the same layout, the same lighting, the same pack in a hand — fails even when it breaks no rule."
+  ],
+
+  "_style_directions_note": "แนวภาพหมุนเวียน · route เลือกใบละหนึ่งแนวตาม id ของคอนเทนต์ (ใบเดิมได้แนวเดิมเสมอ เทียบผลได้ · คนละใบได้คนละแนว) แล้วส่งเป็น 'ข้อเสนอ' ไม่ใช่คำสั่ง — ถ้าไม่เข้ากับเนื้อหา ตัวคิดไอเดียเลือกแนวอื่นเองได้ · เพิ่ม/ลบแนวที่นี่ได้เลยไม่ต้องแตะโค้ด · ⚠️ ทุกแนวต้องไม่ขัดกฎเหล็กหรือ negative_always (ไม่มีหน้าคน ไม่มีตัวละครลิขสิทธิ์ ซองต้องไม่ขาด) — เลี่ยงคำว่า torn/ripped แม้จะหมายถึงกระดาษพื้นหลัง เพราะโมเดลเอาไปใช้กับซองได้",
+  "style_directions": [
+    "Cinematic photoreal close-up — shallow depth of field, tactile real textures, one strong motivated light source",
+    "Bold graphic poster — flat colour blocks, big confident shapes, the product as a clean cut-out",
+    "Stylised 3D render — a glossy, toy-like miniature world built around the product",
+    "Editorial magazine layout — generous negative space, refined typography, calm and premium",
+    "Comic-panel energy — halftone dots, speed lines and dramatic panel framing, with no characters",
+    "Layered paper collage — cut-out photos, stickers and tape arranged playfully but tidily",
+    "Minimal still life — a single hero object, lots of space, sculptural light and shadow",
+    "Lifestyle snapshot — a real-feeling moment inside a Thai mall, hands and objects only, no faces",
+    "Arcade neon — glowing sign shapes, reflective surfaces, a playful game-like atmosphere",
+    "Clean infographic — a diagram, steps or side-by-side drawn clearly, best when the post teaches"
+  ],
+
+  "_retired_note": "กฎสไตล์ที่เลิกส่งเข้าพรอมต์ 14 ก.ย. 2026 — เก็บไว้ดูย้อนหลังและเผื่ออยากหยิบบางข้อกลับไปทำเป็นแนวภาพ (style_directions) · ไม่มีโค้ดอ่านคีย์นี้โดยตั้งใจ · ข้อ 5 (4:5) กับ 25-26 ไม่เคยใช้ได้กับโปสเตอร์ AI อยู่แล้ว (ภาพที่สั่งจริงเป็น 1024x1024 · ระยะขอบวิดีโอ 9:16 · น้ำหนักฟอนต์ของเทมเพลต) · ข้อ 9, 28, 29 ครอบด้วยกฎเหล็กเรื่องตัวเลข/TEXT LOCK และหลัก 'เข้าใจก่อนอ่าน' ของขั้นคิดไอเดียแล้ว",
+  "retired_rules": [
     "Ground every composition in deep navy. Base #0A1628, allowed range #06132E to #12264F. Never pure black, never a white or light ground.",
     "Use exactly one accent family: electric cyan #00D4FF, with #4FC3F7 for soft glow and text, #007EA7 for dim edges. No second hue family.",
     "Gold #E0B457 is a SECONDARY accent only. Allowed on borders, numerals, rarity or collection badges, and headline strokes. Never as a background or dominant field. Cyan always leads.",
@@ -20,26 +59,19 @@
     "Lightning-bolt motifs belong in the background behind the subject. They must never cross the headline or the product.",
     "Group products in a curved fan arrangement with depth. Never a flat evenly-spaced row.",
     "Every piece must survive on BOTH a white page and a navy page. Give it its own solid ground or a defined edge. No borderless glow bleeding to the frame edge.",
-    "Use only the supplied real product photography. Never draw, redraw, restyle, or invent a card pack, card artwork, character, or publisher logo.",
-    "Render Thai text only when copying it character-by-character from supplied text. Thai has vowels above and below consonants plus tone marks. If accurate rendering is uncertain, leave the area empty rather than writing wrong Thai.",
-    "Give Thai type at least 35% extra leading above cap height for upper vowels and tone marks. Never tight-track Thai.",
-    "Never invent numbers. No prices, branch counts, percentages, card values, dates, or quantities that were not supplied.",
-    "Never print a branch, store or vending-machine count anywhere in the artwork — not in a badge, not in body copy. The number changes weekly and a poster outlives it. Availability is supplied as a fact for your understanding only.",
-    "Never depict scarcity, guaranteed rarity, or superiority over other sellers. No SOLD OUT, GUARANTEED, LAST DAY, or BEST IN THAILAND devices. The selling point is convenience (self-serve, no queue, in a nearby mall, open every day during mall hours), never the product itself. NEVER say or imply 24 hours — the machines sit inside malls and close when the mall closes.",
-    "Print set codes only when they are the publisher's official code, formatted as 'Official Set Name [OP-15]'. Never print internal inventory codes such as PRB 01, YGH UT01, MLP SEA02, or MLP BP-01.",
     "Minimum type size: primary information at least 5% of canvas width, secondary at least 3.5%. Validate by scaling the image to 320px wide; if primary text is unreadable, the layout fails.",
     "For 9:16 video frames at 1080x1920, keep every essential element inside a margin of 140px top, 500px bottom, 60px left, 180px right.",
     "Headline weight is capped at 700 (Sarabun Bold / IBM Plex Sans Thai 700). Do not propose concepts that depend on a heavier display weight.",
     "The DivisionX logo may sit in whichever corner suits the composition — place it where it stays clear of the subject and reads at a glance. Keep its size and clear space consistent; only the corner may change.",
     "Convey premium through material (chrome, foil, rim light, depth), never through adjectives placed in the image.",
-    "Reject any concept that needs explanatory text inside the image to make sense.",
-    "The brand LINE ID is exactly '@divisionxcard' — all lowercase. Never render any other spelling or capitalisation."
+    "Reject any concept that needs explanatory text inside the image to make sense."
   ],
+
   "_open_questions_note": "คำถามที่ยังไม่มีคำตอบ อยู่ในหัวข้อ 'ยังไม่รู้' ของไฟล์ wiki · ห้ามเดาแล้วเขียนเป็นกฎที่นี่",
   "open_questions": [
     "ไฟล์ฟอนต์พาดหัวที่ใช้บนแบนเนอร์อยู่ไหน — ไม่มีในรีโป ทั้งเว็บและโปสเตอร์ตันที่น้ำหนัก 700 ถ้าไม่ได้ต้องหา display Thai น้ำหนัก 800+ มาแทน",
     "ขอไฟล์โลโก้โปร่งใส (PNG/SVG) — logo.png ปัจจุบัน alpha 255 ทั้งใบ มุมเป็นดำทึบ แต่เจ้าของมีเวอร์ชันโปร่งใสอยู่นอกรีโป (เห็นบน branches-hero)",
-    "จะสลับ poster_mode จาก full เป็น art ไหม — art แก้ปัญหา AI สะกดไทยผิดได้ แต่ image_style.json:35 ระบุว่า full คือแบบที่เจ้าของชอบ ห้ามสลับเองโดยไม่ถาม",
+    "จะสลับ poster_mode จาก full เป็น art ไหม — art แก้ปัญหา AI สะกดไทยผิดได้ แต่ image_style.json ระบุว่า full คือแบบที่เจ้าของชอบ ห้ามสลับเองโดยไม่ถาม",
     "จำนวนสาขาที่ถูกต้องตอนนี้เท่าไหร่ — DB active = 12 แต่ chukes03 อยู่ใน active ทั้งที่ CLAUDE.md เขียนว่ายังไม่เปิด",
     "จุดยืน 'ความสะดวก' (กดเองได้ ไม่ต้องต่อคิว) ไม่เคยถูกพูดเลยใน 58 โพสต์ — ไม่มีข้อมูลเก่ารองรับเลยแม้แต่ตัวอย่างเดียว ต้องทดลองก่อน ไม่ใช่ประกาศเป็นแนวทาง",
     "ถ้าทำ A/B ชุดให้ความรู้ vs ชุดความสะดวก จะตัดสินด้วยอะไร — ที่ 97 ผู้ติดตาม reactions ไม่มีทางได้นัยสำคัญ ต้องตกลงล่วงหน้าว่าใช้ยอดแอดไลน์หรือยอดขายหน้าตู้รายวัน",
