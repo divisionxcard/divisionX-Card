@@ -122,7 +122,7 @@ export default function MarketingOS() {
   // เก็บแยกจาก item เพราะเป็นผลของ "การกดเขียนรอบนี้" ไม่ใช่ข้อมูลของคอนเทนต์
   const [skuAsk, setSkuAsk] = useState({})
   // ใบนี้กำลังวาดด้วยทางไหน {id: "ai" | "tpl"} — สองปุ่มใช้ธง imaging ร่วมกัน
-  // ถ้าไม่แยก ข้อความระหว่างรอจะบอกเวลาผิดทางใดทางหนึ่งเสมอ (AI ~150 วิ · เทมเพลต ~60-120 วิ)
+  // ถ้าไม่แยก ข้อความระหว่างรอจะบอกเวลาผิดทางใดทางหนึ่งเสมอ (AI ไม่เกิน 2 นาที · เทมเพลต ~60-120 วิ)
   const [imagingKind, setImagingKind] = useState({})
   // เครดิต OpenAI คงเหลือ — null = ยังไม่ได้โหลด · undefined ไม่ใช้ เพราะ Shell
   // ใช้ค่า undefined เป็นสัญญาณว่า "หน้านี้ไม่มีป้ายเครดิต" (จอ login/forbidden)
@@ -1077,7 +1077,7 @@ export default function MarketingOS() {
                             <span className="relative text-[10px] text-blue-500 tabular-nums">
                               {Math.floor((Date.now() - (imagingSince[item.id] || Date.now())) / 1000)} วินาที
                               <span className="text-blue-400">
-                                {imagingKind[item.id] === "tpl" ? " · ปกติ 60-120 วิ" : " · ปกติ 150-200 วิ"}
+                                {imagingKind[item.id] === "tpl" ? " · ปกติ 60-120 วิ" : " · ปกติไม่เกิน 2 นาที"}
                               </span>
                             </span>
                           </>
@@ -1177,7 +1177,7 @@ export default function MarketingOS() {
                     <button
                       disabled={imaging.has(item.id)}
                       onClick={() => makeImage(item.id)}
-                      title="ให้ AI ออกแบบโปสเตอร์ทั้งใบจากแคปชั่น + รูปซองจริง · ราว 2-3 นาที · เสียค่าสร้างภาพต่อใบ"
+                      title="ให้ AI ออกแบบโปสเตอร์ทั้งใบจากแคปชั่น + รูปซองจริง · ปกติไม่เกิน 2 นาที · เสียค่าสร้างภาพต่อใบ"
                       className="w-full sm:w-36 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg
                                  bg-blue-600 text-white text-[11px] font-medium disabled:opacity-50">
                       <Sparkles size={12} />

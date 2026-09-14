@@ -382,9 +382,13 @@ async function askOpenAI(style, prompt, refs, deadline = Infinity) {
         fd.append("quality", quality)
         // gpt-image-2 ห้ามส่ง input_fidelity — เอกสารระบุตรง ๆ ว่ามันประมวลผลรูปอ้างอิงที่
         // fidelity สูงเสมออยู่แล้ว และ API จะไม่ยอมให้เปลี่ยน (ส่งไปแล้วโดนปฏิเสธ)
-        // ตัวดัก error ด้านล่างจับเฉพาะข้อความที่มีคำว่า model/not found/unsupported
-        // error เรื่องพารามิเตอร์จึงหลุดออกไปเป็น throw ทันที ไม่ fallback = ยิงไม่ติดเงียบ ๆ
-        if (style.openai_input_fidelity && !/^gpt-image-2/.test(model)) {
+        //
+        // ⚠️ ใช้รายชื่อที่ "อนุญาต" ไม่ใช่รายชื่อที่ "ห้าม" — เดิมเขียน !/^gpt-image-2/ ซึ่งบังเอิญ
+        //    ครอบ gpt-image-2.5-* ไปด้วยโดยไม่มีใครตั้งใจ รุ่นถัดไปที่ชื่อไม่ขึ้นต้นแบบนั้น
+        //    จะโดนส่งพารามิเตอร์ไปแล้วพังซ้ำรอยเดิม · snapshot ที่มีวันที่ต่อท้ายนับเป็นตัวเดียวกัน
+        const fidelityOk = (style.openai_input_fidelity_models || [])
+          .some(m => model === m || model.startsWith(`${m}-20`))
+        if (style.openai_input_fidelity && fidelityOk) {
           fd.append("input_fidelity", style.openai_input_fidelity)
         }
         refs.forEach((r, i) => {
@@ -426,6 +430,15 @@ async function askOpenAI(style, prompt, refs, deadline = Infinity) {
           blockedTimes++
           attempts[attempts.length - 1] = `${model}: ตัวกรองเนื้อหาบล็อก (ครั้งที่ ${blockedTimes})`
           continue
+        }
+        // ⚠️ error เรื่องพารามิเตอร์ต้องหลุดออกไปให้เห็น ห้ามเลื่อนโมเดลเงียบ ๆ
+        //    OpenAI บอกชื่อพารามิเตอร์ที่ผิดมาใน error.param (เช่น "quality" · "input_fidelity")
+        //    แต่ข้อความของ error ชนิดนี้มักมีคำว่า model ซึ่งตัวดักบรรทัดถัดไปกลืน
+        //    = ภาพทุกใบมาจากตัวสำรอง ทั้งที่คิดว่ากำลังใช้รุ่นใหม่ (เกิดจริง 19 ส.ค. 2026)
+        //    ยิ่งตอนเพิ่งเปลี่ยนรุ่นคือช่วงที่พารามิเตอร์ไม่เข้ากันโผล่มากที่สุด
+        const badParam = json?.error?.param
+        if (res.status === 400 && badParam && badParam !== "model") {
+          throw Object.assign(new Error(msg), { status: res.status, json, attempts })
         }
         if (/model|not found|does not exist|unsupported/i.test(msg) && res.status === 400) {
           dead.add(model); continue
@@ -493,6 +506,11 @@ async function askGemini(style, prompt, refs) {
 // วัดจริง 27 ส.ค. 2026: gpt-image-2 quality=high 1024 ใช้ 145-153 วินาทีต่อใบ
 // (ยิงจริง 4 ใบ ทั้งแบบมีรูปอ้างอิงและไม่มี ได้เลขใกล้กันทุกครั้ง)
 // บวกขั้นคิดไอเดียภาพ + ดึงข้อมูล + อัปโหลด แล้วราว 200 วินาที
+//
+// วัดจริง 14 ก.ย. 2026: gpt-image-2.5-flare quality=high 1024 แนบซองจริง ใช้ 26 วินาที ($0.062)
+// ⚠️ ห้ามลด MIN_GEN_MS ตามตัวเลขนี้ — เพดานใช้ร่วมกันทุกโมเดลในคิว ถ้าตัวหลักล้ม
+//    ตัวสำรองลำดับแรกคือ gpt-image-2 ซึ่งยังต้องการ ~150 วิ เริ่มยิงทั้งที่เวลาไม่พอ = จ่ายแต่ไม่ได้ภาพ
+//    สิ่งที่ได้จากความเร็วคือ ยิงซ้ำหลังโดนตัวกรองบล็อกได้จริง 1-2 รอบ (เดิมแทบไม่เคยเหลือเวลาพอ)
 //
 // ⚠️ ต้องประกาศ maxDuration เอง — ไม่มีที่ไหนในโปรเจกต์ตั้งไว้เลย ทุก route
 //    ใช้ค่า default ของแพลตฟอร์ม ซึ่งต่ำกว่านี้มากถ้าไม่ได้เปิด Fluid Compute
@@ -800,7 +818,7 @@ export async function POST(req) {
     const mode = body.mode || style.poster_mode || "full"
 
     // ── ขั้นคิดไอเดียภาพ (ก่อนวาด) ──
-    // ค่าใช้จ่ายหลักหลักสตางค์ต่อครั้ง เทียบกับค่าวาด $0.17 → คุ้มมากถ้าช่วยให้ไม่ต้องวาดซ้ำ
+    // ค่าใช้จ่ายหลักหลักสตางค์ต่อครั้ง เทียบกับค่าวาด ~$0.06 (flare) → คุ้มมากถ้าช่วยให้ไม่ต้องวาดซ้ำ
     // ล้มแล้วไม่ทำให้ทั้งงานล้ม — planVisual คืน null แล้วเราวาดต่อแบบเดิม
     const artCfg = await loadJson("art_direction.json")
     const brandRules = artCfg?.rules || []
