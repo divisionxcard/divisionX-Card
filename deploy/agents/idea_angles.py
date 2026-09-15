@@ -52,12 +52,16 @@ def load_env_file():
     f = ROOT / ".env.local"
     if not f.exists():
         return
-    for line in f.read_text(encoding="utf-8").splitlines():
+    # ⚠️ utf-8-sig ไม่ใช่ utf-8 — .env.local ในเครื่องเจ้าของขึ้นต้นด้วย BOM และบรรทัดแรกคือ
+    #    NEXT_PUBLIC_SUPABASE_URL · อ่านแบบ utf-8 คีย์จะมี ﻿ นำหน้าแล้วหา URL ไม่เจอเงียบ ๆ
+    #    เจอจริง 15 ก.ย. 2026 ตอนย้ายงานนี้จาก GitHub Actions (env มาจาก secrets ไม่เคยอ่านไฟล์)
+    #    เข้าบอทในเครื่อง: ไอเดีย 19 ชิ้นไม่ได้มุมเลยสักชิ้น
+    for line in f.read_text(encoding="utf-8-sig").splitlines():
         line = line.strip()
         if not line or line.startswith("#") or "=" not in line:
             continue
         k, v = line.split("=", 1)
-        v = v.strip()
+        k, v = k.strip(), v.strip()
         if k in ("SUPABASE_URL", "NEXT_PUBLIC_SUPABASE_URL") and not SB_URL:
             SB_URL = v
         if k in ("SUPABASE_SERVICE_KEY", "SUPABASE_SERVICE_ROLE_KEY") and not SB_KEY:

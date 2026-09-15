@@ -26,6 +26,20 @@
 
     สั่งได้ในห้อง: /auto (ดูสถานะ) · /auto on|off · /auto 00:30 (เปลี่ยนเวลา)
 
+เก็บไอเดียคอนเทนต์ประจำวัน (15 ก.ย. 2026):
+    หน้า /marketing โซน "ไอเดียวันนี้" ค้างของวันที่ 9 ก.ย. อยู่ 6 วัน (เจ้าของทัก) เพราะ
+    idea-collector.yml ก็เป็น cron ของ GitHub ที่ตายไปพร้อมบัญชี · ย้ายมาไว้ที่นี่ด้วยเงื่อนไข
+    แบบเดียวกับซิงค์ — "วันนี้เก็บหรือยัง" ไม่ใช่ "ตี 7 พอดีหรือยัง" เปิดเครื่องสายก็ได้ของครบ
+    ขั้นตอนเหมือน workflow: idea_collector.py → idea_angles.py --limit 40
+    (ขั้นคิดมุมล้มไม่นับว่าล้ม — ไอเดียยังอยู่ครบ แค่ใช้มุมจาก template ไปก่อน)
+
+    ⚠️ ใช้ล็อกแยกจากซิงค์ — ขั้นคิดมุมเว้นจังหวะ 5 วิต่อชิ้น วัดจริง 18 นาทีกับ 19 ชิ้น
+       ถ้าใช้ล็อกเดียวกัน คนกดซิงค์สต็อกก่อนออกไปเติมตู้จะโดนบอกให้รอเฉย ๆ
+    ⚠️ ถ้า GitHub กลับมาแล้ว workflow รันซ้ำก็ไม่เป็นไร — ตัวเก็บกันซ้ำด้วย external_key
+       และขั้นคิดมุมทำเฉพาะไอเดียที่ยังไม่มีมุม
+
+    สั่งได้ในห้อง: /ideas (เก็บเดี๋ยวนี้) · /ideas on|off
+
 รัน:  .venv-image\\Scripts\\python.exe scripts\\telegram_sync_bot.py
 """
 import html as _html
@@ -52,6 +66,8 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 ENV_FILE = ROOT / "deploy" / ".env.local"
 STATE_FILE = pathlib.Path(__file__).parent / ".sync_bot_state.json"
 SYNC_SCRIPT = pathlib.Path(__file__).parent / "sync_local.py"
+IDEA_COLLECTOR = ROOT / "deploy" / "agents" / "idea_collector.py"
+IDEA_ANGLES = ROOT / "deploy" / "agents" / "idea_angles.py"
 
 BTN_STOCK = "🔄 ซิงค์สต็อกหน้าตู้"
 BTN_ALL = "📊 ซิงค์ทั้งหมด (ยอดขาย+สต็อก)"
@@ -65,6 +81,11 @@ AUTO_TICK = 30          # วินาที · ถี่แค่ไหนก�
 AUTO_RETRY_MIN = 30     # ล้มแล้วรอเท่านี้ค่อยลองใหม่
 AUTO_MAX_TRIES = 3      # ลองครบเท่านี้แล้วยอมแพ้ของวันนั้น (กันวนรัวทั้งคืน)
 MAX_SPAN = 5            # sync_local ปฏิเสธช่วง backfill เกิน 5 วัน
+
+# ── ค่าตั้งของรอบเก็บไอเดีย ──
+# 07:00 ตามเวลาเดิมของ workflow และข้อความบนหน้า /marketing ("ตัวเก็บไอเดียรันทุกเช้า 07:00 น.")
+IDEAS_AT_DEFAULT = "07:00"
+IDEAS_ANGLE_LIMIT = "40"   # เท่ากับ workflow · โควตา Gemini ฟรีมีจำกัด
 
 
 def env(key):
@@ -136,24 +157,31 @@ def save_state(st=None):
 _lock = threading.Lock()
 
 
+def _run_py(script, args, timeout):
+    """รันสคริปต์ Python หนึ่งตัวแบบเก็บ output → (CompletedProcess หรือ None, ข้อความตอนรันไม่ขึ้น)"""
+    # encoding="utf-8" ข้างล่างบอกแค่ว่า "ฝั่งเราจะ**ถอด**รหัสท่อยังไง" ไม่ได้สั่งลูก
+    # ว่าให้**เข้า**รหัสยังไง · ลูกพิมพ์ไทยลง pipe แล้วเลือก ACP ของเครื่องเอง (cp1252)
+    # = ตายตั้งแต่บรรทัดแรก ต้องยัด PYTHONIOENCODING ให้ทั้งสายผ่าน env เท่านั้น
+    env = {**os.environ, "PYTHONIOENCODING": "utf-8:replace"}
+    try:
+        return subprocess.run([sys.executable, str(script), *args],
+                              capture_output=True, text=True, encoding="utf-8",
+                              errors="replace", cwd=str(ROOT), timeout=timeout, env=env), ""
+    except subprocess.TimeoutExpired:
+        return None, f"เกิน {timeout // 60} นาที — ถูกตัดจบ"
+    except Exception as e:
+        return None, f"รันไม่ขึ้น: {e}"
+
+
 def _run_job(args):
     """เรียก sync_local หนึ่งรอบ → (สำเร็จไหม, ข้อความสรุปที่เอาไปโพสต์ได้)
 
     ผู้เรียกเป็นคนถือ _lock เอง — ตัวนี้ไม่ยุ่งกับล็อก เพราะรอบอัตโนมัติ
     ต้องรันหลายรอบติดกันโดยถือล็อกยาวตลอด (ไม่งั้นมีคนกดปุ่มแทรกกลางทางได้)
     """
-    # encoding="utf-8" ข้างล่างบอกแค่ว่า "ฝั่งเราจะ**ถอด**รหัสท่อยังไง" ไม่ได้สั่งลูก
-    # ว่าให้**เข้า**รหัสยังไง · ลูกพิมพ์ไทยลง pipe แล้วเลือก ACP ของเครื่องเอง (cp1252)
-    # = ตายตั้งแต่บรรทัดแรก ต้องยัด PYTHONIOENCODING ให้ทั้งสายผ่าน env เท่านั้น
-    env = {**os.environ, "PYTHONIOENCODING": "utf-8:replace"}
-    try:
-        p = subprocess.run([sys.executable, str(SYNC_SCRIPT), *args],
-                           capture_output=True, text=True, encoding="utf-8",
-                           errors="replace", cwd=str(ROOT), timeout=1800, env=env)
-    except subprocess.TimeoutExpired:
-        return False, "เกิน 30 นาที — ถูกตัดจบ"
-    except Exception as e:
-        return False, f"รันไม่ขึ้น: {e}"
+    p, err = _run_py(SYNC_SCRIPT, args, timeout=1800)
+    if p is None:
+        return False, err
     ok = p.returncode == 0
     # รายงานในห้องต้องอ่านจบในสายตาเดียว — ตอนสำเร็จเอาเฉพาะท่อน "สรุป"
     # จาก stdout (ไม่เอา stderr เลย เพราะ scraper พ่น DeprecationWarning รัว ๆ
@@ -322,11 +350,109 @@ def run_auto():
         _lock.release()
 
 
+# ── รอบเก็บไอเดียประจำวัน — แทน idea-collector.yml ของ GitHub ──
+_ideas_lock = threading.Lock()
+
+
+def ideas_due(now, state):
+    """ถึงเวลาเก็บไอเดียของวันนี้หรือยัง (ฟังก์ชันล้วน — ทดสอบได้) · เงื่อนไขแบบเดียวกับ auto_due"""
+    if not state.get("ideas_enabled", True):
+        return False
+    if now.strftime("%H:%M") < IDEAS_AT_DEFAULT:
+        return False
+    if state.get("ideas_done_date") == now.date().isoformat():
+        return False
+    retry_at = state.get("ideas_retry_at")
+    if retry_at and now.timestamp() < retry_at:
+        return False
+    return True
+
+
+def ideas_summary(collector_out, angles_out=""):
+    """ตัดเหลือบรรทัดสรุปที่อ่านจบในสายตาเดียว (ฟังก์ชันล้วน — ทดสอบได้)
+
+    ตัวเก็บพิมพ์รายการไอเดีย 15 อันดับแรก ตัวคิดมุมพิมพ์ทีละชิ้นทีละมุม — ยาวเกินห้องแชต
+    เก็บเฉพาะบรรทัดที่ขึ้นต้นด้วยป้าย [ideas] [purge] [angles] กับบรรทัดเตือนที่มี ⚠️
+    """
+    keep = []
+    for out in (collector_out or "", angles_out or ""):
+        for line in out.splitlines():
+            s = line.strip()
+            if s.startswith(("[ideas]", "[purge]", "[angles]")) or "⚠️" in s:
+                keep.append(s)
+    return "\n".join(keep)
+
+
+def run_ideas(manual=False):
+    """เก็บไอเดีย → คิดมุม · ขั้นคิดมุมล้มไม่นับว่ารอบนี้ล้ม"""
+    chat_id = STATE.get("chat_id")
+    if not _ideas_lock.acquire(blocking=False):
+        if manual and chat_id:
+            send(chat_id, "⏳ กำลังเก็บไอเดียอยู่แล้ว — รอผลสักครู่")
+        return
+    try:
+        today = date.today().isoformat()
+        if STATE.get("ideas_tries_date") != today:
+            STATE["ideas_tries"] = 0
+            STATE["ideas_tries_date"] = today
+        if manual and chat_id:
+            send(chat_id, "💡 เริ่มเก็บไอเดียคอนเทนต์ … ใช้เวลาราว 10-40 นาที (ขั้นคิดมุมช้า) เสร็จแล้วจะรายงานที่นี่")
+
+        t0 = time.time()
+        p, err = _run_py(IDEA_COLLECTOR, [], timeout=900)
+        ok = p is not None and p.returncode == 0
+        col_out = p.stdout if p is not None else ""
+        ang_out, ang_note = "", ""
+        if ok:
+            a, a_err = _run_py(IDEA_ANGLES, ["--limit", IDEAS_ANGLE_LIMIT], timeout=2700)
+            if a is None or a.returncode != 0:
+                ang_note = "\n⚠️ ขั้นคิดมุมไม่สำเร็จ — ไอเดียยังอยู่ครบ ใช้มุมจาก template ไปก่อน"
+            ang_out = a.stdout if a is not None else a_err
+        mins = (time.time() - t0) / 60
+
+        if ok:
+            STATE["ideas_done_date"] = today
+            STATE.pop("ideas_retry_at", None)
+            STATE["ideas_tries"] = 0
+            save_state()
+            if chat_id:
+                send(chat_id, f"💡 <b>เก็บไอเดียประจำวันแล้ว</b> ({mins:.1f} นาที) — ดูที่หน้า /marketing"
+                              f"{ang_note}\n\n<pre>{_esc(ideas_summary(col_out, ang_out)[:3000])}</pre>")
+            return
+
+        detail = err if p is None else ((p.stderr or "").strip()[-1200:] or col_out[-800:])
+        tries = STATE.get("ideas_tries", 0) + 1
+        STATE["ideas_tries"] = tries
+        if tries >= AUTO_MAX_TRIES:
+            STATE["ideas_done_date"] = today        # ยอมแพ้ของวันนี้ พรุ่งนี้ลองใหม่เอง
+            STATE.pop("ideas_retry_at", None)
+        else:
+            STATE["ideas_retry_at"] = time.time() + AUTO_RETRY_MIN * 60
+        save_state()
+        if chat_id:
+            send(chat_id, f"❌ <b>เก็บไอเดียล้ม</b> (รอบที่ {tries}/{AUTO_MAX_TRIES})"
+                          + (f" — จะลองใหม่ในอีก {AUTO_RETRY_MIN} นาที" if tries < AUTO_MAX_TRIES
+                             else " — หยุดลองของวันนี้ พรุ่งนี้เก็บใหม่เอง หรือพิมพ์ /ideas")
+                          + f"\n\n<pre>{_esc(detail)}</pre>")
+    except Exception as e:
+        STATE["ideas_retry_at"] = time.time() + AUTO_RETRY_MIN * 60
+        save_state()
+        if chat_id:
+            send(chat_id, f"❌ รอบเก็บไอเดียล้ม: {_esc(e)}")
+    finally:
+        _ideas_lock.release()
+
+
 def scheduler():
     while True:
         try:
             if auto_due(datetime.now(), STATE):
                 run_auto()
+            # วางหลังซิงค์ — วันที่เปิดเครื่องสายจนค้างทั้งคู่ ไอเดียภายในจะได้อ่านยอดขายล่าสุด
+            if ideas_due(datetime.now(), STATE):
+                # แยกเธรด — ขั้นคิดมุมวัดจริง 18 นาทีกับ 19 ชิ้น ถ้ารันในเธรดนี้ ตัวจับเวลาซิงค์จะค้างรอไปด้วย
+                # ติ๊กถัดไประหว่างที่ยังรันอยู่จะเรียกซ้ำ แต่ _ideas_lock ทำให้ตัวที่ซ้ำออกทันที
+                threading.Thread(target=run_ideas, daemon=True).start()
         except Exception as e:
             print(f"[scheduler] {e}")
         time.sleep(AUTO_TICK)
@@ -343,9 +469,13 @@ def auto_status():
     retry = STATE.get("auto_retry_at")
     if retry and retry > time.time():
         lines.append(f"รอลองใหม่อีก {int((retry - time.time()) / 60)} นาที")
+    idea_on = STATE.get("ideas_enabled", True)
+    idea_done = STATE.get("ideas_done_date") == date.today().isoformat()
+    lines.append(f"💡 เก็บไอเดีย: <b>{'เปิด' if idea_on else 'ปิด'}</b> · เวลา <b>{IDEAS_AT_DEFAULT}</b> น. · "
+                 f"วันนี้{'เก็บแล้ว' if idea_done else 'ยังไม่ได้เก็บ'}")
     lines.append("\nเครื่องต้องเปิดอยู่บอทถึงจะทำงาน — ถ้าเครื่องปิดข้ามคืน "
                  "บอทจะซิงค์ชดเชยให้ทันทีที่เปิดมา")
-    lines.append("สั่งได้: /auto on · /auto off · /auto 00:30")
+    lines.append("สั่งได้: /auto on · /auto off · /auto 00:30 · /ideas (เก็บไอเดียเดี๋ยวนี้) · /ideas on|off")
     return "\n".join(lines)
 
 
@@ -380,6 +510,20 @@ def handle(u):
     if text.startswith("/start") or text.startswith("/buttons"):
         send(chat_id, "ปุ่มพร้อมใช้ครับ 👇\n(ซิงค์อัตโนมัติทุกคืนอยู่แล้ว — "
                       "ดูสถานะด้วย /auto)", keyboard=True)
+    elif text.startswith("/ideas"):
+        arg = text.split(maxsplit=1)[1].strip().lower() if " " in text else ""
+        if arg in ("on", "เปิด"):
+            state["ideas_enabled"] = True
+            save_state()
+            send(chat_id, f"✅ เปิดเก็บไอเดียอัตโนมัติแล้ว (ทุกวัน {IDEAS_AT_DEFAULT} น.)")
+        elif arg in ("off", "ปิด"):
+            state["ideas_enabled"] = False
+            save_state()
+            send(chat_id, "⏸ ปิดเก็บไอเดียอัตโนมัติแล้ว — พิมพ์ /ideas เพื่อเก็บเองได้")
+        elif arg:
+            send(chat_id, "ไม่เข้าใจครับ — ใช้ /ideas · /ideas on · /ideas off")
+        else:
+            threading.Thread(target=run_ideas, kwargs={"manual": True}, daemon=True).start()
     elif text.startswith("/auto"):
         arg = text.split(maxsplit=1)[1].strip().lower() if " " in text else ""
         if arg in ("on", "เปิด"):
