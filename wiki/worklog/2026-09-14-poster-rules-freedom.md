@@ -3,7 +3,7 @@ type: worklog
 date: 2026-09-14
 tags: [marketing, image, poster, art-direction, prompt, creativity]
 commits: [59d15cb, 9d4f944]
-status: ✅ แก้แล้ว · ทดสอบบรีฟจริง + วาดจริง 3 ใบ · ⚠️ ยังไม่ deploy (รอ token Vercel ใหม่)
+status: ✅ แก้แล้ว · ทดสอบบรีฟจริง + วาดจริง 3 ใบ · ✅ deploy แล้ว 15 ก.ย. (พร้อมงานแก้ต่อ)
 ---
 
 # บรีฟโปสเตอร์ปลดล็อก — แยก "ความจริง" ออกจาก "สูตรสไตล์"
@@ -139,7 +139,8 @@ deploy ขึ้น production ไม่ได้ (token Vercel หาย ดู
 
 ## ⚠️ ต้องทำต่อ
 
-- **deploy ยังไม่ขึ้น** — `VERCEL_TOKEN` ถูกลบจากระบบ Vercel (`/v5/user/tokens/current` → 404 Token not found)
+- ✅ **deploy แล้ว 15 ก.ย.** พร้อม [[2026-09-15-poster-brief-review-fixes]] · ต้นเหตุจริงคือ token **ตั้งหมดอายุ 1 วัน** ไม่ใช่ถูกลบ
+  (บันทึกเดิม: `VERCEL_TOKEN` ใช้ไม่ได้ · `/v5/user/tokens/current` → 404 Token not found)
   ต้องให้เจ้าของสร้างใหม่ แล้วรัน `scripts/vercel_deploy.py --prod` · เว็บจริงยังเป็น build GPT Image 2.5 ไม่เสียหาย
 
 - **ตรวจโปสเตอร์เก่าก่อนโพสต์** — ใบที่มีแถบติดต่อมีเบอร์โทรที่ AI แต่งขึ้น
