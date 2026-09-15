@@ -67,6 +67,8 @@ CREATIVE FREEDOM
 - Rendering style, palette balance, lighting, camera angle and layout are yours to choose.
   Photography, illustration, 3D, collage, graphic design and typography-led posters are all
   welcome.
+- The canvas is always a SQUARE 1:1 image. Compose for a square — never describe a portrait
+  or landscape layout.
 - You are given a SUGGESTED STYLE for this poster. Use it unless it fights the idea; if it
   does, choose a different distinctive style yourself.
 
@@ -81,7 +83,12 @@ TRUTH — never break
 - Any pack you show must be one of our actual products — say WHICH ones. Never invented art.
 - Never propose drawing a franchise character or mascot in ANY form — not as a figure, plush,
   toy, costume, statue, "vintage collectible" or symbolic object. Characters may appear only
-  where they are already printed on the real pack photos.
+  where they are already printed on the real pack photos, or on the face of a card from the
+  ALLOWED CARDS list when one is supplied — name which of those cards you use.
+- If the caption teaches how the game is played and the lesson needs cards, show the card
+  the lesson is actually about. Never swap in a different kind of card (an Energy or Trainer
+  card standing in for a Pokémon) — a lesson picture that teaches the wrong move is worse
+  than no picture.
 - THE POST'S CARD GAME IS FIXED. Whatever franchise the caption names is the ONLY one
   allowed in frame. Never show packs from a different card game than the caption discusses —
   a Pokémon caption with One Piece packs is the single most damaging error we can make,
@@ -95,6 +102,7 @@ Reply as JSON with exactly these keys:
   "visual_device":   "<English, the compositional device>",
   "style_direction": "<English, the rendering style, palette balance and lighting you chose>",
   "subject":         "<English, what is physically in frame>",
+  "shows_machine":   <true if a vending machine is visible anywhere in frame, otherwise false>,
   "composition":     "<English, layout, framing, where the text blocks sit>",
   "why_it_works":    "<Thai, one sentence>"
 }`
@@ -107,9 +115,10 @@ Reply as JSON with exactly these keys:
  * @param {string[]} [o.rules]    กฎเหล็กจาก tasks/art_direction.json → hard_rules
  * @param {string[]} [o.signature] ลายเซ็นแบรนด์จาก art_direction.json → brand_signature
  * @param {string} [o.styleHint]  แนวภาพที่เสนอให้ใบนี้ (หมุนตาม id)
+ * @param {string[]} [o.allowedCards] การ์ดจริงที่วาดหน้าได้ "ชื่อ — ขั้น · HP" (เฉพาะโพสต์โปเกมอน)
  * @returns {Promise<object|null>} null = ล้มเหลว ให้ผู้เรียกไปต่อโดยไม่มีไอเดียภาพ
  */
-export async function planVisual({ caption, format, sku, franchise, rules = [], signature = [], styleHint = null }) {
+export async function planVisual({ caption, format, sku, franchise, rules = [], signature = [], styleHint = null, allowedCards = [] }) {
   const key = process.env.OPENAI_API_KEY
   if (!key || !caption?.trim()) return null
 
@@ -132,6 +141,14 @@ export async function planVisual({ caption, format, sku, franchise, rules = [], 
     // แล้วตัววาดค่อยไปหยิบลายผิดค่ายมาใส่ทีหลัง (เคสจริง: Dragon Ball ได้สมอกับคลื่น)
     franchise ? `ค่ายการ์ด: ${franchise} — องค์ประกอบภาพต้องเข้ากับค่ายนี้ ห้ามหยิบสัญลักษณ์ของค่ายอื่นมาปน` : null,
     styleHint ? `SUGGESTED STYLE for this poster: ${styleHint}` : null,
+    // ⚠️ ต้องเห็นรายชื่อตั้งแต่ขั้นนี้ — ไม่งั้นมันเชื่อข้อห้ามวาดตัวละครแล้วเลี่ยงการ์ดไปเลย
+    //    ภาพสอนกฎ #43 จึงเอาการ์ดพลังงานมาแทนโปเกมอน (15 ก.ย. 2026)
+    allowedCards.length
+      // "สะกดตามรายการ" — ทดสอบแล้วมันแปลชื่อเป็นอังกฤษเอง (แมนคี → Mankey) รายการในบรีฟขั้นวาดเป็นชื่อไทย
+      //  ชื่อไม่ตรงกันทำให้ artworkPkmCards ดันใบที่ไอเดียเลือกขึ้นหัวรายการไม่ได้
+      ? `ALLOWED CARDS — real cards from the set we sell. If the idea needs a card face, use only ` +
+        `these and name which, spelled exactly as listed:\n${allowedCards.map(c => `- ${c}`).join("\n")}`
+      : null,
     `\nแคปชั่นที่อนุมัติแล้ว:\n${caption.trim()}`,
   ].filter(Boolean).join("\n")
 

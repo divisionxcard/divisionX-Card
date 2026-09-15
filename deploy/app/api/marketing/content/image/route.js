@@ -205,17 +205,21 @@ function buildPrompt(style, concept, facts, mode, hasRefs = false, idea = null, 
   // ลายเซ็นแบรนด์ใน art_direction.json แทนบรรทัดนี้แล้ว — ส่งทั้งสองชุดเท่ากับดันกรมท่าเข้าไปสองรอบ
   // เก็บไว้เป็นทางสำรองตอนไฟล์นั้นไม่มี brand_signature
   if (!signature.length) p.push(`BRAND STYLE: ${style.style}`)
-  p.push(
-    // ⚠️ 20 ส.ค. 2026 — ประโยคนี้เคยเขียนว่า "a One Piece nautical theme" ลอย ๆ
-    //    ผลคือโปสเตอร์ Dragonball FB-09 ออกมามีสมอ คลื่น เข็มทิศ นกนางนวลเต็มใบ
-    //    ลายเดินเรือเป็นลายที่พิมพ์อยู่บน "ตัวตู้จริง" ไม่ใช่ธีมของโปสเตอร์
-    //    ต้องผูกไว้กับตัวตู้เท่านั้น ห้ามให้ลามเป็นกรอบ/พื้นหลังของทั้งใบ
-    "BRAND WORLD: the physical vending machine itself is navy blue, wrapped with white ocean " +
-    "waves, a gold anchor, stars and seagulls. That nautical artwork belongs to the machine's " +
-    "own body panels only — when the machine is in frame, draw it that way. It is NOT the " +
-    "poster's theme and must never spread into the frame, border, or background. " +
-    "Gold is a genuine brand colour."
-  )
+  // ⚠️ 20 ส.ค. 2026 — ประโยคนี้เคยเขียนว่า "a One Piece nautical theme" ลอย ๆ
+  //    ผลคือโปสเตอร์ Dragonball FB-09 ออกมามีสมอ คลื่น เข็มทิศ นกนางนวลเต็มใบ
+  //    ลายเดินเรือเป็นลายที่พิมพ์อยู่บน "ตัวตู้จริง" ไม่ใช่ธีมของโปสเตอร์
+  //    ต้องผูกไว้กับตัวตู้เท่านั้น ห้ามให้ลามเป็นกรอบ/พื้นหลังของทั้งใบ
+  // ⚠️ 15 ก.ย. 2026 — ส่งเฉพาะใบที่มีตู้ในภาพ · เดิมส่งทุกใบ ภาพที่ไม่มีตู้ก็ได้คำบรรยาย
+  //    คลื่น สมอ นกนางนวลไปด้วย ซึ่งทั้งดึงตู้กลับเข้าภาพ และเป็นที่มาที่เป็นไปได้ของ
+  //    ลายทะเลประดับข้างโปสเตอร์ #44 (ตรวจ 14 ก.ย.) · สีทองมีใน brand_signature แล้ว
+  if (hasMachineRef) {
+    p.push(
+      "BRAND WORLD: the physical vending machine itself is navy blue, wrapped with white ocean " +
+      "waves, a gold anchor, stars and seagulls. That nautical artwork belongs to the machine's " +
+      "own body panels only — when the machine is in frame, draw it that way. It is NOT the " +
+      "poster's theme and must never spread into the frame, border, or background."
+    )
+  }
 
   // ⚠️ 24 ส.ค. 2026 — บรีฟเดิมบอกแค่ว่าตู้หน้าตายังไง ไม่เคยบอกว่ามันตั้งอยู่ที่ไหน
   //    ผลคือโปสเตอร์ #35 วาดตู้ตั้งอยู่ "นอกห้าง" ริมถนนตอนกลางคืนหน้าไอคอนสยาม
@@ -868,6 +872,35 @@ export async function POST(req) {
     const fr = wantFr ? (frCfg?.franchises || {})[wantFr] : null
     const frBlock = fr || (frCfg?.default ? { label: "แบรนด์กลาง", decor: frCfg.default } : null)
 
+    // ── การ์ดจริงที่วาดในภาพได้ (โพสต์โปเกมอน) — ต้องหา *ก่อน* คิดไอเดีย ──
+    //
+    // ⚠️ 15 ก.ย. 2026 — เดิมรายชื่อนี้ถูกหาหลังได้ไอเดียแล้ว ตัวคิดไอเดียจึงไม่เคยรู้ว่ามีการ์ดให้ใช้
+    //    ทั้งที่ถูกสั่งว่า "ห้ามวาดตัวละครในรูปแบบใดก็ตาม" → โพสต์สอนกฎ #43 (วางโปเกมอนร่างพื้นฐาน
+    //    บนเบนช์) ได้ภาพย้าย "การ์ดพลังงาน" ลงเบนช์แทน = สอนผิด
+    //    ก่อน 14 ก.ย. มันรอดเพราะประโยคปิดบรีฟ "ไอเดียชนะกฎแบรนด์" เปิดทางให้ฝ่ากฎห้ามวาดการ์ด
+    //    พอปิดประตูนั้น (ถูกต้อง) ALLOWED CARDS ก็ขัดกับกฎเหล็กตรง ๆ
+    //    → เจ้าของเลือกให้วาดหน้าการ์ดจริงที่ระบุได้ · เขียนเป็นข้อยกเว้นไว้ที่ตัวข้อห้ามทุกจุด
+    //      (กฎเหล็กข้อ 1 · negative_always · ตัวคิดไอเดีย) และส่งรายชื่อให้ตัวคิดไอเดียเห็นตั้งแต่แรก
+    let pkmSet = null
+    if (wantFr === "PKM") {
+      try {
+        // ชุดจาก SKU ที่ผูกไว้ก่อน · ไม่ผูกก็ดูว่าแคปชั่นเอ่ยชุดไหน (60% ของใบไม่ได้ผูก SKU)
+        let setCode = sku?.set_code || null
+        if (!setCode) {
+          const { data: pkmSkus } = await db.from("skus")
+            .select("name,set_code").eq("is_active", true).eq("franchise", "PKM")
+          const hay = `${caption} ${content.idea?.title || ""}`
+          const hit = (pkmSkus || []).find(s =>
+            (s.set_code && hay.includes(s.set_code)) || (s.name && hay.includes(s.name)))
+          setCode = hit?.set_code || null
+        }
+        pkmSet = findPkmSet(await loadPkmCards(), setCode)
+      } catch { /* อ่านคลังไม่ได้ก็วาดต่อได้ แค่ไม่มีรายชื่อกำกับ */ }
+    }
+    const cardsForIdea = pkmSet
+      ? artworkPkmCards(pkmSet, `${caption} ${content.idea?.title || ""}`, 6)
+      : []
+
     const idea = await planVisual({
       caption,
       format: content.content_format,
@@ -876,6 +909,7 @@ export async function POST(req) {
       rules: brandRules,
       signature,
       styleHint,
+      allowedCards: cardsForIdea.map(c => `${c.name} — ${c.stage} · HP ${c.hp}`),
     })
 
     // ── รูปตู้จริง — ต้องตัดสินใจ *หลัง* ได้ไอเดียแล้ว ──
@@ -889,8 +923,16 @@ export async function POST(req) {
     const ideaText = idea
       ? `${idea.big_idea || ""} ${idea.subject || ""} ${idea.composition || ""} ${idea.visual_device || ""}`
       : ""
-    const wantsMachine = ["machine_luck", "real_machine"].includes(conceptKey) ||
-                         MACHINE_WORDS.test(ideaText)
+    // ⚠️ 15 ก.ย. 2026 — เดิมตัดสินด้วย MACHINE_WORDS อย่างเดียว ซึ่งจับคำได้แต่อ่านความหมายไม่ออก
+    //    "no vending machine in frame" ก็เข้า · "ช่องว่าง" "ช่องทาง" ก็เข้า
+    //    หลังปลดล็อกบรีฟ (14 ก.ย.) ตัวคิดไอเดียถูกบอกให้เลี่ยงตู้ ประโยคปฏิเสธแบบนี้จึงโผล่บ่อยขึ้น
+    //    แนบรูปตู้ + บรีฟ "รูปอ้างอิงใบหนึ่งคือตู้จริง" = ดึงตู้กลับเข้าภาพที่ตั้งใจไม่ให้มีตู้
+    //    → ให้ตัวคิดไอเดียตอบเองว่ามีตู้ในภาพไหม · regex เหลือเป็นทางสำรองตอนไม่ได้คีย์นี้กลับมา
+    const says = idea?.shows_machine
+    const ideaShowsMachine = says === true || says === "true" ? true
+                           : says === false || says === "false" ? false
+                           : MACHINE_WORDS.test(ideaText)
+    const wantsMachine = ["machine_luck", "real_machine"].includes(conceptKey) || ideaShowsMachine
     if (wantsMachine) {
       // ⚠️ มีรูปตู้จริง 2 ใบแต่โค้ดเรียกใบเดียวมาตลอด — machine-scene.jpg ไม่เคยถูกใช้เลย
       //    ทั้งที่ README ในโฟลเดอร์นั้นเขียนไว้ว่ามันมีไว้คนละหน้าที่:
@@ -918,40 +960,33 @@ export async function POST(req) {
     //    ปิกาจูโผล่สองใบ HP ไม่เท่ากัน (60 บนเบนช์ / 70 บนสนาม) ซึ่งเป็นไปไม่ได้
     //    และข้อความบนการ์ดเป็นภาษาญี่ปุ่นมั่ว — คนเล่นจับได้ทันทีว่าปลอม
     //
-    // กฎข้อ 17 ห้ามวาดการ์ดอยู่แล้ว แต่บรีฟดันสั่งพร้อมกันว่า "สอนเรื่องเบนช์ให้เห็นภาพ"
+    // กฎเหล็กข้อ 1 ห้ามวาดการ์ดอยู่แล้ว แต่บรีฟดันสั่งพร้อมกันว่า "สอนเรื่องเบนช์ให้เห็นภาพ"
     // ซึ่งทำโดยไม่มีการ์ดไม่ได้ โมเดลจึงเลือกฝ่าข้อห้าม — ห้ามอย่างเดียวไม่พอ
     // ต้องบอกด้วยว่า "ถ้าจำเป็นต้องมี ให้ใช้ใบพวกนี้เท่านั้น"
+    // (15 ก.ย. 2026 ข้อยกเว้นนี้เขียนไว้ในตัวกฎเหล็กข้อ 1 + negative_always แล้ว — ดูบล็อก pkmSet ด้านบน)
     //
     // ⚠️ กรองตามขั้น (พื้นฐาน/ร่าง 1/ร่าง 2) ด้วย — โพสต์สอนกฎที่วางร่าง 2 ไว้บนเบนช์
     //    คือสอนผิด ซึ่งแย่กว่าภาพไม่สวย
-    if (wantFr === "PKM") {
-      try {
-        // ชุดจาก SKU ที่ผูกไว้ก่อน · ไม่ผูกก็ดูว่าแคปชั่นเอ่ยชุดไหน (60% ของใบไม่ได้ผูก SKU)
-        let setCode = sku?.set_code || null
-        if (!setCode) {
-          const { data: pkmSkus } = await db.from("skus")
-            .select("name,set_code").eq("is_active", true).eq("franchise", "PKM")
-          const hay = `${caption} ${content.idea?.title || ""}`
-          const hit = (pkmSkus || []).find(s =>
-            (s.set_code && hay.includes(s.set_code)) || (s.name && hay.includes(s.name)))
-          setCode = hit?.set_code || null
-        }
-        const set = findPkmSet(await loadPkmCards(), setCode)
-        const list = artworkPkmCards(set, `${caption} ${ideaText}`, 6)
-        if (list.length) {
-          facts.push(
-            `- ALLOWED CARDS: if any Pokémon card is visible, it must be one of these real ` +
-            `cards from the set we actually sell. Match the creature, its evolution stage and ` +
-            `its HP exactly as listed:\n` +
-            list.map(c => `    · ${c.name} — ${c.stage} · HP ${c.hp} · ` +
-                          `${(c.types || []).join("/")}`).join("\n"))
-          facts.push(
-            `- Never show a card outside that list, never show the same Pokémon twice in one ` +
-            `image, and never change a listed HP or stage. Do not render the small rules text ` +
-            `on a card face — it always comes out as gibberish and marks the card as fake. ` +
-            `Keep card faces mostly artwork, seen at an angle or partly overlapped.`)
-        }
-      } catch { /* อ่านคลังไม่ได้ก็วาดต่อได้ แค่ไม่มีรายชื่อกำกับ */ }
+    //
+    // ชุดการ์ดหาไว้แล้วก่อนคิดไอเดีย · รอบนี้หารายชื่อใหม่โดยรวมข้อความไอเดียด้วย เพราะไอเดีย
+    // อาจพูดถึงเบนช์/ร่างพื้นฐานที่แคปชั่นไม่ได้เอ่ย · ใบที่ไอเดียเอ่ยชื่อจะขึ้นหัวรายการเอง
+    if (pkmSet) {
+      const list = artworkPkmCards(pkmSet, `${caption} ${ideaText}`, 6)
+      if (list.length) {
+        facts.push(
+          `- ALLOWED CARDS (the one exception to the rule against drawing card artwork): if any ` +
+          `Pokémon card is visible, it must be one of these real cards from the set we actually ` +
+          `sell. Match the creature, its evolution stage and its HP exactly as listed:\n` +
+          list.map(c => `    · ${c.name} — ${c.stage} · HP ${c.hp} · ` +
+                        `${(c.types || []).join("/")}`).join("\n"))
+        facts.push(
+          `- Never show a card outside that list, never show the same Pokémon twice in one ` +
+          `image, and never change a listed HP or stage. When the post teaches a move, the card ` +
+          `making that move must be the kind of card the lesson names — never an Energy or ` +
+          `Trainer card standing in for a Pokémon. Do not render the small rules text ` +
+          `on a card face — it always comes out as gibberish and marks the card as fake. ` +
+          `Keep card faces mostly artwork, seen at an angle or partly overlapped.`)
+      }
     }
 
     const prompt = buildPrompt(

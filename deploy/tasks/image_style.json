@@ -25,9 +25,10 @@
   "_style_note": "14 ก.ย. 2026 — เดิมระบุพื้นหลัง gradient สายฟ้า โครเมียม แสงสตูดิโอ และ 'วางของกลางภาพ' ครบทุกอย่าง ทุกใบจึงหน้าตาเดียวกัน (เจ้าของบอกว่าจำเจ) · ตอนนี้เป็นแค่ค่าสำรองตอนไม่มี brand_signature ใน art_direction.json · แนวภาพให้ไอเดียกับ style_directions เป็นคนเลือก",
   "style": "Recognisably DivisionX Card: deep navy and electric neon cyan (#00C2FF) appear somewhere in the piece — as the ground, the light, a frame or an accent. Gold is a welcome secondary colour. Rendering style, lighting, composition and palette balance change from poster to poster to serve the idea.",
   "_negative_note": "⚠️ ต้องแยก 2 ชุด ห้ามรวมกลับเป็นก้อนเดียว — 19 ส.ค. 2026 พบว่าเดิมรวมกันแล้วส่งทุกโหมด ทำให้โหมด full ได้พรอมต์ที่บอก 'วาดตัวอักษรไทยให้ตรงเป๊ะ' แล้วต่อท้ายด้วย 'no text, no letters' ในพรอมต์เดียวกัน = สั่งขัดกันเอง · negative_always ใช้ได้ทุกโหมด (กฎหมาย+คุณภาพ) · negative_no_text ใช้เฉพาะโหมด art ที่ให้เทมเพลตวางตัวอักษรเอง · 21 ส.ค. 2026 เพิ่ม 3 ข้อเรื่องซองต้องไม่ขาด/มือต้องถูกกายวิภาค/การ์ดต้องไม่ยับ — เจ้าของทักว่าภาพที่ได้ซองดูขาดและมีมือที่สามโผล่มา ต้นเหตุคือแคปชั่นเขียนว่า 'ฉีกซอง' แล้วตัวคิดฉากสั่งวาดตามตรง ๆ โดยไม่มีอะไรกันไว้",
+  "_card_exception_note": "15 ก.ย. 2026 — สองข้อแรกมีข้อยกเว้นเดียวคือการ์ดใน ALLOWED CARDS (route ใส่ให้เฉพาะโพสต์โปเกมอนที่หาชุดเจอ) · เจ้าของเลือกเองว่าให้วาดหน้าการ์ดจริงที่ระบุได้ ดีกว่าให้โมเดลเลี่ยงการ์ดจนภาพสอนกฎสอนผิด (#43 ย้ายการ์ดพลังงานลงเบนช์) · ⚠️ ข้อยกเว้นต้องเขียนไว้ที่ตัวข้อห้ามเอง ถ้าเขียนแค่ใน FACTS โมเดลเห็นสองคำสั่งขัดกันแล้วเลือกข้อห้าม",
   "negative_always": [
-    "do not draw or invent any anime/manga characters",
-    "do not recreate copyrighted card artwork or brand logos",
+    "do not draw or invent any anime/manga characters — the only exception is the creature printed on a card listed under ALLOWED CARDS",
+    "do not recreate copyrighted card artwork or brand logos — the only exception is the face of a card listed under ALLOWED CARDS",
     "no people's faces",
     "no random objects unrelated to the idea",
     "sealed booster packs must look factory-fresh and intact — never torn, ripped, crumpled, creased or damaged, and never shown mid-tear or being opened",
