@@ -2,7 +2,7 @@
 type: worklog
 date: 2026-09-15
 tags: [marketing, ideas, telegram-bot, cron, github-flagged]
-commits: [PENDING]
+commits: [a9c4284]
 status: ✅ ย้ายตัวเก็บไอเดียเข้าบอทแล้ว · ทดสอบ + รันจริงบนบอท
 ---
 
