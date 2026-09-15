@@ -2,7 +2,7 @@
 type: worklog
 date: 2026-09-15
 tags: [marketing, image, poster, art-direction, pokemon, review]
-commits: [PENDING]
+commits: [a25dbf9]
 status: ✅ แก้แล้ว · ทดสอบขั้นคิดไอเดียกับแคปชั่นจริง · ⚠️ ยังไม่ได้วาดจริง · ยังไม่ deploy
 ---
 
