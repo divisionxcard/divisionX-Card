@@ -23,6 +23,7 @@ import { topSkusByFranchise } from "../../../../../lib/skuPicker"
 import { splitHeadline } from "../../../../../lib/headline"
 import { fetchAll } from "../../../../../lib/fetchAll"
 import { loadPkmCards, findPkmSet, artworkPkmCards } from "../../../../../lib/pkmKnowledge"
+import { stampLogo } from "../../../../../lib/logoStamp"
 
 const SB_URL = process.env.NEXT_PUBLIC_SUPABASE_URL
 const SB_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -626,15 +627,32 @@ export async function POST(req) {
     const skuId = content.source_sku || content.idea?.related_sku
     let sku = null
     if (skuId) {
+      // ⚠️ set_code ต้องอยู่ใน select — โค้ดหาชุดการ์ด (โปเกมอน/วันพีซ) อ่าน sku.set_code
+      //    เดิมไม่ได้ select มา ค่าจึงเป็น undefined เสมอ แล้วเงียบ ๆ ไปเดาชุดจากแคปชั่นทุกครั้ง (15 ก.ย. 2026)
       const { data } = await db.from("skus")
-        .select("sku_id,name,franchise,image_url,image_url_box").eq("sku_id", skuId).maybeSingle()
+        .select("sku_id,name,franchise,set_code,image_url,image_url_box").eq("sku_id", skuId).maybeSingle()
       sku = data
     }
 
     const caption = (content.caption || "").replace(/#\S+/g, "").trim()
     const head = splitHeadline(content.caption)
+    // ── โลโก้ ──
+    // ⚠️ 15 ก.ย. 2026 — เดิมบอกโมเดลแค่ `logo wordmark "DC"` มันจึงวาดโลโก้เองทุกใบ ทรงเพี้ยนไม่ซ้ำกัน
+    //    เจ้าของขอให้โลโก้คงรูปเดิม → แปะไฟล์จริงหลังวาด (lib/logoStamp.js) และสั่งห้ามวาด + เว้นมุม
+    //    โหมดบรีฟ (คนเอาไปวางใน ChatGPT เอง) ไม่มีขั้นแปะ จึงบอกให้วางไฟล์โลโก้ที่แนบไปแทน
+    const stampCfg = style.logo_stamp || {}
+    const stampOn = stampCfg.enabled !== false
+    const cornerText = String(stampCfg.corner || "bottom-left").replace("-", " ")
     const facts = [
-      `- Brand name: DivisionX Card (logo wordmark "DC")`,
+      !stampOn
+        ? `- Brand name: DivisionX Card (logo wordmark "DC")`
+        : body.brief
+          ? `- Brand logo: place the attached DivisionX Card logo file in the ${cornerText} corner exactly ` +
+            `as supplied — never redraw, restyle or recolour it, and draw no other logo or brand name.`
+          : `- Brand logo: do NOT draw any logo, "DC" monogram or brand name anywhere — the real logo ` +
+            `file is stamped onto the ${cornerText} corner after the image is made. Keep that corner ` +
+            `(about a quarter of the width and a sixth of the height) free of text, badges and key ` +
+            `subjects; background artwork may continue behind it.`,
       `- Number of branches (real, from database): ${branches}`,
       // ⚠️ ห้ามเขียนว่า open 24 hours ตรงนี้อีก — ตู้อยู่ในห้าง เปิด-ปิดตามเวลาห้าง
       //    เคยหลุดออกโปสเตอร์มาแล้ว 2 รอบ (ดู wiki/worklog/2026-08-21-24hour-claim-regression.md)
@@ -781,6 +799,8 @@ export async function POST(req) {
     //    โหมดบรีฟ (เอาไปวางใน ChatGPT เอง) ต้องการลิงก์รูปให้คนลากไปแนบ
     const refNotes = []
     const noteRef = (label, url) => refNotes.push({ label, url: url || null })
+    // โหมดบรีฟไม่มีขั้นแปะโลโก้ (คนเอาไปวาดใน ChatGPT เอง) — แนบไฟล์จริงไปให้ลากเข้าแชตพร้อมรูปอื่น
+    if (body.brief && stampOn) noteRef("โลโก้ DivisionX Card (วางตามบรีฟ ห้ามแก้ไฟล์)", "/logo-white.png")
 
     const packRef = await fetchRef(sku?.image_url || sku?.image_url_box)
     if (packRef) {
@@ -1087,6 +1107,20 @@ export async function POST(req) {
       }, { status: 502 })
     }
 
+    // ── แปะโลโก้จริงทับ ── บรีฟสั่งโมเดลให้เว้นมุมไว้แล้ว (ดูบรรทัดโลโก้ใน FACTS)
+    // ล้มแล้วยังเก็บภาพต่อ — ภาพที่ไม่มีโลโก้ยังแก้ได้ ภาพที่จ่ายเงินวาดแล้วหายไปแก้ไม่ได้
+    let logo = null
+    if (stampOn) {
+      try {
+        const s = await stampLogo(out.buf, stampCfg)
+        out = { ...out, buf: s.buf, mime: s.mime }
+        logo = { variant: s.variant, corner: s.corner, lum: s.lum }
+      } catch (e) {
+        console.warn("[image] แปะโลโก้ไม่สำเร็จ —", e?.message || e)
+        logo = { error: String(e?.message || e).slice(0, 160) }
+      }
+    }
+
     // ── เก็บลง Storage ── ชื่อไฟล์มี timestamp กดสร้างใหม่ได้ไม่ติด CDN cache
     const ext = out.mime.includes("jpeg") ? "jpg" : out.mime.includes("webp") ? "webp" : "png"
     const bucket = style.bucket || "marketing"
@@ -1121,6 +1155,8 @@ export async function POST(req) {
         // เห็นชัดว่ารอบนี้แนบรูปตู้จริงไปด้วยไหม — ถ้าภาพออกมาตู้ยังเพี้ยนทั้งที่แนบแล้ว
         // แปลว่าปัญหาอยู่ที่โมเดล ไม่ใช่ที่เราลืมแนบ
         machine_ref: wantsMachine,
+        // โลโก้ที่แปะทับ — variant ขาว/ดำตามความสว่างของมุม · มี error = ภาพนี้ไม่มีโลโก้
+        logo,
         franchise: frBlock?.label || null,
         bytes: out.buf.length,
         // ถ้าโมเดลแรกพัง มันจะเลื่อนไปตัวถัดไปเงียบ ๆ — ต้องคืนออกมาให้เห็น

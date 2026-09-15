@@ -27,7 +27,7 @@
   "_negative_note": "⚠️ ต้องแยก 2 ชุด ห้ามรวมกลับเป็นก้อนเดียว — 19 ส.ค. 2026 พบว่าเดิมรวมกันแล้วส่งทุกโหมด ทำให้โหมด full ได้พรอมต์ที่บอก 'วาดตัวอักษรไทยให้ตรงเป๊ะ' แล้วต่อท้ายด้วย 'no text, no letters' ในพรอมต์เดียวกัน = สั่งขัดกันเอง · negative_always ใช้ได้ทุกโหมด (กฎหมาย+คุณภาพ) · negative_no_text ใช้เฉพาะโหมด art ที่ให้เทมเพลตวางตัวอักษรเอง · 21 ส.ค. 2026 เพิ่ม 3 ข้อเรื่องซองต้องไม่ขาด/มือต้องถูกกายวิภาค/การ์ดต้องไม่ยับ — เจ้าของทักว่าภาพที่ได้ซองดูขาดและมีมือที่สามโผล่มา ต้นเหตุคือแคปชั่นเขียนว่า 'ฉีกซอง' แล้วตัวคิดฉากสั่งวาดตามตรง ๆ โดยไม่มีอะไรกันไว้",
   "_card_exception_note": "15 ก.ย. 2026 — สองข้อแรกมีข้อยกเว้นเดียวคือการ์ดใน ALLOWED CARDS (route ใส่ให้เฉพาะโพสต์โปเกมอนที่หาชุดเจอ) · เจ้าของเลือกเองว่าให้วาดหน้าการ์ดจริงที่ระบุได้ ดีกว่าให้โมเดลเลี่ยงการ์ดจนภาพสอนกฎสอนผิด (#43 ย้ายการ์ดพลังงานลงเบนช์) · ⚠️ ข้อยกเว้นต้องเขียนไว้ที่ตัวข้อห้ามเอง ถ้าเขียนแค่ใน FACTS โมเดลเห็นสองคำสั่งขัดกันแล้วเลือกข้อห้าม",
   "negative_always": [
-    "do not draw or invent any anime/manga characters — the only exception is the creature printed on a card listed under ALLOWED CARDS",
+    "do not draw or invent any anime/manga characters — the only exception is the character printed on a card listed under ALLOWED CARDS",
     "do not recreate copyrighted card artwork or brand logos — the only exception is the face of a card listed under ALLOWED CARDS",
     "no people's faces",
     "no random objects unrelated to the idea",
@@ -61,6 +61,14 @@
   "_size_note": "1K พอสำหรับโพสต์ Facebook/LINE และถูกที่สุด · ขยับเป็น 2K เฉพาะตอนต้องใช้ทำป้ายหรือพิมพ์",
   "image_size": "1K",
   "aspect_ratio": "1:1",
+  "_logo_stamp_note": "15 ก.ย. 2026 — เจ้าของขอให้โลโก้บริษัทคงรูปเดิมทุกใบ · เดิม AI วาดโลโก้เองแล้วทรงเพี้ยนไม่ซ้ำกันสักใบ จึงสั่งห้ามวาด+เว้นมุม แล้วแปะไฟล์จริง public/logo-white.png หรือ logo-black.png (เลือกตามความสว่างของมุมนั้น) หลังวาดเสร็จ ด้วย lib/logoStamp.js · corner: bottom-left | bottom-right | top-left | top-right · width_pct = ความกว้างโลโก้เป็น % ของภาพ · light_threshold = มุมสว่างเกินค่านี้ (0-255) ใช้โลโก้ดำ · enabled:false = กลับไปให้ AI วาดโลโก้เองแบบเดิม",
+  "logo_stamp": {
+    "enabled": true,
+    "corner": "bottom-left",
+    "width_pct": 15,
+    "margin_pct": 3.5,
+    "light_threshold": 140
+  },
   "_bucket_note": "เก็บใน Supabase Storage bucket 'marketing' (public อยู่แล้ว) · ไม่เก็บ base64 ลง DB เพราะแถวจะบวมและ query ช้า",
   "bucket": "marketing",
   "path_prefix": "content",
