@@ -12,6 +12,9 @@
     - /start ครั้งแรกในกลุ่มไหน = ผูกบอทกับกลุ่มนั้น (จำใน scripts/.sync_bot_state.json)
       หลังผูกแล้วรับคำสั่งจากกลุ่มนั้นกลุ่มเดียว — กลุ่ม/คนอื่นส่งมาโดนเมิน
     - ปุ่มถาวร (reply keyboard): ซิงค์สต็อก / ซิงค์ทั้งหมด · หรือพิมพ์ /stock /sync /sales
+    - แผงปุ่มในตัวข้อความ (inline · /panel): ทุกคนในห้องเห็นและกดได้ ปักหมุดไว้ใช้ได้ตลอด
+      ⚠️ reply keyboard แสดงผล **รายคน** — คนที่เข้ากลุ่มทีหลังหรือเคยกดซ่อนคีย์บอร์ดจะไม่เห็นปุ่มเลย
+         (เจอจริง 16 ก.ย. 2026: เจ้าของเห็นปุ่ม แต่แอดมินอีกคนในห้องเดียวกันไม่เห็น จึงสั่งซิงค์ไม่ได้)
     - รันจริงผ่าน scripts/sync_local.py (ตัวเดียวกับที่ workflow ใช้) ทีละงาน ห้ามซ้อน
     - **ซิงค์อัตโนมัติเที่ยงคืน** แทน cron ของ GitHub ที่ใช้ไม่ได้ (ดูหัวข้อล่าง)
 
@@ -84,6 +87,21 @@ BTN_ALL = "📊 ซิงค์ทั้งหมด (ยอดขาย+สต�
 KEYBOARD = {"keyboard": [[{"text": BTN_STOCK}], [{"text": BTN_ALL}]],
             "resize_keyboard": True, "is_persistent": True}
 
+# ── แผงปุ่มในตัวข้อความ (inline) — เพิ่ม 16 ก.ย. 2026 ──
+# ปุ่ม inline ติดอยู่กับ "ข้อความ" ไม่ใช่กับ "ช่องพิมพ์ของแต่ละคน" → ทุกคนในห้องเห็นเหมือนกัน
+# และกดได้ทุกคน · ปักหมุดข้อความนี้ = มีปุ่มถาวรอยู่บนสุดของห้อง ไม่ต้องเลื่อนหา
+PANEL = {"inline_keyboard": [
+    [{"text": BTN_STOCK, "callback_data": "stock"}],
+    [{"text": BTN_ALL, "callback_data": "sync"}],
+    [{"text": "💡 เก็บไอเดีย", "callback_data": "ideas"},
+     {"text": "💾 สำรองข้อมูล", "callback_data": "backup"}],
+    [{"text": "📋 สถานะ", "callback_data": "status"}],
+]}
+PANEL_TEXT = ("🎛 <b>แผงควบคุม DivisionX</b>\n"
+              "กดปุ่มได้เลย — ทุกคนในห้องนี้กดได้ ผลจะรายงานกลับมาที่ห้องนี้\n\n"
+              "<i>แนะนำให้ปักหมุดข้อความนี้ไว้ (กดค้างที่ข้อความ → ปักหมุด) "
+              "จะได้กดจากบนสุดของห้องได้ตลอด ไม่ต้องเลื่อนหา</i>")
+
 # ── ค่าตั้งของรอบอัตโนมัติ ──
 # 00:10 ไม่ใช่ 00:00 เป๊ะ — เผื่อให้หลังบ้านตู้ปิดยอดของวันให้เรียบร้อยก่อน
 AUTO_AT_DEFAULT = "00:10"
@@ -149,11 +167,18 @@ def _esc(s):
     return _html.escape(str(s))
 
 
-def send(chat_id, text, keyboard=False):
+def send(chat_id, text, keyboard=False, markup=None):
     p = {"chat_id": chat_id, "text": text, "parse_mode": "HTML"}
-    if keyboard:
+    if markup is not None:
+        p["reply_markup"] = markup
+    elif keyboard:
         p["reply_markup"] = KEYBOARD
     return call("sendMessage", **p)
+
+
+def send_panel(chat_id):
+    """ส่งแผงปุ่ม inline — ใช้แทน/คู่กับ reply keyboard เวลาห้องมีหลายคน"""
+    return send(chat_id, PANEL_TEXT, markup=PANEL)
 
 
 def load_state():
@@ -659,6 +684,7 @@ def auto_status():
     lines.append("\nเครื่องต้องเปิดอยู่บอทถึงจะทำงาน — ถ้าเครื่องปิดข้ามคืน "
                  "บอทจะซิงค์ชดเชยให้ทันทีที่เปิดมา")
     lines.append("สั่งได้: /auto on · /auto off · /auto 00:30 · /ideas (เก็บไอเดียเดี๋ยวนี้) · /ideas on|off")
+    lines.append("ปุ่มหาย/ไม่ขึ้นบนเครื่องใคร ให้พิมพ์ /panel — แผงปุ่มในข้อความ ทุกคนในห้องกดได้")
     return "\n".join(lines)
 
 
@@ -686,13 +712,16 @@ def handle(u):
             send(chat_id, f"🔗 ผูกบอทซิงค์กับห้องนี้แล้ว ({state['chat_title']})\n"
                           f"กดปุ่มด้านล่างหรือพิมพ์ /stock /sync /sales ได้เลย",
                  keyboard=True)
+            send_panel(chat_id)
         return
     if chat_id != state["chat_id"]:
         return              # ห้องอื่น/แชทส่วนตัวคนแปลกหน้า — เมินเงียบ ๆ
 
-    if text.startswith("/start") or text.startswith("/buttons"):
+    if text.startswith("/start") or text.startswith("/buttons") or text.startswith("/panel"):
+        # ส่งทั้งสองแบบ — reply keyboard สำหรับคนที่เห็นอยู่แล้ว + แผง inline ที่ทุกคนในห้องเห็น
         send(chat_id, "ปุ่มพร้อมใช้ครับ 👇\n(ซิงค์อัตโนมัติทุกคืนอยู่แล้ว — "
                       "ดูสถานะด้วย /auto)", keyboard=True)
+        send_panel(chat_id)
     elif text.startswith("/backup"):
         arg = text.split(maxsplit=1)[1].strip().lower() if " " in text else ""
         if arg in ("on", "เปิด"):
@@ -766,6 +795,47 @@ def handle(u):
                          daemon=True).start()
 
 
+# ── ปุ่มจากแผง inline ──
+#
+# ⚠️ ต้องตอบ answerCallbackQuery ทุกครั้งและตอบก่อนเริ่มงาน — ไม่งั้นปุ่มค้างหมุนบนเครื่องคนกด
+#    (Telegram ให้เวลาตอบสั้นมาก งานซิงค์กินหลายนาที รอให้เสร็จก่อนตอบไม่ทันแน่)
+CALLBACK_JOBS = {
+    "stock": (["--stock"], "ซิงค์สต็อกหน้าตู้"),
+    "sync": ([], "ซิงค์ทั้งหมด"),
+    "sales": (["--sales"], "ซิงค์ยอดขาย"),
+}
+
+
+def who(user):
+    """ชื่อคนกดปุ่ม — ห้องนี้มีหลายคน ต้องรู้ว่าใครสั่ง (ฟังก์ชันล้วน — ทดสอบได้)"""
+    u = user or {}
+    name = " ".join(x for x in (u.get("first_name"), u.get("last_name")) if x).strip()
+    if name:
+        return name
+    return f"@{u['username']}" if u.get("username") else f"id {u.get('id', '?')}"
+
+
+def handle_callback(cq):
+    data = (cq.get("data") or "").strip()
+    chat_id = ((cq.get("message") or {}).get("chat") or {}).get("id")
+    call("answerCallbackQuery", callback_query_id=cq.get("id"), text="รับคำสั่งแล้ว")
+    if not chat_id or chat_id != STATE.get("chat_id"):
+        return              # ห้องอื่น — เมินเหมือนข้อความ
+    name = who(cq.get("from"))
+    if data in CALLBACK_JOBS:
+        args, label = CALLBACK_JOBS[data]
+        send(chat_id, f"👤 {name} กด <b>{label}</b>")
+        threading.Thread(target=run_sync, args=(chat_id, args, label), daemon=True).start()
+    elif data == "ideas":
+        send(chat_id, f"👤 {name} กด <b>เก็บไอเดีย</b>")
+        threading.Thread(target=run_ideas, kwargs={"manual": True}, daemon=True).start()
+    elif data == "backup":
+        send(chat_id, f"👤 {name} กด <b>สำรองข้อมูล</b>")
+        threading.Thread(target=run_backup, kwargs={"manual": True}, daemon=True).start()
+    elif data == "status":
+        send(chat_id, auto_status())
+
+
 def main():
     offset = 0
     me = call("getMe")
@@ -776,14 +846,17 @@ def main():
 
     while True:
         upd = call("getUpdates", offset=offset, timeout=50,
-                   allowed_updates=["message"])
+                   allowed_updates=["message", "callback_query"])
         if not upd or not upd.get("ok"):
             time.sleep(5)
             continue
         for u in upd["result"]:
             offset = u["update_id"] + 1
             try:
-                handle(u)
+                if u.get("callback_query"):
+                    handle_callback(u["callback_query"])
+                else:
+                    handle(u)
             except Exception as e:
                 # ข้อความแปลก ๆ ใบเดียวต้องไม่ล้มทั้งบอท — เพราะบอทตายเมื่อไหร่
                 # ซิงค์อัตโนมัติตายตามไปเงียบ ๆ ไม่มีใครรู้จนยอดขายหายไปหลายวัน

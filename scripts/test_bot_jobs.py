@@ -85,5 +85,14 @@ with tempfile.TemporaryDirectory() as tmp:
     check("เหลือจริง 8 ชุด", len(list(bot.BACKUP_DIR.iterdir())), 8)
     check("ไม่ลบอะไรถ้ายังไม่เกินโควตา", bot.prune_backups(keep=8), [])
 
+# ── ปุ่มจากแผง inline (ห้องมีหลายคน ต้องรู้ว่าใครกด) ──
+check("ปุ่มซิงค์สต็อก → args ถูก", bot.CALLBACK_JOBS["stock"], (["--stock"], "ซิงค์สต็อกหน้าตู้"))
+check("ปุ่มซิงค์ทั้งหมด → ไม่มี args", bot.CALLBACK_JOBS["sync"], ([], "ซิงค์ทั้งหมด"))
+check("ชื่อคนกด: ชื่อ + นามสกุล", bot.who({"first_name": "สมชาย", "last_name": "ใจดี"}), "สมชาย ใจดี")
+check("ชื่อคนกด: มีแต่ชื่อต้น", bot.who({"first_name": "แอดมิน"}), "แอดมิน")
+check("ชื่อคนกด: มีแต่ username", bot.who({"username": "dvxadmin"}), "@dvxadmin")
+check("ชื่อคนกด: เหลือแต่ id", bot.who({"id": 42}), "id 42")
+check("ชื่อคนกด: ไม่มีข้อมูลเลย", bot.who(None), "id ?")
+
 print(f"\n{'ผ่านครบ' if not fails else f'ไม่ผ่าน {fails} ข้อ'}")
 sys.exit(1 if fails else 0)
