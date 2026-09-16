@@ -40,16 +40,26 @@
 
     สั่งได้ในห้อง: /ideas (เก็บเดี๋ยวนี้) · /ideas on|off
 
+สำรองข้อมูล + โพสต์อัตโนมัติ (16 ก.ย. 2026):
+    GitHub ยังไม่ปลดแฟล็ก (ครบ 6 วันแล้ว) เจ้าของเลือกย้ายสองงานนี้มาก่อน
+      · สำรองข้อมูล  — ของเดิมรายสัปดาห์ (weekly-backup.yml) ขาดไปหนึ่งรอบแล้ว
+      · โพสต์อัตโนมัติ — เคาะ /api/marketing/content/publish-due ทุก 15 นาที (marketing-autopost.yml)
+        ⚠️ ของเดิมรันบนคลาวด์โดยตั้งใจ "โพสต์ต้องขึ้นแม้คอมปิด" — ย้ายมาที่นี่แล้วข้อนี้หายไป
+           เครื่องปิด = โพสต์ไม่ออกจนกว่าจะเปิด (ปลายทางยังโพสต์ให้อยู่ แค่ช้ากว่าเวลาที่ตั้ง)
+    สั่งได้ในห้อง: /backup (สำรองเดี๋ยวนี้) · /backup on|off · /autopost (เคาะเดี๋ยวนี้) · /autopost on|off
+
 รัน:  .venv-image\\Scripts\\python.exe scripts\\telegram_sync_bot.py
 """
 import html as _html
 import json
 import os
 import pathlib
+import shutil
 import subprocess
 import sys
 import threading
 import time
+import urllib.error
 import urllib.request
 from datetime import date, datetime, timedelta
 
@@ -86,6 +96,18 @@ MAX_SPAN = 5            # sync_local ปฏิเสธช่วง backfill เ
 # 07:00 ตามเวลาเดิมของ workflow และข้อความบนหน้า /marketing ("ตัวเก็บไอเดียรันทุกเช้า 07:00 น.")
 IDEAS_AT_DEFAULT = "07:00"
 IDEAS_ANGLE_LIMIT = "40"   # เท่ากับ workflow · โควตา Gemini ฟรีมีจำกัด
+
+# ── ค่าตั้งของงานที่ย้ายมาเพิ่ม 16 ก.ย. 2026 ──
+AUTOPOST_URL = "https://division-x-card.vercel.app/api/marketing/content/publish-due"
+AUTOPOST_EVERY_MIN = 15        # เท่ากับ cron เดิม · ปลายทางเป็นคนตัดสินว่าชิ้นไหนถึงเวลา
+AUTOPOST_ALERT_GAP_MIN = 60    # error เดิมซ้ำทุก 15 นาทีจะท่วมห้อง — เตือนซ้ำชั่วโมงละครั้งพอ
+BACKUP_SCRIPT = ROOT / "deploy" / "scripts" / "backup-tables.js"
+# ⚠️ นอก deploy/ เท่านั้น — scripts/vercel_deploy.py อัปทุกอย่างใน deploy/ ขึ้นเว็บ
+#    ไฟล์สำรองมียอดขายทั้งบริษัท หลุดขึ้นเว็บไม่ได้ (รากรีโปมี /backups/ ใน .gitignore ด้วย)
+BACKUP_DIR = ROOT / "backups"
+BACKUP_EVERY_DAYS = 7
+BACKUP_AT_DEFAULT = "00:30"
+BACKUP_KEEP = 8                # ~2 เดือน · ของเดิมเก็บเป็น artifact บน GitHub 90 วัน
 
 
 def env(key):
@@ -157,20 +179,27 @@ def save_state(st=None):
 _lock = threading.Lock()
 
 
-def _run_py(script, args, timeout):
-    """รันสคริปต์ Python หนึ่งตัวแบบเก็บ output → (CompletedProcess หรือ None, ข้อความตอนรันไม่ขึ้น)"""
+def _run_cmd(cmd, timeout, extra_env=None):
+    """รันคำสั่งหนึ่งตัวแบบเก็บ output → (CompletedProcess หรือ None, ข้อความตอนรันไม่ขึ้น)"""
     # encoding="utf-8" ข้างล่างบอกแค่ว่า "ฝั่งเราจะ**ถอด**รหัสท่อยังไง" ไม่ได้สั่งลูก
     # ว่าให้**เข้า**รหัสยังไง · ลูกพิมพ์ไทยลง pipe แล้วเลือก ACP ของเครื่องเอง (cp1252)
     # = ตายตั้งแต่บรรทัดแรก ต้องยัด PYTHONIOENCODING ให้ทั้งสายผ่าน env เท่านั้น
-    env = {**os.environ, "PYTHONIOENCODING": "utf-8:replace"}
+    env = {**os.environ, "PYTHONIOENCODING": "utf-8:replace", **(extra_env or {})}
     try:
-        return subprocess.run([sys.executable, str(script), *args],
-                              capture_output=True, text=True, encoding="utf-8",
+        return subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8",
                               errors="replace", cwd=str(ROOT), timeout=timeout, env=env), ""
     except subprocess.TimeoutExpired:
         return None, f"เกิน {timeout // 60} นาที — ถูกตัดจบ"
     except Exception as e:
         return None, f"รันไม่ขึ้น: {e}"
+
+
+def _run_py(script, args, timeout):
+    return _run_cmd([sys.executable, str(script), *args], timeout)
+
+
+def _run_node(script, args, timeout, extra_env=None):
+    return _run_cmd(["node", str(script), *args], timeout, extra_env)
 
 
 def _run_job(args):
@@ -443,6 +472,148 @@ def run_ideas(manual=False):
         _ideas_lock.release()
 
 
+# ── โพสต์อัตโนมัติ — เคาะปลายทางบนเว็บทุก 15 นาที (แทน marketing-autopost.yml) ──
+#
+# ⚠️ ตัวตัดสินใจว่าโพสต์ชิ้นไหนอยู่ฝั่งเว็บ บอทเป็นแค่ตัวจับเวลาเหมือน workflow เดิมเป๊ะ
+#    ห้ามย้ายตรรกะการเลือกโพสต์มาที่นี่ — สองที่ที่ตัดสินใจเรื่องเดียวกันจะเพี้ยนคนละทางวันหนึ่ง
+# ⚠️ ไม่มี secret = ปลายทางตอบ 503 แล้วไม่โพสต์อะไร ซึ่งไม่ใช่ความล้มเหลว (เหมือนของเดิม)
+
+def autopost_due(now, state):
+    if not state.get("autopost_enabled", True):
+        return False
+    return now.timestamp() - (state.get("autopost_last") or 0) >= AUTOPOST_EVERY_MIN * 60
+
+
+def autopost_report(code, data):
+    """ข้อความที่ควรส่งเข้าห้อง หรือ None ถ้ารอบนี้ไม่มีอะไรต้องบอก (ฟังก์ชันล้วน — ทดสอบได้)
+
+    200 ที่ไม่มีของถึงคิว = เงียบ · ไม่งั้นห้องจะมีข้อความทุก 15 นาทีจนคนเลิกอ่าน
+    """
+    if code == 503:
+        return None
+    if code != 200:
+        return f"❌ โพสต์อัตโนมัติ: ปลายทางตอบ HTTP {code}"
+    results = data.get("results") or []
+    manual = [r for r in results if r.get("needsManualFix")]
+    if manual:
+        return ("🚨 <b>ขึ้นเพจแล้วแต่บันทึกฐานข้อมูลไม่สำเร็จ</b> — ต้องแก้มือ อย่าสั่งโพสต์ซ้ำ\n"
+                + " · ".join(f"#{r.get('id')}" for r in manual))
+    failed = data.get("failed") or 0
+    if failed:
+        return (f"⚠️ โพสต์อัตโนมัติ: ล้ม {failed} ชิ้น\n"
+                + "\n".join(f"#{r.get('id')} {str(r.get('error'))[:90]}"
+                             for r in results if not r.get("ok")))
+    posted = data.get("posted") or 0
+    if posted:
+        return (f"📣 <b>โพสต์อัตโนมัติขึ้นเพจแล้ว {posted} ชิ้น</b>\n"
+                + "\n".join(f"#{r.get('id')} {r.get('post_url') or ''}".strip()
+                             for r in results if r.get("ok")))
+    return None
+
+
+def run_autopost(manual=False):
+    chat_id = STATE.get("chat_id")
+    STATE["autopost_last"] = time.time()   # ตั้งก่อนยิง — ยิงไม่ผ่านก็ไม่ควรรัวซ้ำทุกติ๊ก
+    save_state()
+    secret = env("AUTOPOST_SECRET")
+    if not secret:
+        if manual and chat_id:
+            send(chat_id, "⏸ ยังไม่ได้เปิดใช้โพสต์อัตโนมัติ — ไม่มี AUTOPOST_SECRET ใน deploy/.env.local")
+        return
+    req = urllib.request.Request(
+        AUTOPOST_URL, data=json.dumps({"dryRun": False}).encode("utf-8"),
+        headers={"Authorization": f"Bearer {secret}", "Content-Type": "application/json"},
+        method="POST")
+    try:
+        with urllib.request.urlopen(req, timeout=120) as r:
+            code, body = r.status, r.read().decode("utf-8", "replace")
+    except urllib.error.HTTPError as e:
+        code, body = e.code, e.read().decode("utf-8", "replace")
+    except Exception as e:
+        code, body = 0, str(e)
+    try:
+        data = json.loads(body)
+    except Exception:
+        data = {}
+
+    msg = autopost_report(code, data)
+    if manual and chat_id and not msg:
+        send(chat_id, f"📭 ไม่มีโพสต์ถึงคิว (ปลายทางตอบ HTTP {code})")
+    if not msg or not chat_id:
+        return
+    bad = msg[0] in "❌⚠️🚨"
+    if bad:
+        # ปัญหาเดิมซ้ำทุก 15 นาทีจะท่วมห้อง — ข่าวดีส่งได้เสมอ ข่าวร้ายชั่วโมงละครั้ง
+        if time.time() - (STATE.get("autopost_alert_at") or 0) < AUTOPOST_ALERT_GAP_MIN * 60:
+            return
+        STATE["autopost_alert_at"] = time.time()
+        save_state()
+    send(chat_id, msg + (f"\n\n<pre>{_esc(body[:600])}</pre>" if bad else ""))
+
+
+# ── สำรองข้อมูลรายสัปดาห์ (แทน weekly-backup.yml) ──
+#
+# เงื่อนไขเป็น "ครบ 7 วันตั้งแต่ชุดล่าสุดหรือยัง" ไม่ใช่ "วันอาทิตย์หรือยัง" —
+# ของเดิมยิงคืนวันเสาร์ ถ้ายึดวันตายตัวแล้ววันนั้นเครื่องปิด สัปดาห์นั้นจะหายไปทั้งรอบ
+_backup_lock = threading.Lock()
+
+
+def backup_due(now, state):
+    if not state.get("backup_enabled", True):
+        return False
+    if now.strftime("%H:%M") < BACKUP_AT_DEFAULT:
+        return False
+    done = state.get("backup_done_date")
+    if not done:
+        return True
+    try:
+        return (now.date() - date.fromisoformat(done)).days >= BACKUP_EVERY_DAYS
+    except ValueError:
+        return True          # ค่าพังในไฟล์ state อย่าทำให้ไม่สำรองข้อมูลไปตลอด
+
+
+def prune_backups(keep=BACKUP_KEEP):
+    """ลบชุดเก่าที่เกินโควตา คืนชื่อที่ลบ · ชื่อโฟลเดอร์เป็น timestamp เรียงตามตัวอักษรได้ตรงกับเวลา"""
+    if not BACKUP_DIR.exists():
+        return []
+    dirs = sorted((d for d in BACKUP_DIR.iterdir() if d.is_dir()), key=lambda d: d.name)
+    dead = dirs[:-keep] if keep > 0 else []
+    for d in dead:
+        shutil.rmtree(d, ignore_errors=True)
+    return [d.name for d in dead]
+
+
+def run_backup(manual=False):
+    chat_id = STATE.get("chat_id")
+    if not _backup_lock.acquire(blocking=False):
+        if manual and chat_id:
+            send(chat_id, "⏳ กำลังสำรองข้อมูลอยู่แล้ว — รอผลสักครู่")
+        return
+    try:
+        if manual and chat_id:
+            send(chat_id, "💾 เริ่มสำรองข้อมูล …")
+        BACKUP_DIR.mkdir(parents=True, exist_ok=True)
+        t0 = time.time()
+        p, err = _run_node(BACKUP_SCRIPT, [], timeout=1800, extra_env={"BACKUP_DIR": str(BACKUP_DIR)})
+        ok = p is not None and p.returncode == 0
+        out = (p.stdout if p is not None else err) or ""
+        if not ok:
+            detail = err if p is None else ((p.stderr or "").strip()[-1000:] or out[-800:])
+            if chat_id:
+                send(chat_id, f"❌ <b>สำรองข้อมูลล้ม</b>\n\n<pre>{_esc(detail)}</pre>")
+            return
+        STATE["backup_done_date"] = date.today().isoformat()
+        save_state()
+        removed = prune_backups()
+        tail = "\n".join(l.strip() for l in out.splitlines() if l.strip()[:1] in "✓✗✅")
+        if chat_id:
+            send(chat_id, f"💾 <b>สำรองข้อมูลแล้ว</b> ({(time.time() - t0) / 60:.1f} นาที)"
+                          + (f" · ลบชุดเก่า {len(removed)} ชุด" if removed else "")
+                          + f"\n<pre>{_esc(tail[:2500])}</pre>")
+    finally:
+        _backup_lock.release()
+
+
 def scheduler():
     while True:
         try:
@@ -453,6 +624,11 @@ def scheduler():
                 # แยกเธรด — ขั้นคิดมุมวัดจริง 18 นาทีกับ 19 ชิ้น ถ้ารันในเธรดนี้ ตัวจับเวลาซิงค์จะค้างรอไปด้วย
                 # ติ๊กถัดไประหว่างที่ยังรันอยู่จะเรียกซ้ำ แต่ _ideas_lock ทำให้ตัวที่ซ้ำออกทันที
                 threading.Thread(target=run_ideas, daemon=True).start()
+            # ทั้งสองตัวแยกเธรดเหมือนกัน — เคาะโพสต์รอปลายทางได้นาน ส่วนสำรองข้อมูลกินหลายนาที
+            if autopost_due(datetime.now(), STATE):
+                threading.Thread(target=run_autopost, daemon=True).start()
+            if backup_due(datetime.now(), STATE):
+                threading.Thread(target=run_backup, daemon=True).start()
         except Exception as e:
             print(f"[scheduler] {e}")
         time.sleep(AUTO_TICK)
@@ -473,6 +649,13 @@ def auto_status():
     idea_done = STATE.get("ideas_done_date") == date.today().isoformat()
     lines.append(f"💡 เก็บไอเดีย: <b>{'เปิด' if idea_on else 'ปิด'}</b> · เวลา <b>{IDEAS_AT_DEFAULT}</b> น. · "
                  f"วันนี้{'เก็บแล้ว' if idea_done else 'ยังไม่ได้เก็บ'}")
+    bk = STATE.get("backup_done_date") or "ยังไม่เคย"
+    lines.append(f"💾 สำรองข้อมูล: <b>{'เปิด' if STATE.get('backup_enabled', True) else 'ปิด'}</b> · "
+                 f"ทุก {BACKUP_EVERY_DAYS} วัน · ชุดล่าสุด {bk}")
+    ap_last = STATE.get("autopost_last")
+    ago = f"{int((time.time() - ap_last) / 60)} นาทีที่แล้ว" if ap_last else "ยังไม่เคย"
+    lines.append(f"📣 โพสต์อัตโนมัติ: <b>{'เปิด' if STATE.get('autopost_enabled', True) else 'ปิด'}</b> · "
+                 f"เคาะทุก {AUTOPOST_EVERY_MIN} นาที · ล่าสุด {ago}")
     lines.append("\nเครื่องต้องเปิดอยู่บอทถึงจะทำงาน — ถ้าเครื่องปิดข้ามคืน "
                  "บอทจะซิงค์ชดเชยให้ทันทีที่เปิดมา")
     lines.append("สั่งได้: /auto on · /auto off · /auto 00:30 · /ideas (เก็บไอเดียเดี๋ยวนี้) · /ideas on|off")
@@ -510,6 +693,34 @@ def handle(u):
     if text.startswith("/start") or text.startswith("/buttons"):
         send(chat_id, "ปุ่มพร้อมใช้ครับ 👇\n(ซิงค์อัตโนมัติทุกคืนอยู่แล้ว — "
                       "ดูสถานะด้วย /auto)", keyboard=True)
+    elif text.startswith("/backup"):
+        arg = text.split(maxsplit=1)[1].strip().lower() if " " in text else ""
+        if arg in ("on", "เปิด"):
+            state["backup_enabled"] = True
+            save_state()
+            send(chat_id, f"✅ เปิดสำรองข้อมูลอัตโนมัติแล้ว (ทุก {BACKUP_EVERY_DAYS} วัน)")
+        elif arg in ("off", "ปิด"):
+            state["backup_enabled"] = False
+            save_state()
+            send(chat_id, "⏸ ปิดสำรองข้อมูลอัตโนมัติแล้ว — พิมพ์ /backup เพื่อสำรองเองได้")
+        elif arg:
+            send(chat_id, "ไม่เข้าใจครับ — ใช้ /backup · /backup on · /backup off")
+        else:
+            threading.Thread(target=run_backup, kwargs={"manual": True}, daemon=True).start()
+    elif text.startswith("/autopost"):
+        arg = text.split(maxsplit=1)[1].strip().lower() if " " in text else ""
+        if arg in ("on", "เปิด"):
+            state["autopost_enabled"] = True
+            save_state()
+            send(chat_id, f"✅ เปิดโพสต์อัตโนมัติแล้ว (เคาะทุก {AUTOPOST_EVERY_MIN} นาทีตอนเครื่องเปิด)")
+        elif arg in ("off", "ปิด"):
+            state["autopost_enabled"] = False
+            save_state()
+            send(chat_id, "⏸ ปิดโพสต์อัตโนมัติแล้ว — ของที่ตั้งเวลาไว้จะไม่ขึ้นเพจเอง")
+        elif arg:
+            send(chat_id, "ไม่เข้าใจครับ — ใช้ /autopost · /autopost on · /autopost off")
+        else:
+            threading.Thread(target=run_autopost, kwargs={"manual": True}, daemon=True).start()
     elif text.startswith("/ideas"):
         arg = text.split(maxsplit=1)[1].strip().lower() if " " in text else ""
         if arg in ("on", "เปิด"):

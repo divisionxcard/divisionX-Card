@@ -13,17 +13,30 @@ const { createClient } = require("@supabase/supabase-js")
 // ── อ่าน .env.local ถ้ามี (local dev) — ถ้าไม่มี ใช้ process.env (GitHub Actions) ──
 const envPath = path.join(__dirname, "..", ".env.local")
 if (fs.existsSync(envPath)) {
-  fs.readFileSync(envPath, "utf8").split("\n").forEach(line => {
-    const m = line.match(/^([A-Z_][A-Z0-9_]*)=(.*)$/)
-    if (m && !process.env[m[1]]) process.env[m[1]] = m[2].replace(/^["']|["']$/g, "")
+  // ⚠️ ต้องตัด BOM ทิ้งก่อน — ไฟล์ในเครื่องเจ้าของขึ้นต้นด้วย BOM และบรรทัดแรกคือ
+  //    NEXT_PUBLIC_SUPABASE_URL · ไม่ตัดแล้ว regex ไม่ match คีย์แรก แล้วสคริปต์จะบอกว่า
+  //    "ไม่พบ Supabase URL/Key" ทั้งที่มีอยู่ (16 ก.ย. 2026 ตอนย้ายงานนี้จาก Actions มาเครื่อง)
+  // ⚠️ อย่าใช้ regex `^KEY=(.*)$` กับไฟล์ .env — ใน JavaScript `.` ไม่แมตช์ `\r`
+  //    (\r เป็น line terminator เหมือน \n) ไฟล์นี้เป็น CRLF ทุกบรรทัดจึงไม่แมตช์เลย
+  //    เหลือแมตช์บรรทัดสุดท้ายบรรทัดเดียวที่ไม่มี \r → สคริปต์บอก "ไม่พบ URL/key" ทั้งที่มีครบ
+  //    (เจอจริง 16 ก.ย. 2026 ตอนย้ายงานสำรองข้อมูลจาก GitHub Actions มารันในเครื่อง)
+  //    ตัดหัวท้ายด้วย trim แล้วแยกที่ "=" ตัวแรกพอ — แบบเดียวกับ envload.py / sync_local.py
+  fs.readFileSync(envPath, "utf8").replace(/^﻿/, "").split(/\r?\n/).forEach(line => {
+    line = line.trim()
+    const i = line.indexOf("=")
+    if (i < 1 || line.startsWith("#")) return
+    const key = line.slice(0, i).trim()
+    if (!process.env[key]) process.env[key] = line.slice(i + 1).trim().replace(/^["']|["']$/g, "")
   })
 }
 
 // รองรับทั้งชื่อ env ของ Next.js (local) และชื่อที่ scraper ใช้ (GHA)
+// ⚠️ ต้องเป็น service key เท่านั้น — RLS เปิดแล้ว (migration 069) anon key อ่านตารางพวกนี้ไม่ได้
+//    ถ้าปล่อยให้ตกไปใช้ anon จะได้ไฟล์สำรองที่ "สำเร็จ" แต่ข้างในว่าง ซึ่งแย่กว่าสำรองล้ม
 const SUPA_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL
-const SUPA_KEY = process.env.SUPABASE_SERVICE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+const SUPA_KEY = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY
 if (!SUPA_URL || !SUPA_KEY) {
-  console.error("❌ ไม่พบ Supabase URL/Key — ตั้ง NEXT_PUBLIC_SUPABASE_URL + NEXT_PUBLIC_SUPABASE_ANON_KEY (local) หรือ SUPABASE_URL + SUPABASE_SERVICE_KEY (CI)")
+  console.error("❌ ไม่พบ Supabase URL/service key — ตั้ง NEXT_PUBLIC_SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY (local) หรือ SUPABASE_URL + SUPABASE_SERVICE_KEY (CI)")
   process.exit(1)
 }
 const supabase = createClient(SUPA_URL, SUPA_KEY)
@@ -59,7 +72,10 @@ async function fetchAllRows(table, orderBy) {
 
 async function main() {
   const ts = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19)
-  const outDir = path.join(__dirname, "..", "backups", ts)
+  // BACKUP_DIR ตั้งจากภายนอกได้ — บอทในเครื่องชี้มาที่ <repo>/backups (นอก deploy/)
+  // เพราะตัวอัปขึ้น Vercel ส่งทุกอย่างใน deploy/ ขึ้นเว็บ · บน Actions ไม่ตั้ง = ที่เดิม
+  const baseDir = process.env.BACKUP_DIR || path.join(__dirname, "..", "backups")
+  const outDir = path.join(baseDir, ts)
   fs.mkdirSync(outDir, { recursive: true })
 
   console.log(`\n📦 Backup → ${outDir}\n`)

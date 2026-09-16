@@ -64,6 +64,11 @@ scripts/vms-scraper/*.har
 *.sql.gz
 *.dump
 
+# ─── ไฟล์สำรองฐานข้อมูลรายสัปดาห์ (บอทในเครื่องเป็นคนทำ ตั้งแต่ 16 ก.ย. 2026) ──
+# อยู่ที่รากรีโป **นอก deploy/** โดยตั้งใจ — scripts/vercel_deploy.py อัปทุกอย่างใน deploy/
+# ขึ้นเว็บ ถ้าวางไว้ที่นั่น ไฟล์ที่มียอดขายทั้งบริษัทจะโหลดได้จากอินเทอร์เน็ต
+/backups/
+
 .vercel
 
 # ─── Local dashboard launcher (machine-specific paths) ───────
