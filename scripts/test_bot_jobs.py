@@ -94,5 +94,21 @@ check("ชื่อคนกด: มีแต่ username", bot.who({"username":
 check("ชื่อคนกด: เหลือแต่ id", bot.who({"id": 42}), "id 42")
 check("ชื่อคนกด: ไม่มีข้อมูลเลย", bot.who(None), "id ?")
 
+# ── ช่วงวันที่ดึงยอดขาย: รูที่หลุดไปต้องถูกอุดเอง (เคส 23 ก.ย. 2026) ──
+from datetime import date  # noqa: E402
+
+d = date(2026, 9, 28)
+chunks = bot.sales_chunks(date(2026, 9, 24), d)
+check("ตัวชี้อยู่ 24 ก.ย. → ย้อนกลับไปถึง 22 ก.ย. (คลุม 23 ที่หลุด)", chunks[0][0], "2026-09-22")
+check("ปลายทางยังเป็นวันนี้", chunks[-1][1], "2026-09-28")
+check("ซิงค์สำเร็จวันนี้แล้ว ยังดึงย้อน 2 วันให้", bot.sales_chunks(d, d)[0][0], "2026-09-26")
+check("ไม่เคยซิงค์มาก่อน → เริ่มจาก 3 วันก่อน (เมื่อวาน - ทับซ้อน)",
+      bot.sales_chunks(None, d)[0][0], "2026-09-25")
+check("แต่ละท่อนยาวไม่เกินเพดาน VMS 5 วัน",
+      all((date.fromisoformat(b) - date.fromisoformat(a)).days <= 5
+          for a, b in bot.sales_chunks(date(2026, 9, 1), d)), True)
+check("ค้างมานาน → ซอยหลายท่อน ไม่ใช่ท่อนเดียวยาว ๆ",
+      len(bot.sales_chunks(date(2026, 9, 1), d)) > 1, True)
+
 print(f"\n{'ผ่านครบ' if not fails else f'ไม่ผ่าน {fails} ข้อ'}")
 sys.exit(1 if fails else 0)
