@@ -143,3 +143,39 @@ deploy/public/music/
 scripts/.sync_bot_state.json
 .sync-local.log
 .sync-local.pid
+
+# ─── เศษสคริปต์จาก cron ตรวจคอนเทนต์ (6 ต.ค. 2026 · ค้าง 153 ไฟล์ใน 1 สัปดาห์) ──
+# งาน cron แบบ agent มี workdir เป็นรากรีโป มันเขียนสคริปต์ชั่วคราวทิ้งทุกรอบ
+# ชื่อซ้ำกันเองเป็นชุด (_review_run.py · _review_run2.py · review_runner.py …)
+#
+# ⚠️ `_*.py` กลืน `__init__.py` ด้วย และรีโปนี้มี `deploy/agents/_console.py` ที่ track อยู่จริง
+#    จึงต้องมีบรรทัด ! กำกับไว้ทุกตัว — ตรวจด้วย `git ls-files | grep -E "(^|/)_[^/]*\.py$"`
+#    ก่อนเพิ่มรูปแบบใหม่เสมอ (gitignore ไม่มีผลกับไฟล์ที่ track แล้ว แต่ไฟล์ใหม่จะหายเงียบ)
+_*.py
+!__init__.py
+!__main__.py
+!deploy/agents/_console.py
+
+# ผลลัพธ์ชั่วคราวของรอบตรวจ (ดึงใหม่ได้จาก DB)
+_review_*.json
+/review_*.json
+/all_captions.txt
+
+# สคริปต์ทดลองที่รากรีโปโดยเฉพาะ — ผูกกับ / เพื่อไม่ให้ลามไปโฟลเดอร์ซอร์สจริง
+/check_*.py
+/fetch_*.py
+/review_*.py
+/verify_claims*.py
+/get_review*.py
+/run_content_review.py
+/cron_review_content.py
+/dump_content.py
+/print_captions.py
+/save_captions.py
+/update_reviews.py
+/dvx_check.py
+/dvx_content_review.py
+/dvx_review_auto.py
+
+# ที่ทิ้งขยะโดยเจตนา — ชื่อบอกอยู่แล้วว่า scratch
+scripts/scratch/
