@@ -259,17 +259,26 @@ def run_sync(chat_id, args, label):
         send(chat_id, "⏳ มีงานซิงค์กำลังรันอยู่ — รอให้จบก่อนแล้วค่อยกดใหม่")
         return
     try:
-        send(chat_id, f"🚀 เริ่ม{label} … ใช้เวลาราว 2-5 นาที เสร็จแล้วจะรายงานผลที่นี่")
+        # ยอดขายไล่ช่วงเดียวกับรอบอัตโนมัติ ไม่ใช่ "เมื่อวาน→วันนี้" ของ sync_local — ดู run_sales_catchup
+        chunks = None if "--stock" in args else pending_sales_chunks()
+        span = f" (ยอดขาย {chunks[0][0]} → {chunks[-1][1]})" if chunks else ""
+        send(chat_id, f"🚀 เริ่ม{label}{span} … ใช้เวลาราว 2-5 นาที เสร็จแล้วจะรายงานผลที่นี่")
         t0 = time.time()
-        ok, body = _run_job(args)
+        if chunks is None:
+            ok, body = _run_job(args)
+        else:
+            parts, ok = run_sales_catchup(chunks)
+            if ok and not args:          # ซิงค์ทั้งหมด → ปิดท้ายด้วยสต็อก (ต้องหลังยอดขายเสมอ)
+                ok, stock_body = _run_job(["--stock"])
+                parts.append(f"▸ สต็อกหน้าตู้\n{stock_body}")
+            body = "\n\n".join(parts)
         mins = (time.time() - t0) / 60
         send(chat_id, f"{'✅' if ok else '❌'} <b>{label}เสร็จ</b> ({mins:.1f} นาที)"
                       f"\n\n<pre>{_esc(body[:3000])}</pre>")
-        if ok:
-            # กดเองก็นับเป็นการซิงค์ของวันนั้น รอบอัตโนมัติจะได้ไม่รันซ้ำให้เปลือง
-            # แต่ "ปิดงานของวันนี้" ให้เฉพาะตอนกดซิงค์ทั้งหมด (args ว่าง) เท่านั้น —
+        if ok and not args:
+            # กดซิงค์ทั้งหมดผ่าน = งานของวันนี้ครบ รอบอัตโนมัติจะได้ไม่รันซ้ำให้เปลือง
             # กดเฉพาะสต็อกหรือเฉพาะยอดขาย ยังขาดอีกครึ่ง ต้องปล่อยให้รอบเที่ยงคืนตามเก็บ
-            mark_synced(sales="--stock" not in args, full=not args)
+            mark_day_done()
     except Exception as e:
         send(chat_id, f"❌ {label}ล้ม: {e}")
     finally:
@@ -278,14 +287,43 @@ def run_sync(chat_id, args, label):
 
 # ── รอบอัตโนมัติเที่ยงคืน — แทน cron ของ GitHub ──
 
-def mark_synced(sales=False, full=False):
-    if sales:
-        STATE["auto_sales_through"] = date.today().isoformat()
-    if full:
-        STATE["auto_done_date"] = date.today().isoformat()
-        STATE.pop("auto_retry_at", None)
-        STATE["auto_tries"] = 0
+def mark_day_done():
+    """ซิงค์ครบทั้งยอดขาย+สต็อกของวันนี้แล้ว — ไม่แตะตัวชี้ยอดขาย (run_sales_catchup เลื่อนให้เอง)"""
+    STATE["auto_done_date"] = date.today().isoformat()
+    STATE.pop("auto_retry_at", None)
+    STATE["auto_tries"] = 0
     save_state()
+
+
+def pending_sales_chunks(today=None):
+    """ช่วงยอดขายที่ต้องดึงตอนนี้ นับจากตัวชี้ auto_sales_through"""
+    last = STATE.get("auto_sales_through")
+    return sales_chunks(date.fromisoformat(last) if last else None, today or date.today())
+
+
+def run_sales_catchup(chunks):
+    """ดึงยอดขายทีละช่วง เลื่อนตัวชี้เฉพาะช่วงที่ดึงสำเร็จจริง → (ข้อความรายช่วง, ผ่านหมดไหม)
+
+    ใช้ทั้งรอบอัตโนมัติและปุ่มกดเอง · ผู้เรียกต้องถือ _lock เอง
+
+    ⚠️ ปุ่มกดเองต้องผ่านตัวนี้ด้วย ห้ามเรียก sync_local เปล่า ๆ (9 ต.ค. 2026)
+       sync_local ที่ไม่ระบุช่วงดึงแค่ "เมื่อวาน→วันนี้" แต่เดิมปุ่มเลื่อนตัวชี้ไปวันนี้เสมอ
+       ยอดวันที่ 7 ต.ค. ของทุกตู้จึงหายทั้งวัน: ไม่มีแถวไหนถูกซิงค์เข้าเลยตั้งแต่ 7 ต.ค. 00:1x
+       จนถึง 9 ต.ค. 21:4x (ดูจาก sales.synced_at) แล้วรอบที่ 21:4x ดึงแค่ 8→9 แบบปุ่มกดเอง
+       ตัวชี้จึงกระโดดไป 9 ข้ามวันที่ 7
+       ช่วงทับซ้อน 2 วันของ sales_chunks จะอุดรูนี้ได้ในรอบถัดไปก็จริง แต่ถ้าวันที่หลุดเกิน
+       ช่วงทับซ้อนก็หายถาวร (เหมือน 23 ก.ย.) · ให้ปุ่มไล่จากตัวชี้เหมือนรอบอัตโนมัติจึงปิดรูได้ตรงกว่า
+    """
+    parts, all_ok = [], True
+    for frm, to in chunks:
+        ok, body = _run_job(["--sales", "--from", frm, "--to", to])
+        parts.append(f"▸ ยอดขาย {frm} → {to}\n{body}")
+        all_ok &= ok
+        if not ok:
+            break                # ยอดขายพัง อย่าไปต่อ สต็อกจะคำนวณการเติมผิด
+        STATE["auto_sales_through"] = to
+        save_state()             # เซฟทีละช่วง — ล้มกลางทางจะได้ไม่ต้องเริ่มใหม่หมด
+    return parts, all_ok
 
 
 def parse_hhmm(s):
@@ -312,6 +350,7 @@ def sales_chunks(last_through, today, max_span=MAX_SPAN, overlap=SALES_OVERLAP_D
        แต่ตัวชี้กระโดดไปวันนี้ด้วย → 23 ก.ย. ไม่เคยถูกดึง และถูกข้ามตลอดไปเพราะตัวชี้เลยมาแล้ว
        ผลคือยอดทั้งวันของ 12 ตู้หายไป 5 วันกว่าจะมีคนสังเกต (฿12,930)
        ทับซ้อนเพิ่มอีกวันทำให้รูแบบนี้ถูกอุดเองในรอบถัดไป โดยจ่ายแค่การดึงซ้ำที่ไม่มีผลข้างเคียง
+       (9 ต.ค. 2026 ปิดที่ต้นเหตุแล้ว — ปุ่มกดเองไล่จากตัวชี้เหมือนกัน ดู run_sales_catchup)
     """
     if last_through is None:
         last_through = today - timedelta(days=1)
@@ -362,23 +401,14 @@ def run_auto():
             STATE["auto_tries_date"] = today.isoformat()
 
         last = STATE.get("auto_sales_through")
-        chunks = sales_chunks(date.fromisoformat(last) if last else None, today)
+        chunks = pending_sales_chunks(today)
         behind = len(chunks) > 1 or (last and date.fromisoformat(last) < today - timedelta(days=1))
         send(chat_id, "🌙 <b>ซิงค์อัตโนมัติประจำวัน</b> เริ่มแล้ว"
                       + (f"\nดึงย้อนหลัง {len(chunks)} ช่วง (ค้างมาตั้งแต่ {last})" if behind else "")
                       + "\nเสร็จแล้วจะรายงานผลที่นี่")
 
         t0 = time.time()
-        parts, all_ok = [], True
-        for frm, to in chunks:
-            ok, body = _run_job(["--sales", "--from", frm, "--to", to])
-            parts.append(f"▸ ยอดขาย {frm} → {to}\n{body}")
-            all_ok &= ok
-            if ok:
-                STATE["auto_sales_through"] = to
-                save_state()         # เซฟทีละช่วง — ล้มกลางทางจะได้ไม่ต้องเริ่มใหม่หมด
-            else:
-                break                # ยอดขายพัง อย่าไปต่อ สต็อกจะคำนวณการเติมผิด
+        parts, all_ok = run_sales_catchup(chunks)
 
         if all_ok:
             ok, body = _run_job(["--stock"])
@@ -391,7 +421,7 @@ def run_auto():
                       f"\n\n<pre>{_esc(report[:3000])}</pre>")
 
         if all_ok:
-            mark_synced(sales=True, full=True)
+            mark_day_done()
         else:
             tries = STATE.get("auto_tries", 0) + 1
             STATE["auto_tries"] = tries
