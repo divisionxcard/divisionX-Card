@@ -3,9 +3,8 @@ name: Payif Daily Sales Sync
 # ยี่ห้อตู้ Payif (ผ่าน Vendos portal API) — ดึงยอดขายเข้า sales table
 # อ่านตู้จาก machines (brand='payif') · sync ทุกตู้อัตโนมัติเมื่อเพิ่มตู้ใหม่
 on:
-  schedule:
-    # ทุกวัน 00:15 น. ไทย (17:15 UTC วันก่อน) — ยอดขายเมื่อวาน (คั่นกลาง stock 00:20)
-    - cron: "15 17 * * *"
+  # รอบเที่ยงคืนย้ายไปบอท Telegram ในเครื่องเจ้าของแล้ว (scripts/telegram_sync_bot.py · 00:10) — 9 ต.ค. 2026
+  # ที่นี่เหลือแค่ปุ่มบนเว็บ + backfill มือ · ห้ามใส่ cron คืนกลับ จะซิงค์ซ้อนกับบอท
   workflow_dispatch:
     inputs:
       days:

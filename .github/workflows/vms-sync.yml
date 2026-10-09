@@ -1,9 +1,8 @@
 name: VMS Daily Sync
 
 on:
-  schedule:
-    # รันทุกวัน เวลา 00:00 น. เวลาไทย (UTC+7 → 17:00 UTC วันก่อน)
-    - cron: "0 17 * * *"
+  # รอบเที่ยงคืนย้ายไปบอท Telegram ในเครื่องเจ้าของแล้ว (scripts/telegram_sync_bot.py · 00:10) — 9 ต.ค. 2026
+  # ที่นี่เหลือแค่ปุ่ม "ดึงข้อมูล VMS" บนเว็บ + backfill มือ · ห้ามใส่ cron 17:00 คืน จะซิงค์ซ้อนกับบอท
   workflow_dispatch:  # กดรันมือได้จาก GitHub Actions
     inputs:
       days:

@@ -1,9 +1,8 @@
 name: WorldWide Daily Sales Sync
 
 on:
-  schedule:
-    # รันทุกวัน เวลา 00:10 น. ไทย (17:10 UTC วันก่อน)
-    - cron: "10 17 * * *"
+  # รอบเที่ยงคืนย้ายไปบอท Telegram ในเครื่องเจ้าของแล้ว (scripts/telegram_sync_bot.py · 00:10) — 9 ต.ค. 2026
+  # ที่นี่เหลือแค่ปุ่มบนเว็บ + backfill มือ · ห้ามใส่ cron คืนกลับ จะซิงค์ซ้อนกับบอท
   workflow_dispatch:
     inputs:
       days:
