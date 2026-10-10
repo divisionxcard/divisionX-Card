@@ -52,7 +52,9 @@ def load_env_file():
     f = ROOT / ".env.local"
     if not f.exists():
         return
-    for line in f.read_text(encoding="utf-8").splitlines():
+    # utf-8-sig: .env.local บรรทัดแรกมี BOM (แก้ด้วย Notepad 15 ก.ย.) — อ่านแบบ utf-8 เฉย ๆ
+    # คีย์จะกลายเป็น "﻿NEXT_PUBLIC_SUPABASE_URL" แล้วรันบนเครื่องขึ้น "ไม่มี SUPABASE_URL" (เจอ 10 ต.ค.)
+    for line in f.read_text(encoding="utf-8-sig").splitlines():
         line = line.strip()
         if not line or line.startswith("#") or "=" not in line:
             continue
