@@ -234,6 +234,19 @@ grep -rn "24 hours\|24-hour\|24/7\|round the clock" deploy/tasks/ deploy/app/ de
 **ขั้นคิดไอเดียถูกมากเทียบกับขั้นวาด** → ทดสอบไอเดียได้ฟรี ๆ ก่อนค่อยยิงภาพ
 เขียนสคริปต์เรียก `planVisual()` ตรง ๆ แล้วดูผล ไม่ต้องเสีย $0.20 ทุกครั้งที่ลอง
 
+### ทางแยก: ซีรีส์ "ส่อง 5 ใบเด็ด" (`content_format = top5` · 10 ต.ค. 2026)
+
+ไม่ผ่านวงจรข้างบน — `content/image` ตอบ 409 `use_template` · ใช้ปุ่ม "โปสเตอร์ 5 ใบเด็ด" แทน:
+```
+content/poster → lib/aiBackground.js (พื้นหลังล้วน ห้ามตัวหนังสือ/ตัวละคร/การ์ด) → Storage aibg/
+  → poster-render.yml (template=top5) → agents/top5_poster.py + tasks/poster_tpl_top5.html (Chromium)
+```
+การ์ดจริง 5 ใบจากเว็บทางการ asia-th วางด้วยเทมเพลต (ไม่ให้โมเดลวาดหน้าการ์ด) · ไม่มีราคาบนภาพ ·
+ลองดีไซน์ในเครื่อง: `top5_poster.py --id 0 --top5-json x.json --bg-file bg.png --dry-run --out x.png`
+
+⚠️ **ห้ามบรรยายโซนว่างเป็นรูปทรงในบรีฟพื้นหลัง** — "a 2x2 grid area" ได้แผ่นกระจกเรืองแสง 2×2 จริง (กฎข้อห้า)
+⚠️ **ภาพพื้นหลังใน HTML ต้องเป็น `<img>`** — `background: var(--x) url(data: 2 MB)` ถูก Chromium ทิ้งทั้งกฎเงียบ ๆ
+
 ---
 
 ## กับดักที่เคยทำให้พังจริง

@@ -77,11 +77,29 @@ select id, left(summary, 60) from marketing_ideas where source = 'news';
 
 ## ผู้เขียน (provider) เลือกอัตโนมัติ
 ```
-ANTHROPIC_API_KEY → Claude   ทำงานทุกที่ · เสียเงิน · คุณภาพสูงสุด
-GEMINI_API_KEY    → Gemini   ทำงานทุกที่ · ฟรี 1,500/วัน  ← ที่ใช้อยู่
+OPENAI_API_KEY    → gpt-5.4  ← ที่ใช้อยู่ (เจ้าของเลือก 10 ต.ค. 2026) · key เดียวกับขั้นคิดไอเดียภาพ
+ANTHROPIC_API_KEY → Claude   ทำงานทุกที่ · เสียเงิน
+GEMINI_API_KEY    → Gemini   ทำงานทุกที่ · ฟรี 1,500/วัน (ตัวหลักเดิม — เขียนตื้น เติมวลีขาย)
 ไม่มี key         → Ollama   ฟรี 100% แต่ **ใช้บน Vercel ไม่ได้** (คนละเครื่อง)
 ```
-บังคับด้วย `AI_PROVIDER=claude|gemini|ollama`
+บังคับด้วย `AI_PROVIDER=openai|claude|gemini|ollama` · เปลี่ยนรุ่นที่ `content_voice.json → openai_model`
+หรือ env `OPENAI_WRITER_MODEL` · gpt-5 ห้ามส่ง temperature/max_tokens (รับแค่ค่าตั้งต้น)
+
+## รูปแบบ manual — ซีรีส์ "ส่อง 5 ใบเด็ด" (`top5` · 10 ต.ค. 2026)
+
+`"manual": true` = **ไม่ถูกสุ่ม** ต้องสร้างจากกล่องในหน้าไอเดีย (`api/marketing/content/series`)
+แถวถูกสร้างพร้อม `content_format: "top5"` แล้วตัวเขียนบังคับรูปแบบนั้นตลอด รวมตอนกดเขียนใหม่
+
+- `length` / `structure` ของรูปแบบ **ทับกฎกลาง "3-5 บรรทัด"** และ**ไม่ส่งตัวอย่างโพสต์ขายของ** (ดู `buildPrompt`)
+- ข้อมูล 5 ใบ + ราคา: `lib/top5.js` → `lib/cardPrice.js` (card2price.com หน้า `/card/<รหัส>` เท่านั้น ห้าม `/api`)
+- **ราคาต้องมีการซื้อขายจริงรองรับ** (`priceBackedBySales`) — card2price มีราคาเวอร์ชันแพงที่ซ้ำกับใบอื่น
+  ทุกบาทและไม่มีประวัติขาย (OP17-118_p2 = เอส OP-13 = ฿100,158) · ราคาเกิน 14 วันไม่ใช้
+- **ตัวเลขสรุปให้คำนวณเอง (`top5Summary`)** อย่าให้โมเดลนับ — มันเขียน "4 ใบทะลุหลักหมื่น" ทั้งที่ 5
+- ราคาอยู่ในแคปชั่นเท่านั้น โปสเตอร์ไม่มีราคา · 5 ใบที่ใช้จริงเก็บที่ Storage `marketing/series/top5-<id>.json`
+- รายละเอียด + กับดัก 13 ข้อ: `wiki/worklog/2026-10-10-top5-series-pilot.md`
+
+⚠️ **ตัวตรวจของ Hermes เขียน "ยาว 3-5 บรรทัด · emoji" ตายตัวในพรอมต์ cron นอกรีโป**
+(`%LOCALAPPDATA%\hermes\cron\jobs.json` งาน 47c6603299a7) — แก้ `content_voice.json` อย่างเดียวไม่พอ
 
 **Gemini: `maxOutputTokens` ต้อง 2048 ไม่ใช่ 1024** — รุ่นใหม่ "คิด" ก่อนตอบและ
 thinking กินโควตา output ด้วย (~550 token) ตั้งน้อยไปจะได้ `MAX_TOKENS` พร้อมข้อความว่าง
