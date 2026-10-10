@@ -123,7 +123,7 @@ One Piece · Pokémon · Yu-Gi-Oh · Dragon Ball · Naruto ครบจบใน
 
 ---
 
-## 🏷️ คลังแฮชแท็ก (ใส่ 5-8 อันต่อโพสต์)
+## 🏷️ คลังแฮชแท็ก (ใส่ 3-4 อันต่อโพสต์ · `#DivisionXCard` ทุกโพสต์ + อีก 2-3 อันตามซีรีส์ — อัปเดต 10 ต.ค. 2026)
 ```
 #OnePieceTCG #วันพีชการ์ด #การ์ดวันพีช #ตู้กดการ์ด #การ์ดสะสม
 #DivisionXCard #เปิดซองวันพีช #OPCG #PokemonTCG #YuGiOh #DragonBall

@@ -32,6 +32,7 @@ import { checkThaiCaption } from "../../../../../lib/thaiText"
 import { detectSku } from "../../../../../lib/skuDetect"
 import { careBlock } from "../../../../../lib/careKnowledge"
 import { pickTop5, top5Knowledge, TOP5_BUCKET, top5Path } from "../../../../../lib/top5"
+import { ensureBrandTag } from "../../../../../lib/brandTag"
 
 const db = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -884,6 +885,10 @@ export async function POST(req) {
         }
       } catch { /* รอบสองล้มก็ใช้ของรอบแรก ดีกว่าไม่ได้อะไรเลย */ }
     }
+
+    // แฮชแท็กชื่อเพจ — มีกฎสั่งแล้ว AI ก็ยังลืมได้ (#33 · #47 · #52 · #53) จึงเติมให้ตรงนี้
+    // ต้องอยู่หลังรอบเขียนซ้ำ จะได้ครอบทั้งแคปชั่นรอบแรกและรอบสอง · ดู lib/brandTag.js
+    caption = ensureBrandTag(caption, content.platform)
 
     // ดึง sku กลับมาด้วย เพราะตัวจับ SKU อาจเพิ่งเติม source_sku ให้ในรอบนี้
     // ถ้าไม่ดึง การ์ดจะยังไม่เห็นรูปซองจนกว่าจะรีเฟรชหน้า → ปุ่ม "ใช้รูป SKU" หาย

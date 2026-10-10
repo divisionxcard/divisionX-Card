@@ -21,6 +21,7 @@ import {
 import { supabase } from "../lib/supabase"
 import KpiCard from "./shared/KpiCard"
 import PostCalendar from "./marketing/PostCalendar"
+import { ensureBrandTag } from "../lib/brandTag"
 
 const PLATFORM_LABEL = { fb: "FB เพจ", line: "LINE OA", ig: "Instagram", tiktok: "TikTok" }
 const SLOT_LABEL = { morning: "เช้า", evening: "เย็น" }
@@ -652,8 +653,11 @@ export default function MarketingOS() {
   }
   const approve = (id) => { moveToReady(id); patch(id, { status: "approved" }) }
   const saveEdit = (id) => {
-    moveToReady(id, { caption: editText })
-    patch(id, { status: "approved", caption: editText })
+    // route เติม #DivisionXCard ให้ตอนบันทึกอยู่แล้ว — เติมตรงนี้ด้วยให้กล่องพร้อมโพสต์โชว์ตัวเดียวกับของจริง
+    const item = (content.items || []).find(i => i.id === id)
+    const caption = ensureBrandTag(editText, item?.platform)
+    moveToReady(id, { caption })
+    patch(id, { status: "approved", caption })
     setEditingId(null)
   }
   const reject = (id) => {
@@ -1353,12 +1357,12 @@ export default function MarketingOS() {
                       )}
 
                       <p className="text-sm text-gray-800 whitespace-pre-wrap mb-2">
-                        {(tab[item.id] && tab[item.id] !== "fb" && item.variants?.[tab[item.id]]) || item.caption}
+                        {(tab[item.id] && tab[item.id] !== "fb" && ensureBrandTag(item.variants?.[tab[item.id]], tab[item.id])) || item.caption}
                       </p>
 
                       {tab[item.id] && tab[item.id] !== "fb" && (
                         <button
-                          onClick={() => navigator.clipboard?.writeText(item.variants?.[tab[item.id]] || "")}
+                          onClick={() => navigator.clipboard?.writeText(ensureBrandTag(item.variants?.[tab[item.id]] || "", tab[item.id]))}
                           className="mb-2 flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-gray-100 text-gray-600 text-[11px]">
                           <Copy size={12} /> ก๊อปช่องนี้
                         </button>
@@ -1627,12 +1631,13 @@ export default function MarketingOS() {
                         </div>
                       )}
 
-                      <p className="text-sm text-gray-700 whitespace-pre-wrap">{item.caption}</p>
+                      {/* โชว์/ก๊อปตัวที่มี #DivisionXCard — ตัวเดียวกับที่ระบบจะโพสต์ขึ้นเพจ (lib/publishContent.js) */}
+                      <p className="text-sm text-gray-700 whitespace-pre-wrap">{ensureBrandTag(item.caption, item.platform)}</p>
 
                       <div className="flex flex-wrap gap-2 mt-3">
                         <button
                           disabled={busyId === item.id}
-                          onClick={() => navigator.clipboard?.writeText(item.caption || "")}
+                          onClick={() => navigator.clipboard?.writeText(ensureBrandTag(item.caption || "", item.platform))}
                           className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-100 text-gray-600 text-sm">
                           <Copy size={14} /> ก๊อปแคปชั่น
                         </button>

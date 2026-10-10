@@ -6,6 +6,7 @@
 // ถ้าเขียนสองที่แล้ววันหนึ่งเพิ่มด่านใหม่ที่ทางเดียว ทางที่ลืมจะปล่อยของเสียขึ้นเพจ
 // (บทเรียนเดิมของโปรเจกต์นี้: ตรรกะซ้ำสองชุดพังแบบเงียบ ๆ — ดู project_sku_mapping_two_scraper_maps)
 import { publishToPage, permalink, photoImage } from "./facebook"
+import { ensureBrandTag } from "./brandTag"
 
 const TABLE = "marketing_content"
 // ช่องว่างที่ AI ทิ้งไว้ให้คนเติม เช่น {ชื่อสาขา} — regex เดียวกับ holesIn() ในหน้าเว็บ
@@ -83,10 +84,14 @@ export async function publishOne(db, item, { dryRun = false, requireSchedule = f
   const blocked = blockReason(item, { requireSchedule })
   if (blocked) return blocked
 
+  // แฮชแท็กชื่อเพจ — ด่านสุดท้าย ครอบทุกชิ้นรวมของที่ค้างคิวมาตั้งแต่ก่อนมีกฎนี้ (#52 · #53)
+  // ทางเขียน/แก้แคปชั่นเติมให้แล้วก็จริง แต่ตรงนี้คือจุดเดียวที่ทุกโพสต์ต้องผ่าน (ดู lib/brandTag.js)
+  const caption = ensureBrandTag(item.caption, platformOf(item))
+
   let result
   try {
     result = await publishToPage({
-      caption: item.caption,
+      caption,
       imageUrl: item.media_url || null,
       publish: !dryRun,
     })
@@ -101,7 +106,7 @@ export async function publishOne(db, item, { dryRun = false, requireSchedule = f
       ok: true, dryRun: true,
       photoId: result.photoId,
       photoUrl: await photoImage(result.photoId),
-      caption: item.caption,
+      caption,
       note: "อัปขึ้น Facebook แล้วแต่ไม่ได้เผยแพร่ · ไม่มีใครเห็นบนเพจ · Facebook ลบให้เองใน ~24 ชม.",
     }
   }
@@ -114,6 +119,8 @@ export async function publishOne(db, item, { dryRun = false, requireSchedule = f
     posted_at: new Date().toISOString(),
     post_id,
     post_url,
+    // เก็บตัวที่ขึ้นเพจจริง — ไม่งั้นหน้าเว็บโชว์แคปชั่นที่ไม่มีแท็ก ทั้งที่บนเพจมี
+    ...(caption !== item.caption ? { caption } : {}),
   }).eq("id", item.id).select().maybeSingle()
 
   // ⚠️ ขึ้นเพจไปแล้วแต่บันทึกลง DB ไม่สำเร็จ — ห้ามคืนแค่ error เปล่า

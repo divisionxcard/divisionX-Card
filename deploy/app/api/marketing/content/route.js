@@ -8,6 +8,7 @@
 import { createClient } from "@supabase/supabase-js"
 import { NextResponse } from "next/server"
 import { requireMarketing } from "../../../../lib/apiAuth"
+import { ensureBrandTag } from "../../../../lib/brandTag"
 
 const db = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -122,6 +123,25 @@ export async function PATCH(req) {
   // เหตุผลที่ทิ้ง — เก็บไว้ป้อนกลับ prompt รอบหน้า
   if (body.reject_reason !== undefined) patch.reject_reason = body.reject_reason || null
 
+  // แฮชแท็กชื่อเพจ (ดู lib/brandTag.js) — 2 จังหวะ:
+  //   1) คนแก้แคปชั่นเองแล้วลบทิ้งหรือลืมใส่ → เติมกลับ
+  //   2) กดอนุมัติ/ตั้งเวลาเฉย ๆ (body มีแค่ status) → เติมให้แคปชั่นในฐานข้อมูลด้วย
+  //      เพราะสรุป "อนุมัติแล้ว รอโพสต์" ทาง Telegram (scraper/marketing_reminder.py) ส่งแคปชั่นดิบจาก DB
+  //      ให้ก๊อปไปโพสต์เอง — ไม่เติมตรงนี้ โพสต์ที่ก๊อปจากตรงนั้นจะไม่มีแท็ก (ตัวตรวจอิสระเจอ 10 ต.ค.)
+  // ต้องรู้ปลายทางก่อน เพราะ LINE ไม่ใช้แฮชแท็ก · body ไม่ได้ส่งมาก็อ่านจากแถวเดิม
+  const approving = patch.status === "approved" || patch.status === "scheduled"
+  if (patch.caption !== undefined || approving) {
+    let { platform, caption } = patch
+    if (!platform || caption === undefined) {
+      const { data: row } = await db.from(TABLE).select("platform,caption").eq("id", id).maybeSingle()
+      platform = platform || row?.platform
+      if (caption === undefined) caption = row?.caption
+    }
+    const tagged = ensureBrandTag(caption, platform)
+    // แก้แคปชั่นมาเอง → ใช้ตัวที่เติมแล้วเสมอ · กดอนุมัติเฉย ๆ → เขียนแคปชั่นเฉพาะตอนที่ต้องเติมจริง
+    if (patch.caption !== undefined || tagged !== caption) patch.caption = tagged
+  }
+
   if (!Object.keys(patch).length) {
     return NextResponse.json({ error: "ไม่มีอะไรให้แก้" }, { status: 400 })
   }
@@ -154,7 +174,7 @@ export async function POST(req) {
 
   try {
     const { data, error } = await db.from(TABLE).insert({
-      caption: body.caption.trim(),
+      caption: ensureBrandTag(body.caption.trim(), platform),
       platform,
       status: body.status && STATUSES.includes(body.status) ? body.status : "pending",
       slot: body.slot || null,

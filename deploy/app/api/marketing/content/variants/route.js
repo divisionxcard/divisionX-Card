@@ -15,6 +15,7 @@ import { readFile } from "fs/promises"
 import path from "path"
 import Anthropic from "@anthropic-ai/sdk"
 import { requireMarketing } from "../../../../../lib/apiAuth"
+import { ensureBrandTag } from "../../../../../lib/brandTag"
 
 const db = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -228,6 +229,9 @@ export async function POST(req) {
         error: `ช่อง ${bad.join(", ")} เขียนออกมาไม่ใช่ภาษาไทย — ไม่บันทึก ลองกดใหม่`,
       }, { status: 422 })
     }
+
+    // แฮชแท็กชื่อเพจ — IG/TikTok เท่านั้น · สคริปต์วิดีโอถูกอ่านออกเสียง ห้ามมีแท็ก (ดู lib/brandTag.js)
+    for (const k of Object.keys(variants)) variants[k] = ensureBrandTag(variants[k], k)
 
     // variants มาจาก migration 064 — ถ้ายังไม่ได้รันจะ error ให้บอกทางแก้ตรง ๆ
     const { data: updated, error: e1 } = await db.from("marketing_content")
