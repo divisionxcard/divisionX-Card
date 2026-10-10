@@ -3,10 +3,14 @@
 // ไอเดียที่เก็บมาเป็นแค่ "ข้อมูลอ้างอิง" ตัวนี้เปลี่ยนให้เป็นแคปชั่นที่อ่านแล้วตรวจได้เลย
 // แล้วเลื่อนสถานะ draft → pending (เข้ากล่องรออนุมัติ)
 //
-// เลือกผู้เขียนอัตโนมัติตามลำดับ (หรือบังคับด้วย AI_PROVIDER=claude|gemini|ollama):
-//   1. ANTHROPIC_API_KEY → Claude   ทำงานทุกที่ · เสียเงินต่อครั้ง · คุณภาพสูงสุด
-//   2. GEMINI_API_KEY    → Gemini   ทำงานทุกที่ · free tier 1,500 ครั้ง/วัน ไม่ต้องใช้บัตร
-//   3. ไม่มี key เลย     → Ollama   ฟรี 100% · ใช้ได้เฉพาะเปิดเว็บจากเครื่องที่มี Ollama
+// เลือกผู้เขียนอัตโนมัติตามลำดับ (หรือบังคับด้วย AI_PROVIDER=openai|claude|gemini|ollama):
+//   1. OPENAI_API_KEY    → gpt-5.4  ตัวหลักตั้งแต่ 10 ต.ค. 2026 (เจ้าของเลือก) · key เดียวกับขั้นคิดไอเดียภาพ
+//   2. ANTHROPIC_API_KEY → Claude   ทำงานทุกที่ · เสียเงินต่อครั้ง
+//   3. GEMINI_API_KEY    → Gemini   ทำงานทุกที่ · free tier 1,500 ครั้ง/วัน ไม่ต้องใช้บัตร
+//   4. ไม่มี key เลย     → Ollama   ฟรี 100% · ใช้ได้เฉพาะเปิดเว็บจากเครื่องที่มี Ollama
+//
+// ทำไมเปลี่ยนจาก Gemini Flash: โพสต์ที่ AI เขียนได้ 0–1 รีแอ็กชัน เทียบกับเพจเฉลี่ย 8.3
+//   รุ่นเล็กฟรีเขียนตื้นและเติมด้วยวลีขาย (ดู wiki/worklog/2026-10-10-content-review-and-preview-tool.md)
 //
 // ทำไมต้องมีหลายทาง: Vercel เป็น serverless คนละเครื่องกับคอมที่รัน Ollama จึงต่อ
 // localhost:11434 ไม่ได้เลย — บน production ต้องใช้ provider ที่เรียกผ่านเน็ตได้
@@ -27,6 +31,7 @@ import { detectFranchise } from "../../../../../lib/franchiseDetect"
 import { checkThaiCaption } from "../../../../../lib/thaiText"
 import { detectSku } from "../../../../../lib/skuDetect"
 import { careBlock } from "../../../../../lib/careKnowledge"
+import { pickTop5, top5Knowledge, TOP5_BUCKET, top5Path } from "../../../../../lib/top5"
 
 const db = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -149,7 +154,9 @@ function closestRecent(caption, recent) {
 const AVOID_LAST = 3
 
 function pickFormat(voice, recent) {
-  const all = voice.content_formats || []
+  // รูปแบบ manual (เช่นซีรีส์ "ส่อง 5 ใบเด็ด") ต้องมีข้อมูลเฉพาะที่ปุ่มสร้างส่งมา
+  // ถ้าปล่อยให้สุ่มได้ โพสต์ข่าวทั่วไปจะถูกสั่งให้จัดอันดับ 5 ใบทั้งที่ไม่มีข้อมูล → โมเดลแต่งเอง
+  const all = (voice.content_formats || []).filter(f => !f.manual)
   if (!all.length) return null
   // รับได้ทั้งสองคีย์เพราะมาจากคนละที่:
   //   - แถวจาก fetchRecent มีทั้ง content_format (ชื่อคอลัมน์จริง) และ format (ตัวที่ map ให้)
@@ -187,12 +194,24 @@ function readFormatLine(text, voice, fallback) {
 }
 
 function buildPrompt(voice, idea, content, sku, recent = [], format = null, craft = null, knowledge = "", altFormat = null) {
-  const rules = voice.rules.map((r, i) => `${i + 1}. ${r}`).join("\n")
+  // รูปแบบที่กำหนดความยาวเอง (เช่น "ส่อง 5 ใบเด็ด") ต้องไม่โดนกฎกลาง "กระชับ 3-5 บรรทัด" ทับ
+  // ไม่งั้นโมเดลได้สองคำสั่งขัดกัน แล้วตัดเนื้อ 5 อันดับทิ้งเหลือ 3 บรรทัด
+  const rules = voice.rules
+    .filter(r => !(format?.length && /บรรทัด/.test(r)))
+    .concat(format?.length ? [`ความยาว: ${format.length}`] : [])
+    .map((r, i) => `${i + 1}. ${r}`).join("\n")
   const phrases = voice.catchphrases.map(p => `- "${p}"`).join("\n")
+  // ⚠️ 10 ต.ค. 2026: แทบทุกโพสต์ปิดด้วย "กดเองสนุกกว่า ลุ้นเองมันส์กว่า" + "เช็กหน้าตู้" จนอ่านเป็นใบปลิว
+  //    รูปแบบใหม่ที่มีโครงของตัวเองจึงบอกเพดานไว้ชัด ๆ แทน "หยิบใช้ตามบริบท" ที่โมเดลตีความว่าต้องใช้
+  const phraseNote = format?.structure
+    ? "ไม่บังคับใช้ ถ้าใช้ไม่เกิน 1 วลีต่อโพสต์"
+    : "หยิบใช้ตามบริบท ไม่ต้องยัดทุกอัน"
 
   // ตัวอย่างภาษาไทยเป็นตัวแปรสำคัญที่สุด — qwen เป็นโมเดลจีน สั่งเป็นข้อความอย่างเดียว
   // ยังเขียนออกมาเป็นจีนอยู่ดี (ทดสอบแล้ว) · ใส่ตัวอย่างช่วยทั้งภาษาและความเร็ว
-  const example = voice.example
+  // ⚠️ รูปแบบที่มีโครงของตัวเองไม่ส่งตัวอย่างนี้ — มันเป็นโพสต์ขายของ 5 บรรทัด
+  //    ("🔥 OP-13 เข้าตู้แล้ว! … ของหมดเร็วมาก") โมเดลเลียนแบบจนโพสต์ทุกชิ้นหน้าตาเป็นใบปลิว
+  const example = voice.example && !format?.structure
     ? `\nตัวอย่างแคปชั่นที่ถูกต้อง (ใช้เป็นแบบอย่างของ "ภาษา/โทน" เท่านั้น ห้ามลอกเนื้อหา):\n---\n${voice.example}\n---\n`
     : ""
 
@@ -221,7 +240,7 @@ function buildPrompt(voice, idea, content, sku, recent = [], format = null, craf
 **ภาษา: เขียนเป็นภาษาไทยเท่านั้น** ห้ามใช้ภาษาจีน ญี่ปุ่น หรืออังกฤษเป็นประโยค
 (ชื่อการ์ด/ชุด เช่น "One Piece OP-13" เป็นอังกฤษได้)
 
-วลีติดปากของแบรนด์ (หยิบใช้ตามบริบท ไม่ต้องยัดทุกอัน):
+วลีติดปากของแบรนด์ (${phraseNote}):
 ${phrases}
 
 กฎเข้ม:
@@ -256,7 +275,14 @@ ${overclaimPart}${craftPart}${example}
       (f.when ? `   ใช้เมื่อ: ${f.when}\n` : "") +
       (f.avoid_when ? `   ห้ามใช้เมื่อ: ${f.avoid_when}\n` : "")
     : ""
-  const fmt = format
+  // รูปแบบ manual ถูกเลือกมาแล้วโดยคน (ปุ่ม "ส่อง 5 ใบเด็ด") — ไม่ให้เลือก และไม่ต้องเขียนบรรทัด FORMAT
+  const fmt = format?.manual
+    ? `\nรูปแบบโพสต์ (กำหนดแล้ว ห้ามเปลี่ยน): **${format.label}**\n   ${format.brief}\n` +
+      (format.structure?.length
+        ? `\nโครงสร้างโพสต์ — ทำตามลำดับนี้:\n` +
+          format.structure.map((s, i) => `${i + 1}) ${s}`).join("\n") + "\n"
+        : "")
+    : format
     ? `\nรูปแบบโพสต์ — เลือก 1 จาก 2 นี้:\n\n` +
       showFmt(format, "ตัวเลือก 1") +
       (altFormat ? "\n" + showFmt(altFormat, "ตัวเลือก 2") : "") +
@@ -476,6 +502,45 @@ async function askClaude(voice, prompt) {
   return { text, model }
 }
 
+// ── OpenAI (gpt-5.4) — ตัวหลักตั้งแต่ 10 ต.ค. 2026 ──────────────────────
+// key เดียวกับขั้นคิดไอเดียภาพ (lib/artDirector.js) ซึ่งตั้งไว้บน Vercel อยู่แล้ว
+// ไล่ chain แบบเดียวกัน: รุ่นถูกปลดหรือไม่มีสิทธิ์ → ตัวถัดไป · error อื่นโยนออกทันที
+//
+// ⚠️ อย่าเลื่อนรุ่นเงียบ ๆ เพราะ error ที่บังเอิญมีคำว่า model (บทเรียนจาก image route:
+//    "model does not support parameter X" ทำให้ทุกภาพตกไปรุ่นสำรองโดยไม่มีใครรู้)
+//    จึงเลื่อนเฉพาะ 404 หรือข้อความที่บอกว่ารุ่นนั้นไม่มี/ไม่มีสิทธิ์ใช้
+// ⚠️ ไม่ส่ง temperature/max_tokens — รุ่น gpt-5 รับแค่ค่าตั้งต้น ส่งไปจะได้ 400
+async function askOpenAI(voice, prompt) {
+  const key = process.env.OPENAI_API_KEY
+  const chain = [...new Set([process.env.OPENAI_WRITER_MODEL, voice.openai_model,
+                             "gpt-5.4", "gpt-5.1", "gpt-4.1"].filter(Boolean))]
+  let lastErr = ""
+  for (const model of chain) {
+    const res = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model,
+        messages: [
+          { role: "system", content: prompt.system },
+          { role: "user", content: prompt.user },
+        ],
+      }),
+      signal: AbortSignal.timeout(150000),
+    })
+    const json = await res.json().catch(() => ({}))
+    if (!res.ok || json?.error) {
+      lastErr = `${model}: ${json?.error?.message || `HTTP ${res.status}`}`
+      if (res.status === 404 || /model\b.*\b(not found|does not exist|do not have access|not available)/i.test(lastErr)) continue
+      throw new Error(lastErr)
+    }
+    const text = (json?.choices?.[0]?.message?.content || "").trim()
+    if (!text) { lastErr = `${model}: ตอบว่าง`; continue }
+    return { text, model }
+  }
+  throw new Error(lastErr || "OpenAI: ไม่มีรุ่นที่ใช้ได้")
+}
+
 async function askOllama(voice, prompt, signal) {
   const host = ollamaHost(voice)
   const model = process.env.OLLAMA_MODEL || voice.ollama_model || "qwen2.5:14b"
@@ -579,9 +644,14 @@ export async function POST(req) {
 
     const [voice, craft] = await Promise.all([loadVoice(), loadCraft()])
     const recent = await fetchRecent(voice.recent_captions_shown || 8)
+    // รูปแบบ manual (ซีรีส์ "ส่อง 5 ใบเด็ด") ถูกกำหนดตอนกดสร้าง และเก็บไว้ใน content_format
+    // ใช้ตัวนั้นตลอด รวมถึงตอนกด "เขียนใหม่" — ห้ามสุ่มทับ ไม่งั้นโพสต์ซีรีส์กลายเป็นโพสต์ทั่วไป
+    // ส่วนโพสต์ปกติ content_format คือผลของรอบก่อน (ไม่ใช่ manual) จึงยังสุ่มใหม่ได้ตามเดิม
+    const manualFmt = (voice.content_formats || [])
+      .find(f => f.manual && f.key === content.content_format) || null
     // สองตัวเลือกให้โมเดลตัดสินเองว่าอันไหนเข้ากับหัวข้อ — ตัวที่สองต้องไม่ซ้ำตัวแรก
-    const format = pickFormat(voice, recent)
-    const formatAlt = pickFormat(voice, [...recent, { format: format?.key }])
+    const format = manualFmt || pickFormat(voice, recent)
+    const formatAlt = manualFmt ? null : pickFormat(voice, [...recent, { format: format?.key }])
 
     // ความรู้ทางการ — ใส่เฉพาะโพสต์ที่เกี่ยวกับค่ายนั้นจริง ๆ
     // ถ้าไฟล์หายหรือไม่มีอะไรตรง บล็อกคืน "" เอง prompt จะไม่บวมฟรี
@@ -646,7 +716,21 @@ export async function POST(req) {
       return out
     }
 
-    const knowledge = await buildKnowledge([format, formatAlt])
+    // ── ซีรีส์ "ส่อง 5 ใบเด็ด": 5 ใบจริงของชุด + ราคาตลาดจาก card2price (ดู lib/top5.js) ──
+    // ไม่มีข้อมูลก็ไม่เขียน — รูปแบบนี้ทั้งโพสต์คือข้อมูล 5 ใบ ปล่อยให้เขียนโดยไม่มีคือให้แต่งเอง
+    let top5 = null
+    if (manualFmt?.knowledge === "top5") {
+      const setKey = sku?.set_code || sku?.sku_id || content.source_sku || idea?.related_sku
+      try { top5 = setKey ? await pickTop5(setKey) : null } catch { top5 = null }
+      if (!top5?.items?.length) {
+        return NextResponse.json({
+          error: `หาข้อมูลการ์ดของชุด ${setKey || "(ไม่ได้ผูกสินค้า)"} ไม่เจอ — ไม่เขียน`,
+          hint: "ซีรีส์นี้ใช้ได้กับซอง One Piece ที่มีในคลังการ์ดเท่านั้น · ตรวจว่าโพสต์ผูกสินค้าถูกชุด",
+        }, { status: 422 })
+      }
+    }
+
+    const knowledge = top5 ? top5Knowledge(top5) : await buildKnowledge([format, formatAlt])
 
     // รายการสินค้าจริงทั้งหมด — กันตัวเขียนแต่งสินค้าที่เราไม่มีขึ้นมาเปรียบเทียบ
     // (เคสจริง: แคปชั่นโปเกมอนพูดถึง "ซองคอลเลกชันคลาสสิก" ทั้งที่เรามีแต่ชุดใหม่ 3 ชุด)
@@ -660,12 +744,24 @@ export async function POST(req) {
     // บังคับด้วย AI_PROVIDER ได้ ไม่งั้นเลือกตัวแรกที่พร้อมใช้
     const forced = (process.env.AI_PROVIDER || "").toLowerCase()
     const provider = forced || (
-      process.env.ANTHROPIC_API_KEY ? "claude"
+      process.env.OPENAI_API_KEY ? "openai"
+      : process.env.ANTHROPIC_API_KEY ? "claude"
       : process.env.GEMINI_API_KEY ? "gemini"
       : "ollama")
 
     let out
-    if (provider === "claude") {
+    if (provider === "openai") {
+      if (!process.env.OPENAI_API_KEY) {
+        return NextResponse.json({ error: "ตั้ง AI_PROVIDER=openai แต่ไม่มี OPENAI_API_KEY" }, { status: 503 })
+      }
+      try {
+        out = await askOpenAI(voice, prompt)
+      } catch (e) {
+        return NextResponse.json(
+          { error: `OpenAI ตอบผิดพลาด: ${String(e.message || e).slice(0, 250)}` },
+          { status: 502 })
+      }
+    } else if (provider === "claude") {
       if (!process.env.ANTHROPIC_API_KEY) {
         return NextResponse.json({ error: "ตั้ง AI_PROVIDER=claude แต่ไม่มี ANTHROPIC_API_KEY" }, { status: 503 })
       }
@@ -757,13 +853,14 @@ export async function POST(req) {
     if (recent.length && dup.score >= SIMILAR_LIMIT) {
       retried = true
       // รอบสองเลี่ยงทั้งของเก่าและตัวที่เพิ่งเลือกไป จะได้ไม่วนกลับมาท่าเดิม
-      const altFormat = pickFormat(voice, [...recent, { format: chosenFormat?.key }])
-      const altFormat2 = pickFormat(voice, [...recent, { format: chosenFormat?.key },
-                                            { format: altFormat?.key }])
+      // ยกเว้นรูปแบบ manual — ซีรีส์ต้องเป็นซีรีส์เดิม แค่เขียนให้ต่างจากของเก่า
+      const altFormat = manualFmt || pickFormat(voice, [...recent, { format: chosenFormat?.key }])
+      const altFormat2 = manualFmt ? null
+        : pickFormat(voice, [...recent, { format: chosenFormat?.key }, { format: altFormat?.key }])
       // ⚠️ ต้องสร้างคลังใหม่ตามรูปแบบของรอบนี้ ไม่ใช่ใช้ก้อนของรอบแรก
       //    รอบนี้เป็นคนละคู่รูปแบบ ถ้าได้ card_care/card_deep มาแล้วคลังไม่ตาม
       //    โมเดลจะถูกสั่งให้เล่าเรื่องที่ไม่มีข้อมูลรองรับ แล้วมันจะแต่งเอา
-      const knowledge2 = await buildKnowledge([altFormat, altFormat2])
+      const knowledge2 = top5 ? knowledge : await buildKnowledge([altFormat, altFormat2])
       const harder = buildPrompt(voice, idea, content, sku, recent, altFormat, craft,
                                  catalogue + knowledge2, altFormat2)
       harder.user +=
@@ -772,7 +869,8 @@ export async function POST(req) {
         `รอบนี้ต้องเปลี่ยน**ทั้งประโยคเปิดและมุมที่เล่า** ห้ามใช้โครงเดิม`
       try {
         const second =
-          provider === "claude" ? await askClaude(voice, harder)
+          provider === "openai" ? await askOpenAI(voice, harder)
+          : provider === "claude" ? await askClaude(voice, harder)
           : provider === "gemini" ? await askGemini(voice, harder)
           : await askOllama(voice, harder, AbortSignal.timeout(180000))
         const round2 = readFormatLine(second.text, voice, altFormat)
@@ -833,10 +931,28 @@ export async function POST(req) {
     }
     if (e1) throw e1
 
+    // เก็บ 5 ใบที่ใช้เขียนจริง ให้โปสเตอร์ใช้ชุดเดียวกัน (ดู lib/top5.js → top5Path)
+    // ล้มก็ไม่ทิ้งแคปชั่น — แค่บอกการ์ดว่าโปสเตอร์ยังทำไม่ได้จนกว่าจะกดเขียนใหม่
+    let top5Saved = null
+    if (top5) {
+      try {
+        const { error: eUp } = await db.storage.from(TOP5_BUCKET)
+          .upload(top5Path(id), JSON.stringify({ content_id: id, ...top5 }),
+                  { contentType: "application/json", upsert: true })
+        top5Saved = !eUp
+      } catch { top5Saved = false }
+    }
+
     return NextResponse.json({
       ...updated,
       generated_by: out.model,
       provider,
+      // ซีรีส์ "ส่อง 5 ใบเด็ด" — ให้การ์ดโชว์ว่าใช้ใบไหน ราคา ณ วันไหน และพร้อมทำโปสเตอร์ไหม
+      top5: top5 ? {
+        set: top5.set, priceAsOf: top5.priceAsOf, saved: top5Saved,
+        items: top5.items.map(it => ({ rank: it.rank, code: it.code, name: it.name,
+                                       raw: it.raw, priced: it.priced, image: it.image })),
+      } : null,
       format: usedFormat ? { key: usedFormat.key, label: usedFormat.label } : null,
       retried,
       // การ์ดเอาไปบอกผู้ใช้ว่าทำไมรูปหาย — ไม่งั้นจะงงว่าโปสเตอร์ที่เคยมีไปไหน

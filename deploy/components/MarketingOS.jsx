@@ -274,6 +274,10 @@ export default function MarketingOS() {
   const [dismissText, setDismissText] = useState("")
   const [pasteUrl, setPasteUrl] = useState("")
   const [pasting, setPasting] = useState(false)
+  // ซีรีส์ "ส่อง 5 ใบเด็ด" — คนเลือกชุดเอง ไม่ได้ตั้งต้นจากไอเดีย (ดู api/marketing/content/series)
+  const [seriesSets, setSeriesSets] = useState(null)       // null = ยังไม่โหลด · [] = ไม่มีชุดที่ทำได้
+  const [seriesSku, setSeriesSku] = useState("")
+  const [seriesBusy, setSeriesBusy] = useState(false)
   const [perSource, setPerSource] = useState(3)   // เด็ดสุดกี่ชิ้นต่อช่องทาง
   const [generating, setGenerating] = useState(new Set())   // id ที่ AI กำลังเขียนแคปชั่นให้
   const [imaging, setImaging] = useState(new Set())         // id ที่กำลังสร้างภาพ/โปสเตอร์
@@ -386,6 +390,15 @@ export default function MarketingOS() {
   }, [api, token, days, perSource])
 
   useEffect(() => { if (authState === "ok") loadAll() }, [authState, loadAll])
+
+  // รายชื่อชุดของซีรีส์ — โหลดครั้งเดียว ไม่ผูกกับ loadAll (ไม่เปลี่ยนระหว่างวัน ไม่ต้องดึงซ้ำทุกรีเฟรช)
+  // ล้มก็เงียบ — กล่องซีรีส์แค่ไม่ขึ้น ส่วนอื่นของหน้ายังใช้ได้
+  useEffect(() => {
+    if (authState !== "ok") return
+    api("content/series?series=top5")
+      .then(r => { setSeriesSets(r.sets || []); setSeriesSku(s => s || r.sets?.[0]?.sku_id || "") })
+      .catch(() => setSeriesSets([]))
+  }, [authState, api])
 
   // บันทึกยอดคงเหลือที่อ่านมาจากหน้า OpenAI แล้วดึงตัวเลขใหม่ทันที
   // ⚠️ ต้องอ่านซ้ำ ไม่ใช่เอาค่าที่เพิ่งกรอกไปแสดงเลย — ค่าใช้จ่ายของวันนี้
@@ -603,6 +616,20 @@ export default function MarketingOS() {
         generate(res.content.id)
       }
     } catch (e) { setErr(toErr(e)) } finally { setBusyId(null) }
+  }
+
+  // ── ซีรีส์ "ส่อง 5 ใบเด็ด": สร้างร่างของชุดที่เลือก แล้วให้ AI เขียนต่อทันที (เหมือนกดเลือกไอเดีย) ──
+  async function createSeries() {
+    if (!seriesSku) return
+    setSeriesBusy(true); setErr("")
+    try {
+      const row = await api("content/series", {
+        method: "POST", body: JSON.stringify({ series: "top5", sku: seriesSku }),
+      })
+      setContent(c => ({ ...c, items: [row, ...(c.items || [])] }))
+      setNotice(`สร้าง "ส่อง 5 ใบเด็ด" ของ ${row.sku?.name || seriesSku} แล้ว — AI กำลังดึงราคาและเขียน (ราว 30 วินาที) ดูที่หน้ารออนุมัติ`)
+      generate(row.id)
+    } catch (e) { setErr(toErr(e)) } finally { setSeriesBusy(false) }
   }
 
   // วางลิงก์คลิปที่เห็นว่าไวรัล → ระบบดึงชื่อ/ผู้โพสต์ให้ผ่าน oEmbed
@@ -877,6 +904,28 @@ export default function MarketingOS() {
               <Plus size={14} /> {pasting ? "กำลังดึง…" : "เก็บไว้"}
             </button>
           </div>
+
+          {/* ซีรีส์ประจำ — ไม่ต้องรอไอเดีย เลือกชุดแล้วกดได้เลย
+              ราคาดึงจาก card2price เฉพาะใบที่เขียนถึง (ดู lib/top5.js) */}
+          {seriesSets?.length > 0 && (
+            <div className="flex flex-wrap items-center gap-2 mb-3 p-3 rounded-2xl border border-cyan-200 bg-cyan-50/60">
+              <span className="flex items-center gap-1.5 text-sm font-semibold text-cyan-800">
+                <Trophy size={15} /> ซีรีส์ ส่อง 5 ใบเด็ด
+              </span>
+              <span className="text-xs text-cyan-700/80">5 การ์ดราคาตลาดสูงสุดของชุด พร้อมรูปการ์ดจริง</span>
+              <select value={seriesSku} onChange={e => setSeriesSku(e.target.value)}
+                aria-label="เลือกชุดการ์ด"
+                className="ml-auto text-sm border border-cyan-200 rounded-xl px-2 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-cyan-200">
+                {seriesSets.map(s => (
+                  <option key={s.sku_id} value={s.sku_id}>{s.name}</option>
+                ))}
+              </select>
+              <button onClick={createSeries} disabled={seriesBusy || !seriesSku}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-cyan-700 text-white text-sm disabled:opacity-40">
+                <Sparkles size={14} /> {seriesBusy ? "กำลังสร้าง…" : "สร้างโพสต์"}
+              </button>
+            </div>
+          )}
 
           {ideas.warning ? (
             <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 text-sm text-amber-800">
@@ -1174,6 +1223,21 @@ export default function MarketingOS() {
                         ทดสอบยิงจริง 4 ใบก่อนสลับ: ตัวอักษรไทยถูกทุกตัวรวมวรรณยุกต์กับสระบน/ล่าง
                         (เหตุผลเดียวที่เทมเพลตเคยจำเป็นคือ Satori ทำไทยเพี้ยน — หมดไปแล้ว)
                         ซองสินค้าลอกจากรูปจริงครบทุกจุด · ใช้เวลา 145-153 วินาทีต่อใบ */}
+                    {/* ซีรีส์ "ส่อง 5 ใบเด็ด" — ทางเดียวคือเทมเพลตวางการ์ดจริง + AI วาดพื้นหลัง
+                        (ปุ่ม "ให้ AI ออกแบบ" ถูกกันฝั่ง server ด้วย เพราะโมเดลวาดหน้าการ์ดซ้ำแล้วได้คนละใบ) */}
+                    {item.content_format === "top5" ? (
+                      <button
+                        disabled={imaging.has(item.id) || item.status === "draft"}
+                        onClick={() => makePoster(item.id, item.media_url)}
+                        title="วางรูปการ์ดจริง 5 ใบด้วยเทมเพลต · AI วาดแค่พื้นหลัง · ราว 2-3 นาที · ต้องเขียนแคปชั่นก่อน"
+                        className="w-full sm:w-36 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg
+                                   bg-cyan-700 text-white text-[11px] font-medium disabled:opacity-50">
+                        <Trophy size={12} />
+                        {imaging.has(item.id) ? "กำลังทำโปสเตอร์…"
+                          : item.media_url ? "ทำโปสเตอร์ใหม่" : "โปสเตอร์ 5 ใบเด็ด"}
+                      </button>
+                    ) : (
+                    <>
                     <button
                       disabled={imaging.has(item.id)}
                       onClick={() => makeImage(item.id)}
@@ -1197,6 +1261,8 @@ export default function MarketingOS() {
                       <ImageIcon size={11} />
                       เทมเพลต (ฟรี)
                     </button>
+                    </>
+                    )}
                   </div>
 
                   <div className="flex-1 min-w-0">
@@ -1223,8 +1289,15 @@ export default function MarketingOS() {
                         <Sparkles size={11} className="animate-pulse" /> AI กำลังเขียน…
                       </span>
                     )}
+                    {/* ซีรีส์ — อ่านจาก content_format ของแถว จึงยังขึ้นหลังรีเฟรช (ป้ายรูปแบบสุ่มด้านล่างหาย) */}
+                    {item.content_format === "top5" && (
+                      <span className="px-2 py-0.5 rounded bg-cyan-50 text-cyan-800 font-medium inline-flex items-center gap-1">
+                        <Trophy size={11} /> ซีรีส์ ส่อง 5 ใบเด็ด
+                        {item.top5?.priceAsOf && <span className="font-normal text-cyan-700/80">· ราคา ณ {item.top5.priceAsOf}</span>}
+                      </span>
+                    )}
                     {/* รูปแบบที่สุ่มได้รอบนี้ — กด "เขียนใหม่" แล้วจะเปลี่ยนเป็นแบบอื่น */}
-                    {item.format?.label && (
+                    {item.format?.label && item.content_format !== "top5" && (
                       <span className="px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 font-medium">
                         {item.format.label}
                       </span>
