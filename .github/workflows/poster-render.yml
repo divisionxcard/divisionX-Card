@@ -20,6 +20,15 @@ on:
         description: "บังคับ SKU ที่จะเอารูปมาใช้ (เว้นว่าง = ใช้ source_sku ของคอนเทนต์)"
         required: false
         type: string
+      # ซีรีส์ "ส่อง 5 ใบเด็ด" (10 ต.ค. 2026) — เทมเพลตวางการ์ดจริง 5 ใบ (deploy/agents/top5_poster.py)
+      template:
+        description: "เทมเพลตพิเศษ (top5 = ส่อง 5 ใบเด็ด · เว้นว่าง = โปสเตอร์ปกติ)"
+        required: false
+        type: string
+      bg:
+        description: "url พื้นหลังจาก AI ใน /marketing/aibg/ (ใช้กับ template=top5)"
+        required: false
+        type: string
 
 jobs:
   render:
@@ -47,7 +56,26 @@ jobs:
           pip install "playwright>=1.49"
           playwright install --with-deps chromium
 
+      # ซีรีส์ 5 ใบเด็ด — รับค่าผ่าน env ไม่ใช่แทนลงคำสั่งตรง ๆ (ค่า bg เป็น url จากภายนอก
+      # ถ้าแทนลงในคำสั่งแล้วรันด้วย eval เครื่องหมายแปลก ๆ ในค่าจะกลายเป็นคำสั่ง shell ได้)
+      - name: Render top5 poster
+        if: ${{ github.event.inputs.template == 'top5' }}
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          CONTENT_ID: ${{ github.event.inputs.content_id }}
+          BG_URL: ${{ github.event.inputs.bg }}
+        run: |
+          case "$CONTENT_ID" in ''|*[!0-9]*) echo "content_id ต้องเป็นตัวเลข"; exit 1 ;; esac
+          cd deploy/agents
+          if [ -n "$BG_URL" ]; then
+            python top5_poster.py --id "$CONTENT_ID" --bg "$BG_URL"
+          else
+            python top5_poster.py --id "$CONTENT_ID"
+          fi
+
       - name: Render poster
+        if: ${{ github.event.inputs.template != 'top5' }}
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}

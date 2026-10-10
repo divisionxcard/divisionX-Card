@@ -13,6 +13,12 @@ import { createClient } from "@supabase/supabase-js"
 import { requireMarketing } from "../../../../../lib/apiAuth"
 import { detectFranchise } from "../../../../../lib/franchiseDetect"
 import { topSkusByFranchise } from "../../../../../lib/skuPicker"
+import { generateBackground, top5BackgroundPrompt } from "../../../../../lib/aiBackground"
+import { TOP5_BUCKET, top5Path } from "../../../../../lib/top5"
+
+export const runtime = "nodejs"
+// ซีรีส์ 5 ใบเด็ดวาดพื้นหลังด้วย AI ก่อนสั่ง workflow (~30 วิ ต่อภาพ) — เผื่อเวลาไว้
+export const maxDuration = 300
 
 const db = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -39,6 +45,12 @@ export async function POST(req) {
   try { body = await req.json() } catch { return NextResponse.json({ error: "bad json" }, { status: 400 }) }
   const id = parseInt(body.id, 10)
   if (!id) return NextResponse.json({ error: "ต้องระบุ id" }, { status: 400 })
+
+  // ── ซีรีส์ "ส่อง 5 ใบเด็ด": คนละเทมเพลต (deploy/agents/top5_poster.py) ──
+  // การ์ดจริง 5 ใบวางด้วย Chromium · AI วาดแค่พื้นหลัง (เจ้าของเลือก 10 ต.ค. 2026)
+  const { data: row } = await db.from("marketing_content")
+    .select("content_format").eq("id", id).maybeSingle()
+  if (row?.content_format === "top5") return top5Poster(id, token)
 
   // ── หา SKU ที่จะเอารูปไปแปะ ──
   //
@@ -67,25 +79,7 @@ export async function POST(req) {
   }
 
   try {
-    const res = await fetch(
-      `https://api.github.com/repos/${REPO}/actions/workflows/${WORKFLOW}/dispatches`,
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          Accept: "application/vnd.github+json",
-          "X-GitHub-Api-Version": "2022-11-28",
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          ref: "main",
-          inputs: {
-            content_id: String(id),
-            ...(sku ? { sku } : {}),
-          },
-        }),
-      }
-    )
+    const res = await dispatch(token, { content_id: String(id), ...(sku ? { sku } : {}) })
 
     if (res.status === 204) {
       return NextResponse.json({
@@ -106,6 +100,70 @@ export async function POST(req) {
         hint: `ต้อง push ${WORKFLOW} ขึ้น main ก่อน แล้ว GitHub ถึงจะรู้จัก`,
       }, { status: 404 })
     }
+    return NextResponse.json({ error: `GitHub ตอบ ${res.status}`, detail: detail.slice(0, 250) },
+                             { status: res.status })
+  } catch (err) {
+    return NextResponse.json({ error: err.message }, { status: 500 })
+  }
+}
+
+function dispatch(token, inputs) {
+  return fetch(`https://api.github.com/repos/${REPO}/actions/workflows/${WORKFLOW}/dispatches`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Accept: "application/vnd.github+json",
+      "X-GitHub-Api-Version": "2022-11-28",
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ ref: "main", inputs }),
+  })
+}
+
+// ── โปสเตอร์ "ส่อง 5 ใบเด็ด" ──
+// 1) ต้องมีข้อมูล 5 ใบที่ตัวเขียนเก็บไว้ (ใช้ชุดเดียวกับแคปชั่น — ดู lib/top5.js → top5Path)
+// 2) AI วาดพื้นหลัง → อัปไว้ใน aibg/ (top5_poster.py รับพื้นหลังจากโฟลเดอร์นี้เท่านั้น)
+// 3) สั่ง workflow เดิม (poster-render.yml) พร้อม template=top5
+// วาดพื้นหลังไม่สำเร็จไม่ใช่เหตุให้หยุด — เทมเพลตมีพื้นแบรนด์ของมันเอง แค่บอกผู้ใช้ให้รู้
+async function top5Poster(id, token) {
+  const SB_URL = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const SB_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
+
+  const probe = await fetch(`${SB_URL}/storage/v1/object/public/${TOP5_BUCKET}/${top5Path(id)}`,
+                            { method: "HEAD" }).catch(() => null)
+  if (!probe?.ok) {
+    return NextResponse.json({
+      error: "ยังไม่มีข้อมูล 5 ใบของโพสต์นี้",
+      hint: "กด 'เขียนใหม่' หนึ่งครั้งให้ระบบดึงการ์ดและราคาเก็บไว้ก่อน แล้วค่อยกดทำโปสเตอร์",
+    }, { status: 409 })
+  }
+
+  let bgUrl = null, bgNote = ""
+  try {
+    const bg = await generateBackground(await top5BackgroundPrompt("OP"),
+                                        { deadline: Date.now() + 200_000 })
+    const key = `aibg/top5-${id}-${Date.now()}.png`
+    const up = await fetch(`${SB_URL}/storage/v1/object/${TOP5_BUCKET}/${key}`, {
+      method: "POST",
+      headers: { apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}`, "Content-Type": bg.mime, "x-upsert": "true" },
+      body: bg.buf,
+    })
+    if (!up.ok) throw new Error(`อัปพื้นหลังไม่สำเร็จ (${up.status})`)
+    bgUrl = `${SB_URL}/storage/v1/object/public/${TOP5_BUCKET}/${key}`
+  } catch (e) {
+    bgNote = ` · วาดพื้นหลังด้วย AI ไม่สำเร็จ (${String(e.message || e).slice(0, 80)}) ใช้พื้นแบรนด์แทน`
+  }
+
+  try {
+    const res = await dispatch(token, { content_id: String(id), template: "top5", ...(bgUrl ? { bg: bgUrl } : {}) })
+    if (res.status === 204) {
+      return NextResponse.json({
+        success: true,
+        message: `สั่งทำโปสเตอร์ 5 ใบเด็ดแล้ว — รูปจะขึ้นเองเมื่อเสร็จ (ราว 1-2 นาที) ไม่ต้องกดอะไร${bgNote}`,
+        background: bgUrl,
+      })
+    }
+    const detail = await res.text().catch(() => "")
     return NextResponse.json({ error: `GitHub ตอบ ${res.status}`, detail: detail.slice(0, 250) },
                              { status: res.status })
   } catch (err) {

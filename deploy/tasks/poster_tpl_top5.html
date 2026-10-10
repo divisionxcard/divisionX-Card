@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<!--
+  โปสเตอร์ซีรีส์ "ส่อง 5 ใบเด็ด" — เรนเดอร์ด้วย Chromium (deploy/agents/top5_poster.py)
+
+  ทำไมเป็นเทมเพลต ไม่ให้ AI วาดทั้งใบ (เจ้าของเลือก 10 ต.ค. 2026):
+    รูปการ์ดต้องเป็นของจริงเป๊ะทุกพิกเซล (โมเดลวาดซ้ำแล้วได้คนละใบ — #46 ลูฟี่ผิดชุด)
+    และตัวอักษรไทยต้องถูก 100% ซึ่งจริงเชิงโครงสร้างก็ต่อเมื่อเบราว์เซอร์เป็นคนวาง
+    AI ทำแค่พื้นหลัง (แท็ก img ชั้นล่างสุด ถ้ามี) ไม่มีก็ใช้พื้นแบรนด์ที่เขียนด้วย CSS
+
+  กติกาที่ห้ามแหก:
+    - ห้ามมีราคาบนภาพ (ภาพอยู่นานกว่าราคา) — ราคาอยู่ในแคปชั่นเท่านั้น
+    - ห้ามวางอะไรทับรูปการ์ด (ป้ายชื่ออยู่ใต้การ์ด) และห้ามลบคำ SAMPLE บนรูป
+    - โลโก้เป็นไฟล์จริง ไม่วาดใหม่ และไม่ทับรูปการ์ด
+
+  เลย์เอาต์ 1080×1080: หัว 40–215 · การ์ด 240–968 (อันดับ 1 ใหญ่ซ้าย · 2–5 เป็นตาราง 2×2) · ท้าย 1000–1060
+-->
+{{DISPLAY_FONT_LINK}}
+<style>
+  @font-face { font-family: 'DXSans'; src: url({{FONT_REGULAR}}) format('truetype'); font-weight: 400 }
+  @font-face { font-family: 'DXSans'; src: url({{FONT_BOLD}}) format('truetype'); font-weight: 700 }
+
+  :root {
+    --navy: #071226;
+    --navy-2: #0D1F3D;
+    --cyan: #00D4FF;
+    --cyan-soft: #4FC3F7;
+    --gold: #E0B457;
+    --ink: #FFFFFF;
+    --ink-2: #B8C5E0;
+    --display: 'Kanit', 'DXSans', sans-serif;
+    --body: 'DXSans', sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 1080px; height: 1080px; overflow: hidden; background: var(--navy); }
+  body { position: relative; font-family: var(--body); color: var(--ink); }
+
+  /* ── พื้น: ภาพ AI (ถ้ามี) + ชั้นมืดให้ตัวหนังสืออ่านออก · ไม่มีภาพ = พื้นแบรนด์จาก CSS ── */
+  .bg {
+    position: absolute; inset: 0;
+    background:
+      radial-gradient(900px 520px at 78% 18%, rgba(0, 212, 255, .22), transparent 70%),
+      radial-gradient(700px 600px at 10% 95%, rgba(224, 180, 87, .14), transparent 70%),
+      linear-gradient(160deg, #0B1C3A 0%, var(--navy) 55%, #040A17 100%);
+  }
+  /* ⚠️ ภาพพื้นหลังต้องเป็นแท็ก <img> ห้ามใส่ใน CSS background
+        ลองแล้ว 10 ต.ค. 2026: `background: var(--navy) url(data:… 2 MB) …` ถูก Chromium ทิ้งทั้งกฎเงียบ ๆ
+        (ค่าที่ต้องแทนลงตัวแปรยาวเกินขีด) โปสเตอร์ออกมาเป็นพื้นแบรนด์ทั้งที่ log บอกว่าใช้ภาพ AI */
+  .bgimg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  .shade {
+    position: absolute; inset: 0;
+    background:
+      linear-gradient(180deg, rgba(4, 10, 23, .78) 0%, rgba(4, 10, 23, .25) 30%, rgba(4, 10, 23, .35) 70%, rgba(4, 10, 23, .85) 100%);
+  }
+  /* เส้นแสงทแยงบาง ๆ — ภาษาภาพ "สายฟ้า/แสงนีออน" ของแบรนด์ ใช้แค่เป็นบรรยากาศ */
+  .streak {
+    position: absolute; width: 1400px; height: 2px; left: -160px;
+    background: linear-gradient(90deg, transparent, rgba(0, 212, 255, .55), transparent);
+    transform: rotate(-12deg); filter: blur(.4px);
+  }
+  .s1 { top: 228px; } .s2 { top: 990px; opacity: .6; }
+
+  /* ── หัว ── */
+  .head { position: absolute; left: 85px; right: 85px; top: 44px; display: flex; flex-direction: column; gap: 6px; }
+  .eyebrow {
+    align-self: flex-start; font: 700 26px/1 var(--body); color: var(--navy);
+    background: var(--cyan); padding: 9px 18px 8px; border-radius: 999px; letter-spacing: .01em;
+  }
+  h1 {
+    font: 800 96px/1.05 var(--display); color: var(--ink); letter-spacing: -.01em;
+    text-shadow: 0 0 28px rgba(0, 212, 255, .45), 0 4px 0 rgba(0, 0, 0, .35);
+    white-space: nowrap;
+  }
+  h1 .code { color: var(--cyan); }
+  .sub { font: 400 28px/1.2 var(--body); color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  /* ── การ์ด ── */
+  .card { position: absolute; display: flex; flex-direction: column; gap: 8px; }
+  .card img {
+    display: block; width: 100%; aspect-ratio: 600 / 838; object-fit: contain;
+    border-radius: 10px;
+    box-shadow: 0 14px 30px rgba(0, 0, 0, .55), 0 0 0 1px rgba(255, 255, 255, .08);
+  }
+  .card.r1 img { box-shadow: 0 18px 40px rgba(0, 0, 0, .6), 0 0 0 3px var(--gold), 0 0 36px rgba(224, 180, 87, .45); border-radius: 12px; }
+  .lab { display: flex; align-items: baseline; gap: 10px; min-width: 0; }
+  .rank { font: 800 34px/1 var(--display); color: var(--cyan); flex: none; }
+  .r1 .rank { font-size: 52px; color: var(--gold); }
+  .who { display: flex; flex-direction: column; min-width: 0; }
+  .name { font: 700 22px/1.15 var(--body); color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .r1 .name { font-size: 30px; }
+  .tag { font: 400 17px/1.25 var(--body); color: var(--cyan-soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .r1 .tag { font-size: 21px; }
+
+  .r1 { left: 85px;  top: 246px; width: 400px; }
+  .r2 { left: 525px; top: 246px; width: 220px; }
+  .r3 { left: 775px; top: 246px; width: 220px; }
+  .r4 { left: 525px; top: 618px; width: 220px; }
+  .r5 { left: 775px; top: 618px; width: 220px; }
+
+  /* ── ท้าย ── */
+  .logo { position: absolute; left: 85px; bottom: 26px; width: 150px; }
+  .credit { position: absolute; right: 85px; bottom: 34px; font: 400 16px/1.3 var(--body); color: rgba(184, 197, 224, .75); text-align: right; }
+</style>
+</head>
+<body>
+  <div class="bg"></div>
+  {{BG_IMG}}
+  <div class="shade"></div>
+  <div class="streak s1"></div>
+  <div class="streak s2"></div>
+
+  <header class="head">
+    <span class="eyebrow">ONE PIECE CARD GAME</span>
+    <h1>{{HEAD}}</h1>
+    <p class="sub">{{SUB}}</p>
+  </header>
+
+  {{CARDS}}
+
+  {{LOGO}}
+  <p class="credit">ภาพการ์ดจากเว็บทางการ ONE PIECE CARD GAME</p>
+</body>
+</html>
