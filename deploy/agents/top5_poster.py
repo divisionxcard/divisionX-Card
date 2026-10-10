@@ -126,6 +126,34 @@ def build_html(top5, bg_uri):
             .replace("{{LOGO}}", logo))
 
 
+# ย่อชื่อการ์ดที่ยาวเกินช่องจนพอดี — วัดในเบราว์เซอร์จริง (ความกว้างตัวอักษรเดาไม่ได้)
+# ⚠️ โปสเตอร์จริงชุดแรก (#52 · 10 ต.ค. 2026) ขึ้น "Edward.Newga…" เพราะช่องชื่อการ์ดเล็กกว้างราว 165px
+#    ห้ามแก้ด้วยการให้ขึ้นบรรทัดใหม่ — ใต้การ์ดแถวบนเหลือที่แค่ ~20px ก่อนถึงการ์ดแถวล่าง ชื่อ 2 บรรทัดจะชน
+# ⚠️ ห้ามวัดด้วย scrollWidth > clientWidth — สองค่านี้ถูกปัดเป็นจำนวนเต็ม: "Edward.Newgate" กว้างจริง 167.x
+#    ในช่อง 167 → รายงานว่าเท่ากันพอดี แต่ตอนวาดเกินเศษพิกเซลแล้วขึ้น "…" (ลองจริง โปสเตอร์ #52)
+#    วัดความกว้างตัวหนังสือด้วย Range (ได้ทศนิยม) แล้วเผื่อขอบ 1px
+#    และห้ามวัด "ช่อง" จากกล่องชื่อเอง — กล่องหดตามความยาวชื่อ ย่อเท่าไรก็ไม่พอดี (ลองแล้ว ย่อทุกชื่อจนเล็กสุด)
+#    ช่องจริง = ความกว้างแถวป้าย − เลขอันดับ − ช่องว่างระหว่างกัน
+FIT_NAMES_JS = """() => {
+  const out = [];
+  const textW = el => { const r = document.createRange(); r.selectNodeContents(el); return r.getBoundingClientRect().width; };
+  for (const lab of document.querySelectorAll('.lab')) {
+    const el = lab.querySelector('.name'), rank = lab.querySelector('.rank');
+    if (!el || !rank) continue;
+    const gap = parseFloat(getComputedStyle(lab).columnGap) || 0;
+    const room = lab.getBoundingClientRect().width - rank.getBoundingClientRect().width - gap - 1;
+    let size = parseFloat(getComputedStyle(el).fontSize);
+    const min = Math.max(14, Math.round(size * 0.65));
+    while (textW(el) > room && size > min) {
+      size -= 1;
+      el.style.fontSize = size + 'px';
+    }
+    if (textW(el) > room) out.push(el.textContent);
+  }
+  return out;
+}"""
+
+
 def render(html, out_path):
     from playwright.sync_api import sync_playwright
     with sync_playwright() as p:
@@ -135,6 +163,9 @@ def render(html, out_path):
         # รอฟอนต์จริง ไม่ใช่รอเวลาเดา — ฟอนต์พาดหัวมาจากเน็ต ช้ากว่าที่ฝังไว้
         pg.evaluate("document.fonts.ready.then(() => true)")
         pg.wait_for_timeout(300)
+        still_cut = pg.evaluate(FIT_NAMES_JS)   # ต้องหลังฟอนต์โหลดเสร็จ ไม่งั้นวัดผิด
+        if still_cut:
+            print(f"  ⚠️ ชื่อยังยาวเกินช่องแม้ย่อสุดแล้ว: {', '.join(still_cut)}")
         used = pg.evaluate("[...document.fonts].some(f => f.family.includes('Kanit') && f.status === 'loaded')")
         pg.screenshot(path=out_path, type="png")
         b.close()
