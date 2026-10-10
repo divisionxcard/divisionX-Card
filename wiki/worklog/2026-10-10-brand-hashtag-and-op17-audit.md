@@ -115,7 +115,7 @@ status: 🟢 แท็กชื่อเพจครบทุกทาง (ต�
 - [ ] แคปชั่น #52/#53 แก้ 3 จุดข้างบน (สถานะ approved ยังไม่ได้ตั้งเวลา) — เจ้าของยังไม่ได้ตัดสินใจ
 
 ⚠️ กับดักที่เจอตอนเรนเดอร์: `deploy/.env.local` บรรทัดแรกมี BOM (แก้ล่าสุด 15 ก.ย.) → ตัวโหลด env ของ
-`poster_render.py` (ใช้ร่วมกับ `top5_poster.py`) อ่านคีย์เป็น `﻿NEXT_PUBLIC_SUPABASE_URL` → รันบนเครื่องขึ้น
+`poster_render.py` (ใช้ร่วมกับ `top5_poster.py`) อ่านคีย์เป็น `U+FEFF NEXT_PUBLIC_SUPABASE_URL` → รันบนเครื่องขึ้น
 "ไม่มี SUPABASE_URL" · แก้เป็น `utf-8-sig` แล้ว (GH Actions ไม่กระทบ — ใช้ env จริง ฟังก์ชันออกก่อน)
 - [ ] รีเฟรช `opcg_cards.json` (OP-17 อยู่ในตู้แล้ว)
 
