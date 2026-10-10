@@ -527,6 +527,11 @@ def load_content_rules():
     }
 
 
+def _count_lines(text):
+    """จำนวนบรรทัดที่มีข้อความ (ไม่นับบรรทัดว่าง) — ตรงกับกฎความยาวใน content_voice.json"""
+    return sum(1 for ln in (text or "").splitlines() if ln.strip())
+
+
 def query_content_for_review(limit=10, include_reviewed=False):
     """คอนเทนต์ที่รอคนอนุมัติและยังไม่ผ่านด่านตรวจ + กฎแบรนด์ที่ต้องใช้ตรวจ
 
@@ -556,6 +561,9 @@ def query_content_for_review(limit=10, include_reviewed=False):
         "id": r["id"], "status": r.get("status"), "platform": r.get("platform"),
         "format": r.get("content_format"), "sku": r.get("source_sku"),
         "caption": r.get("caption"),          # ตัวเต็ม — ตรวจงานต้องเห็นของจริงทั้งชิ้น
+        # นับให้แล้ว — ห้ามให้ผู้ตรวจนับเอง (10 ต.ค. 2026: แคปชั่น #52/#53 มีข้อความ 17 บรรทัด
+        # โมเดลตรวจบอก "อย่างน้อย 19" แล้วตีกลับว่ายาวเกินกฎ 18 บรรทัด)
+        "lines_nonblank": _count_lines(r.get("caption")),
         "why_written": _clip(r.get("source_reason"), 200),
         "revision_count": r.get("revision_count") or 0,
         "created": _th_stamp(r.get("created_at")),
