@@ -3,7 +3,7 @@ type: worklog
 date: 2026-10-10
 tags: [marketing, ideas, trends, official-sites, reddit, youtube, card2price, tavily, tiktok, competitors]
 commits: [459c413]
-status: 🟢 เลนใหม่ 3 เลน + YouTube 24 ช่อง ต่อเข้าตัวเก็บไอเดียแล้ว · 🟡 รอเจ้าของรัน migration 076 · เลนคู่แข่ง (Tavily/Hermes) รอชื่อเพจ TDPK
+status: 🟢 เลนใหม่ 3 เลน + YouTube 24 ช่อง + เลนคู่แข่ง/ครีเอเตอร์ (Hermes cron 5163f87beffd) ใช้งานจริงแล้ว · migration 076 รันแล้ว · TDPK ปิดไว้ (หาชื่อเพจไม่เจอ)
 ---
 
 # เรดาร์เทรนด์ — ให้ระบบหาข่าว/กระแสจากหลายช่องทางให้ทันและอัปเดตเสมอ
@@ -80,17 +80,25 @@ status: 🟢 เลนใหม่ 3 เลน + YouTube 24 ช่อง ต่�
 5. **โควตา session ชนลิมิต 22:00** ทำให้ตัวสำรวจ 6/8 ตาย — resume workflow ด้วย `resumeFromRunId` ใช้ผล 2 ตัวที่เสร็จแล้วจากแคช
 6. Google แยก "การ์ดวันพีซ" (≈0) กับ "การ์ดวันพี**ช**" (คำที่คนไทยพิมพ์จริง) — คำค้นเทรนด์/โซเชียลต้องใช้ ช
 
-## ยังค้าง / รอเจ้าของ
+## เจ้าของตอบ (23:40) และสิ่งที่ทำต่อ
 
-- [ ] **รัน migration 076** ใน Supabase SQL Editor (จนกว่าจะรัน ไอเดียเลนใหม่ถูกบันทึกเป็น news/internal และไม่มี event_date)
-- [ ] **ชื่อเพจ/บัญชี FB·IG·TikTok ของ "TDPK"** — ค้นแล้วได้แต่ True Digital Park · ต้องใช้สำหรับเลนคู่แข่ง
-- [ ] **เลนคู่แข่ง/ครีเอเตอร์ (Tavily · Hermes cron รายสัปดาห์ · ~25-60 เครดิต/เดือน)** — สคริปต์ no_agent:
-      ค้น FB/IG/TikTok ด้วยชื่อร้าน+ห้าง (Nut Card · Take a Hit Card · BLACKCARDTCG · TDPK) + ครีเอเตอร์ไทย
-      (@jitranuchdang @beysdexth @kittyumbs @stampfordbridge41 @merchtcg @op_wgm) → `add_marketing_idea` + สรุป Telegram ·
-      ห้ามใส่ time_range กับโดเมนโซเชียล · กรอง score ≥0.3 · เก็บ seen-URL
-- [ ] **คลังแนวทางโฆษณา** (`ad_inspirations` · Meta Ad Library/TikTok Top Ads ดูด้วยคน) — ตอบคำถามเจ้าของเรื่องสำรวจแอดคู่แข่ง · ไปกับแผน `ads-automation-blueprint`
-- [ ] ยืนยันว่า Naruto / Solo Leveling ในตู้เป็นสินค้า Bandai (NARUTO CARD GAME · UNION ARENA) หรือการ์ดสะสม Kayou — เลือกเว็บทางการให้ถูก
-- [ ] (ทางเลือก) หมุน GEMINI_API_KEY · (ทางเลือก) คีย์ YouTube Data API ถ้าอยากค้นคีย์เวิร์ด/ชาร์ตยอดนิยมไทย
+- [x] **migration 076 รันแล้ว** — ยืนยันด้วยการแทรก/ลบแถวทดสอบ source=official + event_date ได้ 201
+- [x] **Naruto / Solo Leveling = Bandai** → เพิ่ม Union Arena (TCG+ game 9) เข้าเลนทัวร์นาเมนต์ · NARUTO CARD GAME
+      ยังไม่วางขายจนกลางปี 2027 ค่อยเพิ่ม
+- [x] **ลบสคริปต์ตรวจเก่าที่ตีกลับแท็กเกิน 3 อัน** 3 ไฟล์ (สำรองไว้ `backups/2026-10-10-removed-hashtag-checkers/`) —
+      `review_content` ที่ SOUL.md/jobs.json อ้างถึงคือ **MCP tool** ไม่ใช่ไฟล์ จึงไม่กระทบ
+- [x] **เลนคู่แข่ง/ครีเอเตอร์ทำแล้ว (ไม่มี TDPK — เจ้าของก็หาชื่อเพจไม่เจอ ปิดไว้ใน config เปิดได้ทีหลัง)**
+      · เป้าหมาย: `deploy/tasks/competitor_watch.json` (Nut Card · Take a Hit Card · BLACKCARDTCG + กวาดตู้ใหม่ในห้าง · ครีเอเตอร์ TikTok · ข่าวธุรกิจไทย)
+      · สคริปต์: `%LOCALAPPDATA%\hermes\scripts\competitor_radar.py` (สำเนาใน `scripts/hermes/`) · no_agent พิมพ์=ส่ง · เงียบถ้าไม่มีของใหม่
+      · cron Hermes **`5163f87beffd`** ทุกจันทร์ 08:30 · Tavily 7 คอล/สัปดาห์ · กรอง score ≥0.3 · ตัดหน้าโปรไฟล์/discover
+      · ถอดวันโพสต์ TikTok จาก video id · ≤4 ชิ้น/เป้าหมาย · จำ URL ใน `hermes/state/competitor_radar.json`
+      · เข้าคิวเป็น source `manual` subtype `radar_competitor|radar_creator|radar_news` (ไม่เพิ่ม source ใหม่ใน DB)
+      · **รอบแรก (23:53) ได้ 12 ชิ้น** → เจอว่า Take a Hit Card มี 2 สาขา (สาขา 2 Centerpoint สยาม ติด BTS) เพิ่งเติม Lorcana set 13 ·
+        BLACKCARDTCG เปิดตู้ Siam Discovery โดยมี "กิต Three Man Down" มาเปิด · @merchtcg ทำคลิปงานการ์ดโชว์กรุงเทพ 5-7 ต.ค.
+- [ ] **คลังแนวทางโฆษณา** (`ad_inspirations` · Meta Ad Library/TikTok Top Ads ดูด้วยคน) — Tavily มองไม่เห็นแอด · ไปกับแผน `ads-automation-blueprint`
+- [ ] (ทางเลือก) หมุน GEMINI_API_KEY — เจ้าของต้องสร้างคีย์ใหม่เองที่ AI Studio แล้ววางใน `deploy/.env.local` + Vercel env
+- [ ] (ทางเลือก) คีย์ YouTube Data API ถ้าอยากค้นคีย์เวิร์ด/ชาร์ตยอดนิยมไทย
 - [ ] ปุ่มวางลิงก์ TikTok: รองรับพิมพ์ชื่อเองเมื่อ oEmbed โดน 429
+- [ ] ชื่อเพจ TDPK ถ้าวันหน้าเจอ → เปิด `enabled` ใน competitor_watch.json
 
 เกี่ยวข้อง: [[2026-10-10-brand-hashtag-and-op17-audit]] · [[ai-content-intelligence-plan]] · [[ads-automation-blueprint]] · [[2026-08-08-content-anti-repeat]]

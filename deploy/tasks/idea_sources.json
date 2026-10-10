@@ -50,7 +50,7 @@
     "TikTok เทรนด์ ของสะสม ไทย"
   ],
 
-  "_official_note": "เว็บทางการของค่าย = ต้นน้ำของทุกกระแส (วันวางขาย · แบนลิสต์ · อีเวนต์ในไทย) · ปิด/เปิดได้ทีละแหล่ง · tcgplus_games: 8 = One Piece · 11 = Dragon Ball FW · 9 = Union Arena (Solo Leveling)",
+  "_official_note": "เว็บทางการของค่าย = ต้นน้ำของทุกกระแส (วันวางขาย · แบนลิสต์ · อีเวนต์ในไทย) · ปิด/เปิดได้ทีละแหล่ง · tcgplus_games: 8 = One Piece · 11 = Dragon Ball FW · 9 = Union Arena (Solo Leveling — เจ้าของยืนยัน 10 ต.ค. ว่าเป็นของ Bandai) · NARUTO CARD GAME (19/20) ยังไม่วางขายจนถึงกลางปี 2027 ค่อยเพิ่ม",
   "official_sites": {
     "max_age_days": 10,
     "onepiece_th": true,
@@ -59,7 +59,7 @@
     "pokemon_th": true,
     "pokemon_jp": true,
     "tcgplus_events": true,
-    "tcgplus_games": ["8", "11"]
+    "tcgplus_games": ["8", "11", "9"]
   },
 
   "_global_note": "ชุมชน/สื่อต่างประเทศนำหน้าข่าวไทย 2-6 สัปดาห์ (วัดจริงกับ EB-05: ลีก 23 ส.ค. → ข่าว EN 29 ก.ย. → ข่าวไทยชิ้นแรก 9 ต.ค. · แบน Mihawk 24 ก.ย. ไม่เคยเป็นข่าวไทยเลย) · Reddit ใช้ Atom ไม่ใช่ JSON (403) และยิงได้ 1 ครั้ง/นาที → gap 65 · cadence weekly รันเฉพาะวันที่ weekly_weekday (0 = จันทร์) · keep/drop = regex หัวข้อ",

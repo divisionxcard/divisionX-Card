@@ -378,7 +378,7 @@ def parse_pkm_jp(html, today, max_age):
 TCGPLUS_API = "https://api.bandai-tcg-plus.com/api/user/event/list"
 TCGPLUS_HDR = {"Accept": "application/json, text/plain, */*",
                "Origin": "https://www.bandai-tcg-plus.com", "Referer": "https://www.bandai-tcg-plus.com/"}
-TCGPLUS_GAMES = {"8": "One Piece", "11": "Dragon Ball FW"}
+TCGPLUS_GAMES = {"8": "One Piece", "11": "Dragon Ball FW", "9": "Union Arena (Solo Leveling)"}
 
 
 def tcgplus_url(game_id, start, end, limit=100):

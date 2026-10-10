@@ -1,0 +1,26 @@
+{
+  "_comment": "เป้าหมายของเรดาร์คู่แข่ง/ครีเอเตอร์ (สคริปต์ Hermes: %LOCALAPPDATA%/hermes/scripts/competitor_radar.py · รันทุกจันทร์ 08:30 · ใช้ Tavily ของ Hermes ~7 เครดิต/สัปดาห์) · แก้ไฟล์นี้ได้เลย ไม่ต้องแก้โค้ด",
+  "_how_note": "Tavily เป็นดัชนีค้นหา ไม่ใช่ฟีดสด — โพสต์ FB/IG/TikTok ไทยตามหลัง 1-11 เดือน จึงเป็น 'ข่าวกรองรายสัปดาห์' (เขาเล่นมุมอะไร เปิดสาขาไหน) ไม่ใช่เทรนด์วันนี้ · ทดสอบ 10 ต.ค. 2026: คำทั่วไปอย่าง 'ตู้กดการ์ด' ได้ 0 ต้องเจาะชื่อร้าน/ห้าง · ห้ามใส่ time_range กับโดเมนโซเชียล (ได้ขยะ) · สะกด 'การ์ดวันพีช' (ช) ตามที่คนไทยพิมพ์",
+  "_tdpk_note": "TDPK (ตู้ One Piece) — เจ้าของกับผมค้นชื่อเพจไม่เจอ (Tavily ตีความเป็น True Digital Park) · ปิดไว้ก่อน เปิด enabled และใส่ query ที่มีชื่อเพจจริงเมื่อเจอ",
+  "competitors": [
+    {"name": "Nut Card", "enabled": true, "query": "Nut Card การ์ด", "domains": ["facebook.com", "instagram.com"],
+     "note": "ร้านการ์ด เมกาพลาซ่า วังบูรพา ชั้น 5 + สาขาบางบ่อ · เพจ facebook.com/NutCardTCG · เนื้อหาเด่น: สอนราคาการ์ด ดราม่าแพ็ค ทีเซอร์ Pokémon 30 ปี"},
+    {"name": "Take a Hit Card", "enabled": true, "query": "Take a Hit Card ตู้การ์ด สยาม", "domains": ["facebook.com", "instagram.com", "tiktok.com"],
+     "note": "ตู้กดการ์ดที่ Centerpoint สยามสแควร์ (เพจ centerpointsiamsquare) · มี One Piece/Pokémon/Naruto/Battle of Talingchan"},
+    {"name": "BLACKCARDTCG", "enabled": true, "query": "BLACKCARDTCG ตู้การ์ด Siam Discovery", "domains": ["facebook.com", "instagram.com", "tiktok.com"],
+     "note": "ตู้กด TCG ที่ Siam Discovery ชั้น 3 หน้า Shop ODS (@sanctuarygalleryTH)"},
+    {"name": "TDPK", "enabled": false, "query": "TDPK ตู้ One Piece การ์ด", "domains": ["facebook.com", "instagram.com", "tiktok.com"],
+     "note": "รอชื่อเพจจริง"}
+  ],
+  "sweeps": [
+    {"name": "ตู้การ์ดใหม่ในห้าง", "query": "พิกัด ตู้การ์ดเกม ห้าง One Piece Pokemon", "domains": ["facebook.com", "instagram.com", "tiktok.com"],
+     "country": "thailand", "language": "th", "kind": "competitor"},
+    {"name": "ครีเอเตอร์เปิดซองวันพีช", "query": "การ์ดวันพีช เปิดซอง", "domains": ["tiktok.com"],
+     "country": "thailand", "language": "th", "kind": "creator"},
+    {"name": "ชุมชน OPTCG กรุงเทพ", "query": "One Piece card game Thailand", "domains": ["tiktok.com"], "kind": "creator"},
+    {"name": "ข่าวธุรกิจการ์ดไทย", "query": "การ์ดเกมสะสม ตลาด ไทย ตู้", "domains": [], "time_range": "week", "kind": "news"}
+  ],
+  "min_score": 0.3,
+  "max_age_days": 90,
+  "max_new_per_run": 12
+}
