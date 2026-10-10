@@ -518,7 +518,11 @@ def load_content_rules():
         # overclaim คือ "พูดเกินจริงไหม" ซึ่งเป็นความเสี่ยงต่อชื่อเสียง ไม่ใช่เรื่องความสวยงาม
         "overclaim": v.get("overclaim", {}),
         "example_good": v.get("example"),
-        "formats": [{"key": f.get("key"), "label": f.get("label")}
+        # ⚠️ ต้องส่ง length ด้วย (10 ต.ค. 2026) — เดิมส่งแค่ key/label ตัวตรวจเห็นว่าชิ้นงานเป็น "top5"
+        #    แต่ไม่รู้ว่ารูปแบบนี้ยาวได้ถึง 18 บรรทัด จึงตีกลับว่า "ยาวเกิน 3-5 บรรทัด" ทุกชิ้น
+        #    (โค้ดนี้ถูกโหลดค้างใน MCP server — แก้แล้วมีผลหลัง Hermes gateway เปิดใหม่
+        #    ระหว่างนั้นกฎความยาวของ top5 เขียนไว้ใน hard_rules ข้อ 3 ด้วย ซึ่งอ่านไฟล์ใหม่ทุกครั้ง)
+        "formats": [{k: f.get(k) for k in ("key", "label", "length", "manual") if f.get(k) is not None}
                     for f in v.get("content_formats", [])],
     }
 
