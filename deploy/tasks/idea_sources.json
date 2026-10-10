@@ -1,24 +1,111 @@
 {
-  "_comment": "แหล่งข้อมูลของตัวเก็บไอเดีย (deploy/agents/idea_collector.py) · แก้ไฟล์นี้ได้เลย ไม่ต้องแก้โค้ด",
+  "_comment": "แหล่งข้อมูลของตัวเก็บไอเดีย (deploy/agents/idea_collector.py + trend_sources.py) · แก้ไฟล์นี้ได้เลย ไม่ต้องแก้โค้ด · ทุกแหล่งทดสอบยิงจริง 10 ต.ค. 2026 (wiki/worklog/2026-10-10-trend-radar.md)",
 
-  "_news_note": "Google News RSS ภาษาไทย — ไม่ต้องมี API key · คำค้นควรกว้างพอจะเจอข่าว แต่แคบพอจะไม่เจอเรื่องไม่เกี่ยว",
+  "_news_note": "Google News RSS ภาษาไทย — ไม่ต้องมี API key · คำค้นควรกว้างพอจะเจอข่าว แต่แคบพอจะไม่เจอเรื่องไม่เกี่ยว · ทดสอบ 10 ต.ค.: 'การ์ดสะสม' ได้ 12 ชิ้น/7 วัน (ครึ่งหนึ่งเกี่ยว) · 'ตู้กดการ์ด' เดี่ยว ๆ ได้ 0 · 'การ์ดเกม' เดี่ยว ๆ ได้ขยะ 80% (Google ตัดคำไทยหลวม) · Naruto/Solo Leveling/เปิดซองไวรัล/งานการ์ดเกม กรุงเทพ ได้ 0 ทั้งหมด อย่าเพิ่ม",
   "news_queries": [
     "One Piece Card Game การ์ด",
     "Pokemon การ์ดสะสม ไทย",
     "Dragon Ball Fusion World การ์ด",
     "การ์ดเกม TCG ไทย",
-    "ตู้กดการ์ด การ์ดสะสม"
+    "การ์ดสะสม",
+    "Yu-Gi-Oh การ์ด"
+  ],
+  "_news_drop_note": "หัวข้อข่าวที่ตรง regex นี้ถูกทิ้ง — Yu-Gi-Oh ได้ข่าวเกมมือถือ Master Duel ปนมา 3 ใน 5",
+  "news_title_drop": "MASTER DUEL|TAG FORCE|MasterDeck|Duel Links",
+
+  "_youtube_note": "YouTube channel RSS (ฟรี มียอดวิว ไม่ต้องมี key) · 24 ช่องยืนยันแล้ว 10 ต.ค. 2026 · ทุกช่องถูกกรองด้วยคำการ์ดค่ายเรา (รอบทดสอบแรกช่องสายการ์ดล้วนก็ปล่อย Harry Potter/Digimon หลุด) · youtube_max_per_channel = คลิปสูงสุดต่อช่องต่อรอบ · หา channel_id ของช่องใหม่: เปิด view-source หน้าช่อง หาลิงก์ canonical /channel/UC… · ห้ามเดา",
+  "youtube_max_age_days": 7,
+  "youtube_max_per_channel": 3,
+  "youtube_channels": [
+    {"label": "Guy Ngid (กายหงิด)", "channel_id": "UC79u_tfhqjGIi1tgWsJEG7Q"},
+    {"label": "ohana clip", "channel_id": "UCnR-yB_lvecbAC0EZKXrjJw"},
+    {"label": "F Pongpitak", "channel_id": "UCCBAFMK4jV26k_Nt_amLuoA"},
+    {"label": "Oppa Thuchy", "channel_id": "UCopuDbhVg-4V5X8-XZ6w-bA"},
+    {"label": "OverBoot", "channel_id": "UCycEs5LuDMTG-yvoYZZRucw"},
+    {"label": "JAI RAW", "channel_id": "UCVKIH1Sv_wdp3MBRfemJwWA"},
+    {"label": "SaltDay", "channel_id": "UC0zHMdhfGt3QwRCI-M68MZg"},
+    {"label": "Moowan", "channel_id": "UC7WC0Z7v8XUFSgI68AjOuUg"},
+    {"label": "ปวดหลัง จุ่มเกลือ", "channel_id": "UCUBaLUsdOguGyXW5fiaVDAQ"},
+    {"label": "NEGI", "channel_id": "UCXWbip9SkeUPgGnm7EuXBQw"},
+    {"label": "Kidzncardz", "channel_id": "UCYDQRHv3oBEc2ZUB7aEcReQ"},
+    {"label": "Thursday TCG", "channel_id": "UCUUVyl2kv7dQmAa7anYsiQQ"},
+    {"label": "MARK BREAKER", "channel_id": "UC3noZM2E6m8C_nTD7qNz1gQ"},
+    {"label": "Turbo on Board", "channel_id": "UCpSJRlDErPW1bXJuqDrfWfQ"},
+    {"label": "KuhakuPT", "channel_id": "UCm2tiAzGopgnGXe62YNyOXw"},
+    {"label": "Peach Eternal", "channel_id": "UCTcGrFQFkMSaQwHfymomwfQ"},
+    {"label": "GM Club", "channel_id": "UC3uh9-E91tAarFPXZANhbjg"},
+    {"label": "Kino Ashita", "channel_id": "UCrLA6INx_Uoxr4TVgSxprLg"},
+    {"label": "ONE PIECE Official ENG", "channel_id": "UCwz6BWiifRgjPIVE8QdNEHA"},
+    {"label": "Play Bandai Card Games", "channel_id": "UCefuFOfO8-ZgLNCxNA5ujpQ"},
+    {"label": "Official Bandai Card Games", "channel_id": "UCT5u6XqA2oaSqxsXKp3zubw"},
+    {"label": "Supah Playaz", "channel_id": "UCp-eHiPRBaEFV6Fv5p1Dvqw"},
+    {"label": "Graded Noah", "channel_id": "UCRCaft1C3drKzLi25-uCleQ"},
+    {"label": "The Egman", "channel_id": "UCIWYzx6vOgmC--6PBVTodig"}
   ],
 
-  "_youtube_note": "YouTube channel RSS — ไม่ต้องมี API key · หา channel_id ได้จาก view-source ของหน้าช่อง (ค้น 'channelId')",
-  "youtube_channels": [],
-
-  "_tiktok_note": "TikTok ไม่มี RSS สาธารณะ · Creative Center API ตอบ 'no permission' · การค้นคลิปไวรัลอัตโนมัติทำไม่ได้ถ้าไม่สมัคร official API — ที่ทำได้คือ (1) ข่าวที่พูดถึงกระแส TikTok ผ่าน Google News (2) วางลิงก์คลิปเองบนหน้าเว็บ ระบบดึงชื่อ/ผู้โพสต์ให้ผ่าน oEmbed",
+  "_tiktok_note": "TikTok ไม่มีทางดึงเทรนด์สดโดยไม่ล็อกอิน (ทดสอบซ้ำ 10 ต.ค. 2026: Creative Center ตอบ no permission · หน้า tag/search ว่างเปล่า · oEmbed โดน 429 นานเป็นชั่วโมง · Research API ไม่เปิดให้ธุรกิจ) — ที่ทำได้คือ (1) ข่าวที่พูดถึงกระแส TikTok ผ่าน Google News (2) วางลิงก์คลิปเองบนหน้าเว็บ",
   "tiktok_queries": [
     "TikTok ไวรัล การ์ดสะสม",
     "คลิปไวรัล เปิดซองการ์ด",
     "TikTok เทรนด์ ของสะสม ไทย"
   ],
+
+  "_official_note": "เว็บทางการของค่าย = ต้นน้ำของทุกกระแส (วันวางขาย · แบนลิสต์ · อีเวนต์ในไทย) · ปิด/เปิดได้ทีละแหล่ง · tcgplus_games: 8 = One Piece · 11 = Dragon Ball FW · 9 = Union Arena (Solo Leveling)",
+  "official_sites": {
+    "max_age_days": 10,
+    "onepiece_th": true,
+    "onepiece_jp": true,
+    "dragonball_th": true,
+    "pokemon_th": true,
+    "pokemon_jp": true,
+    "tcgplus_events": true,
+    "tcgplus_games": ["8", "11"]
+  },
+
+  "_global_note": "ชุมชน/สื่อต่างประเทศนำหน้าข่าวไทย 2-6 สัปดาห์ (วัดจริงกับ EB-05: ลีก 23 ส.ค. → ข่าว EN 29 ก.ย. → ข่าวไทยชิ้นแรก 9 ต.ค. · แบน Mihawk 24 ก.ย. ไม่เคยเป็นข่าวไทยเลย) · Reddit ใช้ Atom ไม่ใช่ JSON (403) และยิงได้ 1 ครั้ง/นาที → gap 65 · cadence weekly รันเฉพาะวันที่ weekly_weekday (0 = จันทร์) · keep/drop = regex หัวข้อ",
+  "weekly_weekday": 0,
+  "global_feeds": [
+    {"key": "reddit_optcg_week", "label": "Reddit r/OnePieceTCG ท็อปสัปดาห์", "url": "https://www.reddit.com/r/OnePieceTCG/top/.rss?t=week&limit=15",
+     "cadence": "daily", "gap": 65, "ranked": true, "base": 3.2, "max_age_days": 8, "limit": 10,
+     "lead": "ชุมชนต่างประเทศ นำหน้าไทยหลายสัปดาห์"},
+    {"key": "reddit_optcg_new", "label": "Reddit r/OnePieceTCG ใหม่ล่าสุด", "url": "https://www.reddit.com/r/OnePieceTCG/.rss",
+     "cadence": "daily", "gap": 65, "base": 2.8, "max_age_days": 2, "limit": 12,
+     "keep": "OP\\d{2}|EB\\d{2}|ST\\d{2}|PRB|ban|restrict|leak|reveal|spoil|price",
+     "lead": "โพสต์ใหม่ภายใน 48 ชม. — เรื่องชุดใหม่/แบน/ลีก"},
+    {"key": "reddit_pkm_week", "label": "Reddit r/PokemonTCG ท็อปสัปดาห์", "url": "https://www.reddit.com/r/PokemonTCG/top/.rss?t=week&limit=15",
+     "cadence": "daily", "gap": 65, "ranked": true, "base": 2.8, "max_age_days": 8, "limit": 8,
+     "lead": "ชุมชนโปเกมอนต่างประเทศ"},
+    {"key": "gnews_en_op", "label": "Google News EN · One Piece Card Game", "url": "https://news.google.com/rss/search?q=%22One%20Piece%20Card%20Game%22%20when%3A7d&hl=en-US&gl=US&ceid=US:en",
+     "cadence": "daily", "base": 3.0, "max_age_days": 7, "limit": 10,
+     "drop": "deal|Prime Day|preorder|pre-order|in stock|restock|best .* (deals|buys)",
+     "lead": "สื่ออังกฤษ นำหน้าข่าวไทย 1-7 วัน"},
+    {"key": "gnews_en_pkm", "label": "Google News EN · Pokémon TCG", "url": "https://news.google.com/rss/search?q=%22Pokemon%20TCG%22%20when%3A7d&hl=en-US&gl=US&ceid=US:en",
+     "cadence": "daily", "base": 2.6, "max_age_days": 7, "limit": 10,
+     "drop": "deal|Prime Day|preorder|pre-order|in stock|restock|best .* (deals|buys)|Pocket",
+     "lead": "สื่ออังกฤษ"},
+    {"key": "tcgplayer_op", "label": "TCGplayer Infinite · One Piece", "url": "https://news.google.com/rss/search?q=site%3Atcgplayer.com%20%22One%20Piece%22%20when%3A30d&hl=en-US&gl=US&ceid=US:en",
+     "cadence": "daily", "base": 3.4, "max_age_days": 30, "limit": 15,
+     "keep": "Banned|Restrict|Price Spike|Everything We Know|Pull Rate|Most Expensive|Set in Order|Best .* Deck|Top Selling",
+     "lead": "บทวิเคราะห์ตลาด/แบน/ราคาพุ่งจากตลาดสหรัฐ",
+     "angle": "สรุปประเด็นจากตลาดต่างประเทศให้คนไทยใน 1 โพสต์ — บอกว่ากระทบใบไหนในชุดที่ตู้มี"},
+    {"key": "pokebeach", "label": "PokeBeach (ข่าวโปเกมอนชุดใหม่)", "url": "https://news.google.com/rss/search?q=site%3Apokebeach.com%20when%3A7d&hl=en-US&gl=US&ceid=US:en",
+     "cadence": "daily", "base": 2.8, "max_age_days": 7, "limit": 12,
+     "drop": "^\\S+ - PokeBeach$|^Discussion -",
+     "lead": "ข่าวชุดใหม่โปเกมอน มาก่อนไทยหลายเดือน"},
+    {"key": "ygorganization", "label": "YGOrganization (Yu-Gi-Oh)", "url": "https://ygorganization.com/feed/",
+     "cadence": "weekly", "base": 2.2, "max_age_days": 8, "limit": 10, "keep": "\\[TCG\\]|\\[OCG\\]",
+     "lead": "ข่าว Yu-Gi-Oh ทางการ"},
+    {"key": "optopdecks", "label": "OnePieceTopDecks (ลีกชุดใหม่)", "url": "https://onepiecetopdecks.com/feed/",
+     "cadence": "weekly", "base": 3.6, "max_age_days": 21, "limit": 10, "keep": "^Leaks:",
+     "lead": "ลีกชุดใหม่ 5-7 สัปดาห์ก่อนข่าวทางการ",
+     "angle": "เตรียมโพสต์ 'มีข่าวลือว่า…' แบบระบุชัดว่ายังไม่ยืนยัน แล้วตามด้วยโพสต์ยืนยันวันที่ประกาศจริง"}
+  ],
+
+  "_price_note": "card2price.com/market ฝังลิสต์ 'ราคาขายพุ่งวันนี้' (จาก SNKRDUNK ญี่ปุ่น) และ 'การ์ดมาแรง' — ยิงวันละ 1 ครั้ง · sets = รหัสชุดที่เราขาย (ใส่ชุดใหม่เมื่อเข้าตู้) · ราคาอ้างได้เฉพาะในแคปชั่น พร้อมวันที่+เครดิต ห้ามขึ้นภาพ (นโยบาย 10 ต.ค. 2026)",
+  "price": {
+    "enabled": true,
+    "sets": ["OP13", "OP14", "OP15", "OP16", "OP17", "EB04", "PRB01", "PRB02"]
+  },
 
   "_internal_note": "สัญญาณจากข้อมูลขายของเราเอง — เปิด/ปิดได้ทีละอย่าง",
   "internal_signals": {
@@ -39,6 +126,6 @@
   "max_age_days": 14,
   "tiktok_max_age_days": 7,
 
-  "_purge_note": "ลบไอเดียที่เก่าเกินกี่วันและยังไม่เคยถูกหยิบไปใช้ · ใส่ 0 = ไม่ลบเลย · ลบเฉพาะ status=new เท่านั้น ของที่ picked ไปแล้วหรือมีคอนเทนต์อ้างถึงจะไม่ถูกแตะ",
+  "_purge_note": "ลบไอเดียที่เก่าเกินกี่วันและยังไม่เคยถูกหยิบไปใช้ · ใส่ 0 = ไม่ลบเลย · ลบเฉพาะ status=new เท่านั้น ของที่ picked ไปแล้วหรือมีคอนเทนต์อ้างถึงจะไม่ถูกแตะ · ของที่มี event_date ในอนาคต (วันวางขาย/วันงาน) ไม่ถูกลบจนกว่าจะเลยวัน",
   "purge_after_days": 5
 }

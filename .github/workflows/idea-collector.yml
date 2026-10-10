@@ -15,7 +15,7 @@ on:
   workflow_dispatch:
     inputs:
       only:
-        description: "เก็บเฉพาะแหล่งเดียว (news | youtube | internal) — ว่าง = ทุกแหล่ง"
+        description: "เก็บเฉพาะแหล่งเดียว (official | news | tiktok | youtube | global | price | internal) — ว่าง = ทุกแหล่ง"
         required: false
       dry_run:
         description: "ดูอย่างเดียว ไม่เขียน DB"
@@ -25,7 +25,8 @@ on:
 jobs:
   collect:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    # 20 ไม่ใช่ 10 — เลนต่างประเทศยิง Reddit ได้นาทีละครั้ง (3 ฟีด ≈ 3 นาที) + ขั้นคิดมุมเว้น 5 วิ/ชิ้น
+    timeout-minutes: 20
 
     steps:
       - name: Checkout code

@@ -33,6 +33,7 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
+from datetime import datetime, timedelta, timezone
 import _console  # noqa: F401 — บังคับ stdout เป็น UTF-8 ต้องมาก่อน print แรก
 
 HERE = pathlib.Path(__file__).resolve().parent
@@ -53,7 +54,7 @@ def load_env_file():
     if not f.exists():
         return
     # ⚠️ utf-8-sig ไม่ใช่ utf-8 — .env.local ในเครื่องเจ้าของขึ้นต้นด้วย BOM และบรรทัดแรกคือ
-    #    NEXT_PUBLIC_SUPABASE_URL · อ่านแบบ utf-8 คีย์จะมี ﻿ นำหน้าแล้วหา URL ไม่เจอเงียบ ๆ
+    #    NEXT_PUBLIC_SUPABASE_URL · อ่านแบบ utf-8 คีย์จะมี U+FEFF นำหน้าแล้วหา URL ไม่เจอเงียบ ๆ
     #    เจอจริง 15 ก.ย. 2026 ตอนย้ายงานนี้จาก GitHub Actions (env มาจาก secrets ไม่เคยอ่านไฟล์)
     #    เข้าบอทในเครื่อง: ไอเดีย 19 ชิ้นไม่ได้มุมเลยสักชิ้น
     for line in f.read_text(encoding="utf-8-sig").splitlines():
@@ -97,7 +98,47 @@ def clean_summary(s):
     return t if len(t) >= 25 else ""
 
 
-def build_prompt(voice, idea, formats):
+# ── โพสต์ที่คนตอบรับดีจริงบนเพจเรา — ให้ตัวคิดมุมเห็น "รูปแบบ" ที่เวิร์ก (10 ต.ค. 2026) ──
+#
+# วัดจาก post_metrics: โพสต์ที่ระบบเขียนได้ 0.7 รีแอ็กชันเฉลี่ย ขณะที่เพจทำได้ 25.5
+# ท็อป 8 ของเพจเป็น "การ์ดใบเจาะจง + ตัวเลขราคา + คำถามชวนตอบ" ทั้งหมด — ตัวคิดมุมไม่เคยเห็นเลย
+# ส่งเฉพาะบรรทัดแรก + ยอดรีแอ็กชัน ไม่ส่งทั้งโพสต์ — ให้ดูรูปแบบ ไม่ใช่ให้ลอก
+def winning_patterns(days=90, top=6):
+    since = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
+    try:
+        rows = sb("GET", "post_metrics?select=post_id,message,reactions,comments,shares,captured_at"
+                         f"&posted_at=gte.{urllib.parse.quote(since)}&order=captured_at.desc&limit=1500")
+    except Exception:
+        return []
+    latest = {}
+    for r in rows:                         # เรียง captured_at ล่าสุดก่อน → ตัวแรกของแต่ละโพสต์คือสแนปช็อตล่าสุด
+        latest.setdefault(r.get("post_id"), r)
+    best = sorted(latest.values(), key=lambda r: -(r.get("reactions") or 0))[:top]
+    out = []
+    for r in best:
+        first = (r.get("message") or "").strip().splitlines()
+        if first:
+            out.append(f"«{first[0][:90]}» — {r.get('reactions') or 0} รีแอ็กชัน · {r.get('comments') or 0} คอมเมนต์")
+    return out
+
+
+# กติกาตามแหล่งที่มา — แต่ละเลนมีกับดักคนละแบบ (ข่าวต่างประเทศเขียนเหมือนเป็นข่าวไทยแล้ว ·
+# ราคาถูกพยากรณ์ · คลิปคนอื่นถูกสรุปซ้ำ) ใส่ไว้ตรงนี้ที่เดียว ไม่ใช่ในกฎกลาง
+LANE_NOTE = {
+    "official": ("ที่มา = ประกาศทางการของค่าย — ห้ามเติมรายละเอียดที่ประกาศไม่ได้บอก "
+                 "· ถ้ามีวันที่ ให้อย่างน้อย 1 มุมผูกกับวันนั้น (นับถอยหลัง/วันวางขาย/วันงาน)"),
+    "global":   ("ที่มา = ชุมชน/สื่อต่างประเทศที่คนไทยส่วนใหญ่ยังไม่เห็น — มุมแรกควรเป็น 'เล่าให้คนไทยรู้ก่อนใคร' "
+                 "ระบุชัดว่ามาจากฝั่งไหน (ญี่ปุ่น/สหรัฐ/ชุมชน) และห้ามเขียนเหมือนเป็นข่าวไทยที่ยืนยันแล้ว"),
+    "price":    ("ที่มา = ราคาตลาดมือสอง — ใช้ได้เฉพาะตัวเลข/วันที่/แหล่งที่ให้มา ห้ามพยากรณ์ว่าจะขึ้นหรือลง "
+                 "ห้ามโยงว่ากดตู้แล้วจะได้ใบนั้นหรือได้เงิน"),
+    "youtube":  ("ที่มา = คลิปที่คนดูเยอะ — ห้ามสรุปหรือเล่าซ้ำเนื้อหาคลิปของเขา ให้หยิบ 'คำถามที่คนอยากรู้' "
+                 "ที่คลิปนั้นตอบ มาทำเป็นโพสต์ของเราเองจากข้อมูลของเรา"),
+    "tiktok":   ("ที่มา = กระแสคลิปสั้น — ห้ามลอกมุก/บท ให้เอาเฉพาะ 'ความอยากรู้' ของคนดูมาตอบในแบบของเรา"),
+    "internal": ("ที่มา = ข้อมูลขายจริงของเรา (จุดแข็งที่คู่แข่งไม่มี) — เล่าเชิงคุณภาพ ห้ามเปิดเผยยอดขายดิบ"),
+}
+
+
+def build_prompt(voice, idea, formats, patterns=None):
     fmt_list = "\n".join(f"- {f['label']}: {f['brief']}" for f in formats)
     parts = [
         f"คุณเป็นนักวางแผนคอนเทนต์ให้ {voice.get('brand', 'ตู้กดการ์ดสะสม')}",
@@ -113,9 +154,24 @@ def build_prompt(voice, idea, formats):
     if idea.get("related_sku"):
         parts.append(f"สินค้าที่โยงถึง: {idea['related_sku']}")
     if idea.get("source"):
-        parts.append(f"แหล่งที่มา: {idea['source']}")
+        parts.append(f"แหล่งที่มา: {idea['source']}" + (f" ({idea['source_label']})" if idea.get("source_label") else ""))
+    if idea.get("relevance"):
+        parts.append(f"ทำไมเกี่ยวกับเรา: {idea['relevance']}")
+    note = LANE_NOTE.get(idea.get("source") or "")
+    if note:
+        parts += ["", f"⚠️ {note}"]
+
+    if patterns:
+        parts += [
+            "",
+            "โพสต์ที่คนตอบรับดีที่สุดบนเพจเรา 90 วันล่าสุด — ดู 'รูปแบบ' ที่เวิร์ก (การ์ดใบเจาะจง · ตัวเลข · คำถามชวนตอบ):",
+            *[f"- {p}" for p in patterns],
+            "ใช้เป็นแนวทางว่าคนของเราชอบอะไร ห้ามลอกถ้อยคำ และห้ามคิดมุมที่ซ้ำกับโพสต์เหล่านี้",
+        ]
 
     parts += [
+        "",
+        "ของเราต้อง original: เรียนรู้ได้ว่าอะไรเวิร์ก แต่ห้ามลอก/เรียบเรียงใหม่จากโพสต์หรือคลิปของคนอื่น",
         "",
         "**กฎเหล็ก — 3 มุมต้องต่างกันที่ 'ชนิดของคอนเทนต์' ไม่ใช่ต่างแค่คำพูด**",
         "ห้ามให้ทั้ง 3 มุมเป็นแนว 'เกาะกระแสแล้วชวนมากดตู้' เหมือนกันหมด",
@@ -359,7 +415,7 @@ def main():
     formats = voice.get("content_formats") or []
     model = os.environ.get("GEMINI_MODEL") or voice.get("gemini_model") or "gemini-flash-latest"
 
-    sel = "id,title,summary,source,related_sku,angle,angles"
+    sel = "id,title,summary,source,source_label,relevance,related_sku,angle,angles"
     try:
         if args.id:
             rows = sb("GET", f"marketing_ideas?id=eq.{args.id}&select={sel}")
@@ -384,7 +440,9 @@ def main():
         return
 
     router = Router([model] + [m for m in MODEL_CHAIN if m != model], voice)
-    print(f"[angles] จะเติมมุมให้ {len(rows)} ไอเดีย · เริ่มที่ {router.label}")
+    patterns = winning_patterns()          # ดึงครั้งเดียวต่อรอบ ใช้ซ้ำทุกชิ้น
+    print(f"[angles] จะเติมมุมให้ {len(rows)} ไอเดีย · เริ่มที่ {router.label}"
+          + (f" · เห็นโพสต์เด่นของเพจ {len(patterns)} ชิ้น" if patterns else " · ไม่มีข้อมูลโพสต์เด่น"))
     ok = fail = 0
     for n, it in enumerate(rows):
         if n and not router.on_ollama:
@@ -393,10 +451,10 @@ def main():
         try:
             # ลองซ้ำ 1 รอบเมื่อ parse ไม่ออก — บางครั้งโมเดลตอบเป็นร้อยแก้วแทน JSON
             # (เจอจริง 1 ใน 3 ชิ้นตอนทดสอบ) · ยิงใหม่ทีเดียวมักได้ เพราะ temperature สูง
-            angles = parse_angles(router.ask(build_prompt(voice, it, formats)))
+            angles = parse_angles(router.ask(build_prompt(voice, it, formats, patterns)))
             if len(angles) < 2:
                 angles = parse_angles(router.ask(
-                    build_prompt(voice, it, formats)
+                    build_prompt(voice, it, formats, patterns)
                     + "\n\nย้ำ: ตอบเป็น JSON array ล้วน ๆ เท่านั้น ห้ามมีข้อความอื่นนำหน้าหรือต่อท้าย"))
         except urllib.error.HTTPError as e:
             msg = e.read().decode("utf-8", "ignore")[:120]

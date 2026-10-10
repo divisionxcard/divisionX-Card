@@ -43,6 +43,7 @@ if sys.stdout.encoding and sys.stdout.encoding.lower() != "utf-8":
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import dvx_data as data  # noqa: E402
+import trend_sources as trend  # noqa: E402 — เลน official/global/price/youtube (10 ต.ค. 2026)
 
 ROOT = Path(__file__).resolve().parents[2]
 SOURCES_FILE = ROOT / "deploy" / "tasks" / "idea_sources.json"
@@ -218,6 +219,8 @@ def google_news_url(q, max_age_days):
 def collect_news(cfg, keywords):
     ideas = []
     max_age = cfg.get("max_age_days", 14)
+    # หัวข้อที่ต้องทิ้งแม้ตรงคำค้น — "Yu-Gi-Oh การ์ด" ได้ข่าวเกมมือถือ Master Duel ปนมา 3 ใน 5 (10 ต.ค. 2026)
+    drop_re = re.compile(cfg["news_title_drop"], re.I) if cfg.get("news_title_drop") else None
     for q in cfg.get("news_queries", []):
         try:
             items = rss_items(fetch(google_news_url(q, max_age)))
@@ -226,6 +229,9 @@ def collect_news(cfg, keywords):
             continue
         dropped = off_topic = 0
         for it in items[: cfg.get("max_per_source", 8)]:
+            if drop_re and drop_re.search(it["title"] or ""):
+                off_topic += 1
+                continue
             age = item_age_days(it.get("published"))
             if max_age and age is not None and age > max_age:
                 dropped += 1
@@ -304,31 +310,16 @@ def collect_tiktok(cfg, keywords):
 
 
 # ── แหล่ง 2: YouTube ────────────────────────────────────────────────────
-def collect_youtube(cfg, keywords):
-    ideas = []
-    for ch in cfg.get("youtube_channels", []):
-        cid = ch.get("channel_id") if isinstance(ch, dict) else ch
-        label = (ch.get("label") if isinstance(ch, dict) else None) or cid
-        if not cid:
-            continue
-        url = f"https://www.youtube.com/feeds/videos.xml?channel_id={cid}"
-        try:
-            items = rss_items(fetch(url))
-        except Exception as e:
-            log(f"  ⚠️  ช่อง {label} ดึงไม่ได้: {type(e).__name__}")
-            continue
-        for it in items[: cfg.get("max_per_source", 8)]:
-            sc, fr, _ = score_item(f"{it['title']} {it['summary']}", keywords)
-            ideas.append({
-                "source": "youtube", "source_label": f"YouTube · {label}", "subtype": label,
-                "title": it["title"][:300],
-                "summary": (it["summary"] or "")[:600] or None,
-                "url": it["url"], "score": max(sc, 0.5),   # คลิปจากช่องที่เราตามเอง = สนใจอยู่แล้ว
-                "angle": angle_for(fr, it["title"]),
-                "relevance": f"คลิปใหม่จากช่องที่เราตาม ({label})",
-                "external_key": f"yt:{it['url'][:180]}",
-            })
-    return ideas
+def trend_ctx(cfg, keywords, skus):
+    """สิ่งที่เลนใน trend_sources ต้องใช้ — ส่งเป็น dict เดียว จะได้ไม่ต้อง import วนกลับมาหาไฟล์นี้"""
+    return {"cfg": cfg, "keywords": keywords, "skus": skus, "score": score_item,
+            "today": data.th_today(), "log": log}
+
+
+def collect_youtube(cfg, keywords, skus=None):
+    """ย้ายไป trend_sources.collect_youtube (10 ต.ค. 2026) — อ่านยอดวิวจากฟีด ให้คะแนนตามความเร็ววิว
+    และกรองช่องบันเทิงด้วยคำการ์ด · รายการช่อง 24 ช่องอยู่ใน idea_sources.json (เดิมว่างเปล่ามาตลอด)"""
+    return trend.collect_youtube(trend_ctx(cfg, keywords, skus))
 
 
 # ── แหล่ง 3: ข้อมูลขายของเราเอง ─────────────────────────────────────────
@@ -443,7 +434,11 @@ def collect_internal(cfg, skus):
 
 # ── บันทึกลง DB ─────────────────────────────────────────────────────────
 FIELDS = ("status", "source", "source_label", "subtype", "title", "summary", "url",
-          "angle", "relevance", "score", "related_sku", "external_key")
+          "angle", "relevance", "score", "related_sku", "external_key", "event_date")
+
+# ถ้ายังไม่ได้รัน migration 076 (source ใหม่ + event_date) ให้ถอยไปใช้ค่าที่ตารางเดิมรับ
+# แทนที่จะพังทั้งรอบ — ไอเดียยังเข้าคิว แค่ไอคอนบนหน้าเว็บยังไม่แยกช่องทาง
+SOURCE_FALLBACK = {"official": "news", "global": "news", "price": "internal"}
 
 
 def purge(cfg, dry_run=False):
@@ -461,10 +456,17 @@ def purge(cfg, dry_run=False):
         return 0
 
     cutoff = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
+    base_q = (f"marketing_ideas?select=id,title,source,created_at"
+              f"&status=eq.new&created_at=lt.{urllib.parse.quote(cutoff)}")
+    # ของที่ผูกวันในอนาคต (วันวางขาย/วันงาน) ยังมีค่าจนกว่าจะเลยวัน — ห้ามลบตามอายุที่เก็บมา
+    today = data.th_today().isoformat()
     try:
-        old = data.sb_get(
-            f"marketing_ideas?select=id,title,source,created_at"
-            f"&status=eq.new&created_at=lt.{urllib.parse.quote(cutoff)}")
+        try:
+            old = data.sb_get(base_q + f"&or=(event_date.is.null,event_date.lt.{today})")
+        except data.DvxError as e:
+            if "event_date" not in str(e):
+                raise
+            old = data.sb_get(base_q)          # ยังไม่ได้รัน migration 076 — ใช้เงื่อนไขเดิม
         linked = {r["idea_id"] for r in data.sb_get("marketing_content?select=idea_id")
                   if r.get("idea_id")}
     except data.DvxError as e:
@@ -604,28 +606,53 @@ def save(ideas, cfg, dry_run=False):
         log("\n── DRY RUN — ไม่ได้เขียน ──")
         return 0
 
-    req = urllib.request.Request(
-        f"{data.SB_URL}/rest/v1/marketing_ideas",
-        data=json.dumps(uniq, ensure_ascii=False).encode("utf-8"),
-        headers={"apikey": data.SB_KEY, "Authorization": f"Bearer {data.SB_KEY}",
-                 "Content-Type": "application/json", "Prefer": "return=representation"},
-        method="POST")
-    try:
-        with urllib.request.urlopen(req, timeout=40) as r:
-            created = json.loads(r.read().decode("utf-8"))
-    except urllib.error.HTTPError as e:
-        detail = e.read().decode("utf-8", "ignore")[:300]
-        if e.code == 404:
-            sys.exit("❌ ยังไม่มีตาราง marketing_ideas — รัน migration 060 ก่อน")
-        sys.exit(f"❌ Supabase HTTP {e.code}: {detail}")
+    created = post_ideas(uniq)
     log(f"\n[ideas] ✅ บันทึก {len(created)} ไอเดีย")
     return len(created)
+
+
+def post_ideas(rows):
+    """INSERT ทีเดียวทั้งก้อน · ถอยให้ตารางเดิมได้ 2 ขั้นถ้ายังไม่ได้รัน migration 076
+
+    ขั้น 1  CHECK constraint ของ source ไม่รู้จัก official/global/price → แปลงเป็น news/internal
+    ขั้น 2  ไม่มีคอลัมน์ event_date → ตัดทิ้ง
+    ทั้งสองขั้นพิมพ์เตือนดัง ๆ ทุกรอบ จะได้ไม่ลืมรัน migration (ไอคอนบนเว็บยังไม่แยกช่องทางจนกว่าจะรัน)
+    """
+    body = [dict(r) for r in rows]
+    for attempt in range(3):
+        req = urllib.request.Request(
+            f"{data.SB_URL}/rest/v1/marketing_ideas",
+            data=json.dumps(body, ensure_ascii=False).encode("utf-8"),
+            headers={"apikey": data.SB_KEY, "Authorization": f"Bearer {data.SB_KEY}",
+                     "Content-Type": "application/json", "Prefer": "return=representation"},
+            method="POST")
+        try:
+            with urllib.request.urlopen(req, timeout=40) as r:
+                return json.loads(r.read().decode("utf-8"))
+        except urllib.error.HTTPError as e:
+            detail = e.read().decode("utf-8", "ignore")[:400]
+            if e.code == 404:
+                sys.exit("❌ ยังไม่มีตาราง marketing_ideas — รัน migration 060 ก่อน")
+            if "source_check" in detail or "23514" in detail:
+                log("[ideas] ⚠️ ตารางยังไม่รับ source ใหม่ (official/global/price) — บันทึกเป็น news/internal ไปก่อน"
+                    " · รัน backend/database/migrations/076_marketing_ideas_trend_lanes.sql ใน Supabase SQL Editor")
+                for r in body:
+                    r["source"] = SOURCE_FALLBACK.get(r["source"], r["source"])
+                continue
+            if "event_date" in detail:
+                log("[ideas] ⚠️ ตารางยังไม่มีคอลัมน์ event_date — ตัดทิ้งไปก่อน · รัน migration 076")
+                for r in body:
+                    r.pop("event_date", None)
+                continue
+            sys.exit(f"❌ Supabase HTTP {e.code}: {detail}")
+    sys.exit("❌ บันทึกไอเดียไม่สำเร็จแม้ถอยให้ตารางเดิมแล้ว — ดูข้อความด้านบน")
 
 
 def main():
     ap = argparse.ArgumentParser(description="เก็บไอเดียคอนเทนต์จากข่าว/YouTube/ข้อมูลขาย")
     ap.add_argument("--dry-run", action="store_true", help="ดูอย่างเดียว ไม่เขียน DB")
-    ap.add_argument("--only", choices=["news", "tiktok", "youtube", "internal"], help="เก็บเฉพาะแหล่งเดียว")
+    ap.add_argument("--only", choices=["official", "news", "tiktok", "youtube", "global", "price", "internal"],
+                    help="เก็บเฉพาะแหล่งเดียว")
     ap.add_argument("--purge-only", action="store_true", help="ลบของเก่าอย่างเดียว ไม่เก็บของใหม่")
     args = ap.parse_args()
 
@@ -641,12 +668,28 @@ def main():
     log(f"[ideas] คำสำคัญจากสินค้าที่ขายจริง {len(keywords)} คำ")
 
     ideas = []
+    ctx = trend_ctx(cfg, keywords, skus)
+
+    def lane(name, fn):
+        """แหล่งหนึ่งล้มต้องไม่ทำให้ทั้งรอบล้ม — เว็บค่ายช้า/ล่มเป็นเรื่องปกติ"""
+        try:
+            got = fn(); ideas.extend(got); log(f"[ideas] {name}: {len(got)}")
+        except Exception as e:
+            log(f"  ⚠️  {name} ล้ม: {type(e).__name__}: {str(e)[:100]}")
+
+    # ต้นน้ำก่อน (ทางการ) → ข่าวไทย → คลิป → ต่างประเทศ → ราคา → ข้อมูลเราเอง
+    if args.only in (None, "official"):
+        lane("ทางการ", lambda: trend.collect_official(ctx))
     if args.only in (None, "news"):
-        n = collect_news(cfg, keywords); ideas += n; log(f"[ideas] ข่าว: {len(n)}")
+        lane("ข่าว", lambda: collect_news(cfg, keywords))
     if args.only in (None, "tiktok"):
-        t = collect_tiktok(cfg, keywords); ideas += t; log(f"[ideas] TikTok: {len(t)}")
+        lane("TikTok", lambda: collect_tiktok(cfg, keywords))
     if args.only in (None, "youtube"):
-        y = collect_youtube(cfg, keywords); ideas += y; log(f"[ideas] YouTube: {len(y)}")
+        lane("YouTube", lambda: collect_youtube(cfg, keywords, skus))
+    if args.only in (None, "global"):
+        lane("ต่างประเทศ", lambda: trend.collect_global(ctx))
+    if args.only in (None, "price"):
+        lane("ราคาตลาด", lambda: trend.collect_price(ctx))
     if args.only in (None, "internal"):
         try:
             i = collect_internal(cfg, skus); ideas += i; log(f"[ideas] ภายใน: {len(i)}")

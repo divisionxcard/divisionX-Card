@@ -13,6 +13,7 @@ import {
   Wallet, Package, Receipt, TrendingUp, Trophy, MessageSquare, Lock,
   Lightbulb, Newspaper, Youtube, BarChart3, ExternalLink, Sparkles, Music2, Plus,
   Image as ImageIcon, Send, Copy, Maximize2, Calendar as CalendarIcon, Download,
+  Globe, BadgeCheck,
 } from "lucide-react"
 import {
   ResponsiveContainer, ComposedChart, Bar, Line, XAxis, YAxis,
@@ -35,6 +36,10 @@ const IDEA_SOURCE = {
   internal: { icon: BarChart3, label: "ข้อมูลเราเอง", cls: "bg-emerald-50 text-emerald-700" },
   comment:  { icon: MessageSquare, label: "เสียงลูกค้า", cls: "bg-purple-50 text-purple-700" },
   manual:   { icon: Pencil,    label: "เพิ่มเอง",    cls: "bg-gray-100 text-gray-600" },
+  // เลนเทรนด์ 10 ต.ค. 2026 (migration 076) — ต้นน้ำทางการ · ต่างประเทศที่นำหน้าไทย · ราคาตลาดพุ่ง
+  official: { icon: BadgeCheck, label: "ทางการ",     cls: "bg-indigo-50 text-indigo-700" },
+  global:   { icon: Globe,      label: "ต่างประเทศ", cls: "bg-cyan-50 text-cyan-700" },
+  price:    { icon: TrendingUp, label: "ราคาตลาด",   cls: "bg-orange-50 text-orange-700" },
 }
 
 // ── สถานะสายพาน ────────────────────────────────────────────────────────

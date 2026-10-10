@@ -171,6 +171,25 @@ db.from(t).in(...).select(...)   // ❌ พัง
 db.from(t).select(...).in(...)   // ✅
 ```
 
+## เลนเทรนด์ของตัวเก็บไอเดีย (10 ต.ค. 2026 · `deploy/agents/trend_sources.py`)
+
+| เลน | แหล่ง | หมายเหตุ |
+|---|---|---|
+| `official` | เว็บทางการ OP TH/JP (JSON `article_list.php`) · วันวางขาย · อีเวนต์ · DBS FW · Pokémon TH/JP · Bandai TCG+ API | ต้นน้ำของทุกกระแส · มี `event_date` |
+| `global` | Reddit Atom · Google News EN · site:tcgplayer/pokebeach · YGOrg · OnePieceTopDecks | นำหน้าข่าวไทย 2-6 สัปดาห์ · Reddit ยิงได้ 1/นาที |
+| `price` | card2price.com/market (daily surge + hottest จาก SNKRDUNK) | 1-2 คำขอ/วัน · เฉพาะชุดใน `price.sets` |
+| `youtube` | 24 ช่อง (ฟีดมียอดวิว) · `filter_topic` สำหรับช่องบันเทิง | คะแนนตามความเร็ววิว |
+
+ตั้งค่าทั้งหมดใน `deploy/tasks/idea_sources.json` · parser เป็นฟังก์ชันล้วน ทดสอบกับหน้าเซฟได้ ·
+migration 076 ยังไม่รัน = ถอยบันทึกเป็น news/internal เอง (ดู `post_ideas()`)
+
+**ทดสอบแล้วว่าไม่ได้ อย่าเสียเวลาลองซ้ำ** (worklog `2026-10-10-trend-radar`): TikTok ทุกช่องทางสาธารณะ · Facebook (400) ·
+Reddit JSON (403) · Pantip (กระทู้การ์ด ~1/เดือน) · Google Trends (ลิสต์ไทยไม่มีการ์ดเลย + robots ห้าม explore) ·
+Google News ไทยคำ Naruto/Solo Leveling/เปิดซองไวรัล/ตู้กดการ์ด (0 ชิ้น) · YouTube Data API ด้วยคีย์ Gemini (คนละชนิด)
+
+ตัวคิดมุม (`idea_angles.py`) เห็น **โพสต์ท็อปของเพจ 90 วัน** + `LANE_NOTE` ตามแหล่ง — เพจทำได้ 25.5 รีแอ็กชัน/โพสต์
+ขณะที่โพสต์ระบบได้ 0.7 เพราะท็อปของเพจคือ "การ์ดใบเจาะจง + ราคา + คำถาม" ซึ่งตัวคิดมุมไม่เคยเห็น
+
 ## ค้างอยู่
 - `idea_collector.angle_for()` ยังเป็น template ตายตัว
 - `content_suggester.py` เป็นระบบเก่าคนละทางกับ API นี้ — prompt ยังไม่บังคับภาษาไทย
