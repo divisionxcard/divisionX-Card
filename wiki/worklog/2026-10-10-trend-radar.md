@@ -96,7 +96,10 @@ status: 🟢 เลนใหม่ 3 เลน + YouTube 24 ช่อง + เ�
       · **รอบแรก (23:53) ได้ 12 ชิ้น** → เจอว่า Take a Hit Card มี 2 สาขา (สาขา 2 Centerpoint สยาม ติด BTS) เพิ่งเติม Lorcana set 13 ·
         BLACKCARDTCG เปิดตู้ Siam Discovery โดยมี "กิต Three Man Down" มาเปิด · @merchtcg ทำคลิปงานการ์ดโชว์กรุงเทพ 5-7 ต.ค.
 - [ ] **คลังแนวทางโฆษณา** (`ad_inspirations` · Meta Ad Library/TikTok Top Ads ดูด้วยคน) — Tavily มองไม่เห็นแอด · ไปกับแผน `ads-automation-blueprint`
-- [ ] (ทางเลือก) หมุน GEMINI_API_KEY — เจ้าของต้องสร้างคีย์ใหม่เองที่ AI Studio แล้ววางใน `deploy/.env.local` + Vercel env
+- [x] **หมุน GEMINI_API_KEY แล้ว (11 ต.ค. 03:45)** — เจ้าของสร้างคีย์ใหม่วางใน `.env.local` · ผมอัปเดต Vercel env (PATCH /v9 env id LXWhTdnIOye3O1lG)
+      + GitHub secret (sealed box ด้วย pynacl ใน `.venv-image`) · **GitHub ตอบ 201 = ก่อนหน้านี้ไม่เคยมี secret นี้** → ขั้น "คิดมุม" ใน
+      `idea-collector.yml` ถูกข้ามมาตลอด (ทำงานเฉพาะในบอท) ตอนนี้รันได้ทั้งสองทาง (โควตา Gemini 20/วัน/รุ่น ใช้ร่วมกัน · GH รันหลังบอท
+      จึงเก็บตกเฉพาะชิ้นที่ยังไม่มีมุม) · Vercel ต้อง deploy ใหม่ถึงจะเห็นค่าใหม่ — ทำผ่าน push นี้ · รอเจ้าของลบคีย์เก่า (…RyKw) ใน AI Studio
 - [ ] (ทางเลือก) คีย์ YouTube Data API ถ้าอยากค้นคีย์เวิร์ด/ชาร์ตยอดนิยมไทย
 - [ ] ปุ่มวางลิงก์ TikTok: รองรับพิมพ์ชื่อเองเมื่อ oEmbed โดน 429
 - [ ] ชื่อเพจ TDPK ถ้าวันหน้าเจอ → เปิด `enabled` ใน competitor_watch.json
