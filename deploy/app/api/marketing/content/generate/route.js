@@ -195,7 +195,7 @@ function readFormatLine(text, voice, fallback) {
 }
 
 function buildPrompt(voice, idea, content, sku, recent = [], format = null, craft = null, knowledge = "", altFormat = null) {
-  // รูปแบบที่กำหนดความยาวเอง (เช่น "ส่อง 5 ใบเด็ด") ต้องไม่โดนกฎกลาง "กระชับ 3-5 บรรทัด" ทับ
+  // รูปแบบที่กำหนดความยาวเอง (เช่น "ส่อง 5 ใบเด็ด") ต้องไม่โดนกฎกลาง "3-6 บรรทัด/ตามเนื้อหา" ทับ
   // ไม่งั้นโมเดลได้สองคำสั่งขัดกัน แล้วตัดเนื้อ 5 อันดับทิ้งเหลือ 3 บรรทัด
   const rules = voice.rules
     .filter(r => !(format?.length && /บรรทัด/.test(r)))
