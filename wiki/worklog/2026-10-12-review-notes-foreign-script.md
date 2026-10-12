@@ -2,7 +2,7 @@
 type: worklog
 date: 2026-10-12
 tags: [marketing, review, hermes, content, i18n]
-commits: []
+commits: [18ad49e]
 status: 🟢 แก้แล้ว — ด่านกันอักษรต่างชาติ + ตัวนับบรรทัดไม่นับแฮชแท็ก · 🟡 รอเจ้าของตัดสินใจกฎความยาว 3-5 (#54 มี 6)
 ---
 
