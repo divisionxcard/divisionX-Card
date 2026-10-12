@@ -2,7 +2,7 @@
 type: worklog
 date: 2026-10-10
 tags: [marketing, ideas, trends, official-sites, reddit, youtube, card2price, tavily, tiktok, competitors]
-commits: [459c413, 29a2082]
+commits: [459c413, 29a2082, 9844b91]
 status: 🟢 เลนใหม่ 3 เลน + YouTube 24 ช่อง + เลนคู่แข่ง/ครีเอเตอร์ (Hermes cron 5163f87beffd) ใช้งานจริงแล้ว · migration 080 รันแล้ว · TDPK ปิดไว้ (หาชื่อเพจไม่เจอ)
 ---
 
@@ -79,6 +79,7 @@ status: 🟢 เลนใหม่ 3 เลน + YouTube 24 ช่อง + เ�
 4. **card2price หน้า /cards กรองตามชุดไม่ได้** (พารามิเตอร์ถูกเมิน ข้อมูลจริงมาจาก /api ที่ robots ห้าม) — ใช้ /market ที่ฝังลิสต์มาให้แทน
 5. **โควตา session ชนลิมิต 22:00** ทำให้ตัวสำรวจ 6/8 ตาย — resume workflow ด้วย `resumeFromRunId` ใช้ผล 2 ตัวที่เสร็จแล้วจากแคช
 6. Google แยก "การ์ดวันพีซ" (≈0) กับ "การ์ดวันพี**ช**" (คำที่คนไทยพิมพ์จริง) — คำค้นเทรนด์/โซเชียลต้องใช้ ช
+7. **ตั้งเลข migration ชนกับไฟล์เดิม** (076 ซ้ำกับ 076_role_marketing) เพราะตั้งเลขจากความจำ ไม่ได้ดูโฟลเดอร์ก่อน → ย้ายเป็น 080 (12 ต.ค.) · ครั้งหน้าดู `ls backend/database/migrations | tail` ก่อนตั้งเลขเสมอ
 
 ## เจ้าของตอบ (23:40) และสิ่งที่ทำต่อ
 
