@@ -3,7 +3,7 @@ type: worklog
 date: 2026-10-12
 tags: [users, auth, support, profiles]
 commits: [ea48f98]
-status: 🟢 แก้แล้ว — username เปลี่ยนเป็น aomeiei · รอผู้ใช้ลองล็อกอิน
+status: ✅ ปิดงาน — เปลี่ยน username เป็น aomeiei แล้วผู้ใช้เข้าได้ (เจ้าของยืนยัน 12 ต.ค.)
 ---
 
 # ผู้ใช้ "aomeiei" เข้าระบบไม่ได้
