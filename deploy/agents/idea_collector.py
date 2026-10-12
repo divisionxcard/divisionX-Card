@@ -436,7 +436,7 @@ def collect_internal(cfg, skus):
 FIELDS = ("status", "source", "source_label", "subtype", "title", "summary", "url",
           "angle", "relevance", "score", "related_sku", "external_key", "event_date")
 
-# ถ้ายังไม่ได้รัน migration 076 (source ใหม่ + event_date) ให้ถอยไปใช้ค่าที่ตารางเดิมรับ
+# ถ้ายังไม่ได้รัน migration 080 (source ใหม่ + event_date) ให้ถอยไปใช้ค่าที่ตารางเดิมรับ
 # แทนที่จะพังทั้งรอบ — ไอเดียยังเข้าคิว แค่ไอคอนบนหน้าเว็บยังไม่แยกช่องทาง
 SOURCE_FALLBACK = {"official": "news", "global": "news", "price": "internal"}
 
@@ -466,7 +466,7 @@ def purge(cfg, dry_run=False):
         except data.DvxError as e:
             if "event_date" not in str(e):
                 raise
-            old = data.sb_get(base_q)          # ยังไม่ได้รัน migration 076 — ใช้เงื่อนไขเดิม
+            old = data.sb_get(base_q)          # ยังไม่ได้รัน migration 080 — ใช้เงื่อนไขเดิม
         linked = {r["idea_id"] for r in data.sb_get("marketing_content?select=idea_id")
                   if r.get("idea_id")}
     except data.DvxError as e:
@@ -612,7 +612,7 @@ def save(ideas, cfg, dry_run=False):
 
 
 def post_ideas(rows):
-    """INSERT ทีเดียวทั้งก้อน · ถอยให้ตารางเดิมได้ 2 ขั้นถ้ายังไม่ได้รัน migration 076
+    """INSERT ทีเดียวทั้งก้อน · ถอยให้ตารางเดิมได้ 2 ขั้นถ้ายังไม่ได้รัน migration 080
 
     ขั้น 1  CHECK constraint ของ source ไม่รู้จัก official/global/price → แปลงเป็น news/internal
     ขั้น 2  ไม่มีคอลัมน์ event_date → ตัดทิ้ง
@@ -635,12 +635,12 @@ def post_ideas(rows):
                 sys.exit("❌ ยังไม่มีตาราง marketing_ideas — รัน migration 060 ก่อน")
             if "source_check" in detail or "23514" in detail:
                 log("[ideas] ⚠️ ตารางยังไม่รับ source ใหม่ (official/global/price) — บันทึกเป็น news/internal ไปก่อน"
-                    " · รัน backend/database/migrations/076_marketing_ideas_trend_lanes.sql ใน Supabase SQL Editor")
+                    " · รัน backend/database/migrations/080_marketing_ideas_trend_lanes.sql ใน Supabase SQL Editor")
                 for r in body:
                     r["source"] = SOURCE_FALLBACK.get(r["source"], r["source"])
                 continue
             if "event_date" in detail:
-                log("[ideas] ⚠️ ตารางยังไม่มีคอลัมน์ event_date — ตัดทิ้งไปก่อน · รัน migration 076")
+                log("[ideas] ⚠️ ตารางยังไม่มีคอลัมน์ event_date — ตัดทิ้งไปก่อน · รัน migration 080")
                 for r in body:
                     r.pop("event_date", None)
                 continue

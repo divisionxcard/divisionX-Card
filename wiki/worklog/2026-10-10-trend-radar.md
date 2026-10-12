@@ -3,7 +3,7 @@ type: worklog
 date: 2026-10-10
 tags: [marketing, ideas, trends, official-sites, reddit, youtube, card2price, tavily, tiktok, competitors]
 commits: [459c413, 29a2082]
-status: 🟢 เลนใหม่ 3 เลน + YouTube 24 ช่อง + เลนคู่แข่ง/ครีเอเตอร์ (Hermes cron 5163f87beffd) ใช้งานจริงแล้ว · migration 076 รันแล้ว · TDPK ปิดไว้ (หาชื่อเพจไม่เจอ)
+status: 🟢 เลนใหม่ 3 เลน + YouTube 24 ช่อง + เลนคู่แข่ง/ครีเอเตอร์ (Hermes cron 5163f87beffd) ใช้งานจริงแล้ว · migration 080 รันแล้ว · TDPK ปิดไว้ (หาชื่อเพจไม่เจอ)
 ---
 
 # เรดาร์เทรนด์ — ให้ระบบหาข่าว/กระแสจากหลายช่องทางให้ทันและอัปเดตเสมอ
@@ -49,13 +49,13 @@ status: 🟢 เลนใหม่ 3 เลน + YouTube 24 ช่อง + เ�
 
 **`idea_collector.py`** — เลนใหม่ผ่าน `lane()` (แหล่งเดียวล้มไม่ล้มทั้งรอบ) · `--only` เพิ่ม official/global/price ·
 `news_title_drop` (Yu-Gi-Oh ได้ Master Duel ปน 3/5) · purge **ไม่ลบของที่ `event_date` ยังไม่ถึง** ·
-`post_ideas()` ถอย 2 ขั้นถ้ายังไม่รัน migration 076 (source ใหม่ → news/internal · ตัด event_date) พร้อมเตือนทุกรอบ
+`post_ideas()` ถอย 2 ขั้นถ้ายังไม่รัน migration 080 (source ใหม่ → news/internal · ตัด event_date) พร้อมเตือนทุกรอบ
 
 **`idea_angles.py`** — ตัวคิดมุมเห็น **โพสต์ท็อป 6 ของเพจ 90 วัน** (post_metrics · บรรทัดแรก+รีแอ็กชัน ไม่ใช่ทั้งโพสต์)
 + `LANE_NOTE` กติกาตามแหล่ง (ต่างประเทศ = "เล่าให้คนไทยรู้ก่อน ระบุฝั่ง" · ราคา = ห้ามพยากรณ์ · คลิป = ห้ามสรุปซ้ำ
 หยิบ "คำถาม" มาตอบเอง) + กฎ original · นี่คือส่วน "มุมมองที่เหนือกว่าคู่แข่ง": รู้ก่อน + รู้ว่าคนของเราชอบอะไร
 
-**`backend/database/migrations/076_marketing_ideas_trend_lanes.sql`** — source CHECK + `event_date` · **DDL ต้องรันใน SQL Editor** (REST ทำไม่ได้)
+**`backend/database/migrations/080_marketing_ideas_trend_lanes.sql`** — source CHECK + `event_date` · **DDL ต้องรันใน SQL Editor** (REST ทำไม่ได้)
 **`deploy/tasks/idea_sources.json`** — ช่อง YouTube 24 · official_sites · global_feeds 9 ฟีด · price.sets · คำค้นไทยใหม่
 **`MarketingOS.jsx`** — ไอคอน ทางการ/ต่างประเทศ/ราคาตลาด · **`idea-collector.yml`** timeout 10→20 นาที
 
@@ -82,7 +82,7 @@ status: 🟢 เลนใหม่ 3 เลน + YouTube 24 ช่อง + เ�
 
 ## เจ้าของตอบ (23:40) และสิ่งที่ทำต่อ
 
-- [x] **migration 076 รันแล้ว** — ยืนยันด้วยการแทรก/ลบแถวทดสอบ source=official + event_date ได้ 201
+- [x] **migration 080 รันแล้ว** — ยืนยันด้วยการแทรก/ลบแถวทดสอบ source=official + event_date ได้ 201
 - [x] **Naruto / Solo Leveling = Bandai** → เพิ่ม Union Arena (TCG+ game 9) เข้าเลนทัวร์นาเมนต์ · NARUTO CARD GAME
       ยังไม่วางขายจนกลางปี 2027 ค่อยเพิ่ม
 - [x] **ลบสคริปต์ตรวจเก่าที่ตีกลับแท็กเกิน 3 อัน** 3 ไฟล์ (สำรองไว้ `backups/2026-10-10-removed-hashtag-checkers/`) —

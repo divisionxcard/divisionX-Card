@@ -181,7 +181,7 @@ db.from(t).select(...).in(...)   // ✅
 | `youtube` | 24 ช่อง (ฟีดมียอดวิว) · `filter_topic` สำหรับช่องบันเทิง | คะแนนตามความเร็ววิว |
 
 ตั้งค่าทั้งหมดใน `deploy/tasks/idea_sources.json` · parser เป็นฟังก์ชันล้วน ทดสอบกับหน้าเซฟได้ ·
-migration 076 ยังไม่รัน = ถอยบันทึกเป็น news/internal เอง (ดู `post_ideas()`)
+migration 080 ยังไม่รัน = ถอยบันทึกเป็น news/internal เอง (ดู `post_ideas()`)
 
 **ทดสอบแล้วว่าไม่ได้ อย่าเสียเวลาลองซ้ำ** (worklog `2026-10-10-trend-radar`): TikTok ทุกช่องทางสาธารณะ · Facebook (400) ·
 Reddit JSON (403) · Pantip (กระทู้การ์ด ~1/เดือน) · Google Trends (ลิสต์ไทยไม่มีการ์ดเลย + robots ห้าม explore) ·
