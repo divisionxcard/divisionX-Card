@@ -25,731 +25,10 @@
       "MCP"
     ],
     "description": "ระบบบริหารสต็อก·ยอดขาย·และการตลาดของตู้ขายการ์ดเกม (DivisionX Card) — ซิงค์ข้อมูลจาก VMS InboxCorp, WorldWide, Payif ผ่าน GitHub Actions เข้าสู่ Supabase (PostgreSQL) แสดงผลบน Next.js/Vercel (UI ภาษาไทย) พร้อม Marketing OS (สร้างคอนเทนต์/โปสเตอร์/auto-posting Facebook ด้วย LLM) และ MCP server.",
-    "analyzedAt": "2026-10-10T10:23:08Z",
-    "gitCommitHash": "fcfcf52927e75ce142187b9b0a2d21c4a04ced10"
+    "analyzedAt": "2026-10-12T17:09:22.917Z",
+    "gitCommitHash": "0c763af42c1690092ac7ee735069602c93f5eab4"
   },
   "nodes": [
-    {
-      "id": "file:deploy/agents/dvx_data.py",
-      "type": "file",
-      "name": "dvx_data.py",
-      "filePath": "deploy/agents/dvx_data.py",
-      "summary": "ชั้นเข้าถึงข้อมูล Supabase กลางสำหรับ MCP server และ agent ทุกตัว รวม query ยอดขาย/สต็อก/เตือนเติม/ไอเดีย/คิวคอนเทนต์/แผนโพสต์ และฟังก์ชันเขียนข้อมูล",
-      "tags": [
-        "data-access",
-        "supabase",
-        "service",
-        "query",
-        "mcp"
-      ],
-      "complexity": "complex",
-      "languageNotes": "ใช้ Supabase REST (PostgREST) ตรงด้วย service key และจัดการ timezone ไทย (UTC+7) เองทั้งไฟล์"
-    },
-    {
-      "id": "function:deploy/agents/dvx_data.py:sb_get",
-      "type": "function",
-      "name": "sb_get",
-      "filePath": "deploy/agents/dvx_data.py",
-      "lineRange": [
-        41,
-        61
-      ],
-      "summary": "เรียก Supabase REST แบบ GET พร้อม header service key แล้วคืน JSON",
-      "tags": [
-        "supabase",
-        "http",
-        "utility"
-      ],
-      "complexity": "simple"
-    },
-    {
-      "id": "function:deploy/agents/dvx_data.py:resolve_range",
-      "type": "function",
-      "name": "resolve_range",
-      "filePath": "deploy/agents/dvx_data.py",
-      "lineRange": [
-        88,
-        102
-      ],
-      "summary": "แปลงพารามิเตอร์ days/date/from_date/to_date เป็นช่วงวันที่ไทยสำหรับใช้ query",
-      "tags": [
-        "date",
-        "utility",
-        "validation"
-      ],
-      "complexity": "simple"
-    },
-    {
-      "id": "function:deploy/agents/dvx_data.py:resolve_machine",
-      "type": "function",
-      "name": "resolve_machine",
-      "filePath": "deploy/agents/dvx_data.py",
-      "lineRange": [
-        117,
-        130
-      ],
-      "summary": "จับคู่รหัส/ชื่อตู้ที่ผู้ใช้ป้อนกับ record ในตาราง machines",
-      "tags": [
-        "machine",
-        "lookup",
-        "utility"
-      ],
-      "complexity": "simple"
-    },
-    {
-      "id": "function:deploy/agents/dvx_data.py:query_sales",
-      "type": "function",
-      "name": "query_sales",
-      "filePath": "deploy/agents/dvx_data.py",
-      "lineRange": [
-        134,
-        251
-      ],
-      "summary": "ดึงและสรุปยอดขายตามช่วงวัน/ตู้/การจัดกลุ่ม พร้อมแยกหน่วยกล่อง/ซอง",
-      "tags": [
-        "sales",
-        "query",
-        "aggregation"
-      ],
-      "complexity": "complex"
-    },
-    {
-      "id": "function:deploy/agents/dvx_data.py:query_stock",
-      "type": "function",
-      "name": "query_stock",
-      "filePath": "deploy/agents/dvx_data.py",
-      "lineRange": [
-        259,
-        312
-      ],
-      "summary": "ดึงสต็อกหน้าตู้รายช่อง กรองเฉพาะช่องที่ใกล้หมดได้",
-      "tags": [
-        "stock",
-        "query",
-        "inventory"
-      ],
-      "complexity": "moderate"
-    },
-    {
-      "id": "function:deploy/agents/dvx_data.py:query_restock_alerts",
-      "type": "function",
-      "name": "query_restock_alerts",
-      "filePath": "deploy/agents/dvx_data.py",
-      "lineRange": [
-        316,
-        387
-      ],
-      "summary": "คำนวณความเร็วขายแล้วออกรายการเตือนว่าควรเติมสินค้าอะไรก่อน",
-      "tags": [
-        "restock",
-        "alert",
-        "analytics"
-      ],
-      "complexity": "moderate"
-    },
-    {
-      "id": "function:deploy/agents/dvx_data.py:query_marketing_ideas",
-      "type": "function",
-      "name": "query_marketing_ideas",
-      "filePath": "deploy/agents/dvx_data.py",
-      "lineRange": [
-        408,
-        452
-      ],
-      "summary": "ดึงคิวไอเดียการตลาด กรองตามสถานะ/แหล่งที่มา/SKU",
-      "tags": [
-        "marketing",
-        "query",
-        "ideas"
-      ],
-      "complexity": "moderate"
-    },
-    {
-      "id": "function:deploy/agents/dvx_data.py:query_content_queue",
-      "type": "function",
-      "name": "query_content_queue",
-      "filePath": "deploy/agents/dvx_data.py",
-      "lineRange": [
-        455,
-        496
-      ],
-      "summary": "ดึงคิวคอนเทนต์การตลาดตามสถานะที่ระบุ",
-      "tags": [
-        "content",
-        "query",
-        "queue"
-      ],
-      "complexity": "moderate"
-    },
-    {
-      "id": "function:deploy/agents/dvx_data.py:load_content_rules",
-      "type": "function",
-      "name": "load_content_rules",
-      "filePath": "deploy/agents/dvx_data.py",
-      "lineRange": [
-        504,
-        527
-      ],
-      "summary": "โหลดกฎการเขียนคอนเทนต์จากไฟล์ task config",
-      "tags": [
-        "content",
-        "config",
-        "rules"
-      ],
-      "complexity": "simple"
-    },
-    {
-      "id": "function:deploy/agents/dvx_data.py:query_content_for_review",
-      "type": "function",
-      "name": "query_content_for_review",
-      "filePath": "deploy/agents/dvx_data.py",
-      "lineRange": [
-        535,
-        582
-      ],
-      "summary": "ดึงคอนเทนต์ที่รอตรวจพร้อมนับจำนวนบรรทัดของแต่ละชิ้น",
-      "tags": [
-        "content",
-        "review",
-        "query"
-      ],
-      "complexity": "moderate"
-    },
-    {
-      "id": "function:deploy/agents/dvx_data.py:save_content_review",
-      "type": "function",
-      "name": "save_content_review",
-      "filePath": "deploy/agents/dvx_data.py",
-      "lineRange": [
-        585,
-        616
-      ],
-      "summary": "บันทึกผลตรวจคอนเทนต์ (ผ่าน/ต้องแก้) พร้อมหมายเหตุลง DB",
-      "tags": [
-        "content",
-        "review",
-        "write"
-      ],
-      "complexity": "moderate"
-    },
-    {
-      "id": "function:deploy/agents/dvx_data.py:query_post_plan",
-      "type": "function",
-      "name": "query_post_plan",
-      "filePath": "deploy/agents/dvx_data.py",
-      "lineRange": [
-        632,
-        674
-      ],
-      "summary": "ดึงแผนการโพสต์ตามช่วงวัน รวมโพสต์ที่ยังไม่กำหนดเวลาได้",
-      "tags": [
-        "content",
-        "schedule",
-        "query"
-      ],
-      "complexity": "moderate"
-    },
-    {
-      "id": "function:deploy/agents/dvx_data.py:query_post_performance",
-      "type": "function",
-      "name": "query_post_performance",
-      "filePath": "deploy/agents/dvx_data.py",
-      "lineRange": [
-        677,
-        777
-      ],
-      "summary": "สรุปผลงานโพสต์ย้อนหลังตามขนาดตัวอย่างขั้นต่ำที่กำหนด",
-      "tags": [
-        "content",
-        "analytics",
-        "performance"
-      ],
-      "complexity": "complex"
-    },
-    {
-      "id": "function:deploy/agents/dvx_data.py:schedule_content",
-      "type": "function",
-      "name": "schedule_content",
-      "filePath": "deploy/agents/dvx_data.py",
-      "lineRange": [
-        802,
-        853
-      ],
-      "summary": "ตั้งเวลาโพสต์คอนเทนต์ โดยแปลงคำบอกเวลาไทยเป็น timestamp",
-      "tags": [
-        "content",
-        "schedule",
-        "write"
-      ],
-      "complexity": "moderate"
-    },
-    {
-      "id": "function:deploy/agents/dvx_data.py:add_marketing_idea",
-      "type": "function",
-      "name": "add_marketing_idea",
-      "filePath": "deploy/agents/dvx_data.py",
-      "lineRange": [
-        882,
-        934
-      ],
-      "summary": "เพิ่มไอเดียการตลาดใหม่ลงคิว พร้อมกันซ้ำด้วย key จากหัวข้อ",
-      "tags": [
-        "marketing",
-        "ideas",
-        "write"
-      ],
-      "complexity": "moderate"
-    },
-    {
-      "id": "function:deploy/agents/dvx_data.py:note_for_dev",
-      "type": "function",
-      "name": "note_for_dev",
-      "filePath": "deploy/agents/dvx_data.py",
-      "lineRange": [
-        953,
-        988
-      ],
-      "summary": "ฝากข้อเสนอเชิงระบบถึงนักพัฒนา (บันทึกลงกล่องจดหมาย Hermes)",
-      "tags": [
-        "dev-note",
-        "write",
-        "integration"
-      ],
-      "complexity": "moderate"
-    },
-    {
-      "id": "file:deploy/agents/idea_angles.py",
-      "type": "file",
-      "name": "idea_angles.py",
-      "filePath": "deploy/agents/idea_angles.py",
-      "summary": "สร้างมุมเล่าคอนเทนต์ (angles) จากไอเดียการตลาดด้วย LLM โดยมี Router สลับระหว่าง Gemini กับ Ollama เมื่อเจอ quota/ข้อผิดพลาด",
-      "tags": [
-        "marketing",
-        "llm",
-        "content",
-        "idea-generation"
-      ],
-      "complexity": "complex",
-      "languageNotes": "ใช้รูปแบบ exception เป็น control flow (SwitchModel/QuotaOut) เพื่อสลับโมเดล"
-    },
-    {
-      "id": "function:deploy/agents/idea_angles.py:load_env_file",
-      "type": "function",
-      "name": "load_env_file",
-      "filePath": "deploy/agents/idea_angles.py",
-      "lineRange": [
-        50,
-        70
-      ],
-      "summary": "โหลดค่าจากไฟล์ .env.local เข้า environment variables",
-      "tags": [
-        "config",
-        "env",
-        "utility"
-      ],
-      "complexity": "simple"
-    },
-    {
-      "id": "function:deploy/agents/idea_angles.py:sb",
-      "type": "function",
-      "name": "sb",
-      "filePath": "deploy/agents/idea_angles.py",
-      "lineRange": [
-        73,
-        83
-      ],
-      "summary": "wrapper เรียก Supabase REST รองรับหลาย method",
-      "tags": [
-        "supabase",
-        "http",
-        "utility"
-      ],
-      "complexity": "simple"
-    },
-    {
-      "id": "function:deploy/agents/idea_angles.py:clean_summary",
-      "type": "function",
-      "name": "clean_summary",
-      "filePath": "deploy/agents/idea_angles.py",
-      "lineRange": [
-        88,
-        97
-      ],
-      "summary": "ตัดและทำความสะอาดข้อความสรุปไอเดียก่อนส่งเข้า prompt",
-      "tags": [
-        "text",
-        "utility",
-        "sanitization"
-      ],
-      "complexity": "simple"
-    },
-    {
-      "id": "function:deploy/agents/idea_angles.py:build_prompt",
-      "type": "function",
-      "name": "build_prompt",
-      "filePath": "deploy/agents/idea_angles.py",
-      "lineRange": [
-        100,
-        133
-      ],
-      "summary": "ประกอบ prompt จากโทนแบรนด์ ไอเดีย และรูปแบบโพสต์ที่ต้องการ",
-      "tags": [
-        "llm",
-        "prompt",
-        "content"
-      ],
-      "complexity": "moderate"
-    },
-    {
-      "id": "function:deploy/agents/idea_angles.py:ask_gemini",
-      "type": "function",
-      "name": "ask_gemini",
-      "filePath": "deploy/agents/idea_angles.py",
-      "lineRange": [
-        202,
-        259
-      ],
-      "summary": "เรียก Gemini API สร้าง angles จัดการ error/quota แล้วโยน exception สลับโมเดลเมื่อจำเป็น",
-      "tags": [
-        "llm",
-        "gemini",
-        "api"
-      ],
-      "complexity": "complex"
-    },
-    {
-      "id": "function:deploy/agents/idea_angles.py:ask_ollama",
-      "type": "function",
-      "name": "ask_ollama",
-      "filePath": "deploy/agents/idea_angles.py",
-      "lineRange": [
-        262,
-        278
-      ],
-      "summary": "เรียกโมเดล Ollama ในเครื่องเป็น fallback สร้าง angles",
-      "tags": [
-        "llm",
-        "ollama",
-        "fallback"
-      ],
-      "complexity": "moderate"
-    },
-    {
-      "id": "function:deploy/agents/idea_angles.py:parse_angles",
-      "type": "function",
-      "name": "parse_angles",
-      "filePath": "deploy/agents/idea_angles.py",
-      "lineRange": [
-        323,
-        341
-      ],
-      "summary": "แยกข้อความผลลัพธ์จาก LLM เป็นรายการ angle",
-      "tags": [
-        "parsing",
-        "llm",
-        "utility"
-      ],
-      "complexity": "moderate"
-    },
-    {
-      "id": "function:deploy/agents/idea_angles.py:main",
-      "type": "function",
-      "name": "main",
-      "filePath": "deploy/agents/idea_angles.py",
-      "lineRange": [
-        344,
-        427
-      ],
-      "summary": "จุดเริ่มทำงาน: ดึงไอเดีย สร้าง angles ด้วย Router แล้วบันทึกผล",
-      "tags": [
-        "entry-point",
-        "orchestration",
-        "cli"
-      ],
-      "complexity": "complex"
-    },
-    {
-      "id": "class:deploy/agents/idea_angles.py:Router",
-      "type": "class",
-      "name": "Router",
-      "filePath": "deploy/agents/idea_angles.py",
-      "lineRange": [
-        281,
-        320
-      ],
-      "summary": "ตัวจัดเส้นทางเรียก LLM สลับระหว่าง Gemini และ Ollama ตามสถานะ quota/error",
-      "tags": [
-        "llm",
-        "router",
-        "fallback"
-      ],
-      "complexity": "moderate"
-    },
-    {
-      "id": "file:deploy/agents/idea_collector.py",
-      "type": "file",
-      "name": "idea_collector.py",
-      "filePath": "deploy/agents/idea_collector.py",
-      "summary": "รวบรวมไอเดียคอนเทนต์จากแหล่งข่าว/TikTok/YouTube และข้อมูลภายใน ให้คะแนนความสด จัดการ cap/purge แล้วบันทึกเข้าคิวไอเดีย",
-      "tags": [
-        "marketing",
-        "data-pipeline",
-        "scraper",
-        "ideas"
-      ],
-      "complexity": "complex"
-    },
-    {
-      "id": "function:deploy/agents/idea_collector.py:item_age_days",
-      "type": "function",
-      "name": "item_age_days",
-      "filePath": "deploy/agents/idea_collector.py",
-      "lineRange": [
-        69,
-        89
-      ],
-      "summary": "คำนวณอายุ (วัน) ของรายการจากวันที่เผยแพร่",
-      "tags": [
-        "date",
-        "utility",
-        "parsing"
-      ],
-      "complexity": "moderate"
-    },
-    {
-      "id": "function:deploy/agents/idea_collector.py:freshness",
-      "type": "function",
-      "name": "freshness",
-      "filePath": "deploy/agents/idea_collector.py",
-      "lineRange": [
-        92,
-        108
-      ],
-      "summary": "แปลงอายุรายการเป็นคะแนนความสดของเนื้อหา",
-      "tags": [
-        "scoring",
-        "utility"
-      ],
-      "complexity": "moderate"
-    },
-    {
-      "id": "function:deploy/agents/idea_collector.py:rss_items",
-      "type": "function",
-      "name": "rss_items",
-      "filePath": "deploy/agents/idea_collector.py",
-      "lineRange": [
-        118,
-        136
-      ],
-      "summary": "แยกรายการข่าวจาก XML ของ RSS feed",
-      "tags": [
-        "rss",
-        "parsing",
-        "news"
-      ],
-      "complexity": "moderate"
-    },
-    {
-      "id": "function:deploy/agents/idea_collector.py:build_keywords",
-      "type": "function",
-      "name": "build_keywords",
-      "filePath": "deploy/agents/idea_collector.py",
-      "lineRange": [
-        151,
-        161
-      ],
-      "summary": "สร้างชุดคีย์เวิร์ดสำหรับคัดกรองไอเดียที่เกี่ยวข้อง",
-      "tags": [
-        "keywords",
-        "utility"
-      ],
-      "complexity": "simple"
-    },
-    {
-      "id": "function:deploy/agents/idea_collector.py:score_item",
-      "type": "function",
-      "name": "score_item",
-      "filePath": "deploy/agents/idea_collector.py",
-      "lineRange": [
-        164,
-        183
-      ],
-      "summary": "ให้คะแนนรายการตามคีย์เวิร์ดที่ตรง",
-      "tags": [
-        "scoring",
-        "keywords"
-      ],
-      "complexity": "moderate"
-    },
-    {
-      "id": "function:deploy/agents/idea_collector.py:angle_for",
-      "type": "function",
-      "name": "angle_for",
-      "filePath": "deploy/agents/idea_collector.py",
-      "lineRange": [
-        186,
-        201
-      ],
-      "summary": "เลือกมุมเล่าเริ่มต้นให้ไอเดียตามแฟรนไชส์และหัวข้อ",
-      "tags": [
-        "content",
-        "utility"
-      ],
-      "complexity": "moderate"
-    },
-    {
-      "id": "function:deploy/agents/idea_collector.py:google_news_url",
-      "type": "function",
-      "name": "google_news_url",
-      "filePath": "deploy/agents/idea_collector.py",
-      "lineRange": [
-        205,
-        215
-      ],
-      "summary": "ประกอบ URL ค้นหา Google News ตามคำค้นและอายุสูงสุด",
-      "tags": [
-        "news",
-        "url",
-        "utility"
-      ],
-      "complexity": "simple"
-    },
-    {
-      "id": "function:deploy/agents/idea_collector.py:collect_news",
-      "type": "function",
-      "name": "collect_news",
-      "filePath": "deploy/agents/idea_collector.py",
-      "lineRange": [
-        218,
-        254
-      ],
-      "summary": "ดึงและคัดกรองข่าวจาก Google News ตามคีย์เวิร์ด",
-      "tags": [
-        "news",
-        "collector",
-        "data-pipeline"
-      ],
-      "complexity": "moderate"
-    },
-    {
-      "id": "function:deploy/agents/idea_collector.py:collect_tiktok",
-      "type": "function",
-      "name": "collect_tiktok",
-      "filePath": "deploy/agents/idea_collector.py",
-      "lineRange": [
-        262,
-        303
-      ],
-      "summary": "ดึงไอเดียคอนเทนต์จาก TikTok ตามคีย์เวิร์ด",
-      "tags": [
-        "tiktok",
-        "collector",
-        "data-pipeline"
-      ],
-      "complexity": "moderate"
-    },
-    {
-      "id": "function:deploy/agents/idea_collector.py:collect_youtube",
-      "type": "function",
-      "name": "collect_youtube",
-      "filePath": "deploy/agents/idea_collector.py",
-      "lineRange": [
-        307,
-        331
-      ],
-      "summary": "ดึงไอเดียคอนเทนต์จาก YouTube ตามคีย์เวิร์ด",
-      "tags": [
-        "youtube",
-        "collector",
-        "data-pipeline"
-      ],
-      "complexity": "moderate"
-    },
-    {
-      "id": "function:deploy/agents/idea_collector.py:collect_internal",
-      "type": "function",
-      "name": "collect_internal",
-      "filePath": "deploy/agents/idea_collector.py",
-      "lineRange": [
-        335,
-        441
-      ],
-      "summary": "สร้างไอเดียจากข้อมูลภายใน เช่น ยอดขายและสต็อก SKU",
-      "tags": [
-        "internal",
-        "collector",
-        "analytics"
-      ],
-      "complexity": "complex"
-    },
-    {
-      "id": "function:deploy/agents/idea_collector.py:purge",
-      "type": "function",
-      "name": "purge",
-      "filePath": "deploy/agents/idea_collector.py",
-      "lineRange": [
-        449,
-        513
-      ],
-      "summary": "ลบไอเดียเก่า/หมดอายุออกจากคิว รองรับโหมด dry_run",
-      "tags": [
-        "cleanup",
-        "maintenance",
-        "ideas"
-      ],
-      "complexity": "moderate"
-    },
-    {
-      "id": "function:deploy/agents/idea_collector.py:cap_by_subtype",
-      "type": "function",
-      "name": "cap_by_subtype",
-      "filePath": "deploy/agents/idea_collector.py",
-      "lineRange": [
-        516,
-        549
-      ],
-      "summary": "จำกัดจำนวนไอเดียต่อ subtype ไม่ให้เกิน cap",
-      "tags": [
-        "ideas",
-        "limit",
-        "utility"
-      ],
-      "complexity": "moderate"
-    },
-    {
-      "id": "function:deploy/agents/idea_collector.py:save",
-      "type": "function",
-      "name": "save",
-      "filePath": "deploy/agents/idea_collector.py",
-      "lineRange": [
-        552,
-        622
-      ],
-      "summary": "บันทึกไอเดียที่รวบรวมเข้าคิวใน DB กันซ้ำและรองรับ dry_run",
-      "tags": [
-        "write",
-        "ideas",
-        "data-pipeline"
-      ],
-      "complexity": "complex"
-    },
-    {
-      "id": "function:deploy/agents/idea_collector.py:main",
-      "type": "function",
-      "name": "main",
-      "filePath": "deploy/agents/idea_collector.py",
-      "lineRange": [
-        625,
-        656
-      ],
-      "summary": "จุดเริ่มทำงาน: รวบรวมจากทุกแหล่ง คัดคะแนน จำกัดจำนวน แล้วบันทึก",
-      "tags": [
-        "entry-point",
-        "orchestration",
-        "cli"
-      ],
-      "complexity": "moderate"
-    },
     {
       "id": "file:deploy/agents/opcg_kb.py",
       "type": "file",
@@ -2400,22 +1679,6 @@
       "languageNotes": "ไฟล์ศูนย์กลางที่ import ทุกหน้า pages/* และ shared/* แล้วเลือกเรนเดอร์ตาม state การนำทาง"
     },
     {
-      "id": "file:deploy/components/MarketingOS.jsx",
-      "type": "file",
-      "name": "MarketingOS.jsx",
-      "filePath": "deploy/components/MarketingOS.jsx",
-      "summary": "ระบบจัดการงานการตลาด (Marketing OS) คิวคอนเทนต์ ตรวจรีวิว เครดิต ปฏิทินโพสต์ และเครื่องมือสร้างคอนเทนต์/ภาพ รวมในไฟล์เดียวขนาดใหญ่",
-      "tags": [
-        "component",
-        "marketing",
-        "content-management",
-        "app-shell",
-        "ui"
-      ],
-      "complexity": "complex",
-      "languageNotes": "คอมโพเนนต์เดียวขนาด ~1,774 บรรทัด รวมหลายหน้าย่อยของงานการตลาดไว้ด้วยกัน"
-    },
-    {
       "id": "function:deploy/components/editor/editorStore.js:reducer",
       "type": "function",
       "name": "reducer",
@@ -2899,78 +2162,6 @@
       "complexity": "moderate"
     },
     {
-      "id": "function:deploy/components/MarketingOS.jsx:MarketingOS",
-      "type": "function",
-      "name": "MarketingOS",
-      "filePath": "deploy/components/MarketingOS.jsx",
-      "lineRange": [
-        0,
-        0
-      ],
-      "summary": "คอมโพเนนต์หลักของระบบการตลาด รวมคิวคอนเทนต์ รีวิว เครดิต ปฏิทินโพสต์ และเครื่องมือสร้างคอนเทนต์",
-      "tags": [
-        "component",
-        "marketing",
-        "content-management",
-        "app-shell"
-      ],
-      "complexity": "complex"
-    },
-    {
-      "id": "function:deploy/components/MarketingOS.jsx:NavRail",
-      "type": "function",
-      "name": "NavRail",
-      "filePath": "deploy/components/MarketingOS.jsx",
-      "lineRange": [
-        0,
-        0
-      ],
-      "summary": "แถบนำทางด้านข้างของ MarketingOS สลับระหว่างหน้าย่อยของงานการตลาด",
-      "tags": [
-        "component",
-        "marketing",
-        "navigation",
-        "ui"
-      ],
-      "complexity": "moderate"
-    },
-    {
-      "id": "function:deploy/components/MarketingOS.jsx:Shell",
-      "type": "function",
-      "name": "Shell",
-      "filePath": "deploy/components/MarketingOS.jsx",
-      "lineRange": [
-        0,
-        0
-      ],
-      "summary": "โครง layout (shell) ครอบเนื้อหาของ MarketingOS พร้อม NavRail",
-      "tags": [
-        "component",
-        "marketing",
-        "layout",
-        "app-shell"
-      ],
-      "complexity": "moderate"
-    },
-    {
-      "id": "function:deploy/components/MarketingOS.jsx:CreditBadge",
-      "type": "function",
-      "name": "CreditBadge",
-      "filePath": "deploy/components/MarketingOS.jsx",
-      "lineRange": [
-        0,
-        0
-      ],
-      "summary": "แสดงยอดเครดิตคงเหลือสำหรับงานสร้างคอนเทนต์/ภาพใน MarketingOS",
-      "tags": [
-        "component",
-        "marketing",
-        "credit",
-        "ui"
-      ],
-      "complexity": "complex"
-    },
-    {
       "id": "file:deploy/components/pages/PageMachineStockView.jsx",
       "type": "file",
       "name": "PageMachineStockView.jsx",
@@ -3315,37 +2506,6 @@
         "ai",
         "image-generation",
         "fallback"
-      ],
-      "complexity": "moderate"
-    },
-    {
-      "id": "file:deploy/lib/brandTag.js",
-      "type": "file",
-      "name": "brandTag.js",
-      "filePath": "deploy/lib/brandTag.js",
-      "summary": "จัดการแฮชแท็กชื่อเพจ #DivisionXCard ในแคปชั่น — ตรวจว่าแพลตฟอร์มไหนต้องมีแท็ก และแทรกแท็กให้อยู่หน้าสุดของแถวแท็กอย่างถูกตำแหน่ง",
-      "tags": [
-        "utility",
-        "marketing",
-        "hashtag",
-        "validation"
-      ],
-      "complexity": "moderate"
-    },
-    {
-      "id": "function:deploy/lib/brandTag.js:ensureBrandTag",
-      "type": "function",
-      "name": "ensureBrandTag",
-      "filePath": "deploy/lib/brandTag.js",
-      "lineRange": [
-        50,
-        87
-      ],
-      "summary": "แทรกแท็กแบรนด์เข้าไปในแคปชั่นถ้ายังไม่มี โดยหาแถวแท็กสุดท้ายแล้ววางแท็กชื่อเพจไว้หน้าสุด คงแท็กอื่นที่มีอยู่เดิม",
-      "tags": [
-        "utility",
-        "marketing",
-        "text-processing"
       ],
       "complexity": "moderate"
     },
@@ -19335,331 +18495,1600 @@
         "planning"
       ],
       "complexity": "moderate"
+    },
+    {
+      "id": "file:deploy/agents/dvx_data.py",
+      "type": "file",
+      "name": "dvx_data.py",
+      "filePath": "deploy/agents/dvx_data.py",
+      "summary": "ชั้นข้อมูลกลางของระบบ DivisionX ที่คุยกับ Supabase ผ่าน PostgREST โดยตรง (ไม่มี SDK) คืนค่าเป็น dict/list ล้วนให้ dvx_query.py (CLI) และ MCP server ใช้ร่วมกัน — ครอบคลุมยอดขาย สต็อกหน้าตู้ เตือนเติมสต็อก คิวไอเดีย/คอนเทนต์การตลาด ด่านตรวจคอนเทนต์ ปฏิทินโพสต์ ผลลัพธ์โพสต์ และกล่องจดหมายถึงนักพัฒนา ทุกวันที่ในอาร์กิวเมนต์และผลลัพธ์เป็นเวลาไทย (UTC+7)",
+      "tags": [
+        "data-layer",
+        "supabase",
+        "postgrest",
+        "mcp-tools",
+        "marketing"
+      ],
+      "complexity": "complex",
+      "languageNotes": "ใช้ urllib.request ยิง PostgREST ตรงพร้อม header Range เพื่อดึงทีละหน้า 1000 แถว · แปลง timestamp เป็น UTC ในรูปแบบไม่มีเครื่องหมายบวก เพราะ PostgREST ตีความเป็นช่องว่างแล้วตอบ 400 · ข้อผิดพลาดทุกแบบถูกห่อเป็น DvxError พร้อมข้อความไทยที่บอกทางแก้ (เช่น ยังไม่ได้รัน migration ไหน)"
+    },
+    {
+      "id": "class:deploy/agents/dvx_data.py:DvxError",
+      "type": "class",
+      "name": "DvxError",
+      "filePath": "deploy/agents/dvx_data.py",
+      "lineRange": [
+        36,
+        37
+      ],
+      "summary": "Exception ที่อธิบายให้ผู้ใช้/agent เข้าใจได้ (ตู้ไม่เจอ · วันที่ผิดรูปแบบ · ไม่มี key · ยังไม่ได้รัน migration) — ทุกฟังก์ชันในชั้นข้อมูลโยนตัวนี้แทน error ดิบ",
+      "tags": [
+        "exception",
+        "error-handling",
+        "data-layer"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:deploy/agents/dvx_data.py:sb_get",
+      "type": "function",
+      "name": "sb_get",
+      "filePath": "deploy/agents/dvx_data.py",
+      "lineRange": [
+        41,
+        61
+      ],
+      "summary": "ดึงข้อมูลจาก PostgREST ครบทุกหน้าโดยวนเพิ่ม header Range ทีละ 1000 แถวจนหมด · โยน DvxError ถ้าไม่มี SUPABASE_URL/SERVICE KEY หรือได้ HTTP error",
+      "tags": [
+        "supabase",
+        "postgrest",
+        "pagination",
+        "http-client"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:deploy/agents/dvx_data.py:th_today",
+      "type": "function",
+      "name": "th_today",
+      "filePath": "deploy/agents/dvx_data.py",
+      "lineRange": [
+        65,
+        66
+      ],
+      "summary": "คืนวันที่ปัจจุบันตามเวลาไทย (UTC+7) — จุดอ้างอิงเดียวของคำว่า 'วันนี้' ที่ตัวเก็บไอเดียและ query ทั้งหมดใช้ร่วมกัน",
+      "tags": [
+        "utility",
+        "date",
+        "timezone"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:deploy/agents/dvx_data.py:resolve_range",
+      "type": "function",
+      "name": "resolve_range",
+      "filePath": "deploy/agents/dvx_data.py",
+      "lineRange": [
+        88,
+        102
+      ],
+      "summary": "แปลงอาร์กิวเมนต์ date / from_date+to_date / days ให้เป็นช่วง (วันเริ่ม, วันจบ) แบบวันไทยรวมปลายทั้งสอง พร้อมตรวจว่า to_date ไม่ก่อน from_date",
+      "tags": [
+        "utility",
+        "date-range",
+        "validation"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:deploy/agents/dvx_data.py:resolve_machine",
+      "type": "function",
+      "name": "resolve_machine",
+      "filePath": "deploy/agents/dvx_data.py",
+      "lineRange": [
+        117,
+        130
+      ],
+      "summary": "รับ machine_id ตรง ๆ หรือคำค้นจากชื่อ/สาขา (เช่น 'ชลบุรี') แล้วคืน machine_id ที่ตรง — โยน DvxError ถ้าไม่พบหรือกำกวมตรงหลายตู้",
+      "tags": [
+        "lookup",
+        "machine",
+        "fuzzy-match"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:deploy/agents/dvx_data.py:query_sales",
+      "type": "function",
+      "name": "query_sales",
+      "filePath": "deploy/agents/dvx_data.py",
+      "lineRange": [
+        134,
+        251
+      ],
+      "summary": "สรุปยอดขายตามช่วงวัน กรองตู้/หน่วย (pack|box) และจัดกลุ่มตาม machine | sku | day — แยกยอด 'ซื้อยกกล่อง' กับ 'ซื้อทีละซอง' จากชื่อสินค้าดิบ (คำว่า Box) เพราะ sku_id เหมือนกันทั้งคู่ พร้อมหมายเหตุเตือนว่ายอดขาย sync วันละครั้ง",
+      "tags": [
+        "sales",
+        "aggregation",
+        "reporting",
+        "mcp-tools"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:deploy/agents/dvx_data.py:query_stock",
+      "type": "function",
+      "name": "query_stock",
+      "filePath": "deploy/agents/dvx_data.py",
+      "lineRange": [
+        259,
+        312
+      ],
+      "summary": "ของเหลือรายช่องของทุกตู้ที่ active จากตาราง machine_stock พร้อมเวลา sync ล่าสุด/อายุข้อมูล (stale ถ้าเกิน 24 ชม.) และตัวเลือกดูเฉพาะช่องที่เหลือน้อย — ระบุหน่วยต่อช่องว่าเป็นกล่องหรือซอง",
+      "tags": [
+        "stock",
+        "machine-stock",
+        "reporting",
+        "mcp-tools"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:deploy/agents/dvx_data.py:query_restock_alerts",
+      "type": "function",
+      "name": "query_restock_alerts",
+      "filePath": "deploy/agents/dvx_data.py",
+      "lineRange": [
+        316,
+        387
+      ],
+      "summary": "คำนวณ SKU ขายดีที่กำลังจะหมดต่อตู้ จาก days_cover = สต็อก(ซอง) ÷ velocity จากยอดขาย 14 วัน (logic เดียวกับ restock_guard.py) แบ่งระดับ หมดแล้ว / หมดวันนี้ / เสี่ยงหมด — ช่องกล่องคูณ packs_per_box ให้เป็นซองก่อนเทียบ",
+      "tags": [
+        "restock",
+        "velocity",
+        "alerts",
+        "mcp-tools"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:deploy/agents/dvx_data.py:query_marketing_ideas",
+      "type": "function",
+      "name": "query_marketing_ideas",
+      "filePath": "deploy/agents/dvx_data.py",
+      "lineRange": [
+        408,
+        452
+      ],
+      "summary": "ดึงคิวไอเดียคอนเทนต์จาก marketing_ideas กรองสถานะ/แหล่ง/SKU เรียงตามคะแนน พร้อมสรุปจำนวนต่อแหล่ง SKU ยอดนิยม และ 'มุมเล่าที่ซ้ำ' เพื่อให้ agent เห็นรากของปัญหาคอนเทนต์ซ้ำตั้งแต่ต้นทาง",
+      "tags": [
+        "marketing",
+        "ideas",
+        "mcp-tools",
+        "reporting"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:deploy/agents/dvx_data.py:query_content_queue",
+      "type": "function",
+      "name": "query_content_queue",
+      "filePath": "deploy/agents/dvx_data.py",
+      "lineRange": [
+        455,
+        496
+      ],
+      "summary": "คิวคอนเทนต์จาก marketing_content ทุกสถานะ (draft/pending/approved/rejected/posted) พร้อมสรุปต่อสถานะ/รูปแบบ และเหตุผลที่ถูกตีตกบ่อยสุด — ตัดข้อความยาวให้พอดีบริบทของ agent",
+      "tags": [
+        "marketing",
+        "content-queue",
+        "mcp-tools",
+        "reporting"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:deploy/agents/dvx_data.py:load_content_rules",
+      "type": "function",
+      "name": "load_content_rules",
+      "filePath": "deploy/agents/dvx_data.py",
+      "lineRange": [
+        504,
+        527
+      ],
+      "summary": "อ่านกฎแบรนด์ตัวจริงจาก deploy/tasks/content_voice.json (โทน กลุ่มเป้าหมาย hard_rules ด่านคำเว่อร์ และรูปแบบโพสต์พร้อมความยาวที่อนุญาต) ให้ผู้ตรวจเทียบกับกฎจากไฟล์แทนความจำ",
+      "tags": [
+        "config-loader",
+        "brand-rules",
+        "content-review"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:deploy/agents/dvx_data.py:_count_lines",
+      "type": "function",
+      "name": "_count_lines",
+      "filePath": "deploy/agents/dvx_data.py",
+      "lineRange": [
+        530,
+        539
+      ],
+      "summary": "นับบรรทัดเนื้อหาของแคปชั่นโดยไม่นับบรรทัดว่างและแถวที่มีแต่แฮชแท็ก — ใช้ตัดสินกฎความยาวแทนให้โมเดลตรวจนับเอง (เคยนับผิดแล้วตีกลับงานที่ถูกต้อง)",
+      "tags": [
+        "utility",
+        "content-review",
+        "text-processing"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:deploy/agents/dvx_data.py:query_content_for_review",
+      "type": "function",
+      "name": "query_content_for_review",
+      "filePath": "deploy/agents/dvx_data.py",
+      "lineRange": [
+        542,
+        591
+      ],
+      "summary": "คอนเทนต์ที่รอคนอนุมัติและยังไม่ผ่านด่านตรวจ AI พร้อมกฎแบรนด์ จำนวนบรรทัดที่นับให้แล้ว และแคปชั่นที่โพสต์ล่าสุดไว้เทียบซ้ำ — บอกทางแก้ชัดเจนถ้ายังไม่ได้รัน migration 066",
+      "tags": [
+        "content-review",
+        "mcp-tools",
+        "marketing",
+        "hermes"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:deploy/agents/dvx_data.py:save_content_review",
+      "type": "function",
+      "name": "save_content_review",
+      "filePath": "deploy/agents/dvx_data.py",
+      "lineRange": [
+        594,
+        632
+      ],
+      "summary": "บันทึกผลตรวจ (pass/fix/drop + โน้ต) ลง marketing_content ผ่าน PATCH โดยไม่แตะสถานะคอนเทนต์ · บังคับโน้ตเป็นไทยล้วน (ปฏิเสธอักษรจีน/ญี่ปุ่น/เกาหลีที่โมเดลตรวจเผลอปน) และต้องมีเหตุผลเมื่อไม่ผ่าน",
+      "tags": [
+        "content-review",
+        "write",
+        "validation",
+        "mcp-tools"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:deploy/agents/dvx_data.py:query_post_plan",
+      "type": "function",
+      "name": "query_post_plan",
+      "filePath": "deploy/agents/dvx_data.py",
+      "lineRange": [
+        648,
+        690
+      ],
+      "summary": "แผนการโพสต์ข้างหน้า N วัน (ที่ตั้งเวลาไว้และจะถูกโพสต์อัตโนมัติ) ควบคู่กับคอนเทนต์ที่อนุมัติแล้วแต่ยังไม่มีวัน — ให้ผู้วางแผนเห็นสองอย่างพร้อมกันจะได้ไม่วางทับหรือลืมของที่รอ",
+      "tags": [
+        "scheduling",
+        "post-plan",
+        "mcp-tools",
+        "marketing"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:deploy/agents/dvx_data.py:query_post_performance",
+      "type": "function",
+      "name": "query_post_performance",
+      "filePath": "deploy/agents/dvx_data.py",
+      "lineRange": [
+        693,
+        793
+      ],
+      "summary": "สรุปผลลัพธ์โพสต์บนเพจจากสแนปช็อต post_metrics — ใช้ตัวล่าสุดเป็นยอดปัจจุบันและสแนปช็อตอายุราว 24 ชม. เป็นตัวเทียบข้ามโพสต์ จัดกลุ่มตามรูปแบบ/ชั่วโมงไทย พร้อมธง enough กันสรุปจากตัวอย่างน้อยเกินไป",
+      "tags": [
+        "analytics",
+        "post-metrics",
+        "mcp-tools",
+        "marketing"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:deploy/agents/dvx_data.py:schedule_content",
+      "type": "function",
+      "name": "schedule_content",
+      "filePath": "deploy/agents/dvx_data.py",
+      "lineRange": [
+        818,
+        869
+      ],
+      "summary": "ตั้งเวลาโพสต์ (เวลาไทย) ให้คอนเทนต์ 1 ชิ้น โดยกันเวลาย้อนหลัง กันชิ้นที่โพสต์แล้ว/สถานะไม่ถูก กันชิ้นที่ผู้ตรวจให้ drop และกันตั้งชนกันในช่วง ±45 นาที (ข้ามได้ด้วย force) แล้ว PATCH scheduled_at",
+      "tags": [
+        "scheduling",
+        "write",
+        "validation",
+        "mcp-tools"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:deploy/agents/dvx_data.py:add_marketing_idea",
+      "type": "function",
+      "name": "add_marketing_idea",
+      "filePath": "deploy/agents/dvx_data.py",
+      "lineRange": [
+        898,
+        950
+      ],
+      "summary": "ใส่ไอเดียคอนเทนต์จาก Hermes/คนเข้าคิว marketing_ideas (source=manual) พร้อมกันซ้ำด้วย external_key จากชื่อเรื่อง และเตือนกลับเมื่อคิว new ยาวเกิน 60 ชิ้นว่าคอขวดอยู่ที่การอนุมัติไม่ใช่จำนวนไอเดีย",
+      "tags": [
+        "marketing",
+        "ideas",
+        "write",
+        "mcp-tools",
+        "hermes"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:deploy/agents/dvx_data.py:note_for_dev",
+      "type": "function",
+      "name": "note_for_dev",
+      "filePath": "deploy/agents/dvx_data.py",
+      "lineRange": [
+        969,
+        1004
+      ],
+      "summary": "ฝากข้อเสนอเชิงระบบจาก Hermes ต่อท้ายไฟล์ wiki/hermes-inbox.md เป็นบล็อก markdown พร้อมเวลาไทยและช่อง '- [ ] ยังไม่ได้ทำ' — เพราะ Claude Code ไม่ได้รันค้าง จึงรับข้อความแบบ push ไม่ได้ ต้องอ่านตอนเปิด session",
+      "tags": [
+        "hermes",
+        "inbox",
+        "markdown",
+        "write"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:deploy/agents/idea_angles.py",
+      "type": "file",
+      "name": "idea_angles.py",
+      "filePath": "deploy/agents/idea_angles.py",
+      "summary": "สคริปต์ CLI ให้ AI คิด 'มุมเล่า' 3 มุมที่ต่างชนิดกันต่อ 1 ไอเดียใน marketing_ideas แทนประโยค template ตายตัวของ idea_collector ซึ่งเป็นรากของปัญหาคอนเทนต์ซ้ำ · ไล่โมเดล Gemini free tier ตาม MODEL_CHAIN เมื่อโควตาหมด แล้วถอยไป Ollama บนเครื่อง โดยแยกอาการล้มเหลว 4 แบบ (spike/day/minute/dead) ที่ต้องแก้คนละทาง",
+      "tags": [
+        "cli",
+        "llm",
+        "gemini",
+        "ollama",
+        "marketing",
+        "content-angles"
+      ],
+      "complexity": "complex",
+      "languageNotes": "import _console เป็นการ import เพื่อ side effect (บังคับ stdout เป็น UTF-8 ก่อน print แรก บน Windows ที่เป็น cp1252) · ใช้ exception ที่กำหนดเอง (SwitchModel/QuotaOut) เป็นกลไกควบคุมการสลับโมเดล โดยธง permanent แยก 'หมดถาวร' ออกจาก 'ล้นชั่วคราว' · อ่าน .env.local ด้วย utf-8-sig เพราะไฟล์มี BOM"
+    },
+    {
+      "id": "class:deploy/agents/idea_angles.py:SwitchModel",
+      "type": "class",
+      "name": "SwitchModel",
+      "filePath": "deploy/agents/idea_angles.py",
+      "lineRange": [
+        212,
+        222
+      ],
+      "summary": "Exception สั่งเลิกยิงโมเดลปัจจุบันแล้วไปตัวถัดไป · permanent=True = หมดจริงทั้งรอบ (โควตารายวัน/รุ่นตาย) อย่ากลับมาอีก · permanent=False = อาการชั่วคราว (503 ล้น/เครือข่ายไม่ตอบ) ชิ้นหน้ากลับมาใช้ได้",
+      "tags": [
+        "exception",
+        "control-flow",
+        "model-routing"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:deploy/agents/idea_angles.py:QuotaOut",
+      "type": "class",
+      "name": "QuotaOut",
+      "filePath": "deploy/agents/idea_angles.py",
+      "lineRange": [
+        225,
+        228
+      ],
+      "summary": "Exception ลูกของ SwitchModel สำหรับกรณีโควตา Gemini หมด (รายวัน หรือต่อนาทีหลังรอครบชุดแล้วยังชน) — ถือเป็นการเปลี่ยนโมเดลถาวรเสมอ",
+      "tags": [
+        "exception",
+        "quota",
+        "model-routing"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:deploy/agents/idea_angles.py:Router",
+      "type": "class",
+      "name": "Router",
+      "filePath": "deploy/agents/idea_angles.py",
+      "lineRange": [
+        337,
+        376
+      ],
+      "summary": "ตัวเลือกโมเดลที่จำว่าโมเดลไหน 'หมดถาวร' แล้วเพื่อไม่ยิงซ้ำทุกชิ้น · ask() ไล่ตาม chain ของ Gemini เมื่อเจอ SwitchModel (เลื่อนตัวชี้ถาวรเฉพาะกรณี permanent) และถอยไป Ollama เมื่อหมดทุกตัว · ถ้าล้มชั่วคราวทุกตัวจะโยนต่อให้ข้ามชิ้นนี้ไปก่อน",
+      "tags": [
+        "model-routing",
+        "fallback",
+        "gemini",
+        "ollama"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:deploy/agents/idea_angles.py:load_env_file",
+      "type": "function",
+      "name": "load_env_file",
+      "filePath": "deploy/agents/idea_angles.py",
+      "lineRange": [
+        51,
+        71
+      ],
+      "summary": "อ่าน deploy/.env.local (utf-8-sig เพราะมี BOM) เติมค่า SUPABASE_URL/SERVICE_KEY/GEMINI_API_KEY ให้ตัวแปรโมดูลเฉพาะที่ยังว่าง — จำเป็นเมื่อรันจากบอทในเครื่องแทน GitHub Actions ที่ได้ env จาก secrets",
+      "tags": [
+        "config-loader",
+        "env",
+        "utility"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:deploy/agents/idea_angles.py:sb",
+      "type": "function",
+      "name": "sb",
+      "filePath": "deploy/agents/idea_angles.py",
+      "lineRange": [
+        74,
+        84
+      ],
+      "summary": "ตัวช่วยยิง PostgREST ของ Supabase ด้วย method ใด ๆ (GET/PATCH) ใส่ header apikey/Authorization และ Prefer return=representation เมื่อมี body คืน JSON ที่ parse แล้ว",
+      "tags": [
+        "supabase",
+        "postgrest",
+        "http-client"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:deploy/agents/idea_angles.py:clean_summary",
+      "type": "function",
+      "name": "clean_summary",
+      "filePath": "deploy/agents/idea_angles.py",
+      "lineRange": [
+        89,
+        98
+      ],
+      "summary": "ล้าง HTML tag / ลิงก์ / entity ออกจาก summary ของข่าว Google News RSS (ซึ่งเป็น a href ล้วน) ให้เหลือข้อความอ่านได้จริงก่อนส่งเข้า prompt · ทิ้งถ้าสั้นกว่า 25 ตัวอักษรหรือเป็นข้อความปก",
+      "tags": [
+        "text-cleaning",
+        "rss",
+        "utility"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:deploy/agents/idea_angles.py:winning_patterns",
+      "type": "function",
+      "name": "winning_patterns",
+      "filePath": "deploy/agents/idea_angles.py",
+      "lineRange": [
+        106,
+        122
+      ],
+      "summary": "ดึงโพสต์ที่ได้รีแอ็กชันสูงสุดของเพจ 90 วันล่าสุดจาก post_metrics (สแนปช็อตล่าสุดต่อโพสต์) คืนบรรทัดแรก+ยอดรีแอ็กชัน/คอมเมนต์ ให้ตัวคิดมุมเห็น 'รูปแบบ' ที่เวิร์กโดยไม่ส่งทั้งโพสต์ให้ลอก",
+      "tags": [
+        "post-metrics",
+        "prompt-context",
+        "analytics"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:deploy/agents/idea_angles.py:build_prompt",
+      "type": "function",
+      "name": "build_prompt",
+      "filePath": "deploy/agents/idea_angles.py",
+      "lineRange": [
+        141,
+        189
+      ],
+      "summary": "ประกอบ prompt ภาษาไทยสำหรับคิดมุมเล่า 3 มุม จากกฎแบรนด์ ไอเดีย (หัวข้อ/รายละเอียด/SKU/แหล่ง) กติกาเฉพาะเลน (LANE_NOTE ต่อ source) โพสต์เด่นของเพจ และรายการชนิดคอนเทนต์ — บังคับตอบเป็น JSON array ของ {label, brief}",
+      "tags": [
+        "prompt-engineering",
+        "llm",
+        "marketing"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:deploy/agents/idea_angles.py:classify",
+      "type": "function",
+      "name": "classify",
+      "filePath": "deploy/agents/idea_angles.py",
+      "lineRange": [
+        247,
+        255
+      ],
+      "summary": "แยกความล้มเหลวของ Gemini เป็น 4 ทาง (spike = ล้นชั่วคราวรอสั้น ๆ · day/minute = 429 โควตารายวัน/ต่อนาที · dead = รุ่นไม่มีแล้ว · fatal) ให้ตรงกับ lib/geminiText.js ฝั่งเว็บ — เหมารวมเมื่อไหร่ก็แก้ผิดทาง",
+      "tags": [
+        "error-classification",
+        "gemini",
+        "retry-logic"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:deploy/agents/idea_angles.py:ask_gemini",
+      "type": "function",
+      "name": "ask_gemini",
+      "filePath": "deploy/agents/idea_angles.py",
+      "lineRange": [
+        258,
+        315
+      ],
+      "summary": "ยิง generateContent ไปยัง Gemini โมเดลที่ระบุ พร้อม retry ตามชนิดความล้มเหลว (รอ 1.5-3 วิเมื่อล้น · backoff 20/45/90 วิเมื่อชนลิมิตต่อนาที · timeout ให้โอกาสเดียว) และโยน SwitchModel/QuotaOut เมื่อควรเปลี่ยนโมเดล รวมถึงกรณีใช้โทเค็นไปกับการคิดจนไม่เหลือเขียน",
+      "tags": [
+        "llm",
+        "gemini",
+        "retry-logic",
+        "http-client"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:deploy/agents/idea_angles.py:ask_ollama",
+      "type": "function",
+      "name": "ask_ollama",
+      "filePath": "deploy/agents/idea_angles.py",
+      "lineRange": [
+        318,
+        334
+      ],
+      "summary": "ทางสำรองบนเครื่อง — ยิง /api/chat ของ Ollama (host/model จาก env หรือ content_voice.json ค่าเริ่มต้น qwen2.5:14b) แบบ format=json ไม่มีโควตาแต่ช้ากว่า ใช้ได้เฉพาะเครื่องที่ลง Ollama",
+      "tags": [
+        "llm",
+        "ollama",
+        "fallback",
+        "http-client"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:deploy/agents/idea_angles.py:parse_angles",
+      "type": "function",
+      "name": "parse_angles",
+      "filePath": "deploy/agents/idea_angles.py",
+      "lineRange": [
+        379,
+        397
+      ],
+      "summary": "ดึงก้อน JSON array ออกจากคำตอบโมเดลที่มักครอบด้วย code fence หรือแถมคำอธิบาย แล้วคัดเฉพาะ {label, brief} ที่ครบ ตัดความยาวและจำกัดไม่เกิน 3 มุม",
+      "tags": [
+        "parsing",
+        "json",
+        "llm-output"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:deploy/agents/idea_angles.py:main",
+      "type": "function",
+      "name": "main",
+      "filePath": "deploy/agents/idea_angles.py",
+      "lineRange": [
+        400,
+        485
+      ],
+      "summary": "จุดเริ่ม CLI: parse อาร์กิวเมนต์ (--limit/--id/--dry-run/--redo) โหลด env และ content_voice.json ดึงไอเดีย status=new ที่ยังไม่มี angles แล้ววนให้ Router ถามโมเดล (ลองซ้ำ 1 รอบถ้า parse ไม่ออก) เว้นจังหวะ 5 วิ และ PATCH คอลัมน์ angles — บอกทางแก้ถ้ายังไม่ได้รัน migration 063",
+      "tags": [
+        "entry-point",
+        "cli",
+        "batch-job",
+        "marketing"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:deploy/agents/idea_collector.py",
+      "type": "file",
+      "name": "idea_collector.py",
+      "filePath": "deploy/agents/idea_collector.py",
+      "summary": "สถานี 1 ของระบบการตลาด ('ทีมรีเสิร์ช' ที่รันทุกเช้า): เก็บไอเดียคอนเทนต์จากข่าว Google News RSS, กระแส TikTok (ทางอ้อมผ่านข่าว), เลนเทรนด์ใน trend_sources (ทางการ/ต่างประเทศ/ราคา/YouTube) และสัญญาณจากยอดขายจริง (SKU มาแรง/ตก · ใกล้หมด · ตู้ยอดตก) ให้คะแนนด้วยการนับคำที่ตรงกับแฟรนไชส์/SKU ที่ขายจริง (ไม่ใช้ LLM) แล้วบันทึกลง marketing_ideas พร้อมกันซ้ำ จำกัดโควตาต่อ subtype และลบของเก่าที่ไม่ถูกใช้",
+      "tags": [
+        "cli",
+        "batch-job",
+        "rss",
+        "marketing",
+        "idea-collector",
+        "scoring"
+      ],
+      "complexity": "complex",
+      "languageNotes": "reconfigure stdout เป็น UTF-8 ก่อน print แรกเพราะคอนโซล Windows เป็น cp1252 · ส่ง context (คำสำคัญ/ตัวให้คะแนน/วันที่/log) ให้ trend_sources เป็น dict เดียวผ่าน trend_ctx เพื่อไม่ให้ import วนกลับ · แต่ละเลนถูกห่อด้วย lane() ให้แหล่งหนึ่งล้มไม่ทำให้ทั้งรอบล้ม · post_ideas ถอยให้ตารางเดิม 2 ขั้นถ้ายังไม่ได้รัน migration 080"
+    },
+    {
+      "id": "function:deploy/agents/idea_collector.py:item_age_days",
+      "type": "function",
+      "name": "item_age_days",
+      "filePath": "deploy/agents/idea_collector.py",
+      "lineRange": [
+        70,
+        90
+      ],
+      "summary": "อายุข่าวเป็นวันจากสตริง published — รองรับทั้ง RFC 822 (RSS/Google News) และ ISO 8601 (Atom/YouTube) ตั้ง UTC ถ้าไม่มี timezone คืน None ถ้าอ่านไม่ได้",
+      "tags": [
+        "utility",
+        "date-parsing",
+        "rss"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:deploy/agents/idea_collector.py:freshness",
+      "type": "function",
+      "name": "freshness",
+      "filePath": "deploy/agents/idea_collector.py",
+      "lineRange": [
+        93,
+        109
+      ],
+      "summary": "แปลงอายุข่าวเป็น (คำอธิบายไทย, คะแนนโบนัส) — วันนี้ +2 · ภายใน 3 วัน +1.5 · ภายใน 7 วัน +0.8 · เกิน 14 วัน -1 เพื่อให้ข่าวสดได้เปรียบข่าวเก่า หลังเจ้าของทักว่าคอนเทนต์ไปเกาะกระแสที่ผ่านไปแล้ว",
+      "tags": [
+        "scoring",
+        "freshness",
+        "utility"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:deploy/agents/idea_collector.py:rss_items",
+      "type": "function",
+      "name": "rss_items",
+      "filePath": "deploy/agents/idea_collector.py",
+      "lineRange": [
+        119,
+        137
+      ],
+      "summary": "แกะ item (RSS) และ entry (Atom/YouTube) จาก XML ด้วย regex เป็น dict {title, url, summary, published, author} โดยไม่ใช้ไลบรารี XML — รองรับ link ที่อยู่ใน attribute href ของ Atom",
+      "tags": [
+        "parsing",
+        "rss",
+        "atom",
+        "regex"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:deploy/agents/idea_collector.py:build_keywords",
+      "type": "function",
+      "name": "build_keywords",
+      "filePath": "deploy/agents/idea_collector.py",
+      "lineRange": [
+        152,
+        162
+      ],
+      "summary": "สร้างตารางคำค้น → แฟรนไชส์จากตาราง skus ที่ active จริง (data-driven) บวกคำกลางของวงการการ์ด คืน (keywords, skus) ให้ทุกเลนใช้ให้คะแนน",
+      "tags": [
+        "keywords",
+        "data-driven",
+        "supabase"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:deploy/agents/idea_collector.py:score_item",
+      "type": "function",
+      "name": "score_item",
+      "filePath": "deploy/agents/idea_collector.py",
+      "lineRange": [
+        165,
+        184
+      ],
+      "summary": "ให้คะแนนข้อความจากคำที่ตรงกับแฟรนไชส์ที่ขาย (+2) / คำกลาง (+0.7) / คำบอกเจตนา เช่น เปิดตัว วางจำหน่าย คืน (คะแนน, แฟรนไชส์, จำนวนคำหัวข้อที่ตรง) — ค่าที่สามเป็น 0 แปลว่าข่าวไม่ได้พูดถึงการ์ดเลย ต้องทิ้ง",
+      "tags": [
+        "scoring",
+        "keywords",
+        "relevance"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:deploy/agents/idea_collector.py:angle_for",
+      "type": "function",
+      "name": "angle_for",
+      "filePath": "deploy/agents/idea_collector.py",
+      "lineRange": [
+        187,
+        202
+      ],
+      "summary": "มุมเล่าสำรองแบบ template ตามแฟรนไชส์ (7 แบบ) ใช้ชั่วคราวระหว่างรอ idea_angles.py คิดมุมจริง — ห้ามใช้เป็นมุมสุดท้ายเพราะทำให้ไอเดียทั้งคิวได้โจทย์เดียวกัน",
+      "tags": [
+        "template",
+        "fallback",
+        "content-angles"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:deploy/agents/idea_collector.py:google_news_url",
+      "type": "function",
+      "name": "google_news_url",
+      "filePath": "deploy/agents/idea_collector.py",
+      "lineRange": [
+        206,
+        216
+      ],
+      "summary": "ประกอบ URL ค้น Google News RSS ภาษาไทย (hl=th, gl=TH) พร้อมตัวกรองอายุฝั่งเซิร์ฟเวอร์ when:Nd ซึ่งลดจำนวนผลได้มากกว่ากรองฝั่งเราอย่างเดียว",
+      "tags": [
+        "url-builder",
+        "google-news",
+        "rss"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:deploy/agents/idea_collector.py:collect_news",
+      "type": "function",
+      "name": "collect_news",
+      "filePath": "deploy/agents/idea_collector.py",
+      "lineRange": [
+        219,
+        260
+      ],
+      "summary": "เลนข่าว: วนคำค้น news_queries ใน idea_sources.json ดึง Google News RSS ทิ้งหัวข้อตาม news_title_drop (เช่นข่าวเกมมือถือ) กรองอายุ/ความเกี่ยวข้อง/คะแนนขั้นต่ำ แล้วสร้างแถวไอเดีย source=news พร้อม external_key จาก URL",
+      "tags": [
+        "collector",
+        "news",
+        "rss",
+        "marketing"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:deploy/agents/idea_collector.py:collect_tiktok",
+      "type": "function",
+      "name": "collect_tiktok",
+      "filePath": "deploy/agents/idea_collector.py",
+      "lineRange": [
+        268,
+        309
+      ],
+      "summary": "เลนกระแส TikTok ทางอ้อม (TikTok ไม่มี RSS สาธารณะ) — ค้นข่าวที่พูดถึงกระแสด้วย tiktok_queries กรองอายุเข้มกว่าข่าวปกติ บวกคะแนน +0.5 เพราะไวรัลหมดอายุเร็ว และตั้งมุมเล่าเป็นคลิปสั้นเปิดซองที่ตู้",
+      "tags": [
+        "collector",
+        "tiktok",
+        "rss",
+        "marketing"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:deploy/agents/idea_collector.py:collect_youtube",
+      "type": "function",
+      "name": "collect_youtube",
+      "filePath": "deploy/agents/idea_collector.py",
+      "lineRange": [
+        319,
+        322
+      ],
+      "summary": "ตัวห่อเลน YouTube ที่ส่งต่อไป trend_sources.collect_youtube (ย้ายไปเมื่อ 10 ต.ค. 2026) ด้วย context จาก trend_ctx — อ่านยอดวิวจากฟีดช่องและให้คะแนนตามความเร็ววิว",
+      "tags": [
+        "collector",
+        "youtube",
+        "delegation"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:deploy/agents/idea_collector.py:collect_internal",
+      "type": "function",
+      "name": "collect_internal",
+      "filePath": "deploy/agents/idea_collector.py",
+      "lineRange": [
+        326,
+        432
+      ],
+      "summary": "เลนข้อมูลขายของเราเอง: เทียบยอด 7 วันล่าสุดกับ 7 วันก่อนหน้า (query_sales) หา SKU มาแรง (โต ≥25%) / SKU ยอดตก (≥40%) / ตู้ยอดตก (≥35%) และของใกล้หมดที่ขายดี (query_restock_alerts) — กุญแจกันซ้ำของสัญญาณแนวโน้มเป็นรายสัปดาห์ ส่วน restock รายวัน",
+      "tags": [
+        "collector",
+        "internal-signals",
+        "sales",
+        "restock",
+        "marketing"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:deploy/agents/idea_collector.py:purge",
+      "type": "function",
+      "name": "purge",
+      "filePath": "deploy/agents/idea_collector.py",
+      "lineRange": [
+        444,
+        515
+      ],
+      "summary": "ลบไอเดีย status=new ที่เก่าเกิน purge_after_days และไม่ถูกคอนเทนต์ใดอ้างถึง (เช็ก marketing_content.idea_id ตรง ๆ เพราะมี foreign key) ยกเว้นของที่ผูกวันในอนาคต — ลบเป็นก้อนละ 100 id รองรับ dry-run และตารางที่ยังไม่มี event_date",
+      "tags": [
+        "cleanup",
+        "maintenance",
+        "supabase",
+        "marketing"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:deploy/agents/idea_collector.py:cap_by_subtype",
+      "type": "function",
+      "name": "cap_by_subtype",
+      "filePath": "deploy/agents/idea_collector.py",
+      "lineRange": [
+        518,
+        551
+      ],
+      "summary": "จำกัดจำนวนไอเดียต่อ (source, subtype) ในคิวไม่ให้เกิน cap โดยนับของที่ค้างในคิวรวมด้วย และเลือกเก็บจากคะแนนสูงก่อนแต่คืนตามลำดับเดิม — แก้ปัญหาคิวเต็มไปด้วยสัญญาณภายในหน้าตาเดียวกันจนของดีจม",
+      "tags": [
+        "dedup",
+        "quota",
+        "queue-management"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:deploy/agents/idea_collector.py:save",
+      "type": "function",
+      "name": "save",
+      "filePath": "deploy/agents/idea_collector.py",
+      "lineRange": [
+        554,
+        611
+      ],
+      "summary": "บันทึกไอเดียใหม่: ดึง external_key ทั้งหมดและจำนวนที่ค้างในคิวทีเดียว ตัดซ้ำทั้งกับ DB และในรอบเดียวกัน คัดเฉพาะ FIELDS จำกัดต่อ subtype ด้วย cap_by_subtype แสดง 15 อันดับแรก แล้ว INSERT ผ่าน post_ideas (dry-run แค่พรีวิว)",
+      "tags": [
+        "persistence",
+        "dedup",
+        "supabase",
+        "marketing"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:deploy/agents/idea_collector.py:post_ideas",
+      "type": "function",
+      "name": "post_ideas",
+      "filePath": "deploy/agents/idea_collector.py",
+      "lineRange": [
+        614,
+        648
+      ],
+      "summary": "INSERT ไอเดียทั้งก้อนลง marketing_ideas และถอยให้ตารางเดิมอัตโนมัติถ้ายังไม่ได้รัน migration 080: แปลง source official/global/price เป็น news/internal เมื่อติด CHECK constraint และตัดคอลัมน์ event_date ออก พร้อมพิมพ์เตือนทุกรอบ",
+      "tags": [
+        "persistence",
+        "supabase",
+        "migration-fallback"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:deploy/agents/idea_collector.py:main",
+      "type": "function",
+      "name": "main",
+      "filePath": "deploy/agents/idea_collector.py",
+      "lineRange": [
+        651,
+        699
+      ],
+      "summary": "จุดเริ่ม CLI: โหลด idea_sources.json ลบของเก่าก่อน (purge) สร้างคำสำคัญ แล้วรันทุกเลนตามลำดับต้นน้ำ→ปลายน้ำ (ทางการ · ข่าว · TikTok · YouTube · ต่างประเทศ · ราคา · ภายใน) โดยห่อแต่ละเลนให้ล้มแยกกัน แล้วบันทึกด้วย save — รองรับ --only/--dry-run/--purge-only",
+      "tags": [
+        "entry-point",
+        "cli",
+        "batch-job",
+        "marketing"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:deploy/agents/trend_sources.py",
+      "type": "file",
+      "name": "trend_sources.py",
+      "filePath": "deploy/agents/trend_sources.py",
+      "summary": "เลนเทรนด์ของตัวเก็บไอเดีย (เพิ่ม 10 ต.ค. 2026) — รวม parser/collector ของแหล่งที่ดึงได้จริง ฟรี ไม่ต้องมีคีย์: official (เว็บทางการ One Piece TH/JP · Dragon Ball FW TH · Pokémon TH/JP · ทัวร์นาเมนต์ Bandai TCG+) · global (ฟีด Reddit/Google News EN/สื่อต่างประเทศที่นำหน้าข่าวไทย 2-6 สัปดาห์) · price (ราคาพุ่ง/การ์ดมาแรงจาก card2price.com) · youtube (ฟีดช่อง 24 ช่องพร้อมยอดวิว) ทุก parser เป็นฟังก์ชันล้วนรับ text คืน list ในรูปแถวเดียวกับ idea_collector",
+      "tags": [
+        "scraper",
+        "parser",
+        "trend-radar",
+        "marketing",
+        "rss",
+        "official-sites"
+      ],
+      "complexity": "complex",
+      "languageNotes": "ไม่มี import จากโปรเจกต์เลย — รับทุกอย่างที่ต้องใช้ (cfg, keywords, score_item, today, log) ผ่าน dict ctx จาก idea_collector เพื่อไม่ให้ import วน · parser ใช้ regex กับ HTML ดิบและ JSON ที่เว็บโหลดเอง (เช่น article_list.php ของ One Piece และ payload self.__next_f.push ของ Next.js บน card2price) · มีตัวหน่วงยิงต่อ host (_polite อย่างน้อย 1.1 วิ · Reddit 65 วิ)"
+    },
+    {
+      "id": "function:deploy/agents/trend_sources.py:fetch",
+      "type": "function",
+      "name": "fetch",
+      "filePath": "deploy/agents/trend_sources.py",
+      "lineRange": [
+        46,
+        55
+      ],
+      "summary": "ดึง URL ด้วย User-Agent แบบเบราว์เซอร์และ Accept-Language ไทย/อังกฤษ/ญี่ปุ่น โดยหน่วงเวลาต่อ host ตาม gap (_polite) ก่อนยิง คืนข้อความ UTF-8",
+      "tags": [
+        "http-client",
+        "rate-limit",
+        "utility"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:deploy/agents/trend_sources.py:parse_period",
+      "type": "function",
+      "name": "parse_period",
+      "filePath": "deploy/agents/trend_sources.py",
+      "lineRange": [
+        80,
+        97
+      ],
+      "summary": "แปลงช่วงอีเวนต์ของเว็บ One Piece ('November 1 - November 30, 2026' · 'October 1 - 31, 2026' · 'November 21-22, 2026' · วันเดียว) เป็น (วันเริ่ม, วันจบ)",
+      "tags": [
+        "date-parsing",
+        "regex",
+        "utility"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:deploy/agents/trend_sources.py:_fresh_bonus",
+      "type": "function",
+      "name": "_fresh_bonus",
+      "filePath": "deploy/agents/trend_sources.py",
+      "lineRange": [
+        110,
+        119
+      ],
+      "summary": "โบนัสคะแนนตามอายุ (วันนี้ +2 · ไม่เกิน 3 วัน +1.5 · ไม่เกิน 7 วัน +0.8) — สเกลเดียวกับ freshness ใน idea_collector แต่ไม่ติดลบ",
+      "tags": [
+        "scoring",
+        "freshness",
+        "utility"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:deploy/agents/trend_sources.py:_idea",
+      "type": "function",
+      "name": "_idea",
+      "filePath": "deploy/agents/trend_sources.py",
+      "lineRange": [
+        122,
+        131
+      ],
+      "summary": "โรงงานสร้างแถวไอเดียรูปมาตรฐาน (source, source_label, subtype, title, summary, url, score, angle, relevance, related_sku, external_key, event_date) คีย์ที่ไม่ได้ให้เป็น None และตัดความยาว title/summary ตามคอลัมน์",
+      "tags": [
+        "factory",
+        "data-shape",
+        "utility"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:deploy/agents/trend_sources.py:sku_for_set",
+      "type": "function",
+      "name": "sku_for_set",
+      "filePath": "deploy/agents/trend_sources.py",
+      "lineRange": [
+        134,
+        145
+      ],
+      "summary": "แปลงรหัสชุด (เช่น 'OP13' / 'OP-13') เป็น sku_id ของเราที่เว้นวรรคระหว่างตัวอักษรกับเลข ('OP 13') ถ้าเป็นสินค้าที่ขายจริง ไม่งั้นคืน None",
+      "tags": [
+        "sku-mapping",
+        "lookup",
+        "utility"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:deploy/agents/trend_sources.py:parse_op_articles",
+      "type": "function",
+      "name": "parse_op_articles",
+      "filePath": "deploy/agents/trend_sources.py",
+      "lineRange": [
+        170,
+        199
+      ],
+      "summary": "แกะ JSON article_list ที่หน้า /news/ ของเว็บ One Piece TH/JP โหลดเอง กรองตามอายุ ให้คะแนน/มุมเล่าตามหมวด (rules แบนลิสต์สูงสุด · products · events) และแนบลิงก์หน้าที่เกี่ยว — ข่าว JP ระบุว่าของไทยมักตามมา",
+      "tags": [
+        "parser",
+        "official",
+        "one-piece",
+        "json"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:deploy/agents/trend_sources.py:parse_op_products",
+      "type": "function",
+      "name": "parse_op_products",
+      "filePath": "deploy/agents/trend_sources.py",
+      "lineRange": [
+        202,
+        234
+      ],
+      "summary": "อ่านปฏิทินวางขายจากหน้า /products/ ของ One Piece TH (ตัดหมวด others เช่นเพลย์แมต) เอาเฉพาะที่กำลังจะออกภายใน horizon หรือเพิ่งออก ตั้ง event_date และ external_key จากรหัสชุด เพื่อทำคอนเทนต์นับถอยหลัง",
+      "tags": [
+        "parser",
+        "official",
+        "one-piece",
+        "release-calendar"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:deploy/agents/trend_sources.py:parse_op_events",
+      "type": "function",
+      "name": "parse_op_events",
+      "filePath": "deploy/agents/trend_sources.py",
+      "lineRange": [
+        237,
+        265
+      ],
+      "summary": "อ่านหน้า /events/ ของ One Piece TH ด้วย parse_period เอาเฉพาะอีเวนต์ที่ยังไม่จบและเริ่มภายใน 60 วัน แยกงานทางการ (OFFICIAL คะแนนสูง) กับงานร้านค้า พร้อมมุมเล่าชวนแวะตู้ใกล้สถานที่",
+      "tags": [
+        "parser",
+        "official",
+        "one-piece",
+        "events"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:deploy/agents/trend_sources.py:parse_dbs_home",
+      "type": "function",
+      "name": "parse_dbs_home",
+      "filePath": "deploy/agents/trend_sources.py",
+      "lineRange": [
+        268,
+        293
+      ],
+      "summary": "แกะบล็อก NEWS 10 รายการพร้อมวันที่จากหน้าแรก Dragon Ball Fusion World asia-th กรองตามอายุ แล้วสร้างไอเดีย subtype dbs_ ตามหมวด",
+      "tags": [
+        "parser",
+        "official",
+        "dragon-ball"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:deploy/agents/trend_sources.py:parse_dbs_products",
+      "type": "function",
+      "name": "parse_dbs_products",
+      "filePath": "deploy/agents/trend_sources.py",
+      "lineRange": [
+        296,
+        322
+      ],
+      "summary": "อ่านรายการสินค้าและวัน RELEASE จากหน้า /products/ ของ Dragon Ball FW TH (รองรับวันที่ทั้งแบบ 'October 07, 2026' และ 2026.10.9) เอาเฉพาะที่ใกล้วางขาย ตั้ง event_date",
+      "tags": [
+        "parser",
+        "official",
+        "dragon-ball",
+        "release-calendar"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:deploy/agents/trend_sources.py:parse_pkm_th",
+      "type": "function",
+      "name": "parse_pkm_th",
+      "filePath": "deploy/agents/trend_sources.py",
+      "lineRange": [
+        325,
+        345
+      ],
+      "summary": "แกะข่าวการ์ดเกมจากหน้าแรก Pokémon TCG ไทย — ลิสต์ไม่มีวันที่ จึงเอาแค่ลำดับต้น (limit) แล้วอาศัย external_key จาก URL กันซ้ำ",
+      "tags": [
+        "parser",
+        "official",
+        "pokemon"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:deploy/agents/trend_sources.py:parse_pkm_jp",
+      "type": "function",
+      "name": "parse_pkm_jp",
+      "filePath": "deploy/agents/trend_sources.py",
+      "lineRange": [
+        348,
+        375
+      ],
+      "summary": "แกะรายการประกาศ /info/ ของ Pokémon JP (วันที่แบบ 2026.10.9) กรองตามอายุ ให้คะแนนต่ำกว่าของไทยเพราะเป็นข่าวที่ไทยตามมาทีหลังหลายเดือน และเติมโดเมนให้ลิงก์สัมพัทธ์",
+      "tags": [
+        "parser",
+        "official",
+        "pokemon",
+        "japan"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:deploy/agents/trend_sources.py:parse_tcgplus",
+      "type": "function",
+      "name": "parse_tcgplus",
+      "filePath": "deploy/agents/trend_sources.py",
+      "lineRange": [
+        392,
+        422
+      ],
+      "summary": "สรุปทัวร์นาเมนต์ 7 วันข้างหน้าจาก API ของ Bandai TCG+ เป็นไอเดีย 1 ชิ้นต่อเกมต่อสัปดาห์ (ไม่ใช่ชิ้นละงานเพราะมี 800+ งาน/เดือน) จัดกลุ่มร้าน/สถานที่ที่จัดมากสุด 8 อันดับ ตัดงานที่ยกเลิก",
+      "tags": [
+        "parser",
+        "official",
+        "tournaments",
+        "bandai-tcg-plus"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:deploy/agents/trend_sources.py:collect_official",
+      "type": "function",
+      "name": "collect_official",
+      "filePath": "deploy/agents/trend_sources.py",
+      "lineRange": [
+        425,
+        457
+      ],
+      "summary": "เลนเว็บทางการ: เรียก fetch + parser ของแต่ละค่ายตามสวิตช์ใน official_sites ของ idea_sources.json (One Piece TH ประกาศ/วางขาย/อีเวนต์ · One Piece JP · Dragon Ball TH · Pokémon TH/JP · TCG+ ต่อเกม) โดยห่อแต่ละแหล่งให้ล้มแยกกันและ log จำนวนที่ได้",
+      "tags": [
+        "collector",
+        "official",
+        "orchestration",
+        "marketing"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:deploy/agents/trend_sources.py:feed_entries",
+      "type": "function",
+      "name": "feed_entries",
+      "filePath": "deploy/agents/trend_sources.py",
+      "lineRange": [
+        463,
+        479
+      ],
+      "summary": "แกะ item/entry จาก RSS/Atom (Reddit, Google News EN, WordPress) เป็น dict {title, url, summary, published} รองรับ link ใน attribute และ content/updated ของ Atom",
+      "tags": [
+        "parser",
+        "rss",
+        "atom",
+        "regex"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:deploy/agents/trend_sources.py:_age_from",
+      "type": "function",
+      "name": "_age_from",
+      "filePath": "deploy/agents/trend_sources.py",
+      "lineRange": [
+        482,
+        496
+      ],
+      "summary": "อายุเป็นวันจากสตริงวันที่ RFC 822 หรือ ISO 8601 (ตั้ง UTC ถ้าไม่มี timezone) คืน None ถ้าอ่านไม่ได้ — ใช้ร่วมกันในเลน global และ youtube",
+      "tags": [
+        "utility",
+        "date-parsing",
+        "feeds"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:deploy/agents/trend_sources.py:collect_global",
+      "type": "function",
+      "name": "collect_global",
+      "filePath": "deploy/agents/trend_sources.py",
+      "lineRange": [
+        499,
+        547
+      ],
+      "summary": "เลนต่างประเทศ: อ่านฟีดตามรายการ global_feeds ใน idea_sources.json (key/label/url/cadence รายวันหรือรายสัปดาห์/keep-drop regex/gap/base) กรองอายุและความเกี่ยวข้องด้วย score_item ให้โบนัสตามอันดับสำหรับฟีดท็อปประจำสัปดาห์ แล้วสร้างไอเดีย source=global",
+      "tags": [
+        "collector",
+        "global",
+        "rss",
+        "marketing"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:deploy/agents/trend_sources.py:grab",
+      "type": "function",
+      "name": "grab",
+      "filePath": "deploy/agents/trend_sources.py",
+      "lineRange": [
+        575,
+        602
+      ],
+      "summary": "ตัดค่า JSON ที่ตามหลังคีย์ที่ระบุออกจาก payload ที่ไม่ใช่ JSON ทั้งก้อน ด้วยการนับวงเล็บเหลี่ยม/ปีกกาและข้ามสตริงที่มี escape — ใช้ดึง initialDailySurge/initialData จากหน้า card2price",
+      "tags": [
+        "parser",
+        "json",
+        "utility"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:deploy/agents/trend_sources.py:parse_market",
+      "type": "function",
+      "name": "parse_market",
+      "filePath": "deploy/agents/trend_sources.py",
+      "lineRange": [
+        605,
+        660
+      ],
+      "summary": "แกะหน้า /market ของ card2price.com (payload Next.js ผ่าน rsc_text) คืน (ไอเดียราคาพุ่งรายใบเฉพาะชุดที่เราขายและขายจริงภายใน 1 วัน, ไอเดียสรุปการ์ดมาแรง 5 ใบ) พร้อมผูก related_sku ด้วย sku_for_set และกำชับในมุมเล่าว่าห้ามพยากรณ์ราคา",
+      "tags": [
+        "parser",
+        "price",
+        "card2price",
+        "marketing"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:deploy/agents/trend_sources.py:collect_price",
+      "type": "function",
+      "name": "collect_price",
+      "filePath": "deploy/agents/trend_sources.py",
+      "lineRange": [
+        663,
+        676
+      ],
+      "summary": "เลนราคาตลาด: ถ้าเปิดใช้ใน cfg.price ดึงหน้า card2price /market แล้วส่งให้ parse_market พร้อมรายการชุดที่ขาย คืนไอเดียราคาพุ่ง + สรุปการ์ดมาแรง",
+      "tags": [
+        "collector",
+        "price",
+        "marketing"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:deploy/agents/trend_sources.py:youtube_entries",
+      "type": "function",
+      "name": "youtube_entries",
+      "filePath": "deploy/agents/trend_sources.py",
+      "lineRange": [
+        682,
+        697
+      ],
+      "summary": "แกะ entry ของฟีด YouTube channel (videos.xml) เป็น dict {id, title, url, summary, published, views} โดยอ่านยอดวิวจาก media:statistics",
+      "tags": [
+        "parser",
+        "youtube",
+        "atom",
+        "regex"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:deploy/agents/trend_sources.py:collect_youtube",
+      "type": "function",
+      "name": "collect_youtube",
+      "filePath": "deploy/agents/trend_sources.py",
+      "lineRange": [
+        700,
+        751
+      ],
+      "summary": "เลน YouTube: ดึงฟีดทุกช่องใน youtube_channels เอาเฉพาะคลิปไม่เกิน 7 วันที่กล่าวถึงแฟรนไชส์ที่เราขายจริง (ไม่ใช่แค่คำกลาง) ให้คะแนนจาก log ของยอดวิว + ความเร็ววิวต่อชั่วโมง + ความสด จำกัด 3 คลิป/ช่อง/รอบ ไม่ให้ช่องที่ลงถี่กินโควตาคิว",
+      "tags": [
+        "collector",
+        "youtube",
+        "scoring",
+        "marketing"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:deploy/components/MarketingOS.jsx",
+      "type": "file",
+      "name": "MarketingOS.jsx",
+      "filePath": "deploy/components/MarketingOS.jsx",
+      "summary": "Component หลักของหน้า /marketing ('Marketing OS') — กล่องรออนุมัติคอนเทนต์ที่แยกเป็นหน้าย่อยผ่านเมนูซ้าย: ไอเดียวันนี้ (เลือกมุมเล่า/วางลิงก์/ซีรีส์ส่อง 5 ใบเด็ด) · รออนุมัติ (ให้ AI เขียน/เขียนใหม่ แปลงไปช่องอื่น สร้างภาพด้วย AI/เทมเพลต/อัปโหลด ตรวจปรู๊ฟตัวอักษร บรีฟทำรูป ผลตรวจจาก Hermes) · รอโพสต์ (โพสต์ขึ้นเพจ Facebook/ทดสอบไม่เผยแพร่/บันทึกว่าโพสต์แล้ว) · ปฏิทินโพสต์ · ตัวเลข (KPI + กราฟยอดขายรายวันเทียบวันที่โพสต์) · สายพานการผลิต คุยกับ /api/marketing/* ด้วย token ของ Supabase ที่ดึงสดทุกครั้ง",
+      "tags": [
+        "component",
+        "page",
+        "marketing",
+        "approval-queue",
+        "react",
+        "client-component"
+      ],
+      "complexity": "complex",
+      "languageNotes": "Next.js client component ('use client') ขนาดใหญ่ที่เก็บ handler ทั้งหมดเป็น closure ภายใน MarketingOS (api/loadAll/patch/generate/makeImage/makePoster/publishNow ฯลฯ) · api() ดึง access_token สดจาก supabase.auth.getSession() ทุกครั้งเพราะ token ใน state ไม่ต่ออายุ · โหลดข้อมูลหลายชุดพร้อมกันด้วย Promise.allSettled เพื่อให้ส่วนที่ล้ม (FB/เครดิต) ไม่บังหน้าที่เหลือ · makePoster วนโพลผลจาก GitHub Actions ทุก 8 วิพร้อมธง alive กัน setState หลัง unmount · ใช้ ensureBrandTag ให้แคปชั่นที่โชว์/ก๊อปเป็นตัวเดียวกับที่จะโพสต์จริง"
+    },
+    {
+      "id": "function:deploy/components/MarketingOS.jsx:ReviewNote",
+      "type": "function",
+      "name": "ReviewNote",
+      "filePath": "deploy/components/MarketingOS.jsx",
+      "lineRange": [
+        97,
+        109
+      ],
+      "summary": "กล่องแสดงผลตรวจจาก AI ผู้ตรวจ (Hermes) ตาม verdict pass/fix/drop พร้อมสีและคำไทยกำกับ (เจ้าของอ่านบนมือถือกลางแดด) และโน้ตแบบ pre-wrap — verdict แปลก ๆ ไม่แสดงดีกว่าแสดงผิด",
+      "tags": [
+        "component",
+        "content-review",
+        "ui"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:deploy/components/MarketingOS.jsx:MarketingOS",
+      "type": "function",
+      "name": "MarketingOS",
+      "filePath": "deploy/components/MarketingOS.jsx",
+      "lineRange": [
+        121,
+        1894
+      ],
+      "summary": "Component หน้า /marketing ทั้งหมด: จัดการ auth (checking/ok/anon/forbidden), state ของทุกคิว (ideas/content/ready/pipeline/metrics/fb/credit), ฟังก์ชัน api() ที่แนบ token สด, loadAll แบบ allSettled และ handler ทุกปุ่ม (เลือกไอเดีย · ให้ AI เขียน/แปลงช่อง · สร้างภาพ AI/โปสเตอร์เทมเพลต/อัปโหลด · บรีฟ · ตรวจปรู๊ฟ · อนุมัติ/แก้/ทิ้ง · โพสต์ขึ้นเพจ/ทดสอบ/โพสต์แล้ว/เอากลับ) แล้ว render หน้าย่อยตาม view ภายใน Shell + NavRail",
+      "tags": [
+        "component",
+        "entry-point",
+        "marketing",
+        "state-management",
+        "api-client"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:deploy/components/MarketingOS.jsx:NavRail",
+      "type": "function",
+      "name": "NavRail",
+      "filePath": "deploy/components/MarketingOS.jsx",
+      "lineRange": [
+        1901,
+        1950
+      ],
+      "summary": "เมนูซ้ายของ Marketing OS (จอใหญ่ติดหนึบเป็นคอลัมน์ · จอเล็กเป็นแถบเลื่อนแนวนอน) แสดงกลุ่มเมนูจาก NAV พร้อมตัวเลขคงค้างของแต่ละหน้า (ไอเดีย/รออนุมัติ/รอโพสต์/งานล้ม) ปุ่มเพิ่มไอเดียเอง และป้าย 'เฟส 3' — export ไว้ให้หน้าตรวจถ่ายภาพได้โดยไม่ต้องล็อกอิน",
+      "tags": [
+        "component",
+        "navigation",
+        "ui",
+        "marketing"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:deploy/components/MarketingOS.jsx:CreditBadge",
+      "type": "function",
+      "name": "CreditBadge",
+      "filePath": "deploy/components/MarketingOS.jsx",
+      "lineRange": [
+        1962,
+        2078
+      ],
+      "summary": "ป้ายเครดิต OpenAI คงเหลือ (ยอดที่เจ้าของกรอก ลบ ค่าใช้จ่ายจาก costs API) เปลี่ยนสีตามระดับ และกล่องกรอกยอดใหม่ที่ใช้ได้ทุกสถานะเพราะเป็นทางแก้ของทุกเคส (ไม่มี admin key/ยังไม่รัน migration/ยังไม่กรอก) — บันทึกแล้วต้องยืนยันเสมอ ไม่ปิดกล่องเอง",
+      "tags": [
+        "component",
+        "openai-credit",
+        "ui",
+        "form"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:deploy/components/MarketingOS.jsx:Shell",
+      "type": "function",
+      "name": "Shell",
+      "filePath": "deploy/components/MarketingOS.jsx",
+      "lineRange": [
+        2080,
+        2109
+      ],
+      "summary": "โครงหน้า Marketing OS: header ติดบน (ชื่อหน้า ลิงก์กลับหน้าหลัก ป้ายเครดิต ปุ่มรีเฟรช) และเลย์เอาต์สองคอลัมน์ (เมนู + เนื้อหา) ที่ตั้งใจไม่ใส่ items-start เพื่อให้เมนู sticky ทำงานจริง",
+      "tags": [
+        "component",
+        "layout",
+        "ui",
+        "marketing"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:deploy/lib/brandTag.js",
+      "type": "file",
+      "name": "brandTag.js",
+      "filePath": "deploy/lib/brandTag.js",
+      "summary": "ตัวรับประกันว่าทุกแคปชั่น FB/IG/TikTok มีแฮชแท็กชื่อเพจ #DivisionXCard (เจ้าของสั่ง 10 ต.ค. 2026) — ใช้ทั้งตอน AI เขียนเสร็จ คนแก้/สร้างเอง กดอนุมัติ แปลงช่อง และด่านสุดท้ายก่อนโพสต์ใน publishContent.js · วางหน้าสุดของแถวแฮชแท็กท้ายโพสต์ ต่อท้ายแท็กที่เขียนต่อประโยค หรือขึ้นแถวใหม่ถ้าไม่มีแท็กเลย โดยไม่เพิ่มบรรทัดเมื่อมีแท็กอยู่แล้ว",
+      "tags": [
+        "utility",
+        "hashtag",
+        "brand",
+        "content-publishing",
+        "text-processing"
+      ],
+      "complexity": "moderate",
+      "languageNotes": "ใช้ regex แบบ Unicode (Unicode property escapes กับธง u) รองรับเครื่องหมาย ＃ ตัวเต็มและแท็กภาษาไทย · ตั้งใจเลี่ยง regex ที่ย้อนรอยแบบกำลังสอง/ทวีคูณ (ไล่ทีละคำด้วย split แทน quantifier ซ้อน และใช้ trimEnd แทน regex ช่องว่างท้ายข้อความ) หลังวัดจริงว่าแท็ก 12 ตัวทำหน้าเว็บค้างเกิน 60 วิ · ensureBrandTag เป็น idempotent เรียกซ้ำได้ผลเดิม"
+    },
+    {
+      "id": "function:deploy/lib/brandTag.js:wantsBrandTag",
+      "type": "function",
+      "name": "wantsBrandTag",
+      "filePath": "deploy/lib/brandTag.js",
+      "lineRange": [
+        59,
+        61
+      ],
+      "summary": "บอกว่าแพลตฟอร์มนี้ต้องมีแท็กแบรนด์ไหม — เฉพาะ fb/ig/tiktok (LINE ไม่ใช้แฮชแท็ก · สคริปต์วิดีโอถูกอ่านออกเสียงทุกบรรทัด) ค่าเริ่มต้นคือ fb",
+      "tags": [
+        "utility",
+        "platform",
+        "hashtag"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:deploy/lib/brandTag.js:hasBrandTag",
+      "type": "function",
+      "name": "hasBrandTag",
+      "filePath": "deploy/lib/brandTag.js",
+      "lineRange": [
+        63,
+        65
+      ],
+      "summary": "ตรวจทีละคำว่าแคปชั่นมี #DivisionXCard อยู่แล้วไหม (ไม่สนตัวพิมพ์/＃ ตัวเต็ม) โดยข้ามคำที่เป็นลิงก์ และไม่นับแท็กคนละอันอย่าง #DivisionXCardTH",
+      "tags": [
+        "utility",
+        "hashtag",
+        "validation"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:deploy/lib/brandTag.js:ensureBrandTag",
+      "type": "function",
+      "name": "ensureBrandTag",
+      "filePath": "deploy/lib/brandTag.js",
+      "lineRange": [
+        68,
+        115
+      ],
+      "summary": "คืนแคปชั่นที่มี #DivisionXCard แน่นอนสำหรับแพลตฟอร์มที่ต้องมี: ถ้ามีแล้วแค่จัดตัวสะกด · มีแถวแฮชแท็กใน 3 บรรทัดท้าย → แทรกหน้าแท็กแรกโดยใช้ตัวคั่นเดิม · บรรทัดสุดท้ายจบด้วยแท็กต่อประโยค → ต่อท้ายแท็กตัวสุดท้าย · ไม่มีแท็กเลย → ขึ้นแถวใหม่ท้ายโพสต์ (รักษาการขึ้นบรรทัดแบบ CRLF ของต้นฉบับ)",
+      "tags": [
+        "utility",
+        "hashtag",
+        "text-processing",
+        "idempotent"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:scripts/hermes/competitor_radar.py",
+      "type": "file",
+      "name": "competitor_radar.py",
+      "filePath": "scripts/hermes/competitor_radar.py",
+      "summary": "เรดาร์คู่แข่ง/ครีเอเตอร์รายสัปดาห์ของ Hermes: ค้นด้วย Tavily ตามเป้าหมายใน deploy/tasks/competitor_watch.json คัดเฉพาะโพสต์จริงที่ใหม่และคะแนนไม่ต่ำกว่า 0.3 ถอดวันโพสต์ TikTok จาก video id ส่งเข้าคิว marketing_ideas (source=manual, subtype radar_*) จำ URL ที่เห็นแล้วในไฟล์ state แล้วพิมพ์สรุปเข้า Telegram เฉพาะสัปดาห์ที่มีของใหม่ (รันเป็น cron แบบ --no-agent: พิมพ์ = ส่ง)",
+      "tags": [
+        "script",
+        "cron",
+        "tavily",
+        "competitor-radar",
+        "hermes",
+        "marketing"
+      ],
+      "complexity": "moderate",
+      "languageNotes": "reconfigure stdout เป็น UTF-8 แบบ errors=replace เพราะสคริปต์พิมพ์ไทยล้วนบน Windows ที่เป็น cp1252 · อ่าน .env สองที่ (ของ Hermes สำหรับ TAVILY_API_KEY และ deploy/.env.local สำหรับ Supabase) ด้วย utf-8-sig · ใช้ path ของ repo แบบ hardcode เพราะตอนรันไฟล์อยู่ในโฟลเดอร์ของ Hermes ไม่ใช่ใน repo"
+    },
+    {
+      "id": "function:scripts/hermes/competitor_radar.py:env_value",
+      "type": "function",
+      "name": "env_value",
+      "filePath": "scripts/hermes/competitor_radar.py",
+      "lineRange": [
+        54,
+        67
+      ],
+      "summary": "อ่านค่า key เดียวจากไฟล์ .env (utf-8-sig รองรับ BOM/CRLF) โดย split ที่เครื่องหมายเท่ากับตัวแรกและถอดเครื่องหมายคำพูด คืน None ถ้าไม่มีไฟล์หรือไม่พบ",
+      "tags": [
+        "config-loader",
+        "env",
+        "utility"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:scripts/hermes/competitor_radar.py:tavily",
+      "type": "function",
+      "name": "tavily",
+      "filePath": "scripts/hermes/competitor_radar.py",
+      "lineRange": [
+        82,
+        99
+      ],
+      "summary": "ยิง Tavily search API (search_depth=basic = 1 เครดิต/คอล) ด้วย query/domains/country/language/time_range ของเป้าหมาย คืน (results, error) โดยไม่โยน exception เพื่อให้เป้าหมายหนึ่งล้มไม่หยุดทั้งรอบ",
+      "tags": [
+        "http-client",
+        "tavily",
+        "search"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:scripts/hermes/competitor_radar.py:posted_date",
+      "type": "function",
+      "name": "posted_date",
+      "filePath": "scripts/hermes/competitor_radar.py",
+      "lineRange": [
+        102,
+        115
+      ],
+      "summary": "หาวันโพสต์จริง — TikTok ถอดจาก video id (32 บิตบนเป็น unix time) ซึ่งแม่นกว่าวันที่ของ Tavily ที่เป็นวัน crawl ส่วนแพลตฟอร์มอื่นใช้ published_date",
+      "tags": [
+        "utility",
+        "date-parsing",
+        "tiktok"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:scripts/hermes/competitor_radar.py:pick",
+      "type": "function",
+      "name": "pick",
+      "filePath": "scripts/hermes/competitor_radar.py",
+      "lineRange": [
+        128,
+        147
+      ],
+      "summary": "คัดผลค้นของเป้าหมายเดียว: ตัด URL ที่เห็นแล้ว/ไม่ใช่โพสต์จริง (is_post) คะแนนต่ำกว่า min_score หรือเก่ากว่า max_age_days คืนรายการ {target, kind, title, url, date, score, head}",
+      "tags": [
+        "filter",
+        "ranking",
+        "search-results"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:scripts/hermes/competitor_radar.py:push_idea",
+      "type": "function",
+      "name": "push_idea",
+      "filePath": "scripts/hermes/competitor_radar.py",
+      "lineRange": [
+        150,
+        175
+      ],
+      "summary": "ใส่ผลเรดาร์เข้าคิว marketing_ideas ด้วย source=manual และ subtype radar_competitor/creator/news พร้อมมุมเล่าตามชนิด (ห้ามลอก/ห้ามพาดพิงชื่อคู่แข่ง) และ external_key จาก URL โดยใช้ Prefer resolution=ignore-duplicates",
+      "tags": [
+        "persistence",
+        "supabase",
+        "marketing",
+        "ideas"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:scripts/hermes/competitor_radar.py:main",
+      "type": "function",
+      "name": "main",
+      "filePath": "scripts/hermes/competitor_radar.py",
+      "lineRange": [
+        178,
+        246
+      ],
+      "summary": "จุดเริ่มสคริปต์: โหลดคีย์ Tavily (ไม่มี = เงียบ) อ่าน competitor_watch.json รวมเป้าหมาย competitors+sweeps ยิงค้น คัดและเรียงใหม่สุดก่อนตัดโควตาต่อเป้าหมาย/ต่อรอบ ส่งเข้าคิว (เว้น --dry-run) บันทึก state แล้วพิมพ์สรุปจัดกลุ่มตามชนิดพร้อมลิงก์ที่ถอด percent-encoding",
+      "tags": [
+        "entry-point",
+        "cli",
+        "cron",
+        "marketing"
+      ],
+      "complexity": "moderate"
     }
   ],
   "edges": [
-    {
-      "source": "file:deploy/agents/dvx_data.py",
-      "target": "function:deploy/agents/dvx_data.py:sb_get",
-      "type": "contains",
-      "direction": "forward",
-      "weight": 1
-    },
-    {
-      "source": "file:deploy/agents/dvx_data.py",
-      "target": "function:deploy/agents/dvx_data.py:resolve_range",
-      "type": "contains",
-      "direction": "forward",
-      "weight": 1
-    },
-    {
-      "source": "file:deploy/agents/dvx_data.py",
-      "target": "function:deploy/agents/dvx_data.py:resolve_machine",
-      "type": "contains",
-      "direction": "forward",
-      "weight": 1
-    },
-    {
-      "source": "file:deploy/agents/dvx_data.py",
-      "target": "function:deploy/agents/dvx_data.py:query_sales",
-      "type": "contains",
-      "direction": "forward",
-      "weight": 1
-    },
-    {
-      "source": "file:deploy/agents/dvx_data.py",
-      "target": "function:deploy/agents/dvx_data.py:query_stock",
-      "type": "contains",
-      "direction": "forward",
-      "weight": 1
-    },
-    {
-      "source": "file:deploy/agents/dvx_data.py",
-      "target": "function:deploy/agents/dvx_data.py:query_restock_alerts",
-      "type": "contains",
-      "direction": "forward",
-      "weight": 1
-    },
-    {
-      "source": "file:deploy/agents/dvx_data.py",
-      "target": "function:deploy/agents/dvx_data.py:query_marketing_ideas",
-      "type": "contains",
-      "direction": "forward",
-      "weight": 1
-    },
-    {
-      "source": "file:deploy/agents/dvx_data.py",
-      "target": "function:deploy/agents/dvx_data.py:query_content_queue",
-      "type": "contains",
-      "direction": "forward",
-      "weight": 1
-    },
-    {
-      "source": "file:deploy/agents/dvx_data.py",
-      "target": "function:deploy/agents/dvx_data.py:load_content_rules",
-      "type": "contains",
-      "direction": "forward",
-      "weight": 1
-    },
-    {
-      "source": "file:deploy/agents/dvx_data.py",
-      "target": "function:deploy/agents/dvx_data.py:query_content_for_review",
-      "type": "contains",
-      "direction": "forward",
-      "weight": 1
-    },
-    {
-      "source": "file:deploy/agents/dvx_data.py",
-      "target": "function:deploy/agents/dvx_data.py:save_content_review",
-      "type": "contains",
-      "direction": "forward",
-      "weight": 1
-    },
-    {
-      "source": "file:deploy/agents/dvx_data.py",
-      "target": "function:deploy/agents/dvx_data.py:query_post_plan",
-      "type": "contains",
-      "direction": "forward",
-      "weight": 1
-    },
-    {
-      "source": "file:deploy/agents/dvx_data.py",
-      "target": "function:deploy/agents/dvx_data.py:query_post_performance",
-      "type": "contains",
-      "direction": "forward",
-      "weight": 1
-    },
-    {
-      "source": "file:deploy/agents/dvx_data.py",
-      "target": "function:deploy/agents/dvx_data.py:schedule_content",
-      "type": "contains",
-      "direction": "forward",
-      "weight": 1
-    },
-    {
-      "source": "file:deploy/agents/dvx_data.py",
-      "target": "function:deploy/agents/dvx_data.py:add_marketing_idea",
-      "type": "contains",
-      "direction": "forward",
-      "weight": 1
-    },
-    {
-      "source": "file:deploy/agents/dvx_data.py",
-      "target": "function:deploy/agents/dvx_data.py:note_for_dev",
-      "type": "contains",
-      "direction": "forward",
-      "weight": 1
-    },
-    {
-      "source": "file:deploy/agents/dvx_data.py",
-      "target": "file:deploy/agents/envload.py",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:deploy/agents/idea_angles.py",
-      "target": "function:deploy/agents/idea_angles.py:load_env_file",
-      "type": "contains",
-      "direction": "forward",
-      "weight": 1
-    },
-    {
-      "source": "file:deploy/agents/idea_angles.py",
-      "target": "function:deploy/agents/idea_angles.py:sb",
-      "type": "contains",
-      "direction": "forward",
-      "weight": 1
-    },
-    {
-      "source": "file:deploy/agents/idea_angles.py",
-      "target": "function:deploy/agents/idea_angles.py:clean_summary",
-      "type": "contains",
-      "direction": "forward",
-      "weight": 1
-    },
-    {
-      "source": "file:deploy/agents/idea_angles.py",
-      "target": "function:deploy/agents/idea_angles.py:build_prompt",
-      "type": "contains",
-      "direction": "forward",
-      "weight": 1
-    },
-    {
-      "source": "file:deploy/agents/idea_angles.py",
-      "target": "function:deploy/agents/idea_angles.py:ask_gemini",
-      "type": "contains",
-      "direction": "forward",
-      "weight": 1
-    },
-    {
-      "source": "file:deploy/agents/idea_angles.py",
-      "target": "function:deploy/agents/idea_angles.py:ask_ollama",
-      "type": "contains",
-      "direction": "forward",
-      "weight": 1
-    },
-    {
-      "source": "file:deploy/agents/idea_angles.py",
-      "target": "function:deploy/agents/idea_angles.py:parse_angles",
-      "type": "contains",
-      "direction": "forward",
-      "weight": 1
-    },
-    {
-      "source": "file:deploy/agents/idea_angles.py",
-      "target": "function:deploy/agents/idea_angles.py:main",
-      "type": "contains",
-      "direction": "forward",
-      "weight": 1
-    },
-    {
-      "source": "file:deploy/agents/idea_angles.py",
-      "target": "class:deploy/agents/idea_angles.py:Router",
-      "type": "contains",
-      "direction": "forward",
-      "weight": 1
-    },
-    {
-      "source": "file:deploy/agents/idea_angles.py",
-      "target": "file:deploy/agents/_console.py",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:deploy/agents/idea_collector.py",
-      "target": "function:deploy/agents/idea_collector.py:item_age_days",
-      "type": "contains",
-      "direction": "forward",
-      "weight": 1
-    },
-    {
-      "source": "file:deploy/agents/idea_collector.py",
-      "target": "function:deploy/agents/idea_collector.py:freshness",
-      "type": "contains",
-      "direction": "forward",
-      "weight": 1
-    },
-    {
-      "source": "file:deploy/agents/idea_collector.py",
-      "target": "function:deploy/agents/idea_collector.py:rss_items",
-      "type": "contains",
-      "direction": "forward",
-      "weight": 1
-    },
-    {
-      "source": "file:deploy/agents/idea_collector.py",
-      "target": "function:deploy/agents/idea_collector.py:build_keywords",
-      "type": "contains",
-      "direction": "forward",
-      "weight": 1
-    },
-    {
-      "source": "file:deploy/agents/idea_collector.py",
-      "target": "function:deploy/agents/idea_collector.py:score_item",
-      "type": "contains",
-      "direction": "forward",
-      "weight": 1
-    },
-    {
-      "source": "file:deploy/agents/idea_collector.py",
-      "target": "function:deploy/agents/idea_collector.py:angle_for",
-      "type": "contains",
-      "direction": "forward",
-      "weight": 1
-    },
-    {
-      "source": "file:deploy/agents/idea_collector.py",
-      "target": "function:deploy/agents/idea_collector.py:google_news_url",
-      "type": "contains",
-      "direction": "forward",
-      "weight": 1
-    },
-    {
-      "source": "file:deploy/agents/idea_collector.py",
-      "target": "function:deploy/agents/idea_collector.py:collect_news",
-      "type": "contains",
-      "direction": "forward",
-      "weight": 1
-    },
-    {
-      "source": "file:deploy/agents/idea_collector.py",
-      "target": "function:deploy/agents/idea_collector.py:collect_tiktok",
-      "type": "contains",
-      "direction": "forward",
-      "weight": 1
-    },
-    {
-      "source": "file:deploy/agents/idea_collector.py",
-      "target": "function:deploy/agents/idea_collector.py:collect_youtube",
-      "type": "contains",
-      "direction": "forward",
-      "weight": 1
-    },
-    {
-      "source": "file:deploy/agents/idea_collector.py",
-      "target": "function:deploy/agents/idea_collector.py:collect_internal",
-      "type": "contains",
-      "direction": "forward",
-      "weight": 1
-    },
-    {
-      "source": "file:deploy/agents/idea_collector.py",
-      "target": "function:deploy/agents/idea_collector.py:purge",
-      "type": "contains",
-      "direction": "forward",
-      "weight": 1
-    },
-    {
-      "source": "file:deploy/agents/idea_collector.py",
-      "target": "function:deploy/agents/idea_collector.py:cap_by_subtype",
-      "type": "contains",
-      "direction": "forward",
-      "weight": 1
-    },
-    {
-      "source": "file:deploy/agents/idea_collector.py",
-      "target": "function:deploy/agents/idea_collector.py:save",
-      "type": "contains",
-      "direction": "forward",
-      "weight": 1
-    },
-    {
-      "source": "file:deploy/agents/idea_collector.py",
-      "target": "function:deploy/agents/idea_collector.py:main",
-      "type": "contains",
-      "direction": "forward",
-      "weight": 1
-    },
-    {
-      "source": "file:deploy/agents/idea_collector.py",
-      "target": "file:deploy/agents/dvx_data.py",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:deploy/agents/idea_collector.py",
-      "target": "function:deploy/agents/dvx_data.py:sb_get",
-      "type": "calls",
-      "direction": "forward",
-      "weight": 0.8
-    },
-    {
-      "source": "file:deploy/agents/idea_collector.py",
-      "target": "function:deploy/agents/dvx_data.py:query_sales",
-      "type": "calls",
-      "direction": "forward",
-      "weight": 0.8
-    },
-    {
-      "source": "file:deploy/agents/idea_collector.py",
-      "target": "function:deploy/agents/dvx_data.py:query_restock_alerts",
-      "type": "calls",
-      "direction": "forward",
-      "weight": 0.8
-    },
     {
       "source": "file:deploy/agents/opcg_kb.py",
       "target": "function:deploy/agents/opcg_kb.py:fetch",
@@ -19796,20 +20225,6 @@
     {
       "source": "file:deploy/agents/poster_audit.py",
       "target": "function:deploy/agents/poster_render.py:fit_headline",
-      "type": "calls",
-      "direction": "forward",
-      "weight": 0.8
-    },
-    {
-      "source": "file:deploy/agents/review_content.py",
-      "target": "file:deploy/agents/dvx_data.py",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:deploy/agents/review_content.py",
-      "target": "function:deploy/agents/dvx_data.py:query_content_for_review",
       "type": "calls",
       "direction": "forward",
       "weight": 0.8
@@ -20243,13 +20658,6 @@
     },
     {
       "source": "file:deploy/app/api/marketing/content/generate/route.js",
-      "target": "file:deploy/lib/brandTag.js",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:deploy/app/api/marketing/content/generate/route.js",
       "target": "file:deploy/lib/careKnowledge.js",
       "type": "imports",
       "direction": "forward",
@@ -20314,13 +20722,6 @@
     {
       "source": "file:deploy/app/api/marketing/content/generate/route.js",
       "target": "function:deploy/lib/apiAuth.js:requireMarketing",
-      "type": "calls",
-      "direction": "forward",
-      "weight": 0.8
-    },
-    {
-      "source": "file:deploy/app/api/marketing/content/generate/route.js",
-      "target": "function:deploy/lib/brandTag.js:ensureBrandTag",
       "type": "calls",
       "direction": "forward",
       "weight": 0.8
@@ -20586,21 +20987,7 @@
     },
     {
       "source": "file:deploy/app/api/marketing/content/route.js",
-      "target": "file:deploy/lib/brandTag.js",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:deploy/app/api/marketing/content/route.js",
       "target": "function:deploy/lib/apiAuth.js:requireMarketing",
-      "type": "calls",
-      "direction": "forward",
-      "weight": 0.8
-    },
-    {
-      "source": "file:deploy/app/api/marketing/content/route.js",
-      "target": "function:deploy/lib/brandTag.js:ensureBrandTag",
       "type": "calls",
       "direction": "forward",
       "weight": 0.8
@@ -20656,21 +21043,7 @@
     },
     {
       "source": "file:deploy/app/api/marketing/content/variants/route.js",
-      "target": "file:deploy/lib/brandTag.js",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:deploy/app/api/marketing/content/variants/route.js",
       "target": "function:deploy/lib/apiAuth.js:requireMarketing",
-      "type": "calls",
-      "direction": "forward",
-      "weight": 0.8
-    },
-    {
-      "source": "file:deploy/app/api/marketing/content/variants/route.js",
-      "target": "function:deploy/lib/brandTag.js:ensureBrandTag",
       "type": "calls",
       "direction": "forward",
       "weight": 0.8
@@ -21138,34 +21511,6 @@
       "weight": 0.7
     },
     {
-      "source": "file:deploy/components/MarketingOS.jsx",
-      "target": "file:deploy/components/marketing/PostCalendar.jsx",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:deploy/components/MarketingOS.jsx",
-      "target": "file:deploy/components/shared/KpiCard.jsx",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:deploy/components/MarketingOS.jsx",
-      "target": "file:deploy/lib/brandTag.js",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:deploy/components/MarketingOS.jsx",
-      "target": "file:deploy/lib/supabase.js",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
       "source": "file:deploy/components/editor/editorStore.js",
       "target": "function:deploy/components/editor/editorStore.js:reducer",
       "type": "contains",
@@ -21446,62 +21791,6 @@
       "weight": 0.8
     },
     {
-      "source": "file:deploy/components/MarketingOS.jsx",
-      "target": "function:deploy/components/MarketingOS.jsx:MarketingOS",
-      "type": "contains",
-      "direction": "forward",
-      "weight": 1
-    },
-    {
-      "source": "file:deploy/components/MarketingOS.jsx",
-      "target": "function:deploy/components/MarketingOS.jsx:NavRail",
-      "type": "contains",
-      "direction": "forward",
-      "weight": 1
-    },
-    {
-      "source": "file:deploy/components/MarketingOS.jsx",
-      "target": "function:deploy/components/MarketingOS.jsx:Shell",
-      "type": "contains",
-      "direction": "forward",
-      "weight": 1
-    },
-    {
-      "source": "file:deploy/components/MarketingOS.jsx",
-      "target": "function:deploy/components/MarketingOS.jsx:CreditBadge",
-      "type": "contains",
-      "direction": "forward",
-      "weight": 1
-    },
-    {
-      "source": "file:deploy/components/MarketingOS.jsx",
-      "target": "function:deploy/components/MarketingOS.jsx:MarketingOS",
-      "type": "exports",
-      "direction": "forward",
-      "weight": 0.8
-    },
-    {
-      "source": "file:deploy/components/MarketingOS.jsx",
-      "target": "function:deploy/components/MarketingOS.jsx:NavRail",
-      "type": "exports",
-      "direction": "forward",
-      "weight": 0.8
-    },
-    {
-      "source": "file:deploy/components/MarketingOS.jsx",
-      "target": "function:deploy/components/MarketingOS.jsx:Shell",
-      "type": "exports",
-      "direction": "forward",
-      "weight": 0.8
-    },
-    {
-      "source": "function:deploy/components/MarketingOS.jsx:MarketingOS",
-      "target": "function:deploy/lib/brandTag.js:ensureBrandTag",
-      "type": "calls",
-      "direction": "forward",
-      "weight": 0.8
-    },
-    {
       "source": "document:deploy/components/editor/CONTRACT.md",
       "target": "file:deploy/components/editor/editorStore.js",
       "type": "documents",
@@ -21777,20 +22066,6 @@
     {
       "source": "file:deploy/lib/aiBackground.js",
       "target": "function:deploy/lib/aiBackground.js:generateBackground",
-      "type": "exports",
-      "direction": "forward",
-      "weight": 0.8
-    },
-    {
-      "source": "file:deploy/lib/brandTag.js",
-      "target": "function:deploy/lib/brandTag.js:ensureBrandTag",
-      "type": "contains",
-      "direction": "forward",
-      "weight": 1
-    },
-    {
-      "source": "file:deploy/lib/brandTag.js",
-      "target": "function:deploy/lib/brandTag.js:ensureBrandTag",
       "type": "exports",
       "direction": "forward",
       "weight": 0.8
@@ -22252,13 +22527,6 @@
     },
     {
       "source": "file:deploy/lib/publishContent.js",
-      "target": "file:deploy/lib/brandTag.js",
-      "type": "imports",
-      "direction": "forward",
-      "weight": 0.7
-    },
-    {
-      "source": "file:deploy/lib/publishContent.js",
       "target": "file:deploy/lib/facebook.js",
       "type": "imports",
       "direction": "forward",
@@ -22267,13 +22535,6 @@
     {
       "source": "function:deploy/lib/publishContent.js:publishOne",
       "target": "function:deploy/lib/publishContent.js:blockReason",
-      "type": "calls",
-      "direction": "forward",
-      "weight": 0.8
-    },
-    {
-      "source": "function:deploy/lib/publishContent.js:publishOne",
-      "target": "function:deploy/lib/brandTag.js:ensureBrandTag",
       "type": "calls",
       "direction": "forward",
       "weight": 0.8
@@ -23127,101 +23388,10 @@
     },
     {
       "source": "file:deploy/mcp/dvx_mcp_server.py",
-      "target": "file:deploy/agents/dvx_data.py",
-      "type": "depends_on",
-      "direction": "forward",
-      "weight": 0.6
-    },
-    {
-      "source": "file:deploy/mcp/dvx_mcp_server.py",
       "target": "file:deploy/agents/trigger_workflow.py",
       "type": "depends_on",
       "direction": "forward",
       "weight": 0.6
-    },
-    {
-      "source": "function:deploy/mcp/dvx_mcp_server.py:get_sales",
-      "target": "function:deploy/agents/dvx_data.py:query_sales",
-      "type": "calls",
-      "direction": "forward",
-      "weight": 0.8
-    },
-    {
-      "source": "function:deploy/mcp/dvx_mcp_server.py:get_stock",
-      "target": "function:deploy/agents/dvx_data.py:query_stock",
-      "type": "calls",
-      "direction": "forward",
-      "weight": 0.8
-    },
-    {
-      "source": "function:deploy/mcp/dvx_mcp_server.py:get_restock_alerts",
-      "target": "function:deploy/agents/dvx_data.py:query_restock_alerts",
-      "type": "calls",
-      "direction": "forward",
-      "weight": 0.8
-    },
-    {
-      "source": "function:deploy/mcp/dvx_mcp_server.py:get_marketing_ideas",
-      "target": "function:deploy/agents/dvx_data.py:query_marketing_ideas",
-      "type": "calls",
-      "direction": "forward",
-      "weight": 0.8
-    },
-    {
-      "source": "function:deploy/mcp/dvx_mcp_server.py:add_marketing_idea",
-      "target": "function:deploy/agents/dvx_data.py:add_marketing_idea",
-      "type": "calls",
-      "direction": "forward",
-      "weight": 0.8
-    },
-    {
-      "source": "function:deploy/mcp/dvx_mcp_server.py:note_for_dev",
-      "target": "function:deploy/agents/dvx_data.py:note_for_dev",
-      "type": "calls",
-      "direction": "forward",
-      "weight": 0.8
-    },
-    {
-      "source": "function:deploy/mcp/dvx_mcp_server.py:get_content_queue",
-      "target": "function:deploy/agents/dvx_data.py:query_content_queue",
-      "type": "calls",
-      "direction": "forward",
-      "weight": 0.8
-    },
-    {
-      "source": "function:deploy/mcp/dvx_mcp_server.py:get_content_for_review",
-      "target": "function:deploy/agents/dvx_data.py:query_content_for_review",
-      "type": "calls",
-      "direction": "forward",
-      "weight": 0.8
-    },
-    {
-      "source": "function:deploy/mcp/dvx_mcp_server.py:review_content",
-      "target": "function:deploy/agents/dvx_data.py:save_content_review",
-      "type": "calls",
-      "direction": "forward",
-      "weight": 0.8
-    },
-    {
-      "source": "function:deploy/mcp/dvx_mcp_server.py:get_post_performance",
-      "target": "function:deploy/agents/dvx_data.py:query_post_performance",
-      "type": "calls",
-      "direction": "forward",
-      "weight": 0.8
-    },
-    {
-      "source": "function:deploy/mcp/dvx_mcp_server.py:get_post_plan",
-      "target": "function:deploy/agents/dvx_data.py:query_post_plan",
-      "type": "calls",
-      "direction": "forward",
-      "weight": 0.8
-    },
-    {
-      "source": "function:deploy/mcp/dvx_mcp_server.py:schedule_content",
-      "target": "function:deploy/agents/dvx_data.py:schedule_content",
-      "type": "calls",
-      "direction": "forward",
-      "weight": 0.8
     },
     {
       "source": "function:deploy/mcp/dvx_mcp_server.py:get_sync_status",
@@ -24268,20 +24438,6 @@
     },
     {
       "source": "config:deploy/tasks/content_voice.json",
-      "target": "file:deploy/agents/idea_angles.py",
-      "type": "configures",
-      "direction": "forward",
-      "weight": 0.6
-    },
-    {
-      "source": "config:deploy/tasks/content_voice.json",
-      "target": "file:deploy/agents/dvx_data.py",
-      "type": "configures",
-      "direction": "forward",
-      "weight": 0.6
-    },
-    {
-      "source": "config:deploy/tasks/content_voice.json",
       "target": "file:deploy/app/api/marketing/content/brief/route.js",
       "type": "configures",
       "direction": "forward",
@@ -24367,13 +24523,6 @@
     {
       "source": "config:deploy/tasks/image_style.json",
       "target": "file:deploy/lib/logoStamp.js",
-      "type": "configures",
-      "direction": "forward",
-      "weight": 0.6
-    },
-    {
-      "source": "config:deploy/tasks/idea_sources.json",
-      "target": "file:deploy/agents/idea_collector.py",
       "type": "configures",
       "direction": "forward",
       "weight": 0.6
@@ -30499,6 +30648,239 @@
       "recoveredFromImportMap": true
     },
     {
+      "source": "file:deploy/app/page.jsx",
+      "target": "file:deploy/components/DivisionXApp.jsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7,
+      "recoveredFromImportMap": true
+    },
+    {
+      "source": "file:deploy/scraper/stock_low_alert.py",
+      "target": "file:deploy/scraper/telegram_alert.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7,
+      "recoveredFromImportMap": true
+    },
+    {
+      "source": "file:deploy/agents/dvx_data.py",
+      "target": "file:deploy/agents/envload.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:deploy/agents/idea_angles.py",
+      "target": "file:deploy/agents/_console.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:deploy/agents/review_content.py",
+      "target": "file:deploy/agents/dvx_data.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:deploy/agents/review_content.py",
+      "target": "function:deploy/agents/dvx_data.py:query_content_for_review",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:deploy/app/api/marketing/content/generate/route.js",
+      "target": "file:deploy/lib/brandTag.js",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:deploy/app/api/marketing/content/generate/route.js",
+      "target": "function:deploy/lib/brandTag.js:ensureBrandTag",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:deploy/app/api/marketing/content/route.js",
+      "target": "file:deploy/lib/brandTag.js",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:deploy/app/api/marketing/content/route.js",
+      "target": "function:deploy/lib/brandTag.js:ensureBrandTag",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:deploy/app/api/marketing/content/variants/route.js",
+      "target": "file:deploy/lib/brandTag.js",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:deploy/app/api/marketing/content/variants/route.js",
+      "target": "function:deploy/lib/brandTag.js:ensureBrandTag",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:deploy/components/MarketingOS.jsx",
+      "target": "file:deploy/components/marketing/PostCalendar.jsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:deploy/components/MarketingOS.jsx",
+      "target": "file:deploy/components/shared/KpiCard.jsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:deploy/components/MarketingOS.jsx",
+      "target": "file:deploy/lib/supabase.js",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:deploy/lib/publishContent.js",
+      "target": "file:deploy/lib/brandTag.js",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "function:deploy/lib/publishContent.js:publishOne",
+      "target": "function:deploy/lib/brandTag.js:ensureBrandTag",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:deploy/mcp/dvx_mcp_server.py",
+      "target": "file:deploy/agents/dvx_data.py",
+      "type": "depends_on",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "function:deploy/mcp/dvx_mcp_server.py:get_sales",
+      "target": "function:deploy/agents/dvx_data.py:query_sales",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:deploy/mcp/dvx_mcp_server.py:get_stock",
+      "target": "function:deploy/agents/dvx_data.py:query_stock",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:deploy/mcp/dvx_mcp_server.py:get_restock_alerts",
+      "target": "function:deploy/agents/dvx_data.py:query_restock_alerts",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:deploy/mcp/dvx_mcp_server.py:get_marketing_ideas",
+      "target": "function:deploy/agents/dvx_data.py:query_marketing_ideas",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:deploy/mcp/dvx_mcp_server.py:add_marketing_idea",
+      "target": "function:deploy/agents/dvx_data.py:add_marketing_idea",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:deploy/mcp/dvx_mcp_server.py:note_for_dev",
+      "target": "function:deploy/agents/dvx_data.py:note_for_dev",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:deploy/mcp/dvx_mcp_server.py:get_content_queue",
+      "target": "function:deploy/agents/dvx_data.py:query_content_queue",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:deploy/mcp/dvx_mcp_server.py:get_content_for_review",
+      "target": "function:deploy/agents/dvx_data.py:query_content_for_review",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:deploy/mcp/dvx_mcp_server.py:review_content",
+      "target": "function:deploy/agents/dvx_data.py:save_content_review",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:deploy/mcp/dvx_mcp_server.py:get_post_performance",
+      "target": "function:deploy/agents/dvx_data.py:query_post_performance",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:deploy/mcp/dvx_mcp_server.py:get_post_plan",
+      "target": "function:deploy/agents/dvx_data.py:query_post_plan",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:deploy/mcp/dvx_mcp_server.py:schedule_content",
+      "target": "function:deploy/agents/dvx_data.py:schedule_content",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "config:deploy/tasks/content_voice.json",
+      "target": "file:deploy/agents/idea_angles.py",
+      "type": "configures",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "config:deploy/tasks/content_voice.json",
+      "target": "file:deploy/agents/dvx_data.py",
+      "type": "configures",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "config:deploy/tasks/idea_sources.json",
+      "target": "file:deploy/agents/idea_collector.py",
+      "type": "configures",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
       "source": "file:deploy/agents/dvx_query.py",
       "target": "file:deploy/agents/dvx_data.py",
       "type": "imports",
@@ -30515,20 +30897,1124 @@
       "recoveredFromImportMap": true
     },
     {
-      "source": "file:deploy/app/page.jsx",
-      "target": "file:deploy/components/DivisionXApp.jsx",
-      "type": "imports",
+      "source": "file:deploy/agents/dvx_data.py",
+      "target": "class:deploy/agents/dvx_data.py:DvxError",
+      "type": "contains",
       "direction": "forward",
-      "weight": 0.7,
-      "recoveredFromImportMap": true
+      "weight": 1
     },
     {
-      "source": "file:deploy/scraper/stock_low_alert.py",
-      "target": "file:deploy/scraper/telegram_alert.py",
+      "source": "file:deploy/agents/dvx_data.py",
+      "target": "class:deploy/agents/dvx_data.py:DvxError",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:deploy/agents/dvx_data.py",
+      "target": "function:deploy/agents/dvx_data.py:sb_get",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:deploy/agents/dvx_data.py",
+      "target": "function:deploy/agents/dvx_data.py:sb_get",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:deploy/agents/dvx_data.py",
+      "target": "function:deploy/agents/dvx_data.py:th_today",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:deploy/agents/dvx_data.py",
+      "target": "function:deploy/agents/dvx_data.py:th_today",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:deploy/agents/dvx_data.py",
+      "target": "function:deploy/agents/dvx_data.py:resolve_range",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:deploy/agents/dvx_data.py",
+      "target": "function:deploy/agents/dvx_data.py:resolve_range",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:deploy/agents/dvx_data.py",
+      "target": "function:deploy/agents/dvx_data.py:resolve_machine",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:deploy/agents/dvx_data.py",
+      "target": "function:deploy/agents/dvx_data.py:resolve_machine",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:deploy/agents/dvx_data.py",
+      "target": "function:deploy/agents/dvx_data.py:query_sales",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:deploy/agents/dvx_data.py",
+      "target": "function:deploy/agents/dvx_data.py:query_sales",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:deploy/agents/dvx_data.py",
+      "target": "function:deploy/agents/dvx_data.py:query_stock",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:deploy/agents/dvx_data.py",
+      "target": "function:deploy/agents/dvx_data.py:query_stock",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:deploy/agents/dvx_data.py",
+      "target": "function:deploy/agents/dvx_data.py:query_restock_alerts",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:deploy/agents/dvx_data.py",
+      "target": "function:deploy/agents/dvx_data.py:query_restock_alerts",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:deploy/agents/dvx_data.py",
+      "target": "function:deploy/agents/dvx_data.py:query_marketing_ideas",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:deploy/agents/dvx_data.py",
+      "target": "function:deploy/agents/dvx_data.py:query_marketing_ideas",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:deploy/agents/dvx_data.py",
+      "target": "function:deploy/agents/dvx_data.py:query_content_queue",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:deploy/agents/dvx_data.py",
+      "target": "function:deploy/agents/dvx_data.py:query_content_queue",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:deploy/agents/dvx_data.py",
+      "target": "function:deploy/agents/dvx_data.py:load_content_rules",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:deploy/agents/dvx_data.py",
+      "target": "function:deploy/agents/dvx_data.py:load_content_rules",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:deploy/agents/dvx_data.py",
+      "target": "function:deploy/agents/dvx_data.py:_count_lines",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:deploy/agents/dvx_data.py",
+      "target": "function:deploy/agents/dvx_data.py:query_content_for_review",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:deploy/agents/dvx_data.py",
+      "target": "function:deploy/agents/dvx_data.py:query_content_for_review",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:deploy/agents/dvx_data.py",
+      "target": "function:deploy/agents/dvx_data.py:save_content_review",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:deploy/agents/dvx_data.py",
+      "target": "function:deploy/agents/dvx_data.py:save_content_review",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:deploy/agents/dvx_data.py",
+      "target": "function:deploy/agents/dvx_data.py:query_post_plan",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:deploy/agents/dvx_data.py",
+      "target": "function:deploy/agents/dvx_data.py:query_post_plan",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:deploy/agents/dvx_data.py",
+      "target": "function:deploy/agents/dvx_data.py:query_post_performance",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:deploy/agents/dvx_data.py",
+      "target": "function:deploy/agents/dvx_data.py:query_post_performance",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:deploy/agents/dvx_data.py",
+      "target": "function:deploy/agents/dvx_data.py:schedule_content",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:deploy/agents/dvx_data.py",
+      "target": "function:deploy/agents/dvx_data.py:schedule_content",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:deploy/agents/dvx_data.py",
+      "target": "function:deploy/agents/dvx_data.py:add_marketing_idea",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:deploy/agents/dvx_data.py",
+      "target": "function:deploy/agents/dvx_data.py:add_marketing_idea",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:deploy/agents/dvx_data.py",
+      "target": "function:deploy/agents/dvx_data.py:note_for_dev",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:deploy/agents/dvx_data.py",
+      "target": "function:deploy/agents/dvx_data.py:note_for_dev",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:deploy/agents/dvx_data.py",
+      "target": "function:deploy/agents/envload.py:load_env_local",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:deploy/agents/dvx_data.py",
+      "target": "config:deploy/tasks/content_voice.json",
+      "type": "depends_on",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "file:deploy/agents/dvx_data.py",
+      "target": "document:wiki/hermes-inbox.md",
+      "type": "depends_on",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "file:deploy/agents/idea_angles.py",
+      "target": "class:deploy/agents/idea_angles.py:SwitchModel",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:deploy/agents/idea_angles.py",
+      "target": "class:deploy/agents/idea_angles.py:QuotaOut",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:deploy/agents/idea_angles.py",
+      "target": "class:deploy/agents/idea_angles.py:Router",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:deploy/agents/idea_angles.py",
+      "target": "function:deploy/agents/idea_angles.py:load_env_file",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:deploy/agents/idea_angles.py",
+      "target": "function:deploy/agents/idea_angles.py:sb",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:deploy/agents/idea_angles.py",
+      "target": "function:deploy/agents/idea_angles.py:clean_summary",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:deploy/agents/idea_angles.py",
+      "target": "function:deploy/agents/idea_angles.py:winning_patterns",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:deploy/agents/idea_angles.py",
+      "target": "function:deploy/agents/idea_angles.py:build_prompt",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:deploy/agents/idea_angles.py",
+      "target": "function:deploy/agents/idea_angles.py:classify",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:deploy/agents/idea_angles.py",
+      "target": "function:deploy/agents/idea_angles.py:ask_gemini",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:deploy/agents/idea_angles.py",
+      "target": "function:deploy/agents/idea_angles.py:ask_ollama",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:deploy/agents/idea_angles.py",
+      "target": "function:deploy/agents/idea_angles.py:parse_angles",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:deploy/agents/idea_angles.py",
+      "target": "function:deploy/agents/idea_angles.py:main",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "class:deploy/agents/idea_angles.py:QuotaOut",
+      "target": "class:deploy/agents/idea_angles.py:SwitchModel",
+      "type": "inherits",
+      "direction": "forward",
+      "weight": 0.9
+    },
+    {
+      "source": "file:deploy/agents/idea_angles.py",
+      "target": "config:deploy/tasks/content_voice.json",
+      "type": "depends_on",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "file:deploy/agents/idea_collector.py",
+      "target": "file:deploy/agents/dvx_data.py",
       "type": "imports",
       "direction": "forward",
-      "weight": 0.7,
-      "recoveredFromImportMap": true
+      "weight": 0.7
+    },
+    {
+      "source": "file:deploy/agents/idea_collector.py",
+      "target": "file:deploy/agents/trend_sources.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:deploy/agents/idea_collector.py",
+      "target": "function:deploy/agents/idea_collector.py:item_age_days",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:deploy/agents/idea_collector.py",
+      "target": "function:deploy/agents/idea_collector.py:freshness",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:deploy/agents/idea_collector.py",
+      "target": "function:deploy/agents/idea_collector.py:rss_items",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:deploy/agents/idea_collector.py",
+      "target": "function:deploy/agents/idea_collector.py:build_keywords",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:deploy/agents/idea_collector.py",
+      "target": "function:deploy/agents/idea_collector.py:score_item",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:deploy/agents/idea_collector.py",
+      "target": "function:deploy/agents/idea_collector.py:angle_for",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:deploy/agents/idea_collector.py",
+      "target": "function:deploy/agents/idea_collector.py:google_news_url",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:deploy/agents/idea_collector.py",
+      "target": "function:deploy/agents/idea_collector.py:collect_news",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:deploy/agents/idea_collector.py",
+      "target": "function:deploy/agents/idea_collector.py:collect_tiktok",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:deploy/agents/idea_collector.py",
+      "target": "function:deploy/agents/idea_collector.py:collect_youtube",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:deploy/agents/idea_collector.py",
+      "target": "function:deploy/agents/idea_collector.py:collect_internal",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:deploy/agents/idea_collector.py",
+      "target": "function:deploy/agents/idea_collector.py:purge",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:deploy/agents/idea_collector.py",
+      "target": "function:deploy/agents/idea_collector.py:cap_by_subtype",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:deploy/agents/idea_collector.py",
+      "target": "function:deploy/agents/idea_collector.py:save",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:deploy/agents/idea_collector.py",
+      "target": "function:deploy/agents/idea_collector.py:post_ideas",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:deploy/agents/idea_collector.py",
+      "target": "function:deploy/agents/idea_collector.py:main",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "function:deploy/agents/idea_collector.py:build_keywords",
+      "target": "function:deploy/agents/dvx_data.py:sb_get",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:deploy/agents/idea_collector.py:collect_youtube",
+      "target": "function:deploy/agents/trend_sources.py:collect_youtube",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:deploy/agents/idea_collector.py:collect_internal",
+      "target": "function:deploy/agents/dvx_data.py:th_today",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:deploy/agents/idea_collector.py:collect_internal",
+      "target": "function:deploy/agents/dvx_data.py:query_sales",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:deploy/agents/idea_collector.py:collect_internal",
+      "target": "function:deploy/agents/dvx_data.py:query_restock_alerts",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:deploy/agents/idea_collector.py:purge",
+      "target": "function:deploy/agents/dvx_data.py:sb_get",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:deploy/agents/idea_collector.py:purge",
+      "target": "function:deploy/agents/dvx_data.py:th_today",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:deploy/agents/idea_collector.py:save",
+      "target": "function:deploy/agents/dvx_data.py:sb_get",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:deploy/agents/idea_collector.py:main",
+      "target": "function:deploy/agents/trend_sources.py:collect_official",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:deploy/agents/idea_collector.py:main",
+      "target": "function:deploy/agents/trend_sources.py:collect_global",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:deploy/agents/idea_collector.py:main",
+      "target": "function:deploy/agents/trend_sources.py:collect_price",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:deploy/agents/idea_collector.py",
+      "target": "config:deploy/tasks/idea_sources.json",
+      "type": "depends_on",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "file:deploy/agents/trend_sources.py",
+      "target": "function:deploy/agents/trend_sources.py:fetch",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:deploy/agents/trend_sources.py",
+      "target": "function:deploy/agents/trend_sources.py:fetch",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:deploy/agents/trend_sources.py",
+      "target": "function:deploy/agents/trend_sources.py:parse_period",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:deploy/agents/trend_sources.py",
+      "target": "function:deploy/agents/trend_sources.py:parse_period",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:deploy/agents/trend_sources.py",
+      "target": "function:deploy/agents/trend_sources.py:_fresh_bonus",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:deploy/agents/trend_sources.py",
+      "target": "function:deploy/agents/trend_sources.py:_idea",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:deploy/agents/trend_sources.py",
+      "target": "function:deploy/agents/trend_sources.py:sku_for_set",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:deploy/agents/trend_sources.py",
+      "target": "function:deploy/agents/trend_sources.py:sku_for_set",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:deploy/agents/trend_sources.py",
+      "target": "function:deploy/agents/trend_sources.py:parse_op_articles",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:deploy/agents/trend_sources.py",
+      "target": "function:deploy/agents/trend_sources.py:parse_op_articles",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:deploy/agents/trend_sources.py",
+      "target": "function:deploy/agents/trend_sources.py:parse_op_products",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:deploy/agents/trend_sources.py",
+      "target": "function:deploy/agents/trend_sources.py:parse_op_products",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:deploy/agents/trend_sources.py",
+      "target": "function:deploy/agents/trend_sources.py:parse_op_events",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:deploy/agents/trend_sources.py",
+      "target": "function:deploy/agents/trend_sources.py:parse_op_events",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:deploy/agents/trend_sources.py",
+      "target": "function:deploy/agents/trend_sources.py:parse_dbs_home",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:deploy/agents/trend_sources.py",
+      "target": "function:deploy/agents/trend_sources.py:parse_dbs_home",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:deploy/agents/trend_sources.py",
+      "target": "function:deploy/agents/trend_sources.py:parse_dbs_products",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:deploy/agents/trend_sources.py",
+      "target": "function:deploy/agents/trend_sources.py:parse_dbs_products",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:deploy/agents/trend_sources.py",
+      "target": "function:deploy/agents/trend_sources.py:parse_pkm_th",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:deploy/agents/trend_sources.py",
+      "target": "function:deploy/agents/trend_sources.py:parse_pkm_th",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:deploy/agents/trend_sources.py",
+      "target": "function:deploy/agents/trend_sources.py:parse_pkm_jp",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:deploy/agents/trend_sources.py",
+      "target": "function:deploy/agents/trend_sources.py:parse_pkm_jp",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:deploy/agents/trend_sources.py",
+      "target": "function:deploy/agents/trend_sources.py:parse_tcgplus",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:deploy/agents/trend_sources.py",
+      "target": "function:deploy/agents/trend_sources.py:parse_tcgplus",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:deploy/agents/trend_sources.py",
+      "target": "function:deploy/agents/trend_sources.py:collect_official",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:deploy/agents/trend_sources.py",
+      "target": "function:deploy/agents/trend_sources.py:collect_official",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:deploy/agents/trend_sources.py",
+      "target": "function:deploy/agents/trend_sources.py:feed_entries",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:deploy/agents/trend_sources.py",
+      "target": "function:deploy/agents/trend_sources.py:feed_entries",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:deploy/agents/trend_sources.py",
+      "target": "function:deploy/agents/trend_sources.py:_age_from",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:deploy/agents/trend_sources.py",
+      "target": "function:deploy/agents/trend_sources.py:collect_global",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:deploy/agents/trend_sources.py",
+      "target": "function:deploy/agents/trend_sources.py:collect_global",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:deploy/agents/trend_sources.py",
+      "target": "function:deploy/agents/trend_sources.py:grab",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:deploy/agents/trend_sources.py",
+      "target": "function:deploy/agents/trend_sources.py:grab",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:deploy/agents/trend_sources.py",
+      "target": "function:deploy/agents/trend_sources.py:parse_market",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:deploy/agents/trend_sources.py",
+      "target": "function:deploy/agents/trend_sources.py:parse_market",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:deploy/agents/trend_sources.py",
+      "target": "function:deploy/agents/trend_sources.py:collect_price",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:deploy/agents/trend_sources.py",
+      "target": "function:deploy/agents/trend_sources.py:collect_price",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:deploy/agents/trend_sources.py",
+      "target": "function:deploy/agents/trend_sources.py:youtube_entries",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:deploy/agents/trend_sources.py",
+      "target": "function:deploy/agents/trend_sources.py:youtube_entries",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:deploy/agents/trend_sources.py",
+      "target": "function:deploy/agents/trend_sources.py:collect_youtube",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:deploy/agents/trend_sources.py",
+      "target": "function:deploy/agents/trend_sources.py:collect_youtube",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:deploy/components/MarketingOS.jsx",
+      "target": "file:deploy/lib/brandTag.js",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:deploy/components/MarketingOS.jsx",
+      "target": "function:deploy/components/MarketingOS.jsx:ReviewNote",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:deploy/components/MarketingOS.jsx",
+      "target": "function:deploy/components/MarketingOS.jsx:MarketingOS",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:deploy/components/MarketingOS.jsx",
+      "target": "function:deploy/components/MarketingOS.jsx:MarketingOS",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:deploy/components/MarketingOS.jsx",
+      "target": "function:deploy/components/MarketingOS.jsx:NavRail",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:deploy/components/MarketingOS.jsx",
+      "target": "function:deploy/components/MarketingOS.jsx:NavRail",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:deploy/components/MarketingOS.jsx",
+      "target": "function:deploy/components/MarketingOS.jsx:CreditBadge",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:deploy/components/MarketingOS.jsx",
+      "target": "function:deploy/components/MarketingOS.jsx:Shell",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:deploy/components/MarketingOS.jsx",
+      "target": "function:deploy/components/MarketingOS.jsx:Shell",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:deploy/components/MarketingOS.jsx:MarketingOS",
+      "target": "function:deploy/lib/brandTag.js:ensureBrandTag",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:deploy/components/MarketingOS.jsx:MarketingOS",
+      "target": "function:deploy/components/shared/KpiCard.jsx:KpiCard",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:deploy/components/MarketingOS.jsx:MarketingOS",
+      "target": "function:deploy/components/marketing/PostCalendar.jsx:PostCalendar",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:deploy/components/MarketingOS.jsx",
+      "target": "file:deploy/app/api/marketing/ideas/route.js",
+      "type": "depends_on",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "file:deploy/components/MarketingOS.jsx",
+      "target": "file:deploy/app/api/marketing/content/route.js",
+      "type": "depends_on",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "file:deploy/components/MarketingOS.jsx",
+      "target": "file:deploy/app/api/marketing/content/generate/route.js",
+      "type": "depends_on",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "file:deploy/components/MarketingOS.jsx",
+      "target": "file:deploy/app/api/marketing/content/variants/route.js",
+      "type": "depends_on",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "file:deploy/components/MarketingOS.jsx",
+      "target": "file:deploy/app/api/marketing/content/poster/route.js",
+      "type": "depends_on",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "file:deploy/components/MarketingOS.jsx",
+      "target": "file:deploy/app/api/marketing/content/upload/route.js",
+      "type": "depends_on",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "file:deploy/components/MarketingOS.jsx",
+      "target": "file:deploy/app/api/marketing/content/series/route.js",
+      "type": "depends_on",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "file:deploy/components/MarketingOS.jsx",
+      "target": "file:deploy/app/api/marketing/content/proof/route.js",
+      "type": "depends_on",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "file:deploy/components/MarketingOS.jsx",
+      "target": "file:deploy/app/api/marketing/content/publish/route.js",
+      "type": "depends_on",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "file:deploy/components/MarketingOS.jsx",
+      "target": "file:deploy/app/api/marketing/ai-credit/route.js",
+      "type": "depends_on",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "file:deploy/lib/brandTag.js",
+      "target": "function:deploy/lib/brandTag.js:wantsBrandTag",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:deploy/lib/brandTag.js",
+      "target": "function:deploy/lib/brandTag.js:wantsBrandTag",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:deploy/lib/brandTag.js",
+      "target": "function:deploy/lib/brandTag.js:hasBrandTag",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:deploy/lib/brandTag.js",
+      "target": "function:deploy/lib/brandTag.js:hasBrandTag",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:deploy/lib/brandTag.js",
+      "target": "function:deploy/lib/brandTag.js:ensureBrandTag",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:deploy/lib/brandTag.js",
+      "target": "function:deploy/lib/brandTag.js:ensureBrandTag",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:scripts/hermes/competitor_radar.py",
+      "target": "function:scripts/hermes/competitor_radar.py:env_value",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:scripts/hermes/competitor_radar.py",
+      "target": "function:scripts/hermes/competitor_radar.py:tavily",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:scripts/hermes/competitor_radar.py",
+      "target": "function:scripts/hermes/competitor_radar.py:posted_date",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:scripts/hermes/competitor_radar.py",
+      "target": "function:scripts/hermes/competitor_radar.py:pick",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:scripts/hermes/competitor_radar.py",
+      "target": "function:scripts/hermes/competitor_radar.py:push_idea",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:scripts/hermes/competitor_radar.py",
+      "target": "function:scripts/hermes/competitor_radar.py:main",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
     }
   ],
   "layers": [
@@ -30554,7 +32040,6 @@
         "file:deploy/components/editor/VideoEditor.module.css",
         "file:deploy/components/VideoStudio.jsx",
         "file:deploy/components/DivisionXApp.jsx",
-        "file:deploy/components/MarketingOS.jsx",
         "file:deploy/components/pages/PageMachineStockView.jsx",
         "file:deploy/components/pages/PageRefillPrep.jsx",
         "file:deploy/components/pages/PageSales.jsx",
@@ -30590,7 +32075,8 @@
         "file:deploy/app/layout.jsx",
         "file:deploy/app/marketing/layout.jsx",
         "file:deploy/app/marketing/theme.jsx",
-        "file:deploy/components/shared/design-tokens.js"
+        "file:deploy/components/shared/design-tokens.js",
+        "file:deploy/components/MarketingOS.jsx"
       ]
     },
     {
@@ -30631,7 +32117,6 @@
       "name": "Data Pipeline & Scrapers",
       "description": "Python scrapers (VMS/WorldWide/Payif), slot/sales tracking, reconcile/sku-profile agents, backend tools, และ scripts (sync bot, test, deploy, utilities)",
       "nodeIds": [
-        "file:deploy/agents/dvx_data.py",
         "file:deploy/scripts/backup-tables.js",
         "file:deploy/scraper/price_probe.py",
         "file:deploy/scraper/price_sync.py",
@@ -30696,7 +32181,9 @@
         "file:scripts/check-py311.py",
         "file:scripts/fb-token.mjs",
         "file:scripts/trigger-ww-backfill.ps1",
-        "document:scripts/vms-scraper/README.md"
+        "document:scripts/vms-scraper/README.md",
+        "file:deploy/agents/dvx_data.py",
+        "file:scripts/hermes/competitor_radar.py"
       ]
     },
     {
@@ -30704,8 +32191,6 @@
       "name": "Marketing Automation",
       "description": "ระบบการตลาดด้วย LLM — Marketing API routes, content/poster/idea/knowledge-base agents, lib ความรู้เกม+คอนเทนต์ (tcg/pkm/opcg/artDirector/top5/brandTag), marketing-model package, remotion video, task config, และแผน/KB การตลาดใน wiki",
       "nodeIds": [
-        "file:deploy/agents/idea_angles.py",
-        "file:deploy/agents/idea_collector.py",
         "file:deploy/agents/opcg_kb.py",
         "file:deploy/agents/poster_audit.py",
         "file:deploy/agents/review_content.py",
@@ -30747,7 +32232,6 @@
         "endpoint:deploy/app/api/marketing/metrics/route.js:GET",
         "endpoint:deploy/app/api/marketing/pipeline/route.js:GET",
         "file:deploy/lib/aiBackground.js",
-        "file:deploy/lib/brandTag.js",
         "file:deploy/lib/cardPrice.js",
         "file:deploy/lib/careKnowledge.js",
         "file:deploy/lib/headline.js",
@@ -30860,7 +32344,11 @@
         "file:wiki/marketing/rich-menu-mockup.html",
         "file:deploy/agents/content_suggester.py",
         "file:deploy/agents/run_weekly_brief.ps1",
-        "file:deploy/agents/weekly_marketing_brief.py"
+        "file:deploy/agents/weekly_marketing_brief.py",
+        "file:deploy/agents/idea_angles.py",
+        "file:deploy/agents/idea_collector.py",
+        "file:deploy/agents/trend_sources.py",
+        "file:deploy/lib/brandTag.js"
       ]
     },
     {

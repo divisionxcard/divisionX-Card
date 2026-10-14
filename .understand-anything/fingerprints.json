@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
-  "gitCommitHash": "fcfcf52927e75ce142187b9b0a2d21c4a04ced10",
-  "generatedAt": "2026-10-10T10:23:09.860Z",
+  "gitCommitHash": "0c763af42c1690092ac7ee735069602c93f5eab4",
+  "generatedAt": "2026-10-12T17:09:22.917Z",
   "files": {
     ".env.example": {
       "filePath": ".env.example",
@@ -2385,7 +2385,7 @@
     },
     "deploy/agents/dvx_data.py": {
       "filePath": "deploy/agents/dvx_data.py",
-      "contentHash": "57526509f5f79d377a8d19bf6ffa1fdb93f97bc9cf4f8a220c8d6d1e1fb1384d",
+      "contentHash": "a939bf22b661f78ef74830855a881bb0e7d17bd899e97065ab191e479459d979",
       "functions": [
         {
           "name": "sb_get",
@@ -2553,7 +2553,7 @@
             "text"
           ],
           "exported": true,
-          "lineCount": 3
+          "lineCount": 10
         },
         {
           "name": "query_content_for_review",
@@ -2562,7 +2562,7 @@
             "include_reviewed"
           ],
           "exported": true,
-          "lineCount": 48
+          "lineCount": 50
         },
         {
           "name": "save_content_review",
@@ -2573,7 +2573,7 @@
             "reviewer"
           ],
           "exported": true,
-          "lineCount": 32
+          "lineCount": 39
         },
         {
           "name": "_iso_z",
@@ -2760,7 +2760,7 @@
         "add_marketing_idea",
         "note_for_dev"
       ],
-      "totalLines": 989,
+      "totalLines": 1005,
       "hasStructuralAnalysis": true
     },
     "deploy/agents/dvx_query.py": {
@@ -2897,7 +2897,7 @@
     },
     "deploy/agents/idea_angles.py": {
       "filePath": "deploy/agents/idea_angles.py",
-      "contentHash": "38078a9c2fa2f16b4dc3980093da5517824d84385ebe4b3c725ba7c38a1a1d53",
+      "contentHash": "ec1dd1237f36a523fda57f0f0c273a511c10eacf2019ab7ab09e6906e9eef654",
       "functions": [
         {
           "name": "load_env_file",
@@ -2924,14 +2924,24 @@
           "lineCount": 10
         },
         {
+          "name": "winning_patterns",
+          "params": [
+            "days",
+            "top"
+          ],
+          "exported": true,
+          "lineCount": 17
+        },
+        {
           "name": "build_prompt",
           "params": [
             "voice",
             "idea",
-            "formats"
+            "formats",
+            "patterns"
           ],
           "exported": true,
-          "lineCount": 34
+          "lineCount": 49
         },
         {
           "name": "is_daily_quota",
@@ -2980,7 +2990,7 @@
           "name": "main",
           "params": [],
           "exported": true,
-          "lineCount": 84
+          "lineCount": 86
         }
       ],
       "classes": [
@@ -3076,6 +3086,14 @@
           ]
         },
         {
+          "source": "datetime",
+          "specifiers": [
+            "datetime",
+            "timedelta",
+            "timezone"
+          ]
+        },
+        {
           "source": "_console",
           "specifiers": [
             "_console"
@@ -3086,6 +3104,7 @@
         "load_env_file",
         "sb",
         "clean_summary",
+        "winning_patterns",
         "build_prompt",
         "SwitchModel",
         "QuotaOut",
@@ -3097,12 +3116,12 @@
         "parse_angles",
         "main"
       ],
-      "totalLines": 432,
+      "totalLines": 490,
       "hasStructuralAnalysis": true
     },
     "deploy/agents/idea_collector.py": {
       "filePath": "deploy/agents/idea_collector.py",
-      "contentHash": "40489e9a3d6ebc1b78628d413021bd7e21476ce13d3fde32b640680460a08e66",
+      "contentHash": "22edb1f165aa25d66ad98b7f367e19b229772a57c967e5ad4d8f7054cde760ee",
       "functions": [
         {
           "name": "log",
@@ -3193,7 +3212,7 @@
             "keywords"
           ],
           "exported": true,
-          "lineCount": 37
+          "lineCount": 42
         },
         {
           "name": "collect_tiktok",
@@ -3205,13 +3224,24 @@
           "lineCount": 42
         },
         {
+          "name": "trend_ctx",
+          "params": [
+            "cfg",
+            "keywords",
+            "skus"
+          ],
+          "exported": true,
+          "lineCount": 4
+        },
+        {
           "name": "collect_youtube",
           "params": [
             "cfg",
-            "keywords"
+            "keywords",
+            "skus"
           ],
           "exported": true,
-          "lineCount": 25
+          "lineCount": 4
         },
         {
           "name": "collect_internal",
@@ -3229,7 +3259,7 @@
             "dry_run"
           ],
           "exported": true,
-          "lineCount": 65
+          "lineCount": 72
         },
         {
           "name": "cap_by_subtype",
@@ -3249,13 +3279,21 @@
             "dry_run"
           ],
           "exported": true,
-          "lineCount": 71
+          "lineCount": 58
+        },
+        {
+          "name": "post_ideas",
+          "params": [
+            "rows"
+          ],
+          "exported": true,
+          "lineCount": 35
         },
         {
           "name": "main",
           "params": [],
           "exported": true,
-          "lineCount": 32
+          "lineCount": 49
         }
       ],
       "classes": [],
@@ -3333,6 +3371,12 @@
           "specifiers": [
             "data"
           ]
+        },
+        {
+          "source": "trend_sources",
+          "specifiers": [
+            "trend"
+          ]
         }
       ],
       "exports": [
@@ -3348,14 +3392,16 @@
         "google_news_url",
         "collect_news",
         "collect_tiktok",
+        "trend_ctx",
         "collect_youtube",
         "collect_internal",
         "purge",
         "cap_by_subtype",
         "save",
+        "post_ideas",
         "main"
       ],
-      "totalLines": 661,
+      "totalLines": 704,
       "hasStructuralAnalysis": true
     },
     "deploy/agents/inspect_db.py": {
@@ -9895,7 +9941,7 @@
     },
     "deploy/components/MarketingOS.jsx": {
       "filePath": "deploy/components/MarketingOS.jsx",
-      "contentHash": "7970ed496f2e8153e3489f22537b7005929775b66ddf50da8554e7035c89e38d",
+      "contentHash": "5a85a9df5ecd36f733ad81ec552470d75c6ac3851c3ca49130d0728cc67414b5",
       "functions": [
         {
           "name": "baht",
@@ -9993,7 +10039,9 @@
             "Copy",
             "Maximize2",
             "CalendarIcon",
-            "Download"
+            "Download",
+            "Globe",
+            "BadgeCheck"
           ]
         },
         {
@@ -10040,7 +10088,7 @@
         "NavRail",
         "Shell"
       ],
-      "totalLines": 2105,
+      "totalLines": 2110,
       "hasStructuralAnalysis": true
     },
     "deploy/components/pages/EditStockInModal.jsx": {
@@ -12246,8 +12294,32 @@
     },
     "deploy/lib/brandTag.js": {
       "filePath": "deploy/lib/brandTag.js",
-      "contentHash": "5139a7d9ed7e83b2837e09e5642609066e4178f575523a1142a561c9e76d9c27",
+      "contentHash": "89d306ce197cfc02d971f411cf0b02de5bdc7f4e9d35c625924ffb6c3a15f1c3",
       "functions": [
+        {
+          "name": "isUrl",
+          "params": [
+            "w"
+          ],
+          "exported": false,
+          "lineCount": 1
+        },
+        {
+          "name": "normaliseBrand",
+          "params": [
+            "s"
+          ],
+          "exported": false,
+          "lineCount": 2
+        },
+        {
+          "name": "isTagWord",
+          "params": [
+            "w"
+          ],
+          "exported": false,
+          "lineCount": 1
+        },
         {
           "name": "isDecor",
           "params": [
@@ -12286,7 +12358,7 @@
             "caption"
           ],
           "exported": true,
-          "lineCount": 44
+          "lineCount": 48
         }
       ],
       "classes": [],
@@ -12298,7 +12370,7 @@
         "hasBrandTag",
         "ensureBrandTag"
       ],
-      "totalLines": 104,
+      "totalLines": 116,
       "hasStructuralAnalysis": true
     },
     "deploy/lib/cardPrice.js": {
@@ -22516,6 +22588,523 @@
       "imports": [],
       "exports": [],
       "totalLines": 46,
+      "hasStructuralAnalysis": true
+    },
+    "deploy/agents/trend_sources.py": {
+      "filePath": "deploy/agents/trend_sources.py",
+      "contentHash": "a1fb2c7bbf8a8620f0bd4db6406bea206ca91ca7ac49c772f11dea9e6040c372",
+      "functions": [
+        {
+          "name": "_polite",
+          "params": [
+            "host",
+            "gap"
+          ],
+          "exported": true,
+          "lineCount": 5
+        },
+        {
+          "name": "fetch",
+          "params": [
+            "url",
+            "timeout",
+            "headers",
+            "gap"
+          ],
+          "exported": true,
+          "lineCount": 10
+        },
+        {
+          "name": "_clean",
+          "params": [
+            "s"
+          ],
+          "exported": true,
+          "lineCount": 5
+        },
+        {
+          "name": "parse_long_date",
+          "params": [
+            "s"
+          ],
+          "exported": true,
+          "lineCount": 6
+        },
+        {
+          "name": "parse_period",
+          "params": [
+            "s"
+          ],
+          "exported": true,
+          "lineCount": 18
+        },
+        {
+          "name": "parse_dotted",
+          "params": [
+            "s"
+          ],
+          "exported": true,
+          "lineCount": 4
+        },
+        {
+          "name": "age_days",
+          "params": [
+            "d",
+            "today"
+          ],
+          "exported": true,
+          "lineCount": 2
+        },
+        {
+          "name": "_fresh_bonus",
+          "params": [
+            "age"
+          ],
+          "exported": true,
+          "lineCount": 10
+        },
+        {
+          "name": "_idea",
+          "params": [
+            "**kw"
+          ],
+          "exported": true,
+          "lineCount": 10
+        },
+        {
+          "name": "sku_for_set",
+          "params": [
+            "set_code",
+            "skus"
+          ],
+          "exported": true,
+          "lineCount": 12
+        },
+        {
+          "name": "op_article_url",
+          "params": [
+            "site",
+            "limit"
+          ],
+          "exported": true,
+          "lineCount": 4
+        },
+        {
+          "name": "parse_op_articles",
+          "params": [
+            "text",
+            "site",
+            "today",
+            "max_age"
+          ],
+          "exported": true,
+          "lineCount": 30
+        },
+        {
+          "name": "parse_op_products",
+          "params": [
+            "html",
+            "today",
+            "horizon_days"
+          ],
+          "exported": true,
+          "lineCount": 33
+        },
+        {
+          "name": "parse_op_events",
+          "params": [
+            "html",
+            "today",
+            "horizon_days"
+          ],
+          "exported": true,
+          "lineCount": 29
+        },
+        {
+          "name": "parse_dbs_home",
+          "params": [
+            "html",
+            "today",
+            "max_age"
+          ],
+          "exported": true,
+          "lineCount": 26
+        },
+        {
+          "name": "parse_dbs_products",
+          "params": [
+            "html",
+            "today",
+            "horizon_days"
+          ],
+          "exported": true,
+          "lineCount": 27
+        },
+        {
+          "name": "parse_pkm_th",
+          "params": [
+            "html",
+            "limit"
+          ],
+          "exported": true,
+          "lineCount": 21
+        },
+        {
+          "name": "parse_pkm_jp",
+          "params": [
+            "html",
+            "today",
+            "max_age"
+          ],
+          "exported": true,
+          "lineCount": 28
+        },
+        {
+          "name": "tcgplus_url",
+          "params": [
+            "game_id",
+            "start",
+            "end",
+            "limit"
+          ],
+          "exported": true,
+          "lineCount": 6
+        },
+        {
+          "name": "parse_tcgplus",
+          "params": [
+            "text",
+            "game_id",
+            "today"
+          ],
+          "exported": true,
+          "lineCount": 31
+        },
+        {
+          "name": "collect_official",
+          "params": [
+            "ctx"
+          ],
+          "exported": true,
+          "lineCount": 33
+        },
+        {
+          "name": "feed_entries",
+          "params": [
+            "xml"
+          ],
+          "exported": true,
+          "lineCount": 17
+        },
+        {
+          "name": "_age_from",
+          "params": [
+            "published"
+          ],
+          "exported": true,
+          "lineCount": 15
+        },
+        {
+          "name": "collect_global",
+          "params": [
+            "ctx"
+          ],
+          "exported": true,
+          "lineCount": 49
+        },
+        {
+          "name": "rsc_text",
+          "params": [
+            "html"
+          ],
+          "exported": true,
+          "lineCount": 9
+        },
+        {
+          "name": "_loads_ok",
+          "params": [
+            "p"
+          ],
+          "exported": true,
+          "lineCount": 6
+        },
+        {
+          "name": "grab",
+          "params": [
+            "text",
+            "key",
+            "opener"
+          ],
+          "exported": true,
+          "lineCount": 28
+        },
+        {
+          "name": "parse_market",
+          "params": [
+            "html",
+            "sets",
+            "today",
+            "skus"
+          ],
+          "exported": true,
+          "lineCount": 56
+        },
+        {
+          "name": "collect_price",
+          "params": [
+            "ctx"
+          ],
+          "exported": true,
+          "lineCount": 14
+        },
+        {
+          "name": "youtube_entries",
+          "params": [
+            "xml"
+          ],
+          "exported": true,
+          "lineCount": 16
+        },
+        {
+          "name": "collect_youtube",
+          "params": [
+            "ctx"
+          ],
+          "exported": true,
+          "lineCount": 52
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "json",
+          "specifiers": [
+            "json"
+          ]
+        },
+        {
+          "source": "math",
+          "specifiers": [
+            "math"
+          ]
+        },
+        {
+          "source": "re",
+          "specifiers": [
+            "re"
+          ]
+        },
+        {
+          "source": "time",
+          "specifiers": [
+            "time"
+          ]
+        },
+        {
+          "source": "urllib.parse",
+          "specifiers": [
+            "urllib.parse"
+          ]
+        },
+        {
+          "source": "urllib.request",
+          "specifiers": [
+            "urllib.request"
+          ]
+        },
+        {
+          "source": "datetime",
+          "specifiers": [
+            "date",
+            "datetime",
+            "timedelta",
+            "timezone"
+          ]
+        }
+      ],
+      "exports": [
+        "_polite",
+        "fetch",
+        "_clean",
+        "parse_long_date",
+        "parse_period",
+        "parse_dotted",
+        "age_days",
+        "_fresh_bonus",
+        "_idea",
+        "sku_for_set",
+        "op_article_url",
+        "parse_op_articles",
+        "parse_op_products",
+        "parse_op_events",
+        "parse_dbs_home",
+        "parse_dbs_products",
+        "parse_pkm_th",
+        "parse_pkm_jp",
+        "tcgplus_url",
+        "parse_tcgplus",
+        "collect_official",
+        "feed_entries",
+        "_age_from",
+        "collect_global",
+        "rsc_text",
+        "_loads_ok",
+        "grab",
+        "parse_market",
+        "collect_price",
+        "youtube_entries",
+        "collect_youtube"
+      ],
+      "totalLines": 752,
+      "hasStructuralAnalysis": true
+    },
+    "scripts/hermes/competitor_radar.py": {
+      "filePath": "scripts/hermes/competitor_radar.py",
+      "contentHash": "5b469ecb652a2a2af537e0db6414e5300658238a866065a702359fff3ae8ff21",
+      "functions": [
+        {
+          "name": "env_value",
+          "params": [
+            "path",
+            "key"
+          ],
+          "exported": true,
+          "lineCount": 14
+        },
+        {
+          "name": "load_state",
+          "params": [],
+          "exported": true,
+          "lineCount": 5
+        },
+        {
+          "name": "save_state",
+          "params": [
+            "state"
+          ],
+          "exported": true,
+          "lineCount": 3
+        },
+        {
+          "name": "tavily",
+          "params": [
+            "key",
+            "target"
+          ],
+          "exported": true,
+          "lineCount": 18
+        },
+        {
+          "name": "posted_date",
+          "params": [
+            "url",
+            "tavily_date"
+          ],
+          "exported": true,
+          "lineCount": 14
+        },
+        {
+          "name": "is_post",
+          "params": [
+            "url"
+          ],
+          "exported": true,
+          "lineCount": 8
+        },
+        {
+          "name": "pick",
+          "params": [
+            "target",
+            "results",
+            "seen",
+            "today",
+            "cfg"
+          ],
+          "exported": true,
+          "lineCount": 20
+        },
+        {
+          "name": "push_idea",
+          "params": [
+            "sb_url",
+            "sb_key",
+            "hit"
+          ],
+          "exported": true,
+          "lineCount": 26
+        },
+        {
+          "name": "main",
+          "params": [],
+          "exported": true,
+          "lineCount": 69
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "json",
+          "specifiers": [
+            "json"
+          ]
+        },
+        {
+          "source": "pathlib",
+          "specifiers": [
+            "pathlib"
+          ]
+        },
+        {
+          "source": "re",
+          "specifiers": [
+            "re"
+          ]
+        },
+        {
+          "source": "sys",
+          "specifiers": [
+            "sys"
+          ]
+        },
+        {
+          "source": "urllib.error",
+          "specifiers": [
+            "urllib.error"
+          ]
+        },
+        {
+          "source": "urllib.parse",
+          "specifiers": [
+            "urllib.parse"
+          ]
+        },
+        {
+          "source": "urllib.request",
+          "specifiers": [
+            "urllib.request"
+          ]
+        },
+        {
+          "source": "datetime",
+          "specifiers": [
+            "datetime",
+            "timedelta",
+            "timezone"
+          ]
+        }
+      ],
+      "exports": [
+        "env_value",
+        "load_state",
+        "save_state",
+        "tavily",
+        "posted_date",
+        "is_post",
+        "pick",
+        "push_idea",
+        "main"
+      ],
+      "totalLines": 251,
       "hasStructuralAnalysis": true
     }
   }
