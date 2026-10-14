@@ -2,8 +2,8 @@
 type: worklog
 date: 2026-10-13
 tags: [hermes, model, review, cost, infra]
-commits: []
-status: 🔴 Hermes ไม่มีโมเดลใช้ตั้งแต่ 12 ต.ค. เที่ยง (Nous ฟรีตาย) · 🟡 ทดสอบไทย/ราคา/ทางฟรีครบแล้ว รอเจ้าของเช็ค OpenAI data sharing · ✅ สคริปต์เฝ้าคิวเขียน+ทดสอบแล้ว ยังไม่ผูก
+commits: [f892160]
+status: ✅ Hermes กลับมาทำงาน 14 ต.ค. 16:41 ด้วย gpt-5.4-mini (โปรเจกต์ OpenAI "Hermes" แยก) · ตัวตรวจรัน 2 รอบ 19 ชิ้น ไทยล้วน · เฝ้าคิว+ตัดเครื่องมือลดโทเคน 3.7 เท่า · 🟡 รอเจ้าของติ๊กโปรเจกต์ Hermes ในหน้า Sharing เพื่อใช้โควตาฟรี
 ---
 
 # โมเดลฟรีของ Hermes ตาย — สืบสาเหตุ ทดสอบตัวแทน และทางฟรีที่เหลือ
@@ -67,7 +67,26 @@ status: 🔴 Hermes ไม่มีโมเดลใช้ตั้งแต่
 
 ## รอเจ้าของ
 
-- [ ] เช็คหน้า OpenAI → Settings → Organization → Data controls → Sharing ว่ามี "eligible for free daily usage" ไหม (เลือกทางนี้ 14 ต.ค.)
-- [ ] เมื่อได้คำตอบ: ใส่คีย์ใน `hermes/.env` · config.yaml model.default/fallback · `cronjob(update)` งาน 47c6603299a7 + 34712d0ace30 (provider/model/monitor_script/enabled_toolsets) · รีสตาร์ต gateway · สั่งรัน 1 รอบดูโน้ตจริง
+- [x] เช็คหน้า OpenAI Sharing — **บัญชีเข้าข่าย** (14 ต.ค.): กลุ่ม mini (gpt-5.4-mini/nano, gpt-5-mini/nano…) ฟรี 2.5 ล้าน token/วัน · กลุ่มใหญ่ (gpt-5.4…) 250k/วัน
+- [x] ลงมือ 14 ต.ค. (เจ้าของ: "จัดการได้เลย") — ดูหัวข้อถัดไป
+- [ ] เจ้าของติ๊กโปรเจกต์ **Hermes** ใต้ *Share inputs and outputs → Enabled for selected projects* แล้ว Save — ก่อนหน้านั้นคิดเงินปกติ ($0.75/ล้าน input · cache 90% ขึ้นไป)
 
 เกี่ยวข้อง: [[2026-10-12-review-notes-foreign-script]] · [[2026-10-10-brand-hashtag-and-op17-audit]]
+
+## 14 ต.ค. — ลงมือจริง (เจ้าของเลือกทาง OpenAI data sharing · "จัดการได้เลย")
+
+- สร้างโปรเจกต์ OpenAI **"Hermes"** (`proj_BOghcSIAwwW7KJ09prJllMHK`) + service account `hermes-agent` ผ่าน Admin API (`OPENAI_ADMIN_KEY` ใน `.env.local`)
+  → คีย์ `sk-svca…` อยู่ใน `%LOCALAPPDATA%\hermes\.env` เท่านั้น · **แยกโปรเจกต์ตั้งใจ** เพื่อให้เปิด data sharing เฉพาะ Hermes ไม่แชร์รูปซองอ้างอิงที่เว็บส่งเข้าตัวสร้างภาพ
+- `config.yaml`: `model.default: gpt-5.4-mini` · `provider: openai-api` · `base_url: https://api.openai.com/v1` · `fallback_providers: [openai-api/gpt-5.4-nano]` (ทั้งคู่อยู่ในโควตาฟรีก้อน 2.5M เดียวกัน · ไม่ใช้ gpt-5.4 เพราะโควตาแค่ 250k)
+- งาน cron 47c6603299a7 (ตรวจ) + 34712d0ace30 (วางแผน): `provider=openai-api model=gpt-5.4-mini enabled_toolsets=["mcp-divisionx"]` · ตัวตรวจเพิ่ม `monitor_script=review_monitor.py`
+  (สำรอง `cron/jobs.json.bak-before-openai`) · รีสตาร์ต gateway 16:41 · `hermes cron run` (CLI รันใน process ตัวเอง · ไม่ใช่ next tick ตามข้อความ help)
+
+| รอบ | เครื่องมือ | API calls | prompt รวม | เวลา | ผล |
+|---|---|---|---|---|---|
+| 1 (16:41) | เต็ม 28 ตัว | 14 (เทิร์นละ 33-39k · cache ~90%) | 502k | 83 วิ | 10 ชิ้น: pass 6 · fix 3 · drop 1 (#28 ร่างเปล่า) · ไทยล้วน ไม่มี CJK |
+| 2 (16:44) | `mcp-divisionx` อย่างเดียว | 9 (เทิร์นละ 10-24k · cache 90-98%) | **136k** | 68 วิ | 9 ชิ้น: pass 8 · fix 1 (#57 มุมซ้ำโพสต์ OP-17) · ไทยล้วน |
+
+- ตัดเครื่องมือแล้ว MCP ยังใช้ได้ครบ (ชื่อ toolset = `mcp-<ชื่อ server>` · core tools เช่น terminal/web หายไปด้วย ซึ่งตัวตรวจไม่ต้องใช้) · โทเคนลด 3.7 เท่า
+  → ประมาณการต่อวัน: ตรวจ 1-3 รอบ ×150k + วางแผน ~150k + แชท = ต่ำกว่า 1M จากโควตาฟรี 2.5M
+- สคริปต์เฝ้าคิวทำงานจริง: รอบ 2 ได้ diff ว่า 10 ชิ้นแรกหายจากคิว · หลังตรวจครบ คิวว่าง → รอบตั้งเวลาถัดไป (19:45) จะปลุกอีก 1 ครั้งสั้น ๆ แล้วนิ่ง
+- โน้ตรอบ 2 สั้นกว่ารอบ 1 ("ผ่านได้เลย …") — ยังชี้จุดได้ · ไม่มีตัวไหนจับ "ด้ง!!" ใน #57 (มีแต่ luna ตอนทดสอบตรง) → ถ้าเจ้าของอยากได้ตาจับคำผิด ค่อยพิจารณา luna ในกลุ่มโควตาเดียวกันไม่ได้ (luna ไม่อยู่ในรายชื่อฟรี)
