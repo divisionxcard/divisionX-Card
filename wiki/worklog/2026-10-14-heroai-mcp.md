@@ -3,7 +3,7 @@ type: worklog
 date: 2026-10-14
 tags: [hermes, mcp, video, heroai, claude-code]
 commits: [18e9413]
-status: ✅ เชื่อม Hero AI Studio ผ่าน MCP แล้วทั้ง Claude Code และ Hermes · ทดสอบคลิป 17 วิ ใช้รูปสินค้า/ตู้จริงเป็น B-roll สำเร็จ · 🟡 ยังไม่ได้ต่อเข้าคิวโพสต์ของเรา
+status: ✅ เชื่อม Hero AI Studio ผ่าน MCP แล้วทั้ง Claude Code และ Hermes · คลิปทดสอบ 3 รอบ — รอบ 3 ใช้ฉากเคลื่อนไหวจากเทมเพลตของเราเอง (showcase + photo ใหม่) · 🟡 ยังไม่ได้ต่อเข้าคิวโพสต์ · ขอฟุตเทจดิบจากเจ้าของ
 ---
 
 # เชื่อม Hero AI Creator Studio เข้า MCP (Claude Code + Hermes) และทดสอบคลิปจริง
@@ -53,3 +53,27 @@ export_video → rerendering → exporting → done (~2 นาที) → videoU
 - เทียบคุณภาพเสียง/ซับกับโรงงานวิดีโอของเราเอง (Gemini TTS เหมือนกัน · ซับ Hero ใช้ forced alignment)
 
 เกี่ยวข้อง: [[2026-10-13-hermes-nous-free-ended]] · [[project_video_studio]]
+
+## รอบ 2-3 — เจ้าของบอก "เหมือนสไลด์ภาพนิ่งธรรมดามาก ๆ"
+
+ถูกต้อง: รอบแรกส่ง**รูปนิ่ง**เข้าทุกช่วง Hero แค่ dissolve ระหว่างรูป ไม่มีอะไรขยับ ทางแก้คือส่ง**วิดีโอ**เข้า `replace_broll_window` แทน
+(รับ mp4 ได้ · เสียงในไฟล์ถูกปิด) โดยใช้โรงงานวิดีโอของเราเองผลิตช่วงสั้น ๆ:
+
+- `motion.render_clip('tpl:showcase?img=sku:OP 17', 3.0, …)` — ฉากแบรนด์ (ซองลอย/เอียง · ลำแสง · สายฟ้า · อนุภาค) 3 คลิป 41-76 วิ/คลิป บนเครื่องนี้
+- **เทมเพลตใหม่ `motion_templates/photo.html`** — ภาพถ่ายจริงซูม-แพนช้า (Ken Burns) + ป้ายแคปซูล `tag` (ว่าง = ซ่อน) ใช้กับรูปตู้ `public/machine/*.jpg`
+  เพราะฟุตเทจจริงที่มี (`marketing/how-to-buy.mp4` 464×848) **มีซับเก่าฝังในภาพ** ("ขั้นตอนการสั่งซื้อ…") ชนกับบทพูดใหม่ ใช้ไม่ได้
+- คลิปอัปขึ้น Supabase `marketing/broll/*.mp4` (public) → `replace_broll_window(url)` → `set_broll_style(transition=cut)` → `set_subtitle_style(fontSize=64)` → `export_video`
+  (ไม่ตัดโควตาเพิ่ม · rerendering → exporting → done ~2.5 นาที) · ผล: `backups/2026-10-14-heroai-test/op17-test-v3-motion.mp4`
+  · ลิงก์: https://studio.heroaiengine.com/api/renders/render-1791983189838-56d7ccefad2dd6efbb59ce90e45b16ce.mp4
+
+### บั๊กที่เจอระหว่างทาง
+
+- **`video/config.env()` อ่าน `.env.local` ด้วย utf-8 ไม่ใช่ utf-8-sig** → key แรกของไฟล์ (`NEXT_PUBLIC_SUPABASE_URL`) ไม่เคยถูกอ่านจากไฟล์ (BOM ติดหน้าชื่อ) · บนเครื่องนี้เลย "ไม่มีคีย์ Supabase" ทั้งที่มี
+  (บน Actions รอดเพราะอ่านจาก env แทน) → แก้เป็น utf-8-sig แล้ว · กับดักเดียวกับ [[2026-10-10-trend-radar]] (poster_render)
+- หัวเรื่องในเทมเพลต showcase (`title=`) **ซ้อนกับพาดหัวของ Hero** ช่วงแรก → ช่วงที่มี headline hook ต้องส่ง title ว่าง
+- หลัง export แล้ว windows ที่ไม่ได้แตะใหม่คืน `importStatus: None` — ลูปรอ "ready ทุกช่อง" จะค้าง ต้องเช็คเฉพาะช่องที่เพิ่งเปลี่ยน
+
+### ข้อจำกัดที่ยังอยู่ — ต้องการจากเจ้าของ
+
+- ภาพเคลื่อนไหวตอนนี้คือ "รูปนิ่งที่ขยับ" ไม่ใช่ฟุตเทจคน/มือ/ซองตกจากช่อง · ถ้าอยากได้ระดับคลิปขายของจริง ต้องถ่าย**คลิปดิบ 5-10 ชิ้นด้วยมือถือ ไม่ต้องใส่ซับ** (กดปุ่ม · ซองตกลงช่องรับ · ฉีกซอง · การ์ดเรียงพัด · คนเดินผ่านตู้)
+  เก็บใน `marketing/broll/raw/` แล้วใช้ซ้ำได้ทุกคลิปทั้ง Hero และโรงงานเรา

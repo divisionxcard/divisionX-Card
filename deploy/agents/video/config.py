@@ -42,7 +42,7 @@ def env(key, default=None):
     """อ่านค่าจาก deploy/.env.local (ไฟล์นี้ gitignored — เก็บ service key กับ API key)"""
     f = ROOT / ".env.local"
     if f.exists():
-        for line in f.read_text(encoding="utf-8").splitlines():
+        for line in f.read_text(encoding="utf-8-sig").splitlines():  # utf-8-sig: ไฟล์มี BOM ไม่งั้น key แรก (NEXT_PUBLIC_SUPABASE_URL) หายเงียบ
             line = line.strip()
             if line.startswith("#") or "=" not in line:
                 continue

@@ -1,0 +1,37 @@
+<!doctype html>
+<!-- ภาพถ่ายจริงแบบซูม-แพนช้า (Ken Burns) — ใช้กับรูปตู้/สาขาที่ไม่มีฟุตเทจ
+     spec: tpl:photo?img=file:C:/.../machine-hero.jpg&tag=ตู้ DivisionX Card
+     อนิเมชันเป็น CSS ล้วน (motion.py เลื่อนเวลาด้วย _SEEK_JS) · tag ว่าง = ไม่แสดงป้าย -->
+<html><head><meta charset="utf-8">
+<style>
+  @font-face { font-family: "SarabunDX"; src: url("{{FONT_BOLD}}"); font-weight: 700; }
+  html, body { margin: 0; width: {{W}}px; height: {{H}}px; overflow: hidden; background: #0b1a33; }
+  .photo {
+    position: absolute; inset: 0;
+    background: url("{{IMG}}") center / cover no-repeat;
+    transform-origin: 50% 40%;
+    animation: kb 12s ease-in-out both;
+  }
+  @keyframes kb {
+    from { transform: scale(1.03) translate(0, 0); }
+    to   { transform: scale(1.18) translate(-2%, 1.5%); }
+  }
+  .vignette {
+    position: absolute; inset: 0;
+    background: radial-gradient(ellipse at center, rgba(0,0,0,0) 55%, rgba(5,12,30,.55) 100%);
+  }
+  .tag {
+    position: absolute; left: 50%; top: 7%; transform: translateX(-50%);
+    font-family: "SarabunDX", sans-serif; font-weight: 700; font-size: 46px; color: #fff;
+    background: rgba(11,26,51,.72); padding: 10px 30px; border-radius: 999px;
+    border: 2px solid #4fd1ff; box-shadow: 0 0 24px rgba(79,209,255,.45); white-space: nowrap;
+    animation: enter .6s cubic-bezier(.2,1.4,.4,1) both;
+  }
+  .tag:empty { display: none; }
+  @keyframes enter { from { transform: translateX(-50%) scale(.8); opacity: 0; } to { transform: translateX(-50%) scale(1); opacity: 1; } }
+</style></head>
+<body>
+  <div class="photo"></div>
+  <div class="vignette"></div>
+  <div class="tag">{{TAG}}</div>
+</body></html>
