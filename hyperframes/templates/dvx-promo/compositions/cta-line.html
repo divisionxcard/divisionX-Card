@@ -1,0 +1,235 @@
+<!doctype html>
+<!--
+  cta-line — ฉากปิด "แอดไลน์ · ข่าวเติมของแจ้งทางไลน์" (สเปก cta_spec.json · layout "line" · 16 ต.ค. 2026)
+
+  ทำไมแบบนี้: ดูอันดับ/ผู้ชนะจบแล้ว คำถามต่อไปคือ "ตู้เติมของเมื่อไหร่?" — ไลน์ OA @divisionxcard คือช่องทางตรงช่องเดียว
+    ที่แบรนด์ใช้ประกาศเติมของ · ไม่ใช้ข้อมูลสต็อก จึงจริงเสมอทุกรูปแบบคลิป · โปสเตอร์ QR + กระดิ่งดัง ไม่ซ้ำฉากปิดแบบอื่น
+  ไม่มีรูปซองในฉากนี้ (สเปก): ซองข้างคำว่า "ข่าวเติมของ" = ชวนให้คิดว่าซองนั้นใกล้หมด · จึงไม่มี match cut จากซองฉากก่อน
+    (ตัวแปร src ไม่ได้ใช้) — รอยต่อเป็นแสงวาบของ host อย่างเดียว
+
+  QR: assets/brand/line-qr.svg (ตรวจถอดแล้ว → https://lin.ee/9cMKVRm) · 33 โมดูลรวมขอบเงียบ 4 โมดูล
+    วาด 13 px/โมดูล = 429 px บนการ์ดขาว 440 ที่พิกัดเต็มพิกเซล (325, 525) → ขอบโมดูลคม ไม่มีอะไรทับตัวโค้ด
+    การ์ดตอนนิ่ง transform เหลือ 2D ศูนย์ (มุมมอง 3D อยู่ที่ตัวห่อ ไม่ใช่การ์ด) · ไม่ใส่ will-change บนการ์ด/รูป
+    ครึ่งวินาทีสุดท้ายนิ่งสนิท แคปหน้าจอแล้วสแกนในแอป LINE ได้
+
+  จังหวะ: 0.10 q1 กระแทก · 0.28 q2 · 0.40–0.95 การ์ด QR ลอยขึ้น (ท่าการ์ดรูปตู้ของ fmt-map) · 0.62 กระดิ่งเด้ง
+    · 0.85 กรอบสแกนหดเข้าจาก 1.3 เท่า + เส้นสแกนกวาดครั้งเดียว · 0.95 กระดิ่งดัง 6 จังหวะ + จุดแดงเด้ง
+    · 1.10 ไอดีกวาดเข้า (clip-path) · 1.40 คำแนะนำขึ้น · 1.8 → dur−0.5 กระดิ่งดังทุก 1.5 วิ + กรอบหายใจ (นับรอบจาก dur)
+  สีเขียว LINE เฉพาะชิปเล็ก (ตัวหนังสือกรมท่า — ขาวบนเขียวคอนทราสต์ไม่ถึงเกณฑ์) · ไม่มี UI แชตปลอม
+-->
+<html
+  lang="th"
+  data-composition-variables='[
+    {"id":"variant","type":"string","label":"แบบข้อความ (L1/L2/L3)","default":"L1"},
+    {"id":"q1","type":"string","label":"หัวเรื่องบรรทัด 1","default":"ข่าวเติมของหน้าตู้"},
+    {"id":"q2","type":"string","label":"หัวเรื่องบรรทัด 2 (สีเน้น)","default":"เราแจ้งทางไลน์"},
+    {"id":"qs1","type":"number","label":"ขนาดหัวเรื่องบรรทัด 1 (px)","default":112,"min":48,"max":112,"step":1},
+    {"id":"qs2","type":"number","label":"ขนาดหัวเรื่องบรรทัด 2 (px)","default":92,"min":48,"max":92,"step":1},
+    {"id":"qr","type":"string","label":"รูป QR ไลน์ (ตรวจแล้ว = lin.ee/9cMKVRm)","default":"assets/brand/line-qr.svg"},
+    {"id":"lineid","type":"string","label":"ไอดีไลน์","default":"@divisionxcard"},
+    {"id":"hint","type":"string","label":"คำแนะนำใต้ไอดี (ว่าง = ไม่แสดง)","default":"แคปหน้าจอ แล้วสแกนในแอป LINE"},
+    {"id":"dur","type":"number","label":"ความยาวฉาก (วิ)","default":5.4,"min":1,"max":60,"step":0.01}
+  ]'
+>
+  <head>
+    <meta charset="UTF-8" />
+  </head>
+  <body>
+    <template>
+      <style>
+        @font-face { font-family: "Kanit"; src: url("assets/fonts/Kanit-Black.ttf"); font-weight: 900; }
+        @font-face { font-family: "Kanit"; src: url("assets/fonts/Kanit-ExtraBold.ttf"); font-weight: 800; }
+        @font-face { font-family: "Kanit"; src: url("assets/fonts/Kanit-SemiBold.ttf"); font-weight: 600; }
+        #root { position: absolute; inset: 0; overflow: hidden; font-family: "Kanit", sans-serif; color: #ffffff; }
+
+        /* ── หัวเรื่อง y 206–450 · q1 อยู่กลางแถบ 206–340 (ขนาดไหนก็ไม่ดัน q2) · q2 ที่ 344 */
+        #cta-line-head { position: absolute; left: 0; right: 0; top: 206px; height: 244px; z-index: 6; }
+        .cta-line-q {
+          position: absolute; left: 0; right: 0; display: block; text-align: center; font-weight: 900; line-height: 1.12; white-space: nowrap;
+          -webkit-text-stroke: 14px #03102a; paint-order: stroke fill;
+          text-shadow: 0 10px 0 #03102a, 0 0 40px rgba(27, 141, 255, 0.55);
+          will-change: transform, opacity;
+        }
+        #cta-line-q1 { top: calc((134px - var(--qs1, 112) * 1.12px) / 2); }
+        #cta-line-q2 { top: 138px; color: var(--hot, #ffc24a); }
+
+        /* ── กรอบสแกน 500×500 (290–790 · 490–990) */
+        #cta-line-frame { position: absolute; left: 290px; top: 490px; width: 500px; height: 500px; z-index: 2; opacity: 0; will-change: transform, opacity; }
+        .cta-line-c { position: absolute; width: 84px; height: 84px; border: 0 solid #8fe3ff; filter: drop-shadow(0 0 8px #1b8dff); }
+        #cta-line-c1 { left: 0; top: 0; border-top-width: 10px; border-left-width: 10px; border-top-left-radius: 26px; }
+        #cta-line-c2 { right: 0; top: 0; border-top-width: 10px; border-right-width: 10px; border-top-right-radius: 26px; }
+        #cta-line-c3 { left: 0; bottom: 0; border-bottom-width: 10px; border-left-width: 10px; border-bottom-left-radius: 26px; }
+        #cta-line-c4 { right: 0; bottom: 0; border-bottom-width: 10px; border-right-width: 10px; border-bottom-right-radius: 26px; }
+
+        /* ── การ์ด QR ขาว x 320–760 · y 520–960 · แสงอยู่นอกการ์ดเท่านั้น (box-shadow ด้านนอก) */
+        #cta-line-cardwrap { position: absolute; left: 320px; top: 520px; width: 440px; height: 440px; z-index: 3; perspective: 1400px; }
+        #cta-line-card {
+          position: absolute; inset: 0; border-radius: 36px; overflow: hidden; background: #ffffff; opacity: 0;
+          box-shadow: 0 0 0 5px rgba(89, 210, 255, 0.95), 0 0 64px rgba(27, 141, 255, 0.85), 0 30px 70px rgba(0, 0, 0, 0.55);
+        }
+        /* ไฟล์ SVG มี shape-rendering="crispEdges" ในตัว · pixelated กันภาพเบลอถ้าถูกย่อ/ขยาย */
+        #cta-line-qr { position: absolute; left: 5px; top: 5px; width: 429px; height: 429px; image-rendering: pixelated; }
+        #cta-line-scan {
+          position: absolute; left: 0; top: 0; width: 440px; height: 130px; opacity: 0;
+          background: linear-gradient(180deg, rgba(89, 210, 255, 0) 0%, rgba(89, 210, 255, 0.34) 78%, rgba(27, 141, 255, 0.95) 94%, rgba(27, 141, 255, 0) 100%);
+        }
+
+        /* ── กระดิ่งทอง 120 px ที่ (748, 456) มุมขวาบนของการ์ด · ตัวห่อ = เด้ง/เอียง · ตัวใน = แกว่งรอบหูแขวน */
+        #cta-line-bellwrap { position: absolute; left: 748px; top: 456px; width: 120px; height: 120px; z-index: 5; opacity: 0; filter: drop-shadow(0 0 16px rgba(255, 194, 74, 0.85)); }
+        #cta-line-bell { position: absolute; inset: 0; transform-origin: 50% 6%; }
+        #cta-line-bell svg { position: absolute; inset: 0; width: 120px; height: 120px; overflow: visible; }
+        #cta-line-dot {
+          position: absolute; left: 80px; top: 6px; width: 30px; height: 30px; border-radius: 50%; opacity: 0;
+          background: #ff4d6d; border: 4px solid #03102a; box-shadow: 0 0 14px rgba(255, 77, 109, 0.85);
+        }
+        #cta-line-waves { position: absolute; left: 852px; top: 440px; width: 60px; height: 96px; z-index: 5; overflow: visible; opacity: 0; transform-origin: 0% 60%; }
+        #cta-line-waves path { fill: none; stroke: #ffc24a; stroke-width: 7; stroke-linecap: round; filter: drop-shadow(0 0 8px rgba(255, 194, 74, 0.9)); }
+
+        /* ── ไอดี y 990–1080: ชิปเขียว LINE (เล็ก) + ไอดี Black 72 */
+        #cta-line-idrow { position: absolute; left: 0; right: 0; top: 990px; height: 90px; z-index: 4; display: flex; justify-content: center; align-items: center; }
+        #cta-line-idwrap { position: relative; display: block; }
+        #cta-line-idbox { display: flex; align-items: center; gap: 18px; will-change: clip-path; }
+        /* แสงขอบกวาด: กว้างเท่าก้อนไอดี เลื่อนด้วย xPercent ของตัวเอง → ขอบแสงตรงกับขอบ clip-path โดยไม่ต้องวัด DOM */
+        #cta-line-idglint { position: absolute; left: 0; top: -12px; bottom: -12px; width: 100%; opacity: 0; pointer-events: none; will-change: transform, opacity; }
+        #cta-line-idglint i {
+          position: absolute; left: -8px; top: 0; bottom: 0; width: 16px; border-radius: 8px;
+          background: linear-gradient(180deg, rgba(232, 247, 255, 0) 0%, #e8f7ff 28%, #59d2ff 72%, rgba(89, 210, 255, 0) 100%);
+          box-shadow: 0 0 22px #59d2ff, 0 0 44px rgba(27, 141, 255, 0.8);
+        }
+        #cta-line-chip {
+          display: block; padding: 2px 16px 6px; border-radius: 14px; background: #06c755; color: #03102a;
+          font-weight: 900; font-size: 38px; line-height: 1.2; white-space: nowrap; box-shadow: 0 0 16px rgba(6, 199, 85, 0.45);
+        }
+        #cta-line-id {
+          display: block; font-weight: 900; font-size: 72px; line-height: 1.15; white-space: nowrap; color: #ffffff;
+          -webkit-text-stroke: 12px #03102a; paint-order: stroke fill;
+          text-shadow: 0 6px 0 #03102a, 0 0 28px rgba(27, 141, 255, 0.75);
+        }
+
+        /* ── คำแนะนำ y 1096–1146 */
+        #cta-line-hint {
+          position: absolute; left: 70px; right: 70px; top: 1096px; z-index: 4; display: block; text-align: center;
+          font-weight: 800; font-size: 40px; line-height: 1.25; white-space: nowrap; color: #9fc4e8;
+          text-shadow: 0 4px 0 #03102a, 0 0 18px rgba(3, 16, 42, 0.9); opacity: 0; will-change: transform, opacity;
+        }
+        #cta-line-q1:empty, #cta-line-q2:empty, #cta-line-id:empty, #cta-line-hint:empty { display: none; }
+      </style>
+
+      <div id="root" data-composition-id="cta-line" data-width="1080" data-height="1920">
+        <div id="cta-line-frame" aria-hidden="true" data-layout-ignore>
+          <div class="cta-line-c" id="cta-line-c1"></div>
+          <div class="cta-line-c" id="cta-line-c2"></div>
+          <div class="cta-line-c" id="cta-line-c3"></div>
+          <div class="cta-line-c" id="cta-line-c4"></div>
+        </div>
+        <div id="cta-line-cardwrap">
+          <div id="cta-line-card">
+            <img id="cta-line-qr" data-var-src="qr" src="assets/brand/line-qr.svg" alt="QR LINE @divisionxcard" />
+            <div id="cta-line-scan" aria-hidden="true" data-layout-ignore></div>
+          </div>
+        </div>
+        <div id="cta-line-bellwrap" aria-hidden="true" data-layout-ignore>
+          <div id="cta-line-bell">
+            <svg viewBox="0 0 100 100" aria-hidden="true" data-layout-ignore>
+              <defs>
+                <linearGradient id="cta-line-bellg" x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0" stop-color="#fff4c9" />
+                  <stop offset="0.45" stop-color="#ffc24a" />
+                  <stop offset="1" stop-color="#d1901a" />
+                </linearGradient>
+              </defs>
+              <circle cx="50" cy="8" r="5" fill="#ffc24a" stroke="#03102a" stroke-width="4" />
+              <circle cx="50" cy="84" r="8.5" fill="#ffc24a" stroke="#03102a" stroke-width="5" />
+              <path d="M50 13 C34 13 25 26 25 42 V58 L14 72 H86 L75 58 V42 C75 26 66 13 50 13 Z" fill="url(#cta-line-bellg)" stroke="#03102a" stroke-width="5" stroke-linejoin="round" />
+              <path d="M36 30 C33 36 32.5 44 32.5 53" fill="none" stroke="rgba(255,255,255,0.8)" stroke-width="5" stroke-linecap="round" />
+            </svg>
+            <div id="cta-line-dot"></div>
+          </div>
+        </div>
+        <svg id="cta-line-waves" viewBox="0 0 60 96" aria-hidden="true" data-layout-ignore>
+          <path d="M8 22 C20 32 24 52 16 70" />
+          <path d="M28 8 C46 24 50 58 36 84" />
+        </svg>
+        <div id="cta-line-idrow">
+          <div id="cta-line-idwrap">
+            <div id="cta-line-idbox">
+              <span id="cta-line-chip">LINE</span>
+              <span id="cta-line-id" data-var-text="lineid">@divisionxcard</span>
+            </div>
+            <div id="cta-line-idglint" aria-hidden="true" data-layout-ignore><i></i></div>
+          </div>
+        </div>
+        <div id="cta-line-hint" data-var-text="hint">แคปหน้าจอ แล้วสแกนในแอป LINE</div>
+        <div id="cta-line-head" class="dvx-head">
+          <div class="cta-line-q dvx-q dvx-q1" id="cta-line-q1" data-var-text="q1" style="font-size: calc(var(--qs1, 112) * 1px)">ข่าวเติมของหน้าตู้</div>
+          <div class="cta-line-q dvx-q dvx-q2" id="cta-line-q2" data-var-text="q2" style="font-size: calc(var(--qs2, 92) * 1px)">เราแจ้งทางไลน์</div>
+        </div>
+      </div>
+
+      <script>
+        (function () {
+          const v = (window.__hyperframes && window.__hyperframes.getVariables && window.__hyperframes.getVariables()) || {};
+          const num = (x, d) => (x != null && x !== "" && isFinite(Number(x)) ? Number(x) : d);
+          const DUR = Math.max(1, num(v.dur, 5.4));
+          const END = DUR - 0.5;                                      // จากตรงนี้ถึงจบ นิ่งสนิท (แคปแล้วสแกนได้)
+          // จังหวะเข้าทั้งชุดจบที่ 1.75 วิ · ฉากสั้นผิดปกติ → ย่อทั้งชุดให้จบก่อนช่วงนิ่ง
+          const K = Math.max(0.5, Math.min(1, (END - 0.05) / 1.75));
+          const T = (t) => t * K;
+          const tl = gsap.timeline({ paused: true });
+
+          // ── 1. หัวเรื่องกระแทก (kinetic-beat-slam แบบเดียวกับ fmt-*)
+          tl.fromTo("#cta-line-q1", { scale: 1.8, opacity: 0, filter: "blur(16px)" }, { scale: 1, opacity: 1, filter: "blur(0px)", duration: 0.36 * K, ease: "power4.out" }, T(0.1));
+          tl.fromTo("#cta-line-q2", { scale: 1.8, opacity: 0, filter: "blur(16px)" }, { scale: 1, opacity: 1, filter: "blur(0px)", duration: 0.4 * K, ease: "power4.out" }, T(0.28));
+
+          // ── 2. การ์ด QR ลอยขึ้น (ท่าการ์ดรูปตู้ของ fmt-map) — มุมมอง 3D มาจากตัวห่อ ตอนนิ่งการ์ดจึงไม่มี transform 3D ค้าง
+          tl.fromTo("#cta-line-card", { y: 300, rotationX: 30, scale: 0.86, opacity: 0 }, { y: 0, rotationX: 0, scale: 1, opacity: 1, duration: 0.55 * K, ease: "power3.out" }, T(0.4));
+
+          // ── 3. กระดิ่งเด้งเข้ามุมการ์ด (เอียงพัก 12°)
+          tl.fromTo("#cta-line-bellwrap", { scale: 0.2, opacity: 0, rotation: -24 }, { scale: 1, opacity: 1, rotation: 12, duration: 0.3 * K, ease: "back.out(2.2)" }, T(0.62));
+
+          // ── 4. กรอบสแกนหดเข้าจาก 1.3 เท่า + เส้นสแกนกวาดลงครั้งเดียว แล้วหายนอกการ์ด (ไม่ค้างบนโค้ด)
+          tl.fromTo("#cta-line-frame", { scale: 1.3, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.25 * K, ease: "power4.out" }, T(0.85));
+          const SCAN = 0.6 * K;
+          tl.fromTo("#cta-line-scan", { y: -130, opacity: 1 }, { y: 450, opacity: 1, duration: SCAN, ease: "power1.inOut", immediateRender: false }, T(0.85));
+          tl.set("#cta-line-scan", { opacity: 0 }, T(0.85) + SCAN + 0.02);
+
+          // ── 5. กระดิ่งดัง: 6 จังหวะ × 0.09 วิ แกว่งลดลงจนนิ่ง + คลื่นเสียงวาบ (ทุกท่อน fromTo ระบุต้น-ปลายชัด)
+          const SWING = [18, -14, 10, -7, 4, 0], STEP = 0.09, RING = SWING.length * STEP;
+          function ring(t0, amp) {
+            let prev = 0;
+            SWING.forEach((a, i) => {
+              const to = a * amp;
+              tl.fromTo("#cta-line-bell", { rotation: prev }, { rotation: to, duration: STEP, ease: "sine.inOut", immediateRender: false }, t0 + i * STEP);
+              prev = to;
+            });
+            tl.fromTo("#cta-line-waves", { opacity: 0, scale: 0.8 }, { opacity: 1, scale: 1, duration: 0.12, ease: "power2.out", immediateRender: false }, t0);
+            tl.fromTo("#cta-line-waves", { opacity: 1 }, { opacity: 0, duration: 0.34, ease: "power1.in", immediateRender: false }, t0 + 0.18);
+          }
+          const R0 = T(0.95);
+          ring(R0, 1);
+          tl.fromTo("#cta-line-dot", { scale: 0, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.3, ease: "back.out(3)" }, R0 + 0.07);
+
+          // ── 6. ไอดีกวาดเข้า (clip-path ทั้งก้อน ไม่แยกตัวอักษร · ขอบลบไว้ไม่ให้ตัดขอบตัวหนังสือ/แสงตอนนิ่ง) + คำแนะนำขึ้น
+          // ต้นทาง: ขอบขวา 112% = ขอบซ้าย −12% พอดี → ปิดสนิท (เดิม 100% เหลือแถบ −12%…0 ให้แสงชิปโผล่เป็นเส้นเขียว)
+          const W0 = T(1.1), WIPE = 0.4 * K;
+          tl.fromTo("#cta-line-idbox", { clipPath: "inset(-60% 112% -60% -12%)" }, { clipPath: "inset(-60% -12% -60% -12%)", duration: WIPE, ease: "power2.inOut" }, W0);
+          // แสงขอบวิ่งตามขอบ clip (−12% → 112% ของความกว้างก้อน · ease เดียวกัน) แล้วดับ
+          tl.fromTo("#cta-line-idglint", { xPercent: -12 }, { xPercent: 112, duration: WIPE, ease: "power2.inOut" }, W0);
+          tl.fromTo("#cta-line-idglint", { opacity: 0 }, { opacity: 1, duration: 0.06, ease: "none", immediateRender: false }, W0);
+          tl.fromTo("#cta-line-idglint", { opacity: 1 }, { opacity: 0, duration: 0.16, ease: "power1.out", immediateRender: false }, W0 + WIPE - 0.04);
+          tl.fromTo("#cta-line-hint", { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.35 * K, ease: "power2.out" }, T(1.4));
+
+          // ── 7. ช่วงค้าง (finite · นับจาก dur): กระดิ่งดังทุก 1.5 วิ · กรอบหายใจเป็นคู่ไป-กลับ จบที่ขนาดเดิมก่อน END
+          for (let t0 = R0 + 1.5; t0 + RING <= END + 1e-6; t0 += 1.5) ring(t0, 0.8);
+          const P0 = Math.max(1.8, T(0.85) + 0.25 * K + 0.05), HALF = 0.75;
+          const halves = 2 * Math.floor(Math.max(0, END - P0) / (2 * HALF));
+          if (halves >= 2) {
+            tl.fromTo("#cta-line-frame", { scale: 1 }, { scale: 1.03, duration: HALF, ease: "sine.inOut", yoyo: true, repeat: halves - 1, immediateRender: false }, P0);
+          }
+
+          window.__timelines["cta-line"] = tl;
+        })();
+      </script>
+    </template>
+  </body>
+</html>

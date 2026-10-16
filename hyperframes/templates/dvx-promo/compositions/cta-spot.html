@@ -1,0 +1,428 @@
+<!doctype html>
+<!--
+  cta-spot — ฉากปิดของคลิปทายชุด (fmt-quiz): "เฉลยจุดซูม · รู้ตั้งแต่เลขไหน?"
+
+  ทำไมฉากนี้ (สเปกฉากปิด 16 ต.ค. 2026 · layout "spot"):
+    คลิปทายชุดเฉลยแล้วแต่ไม่เคยบอกว่า "เลนส์ซูมอยู่ตรงไหน" — ฉากนี้ย่อเลนส์กลับลงบนจุดเดิมบนซอง
+    แล้ววาดวงซ้อน 3 วง = ภาพที่คนดูเห็นตอนนับ 3 / 2 / 1 → คนดูย้อนกลับไปดู (rewatch) + ตอบเลขเดียวในคอมเมนต์
+    วงคำนวณจาก zx/zy/z0 ของฉากทายคลิปนี้เอง จึงจริงเฉพาะคลิปนี้ ไม่ใช่ภาพประกอบลอย ๆ
+
+  คณิตของวง (ตรวจกับ fmt-quiz.html แล้ว):
+    fmt-quiz วางรูป 2400×2400 (object-fit: contain) ให้จุด (zx, zy) ของจัตุรัสนั้นอยู่กลางเลนส์ แล้วขยาย (700/2400)·z
+    → เลนส์ 700 px เห็น 1/z ของความกว้างจัตุรัส · การหมุน/สั่นของเลนส์หมุนรอบจุดกลาง วงที่เห็นจึงไม่เปลี่ยน
+    → บนกล่อง contain 560 px ที่ (260, 400): วงกลางที่ (260 + 5.6·zx, 400 + 5.6·zy) เส้นผ่านศูนย์กลาง 560 / (z0·zf[k])
+    zf = ตัวคูณซูมตอนนับ "3|2|1" ของ fmt-quiz (0.86 · 0.72 · 0.6) → วง "3" เล็กสุด วง "1" ใหญ่สุด
+    กล่องต้องเป็นจัตุรัส contain แบบเดียวกับ gloss_box / fmt-quiz — สัดส่วนอื่นวงจะเพี้ยน
+
+  จังหวะ (วินาทีในฉาก · dur = ความยาวฉาก):
+    0.00 ซองเริ่มที่กรอบเฉลยของ fmt-quiz (src) แล้วลอยไปที่ (260, 400, 560) ใน 0.45 วิ (match cut)
+    0.10 ขอบเลนส์ 700 px แบบ fmt-quiz (540, 950) โผล่แล้วหดลงเป็นวง "1" · 0.40 / 0.52 วง "2" / "3" หดตามเข้าไปข้างใน · ป้ายเลขเด้ง
+    0.35 ม่านมืด (สำเนาซองหรี่ + รูกลมขอบนุ่ม) จาง + ขอบประหมุนช้า ๆ ถึง dur−0.4
+    0.50 ป้ายเล็ก · 0.62 หัวเรื่องกระแทก · 0.85 เส้นชี้วิ่ง + ป้ายชี้เด้ง · 1.00 ชื่อเฉลยกวาดเข้า · 1.15 ป้ายค่าย
+    1.25 ปุ่มคำตอบเด้งทีละปุ่ม (หรือคำถามย่อย V3) · 1.75 ข้อความชวนคอมเมนต์
+    1.95 → dur−0.4 คลื่นไฟ 3 → 2 → 1 (ปุ่มเลขเดียวกับวงสว่างพร้อมกัน · จำนวนรอบคำนวณจาก dur) · dur−0.4 นิ่งสนิท
+  ข้อเท็จจริง: ไม่มีตัวเลขยอดขาย/ราคา/สต็อก · ปุ่ม 3 2 1 คือปุ่มคำตอบ (สไตล์วงนับถอยหลัง) ไม่ใช่ข้อมูล
+  ฉากนี้โปร่ง — พื้นหลังกรมท่า/ลาย/โลโก้มุมอยู่ที่ index.html · id ทุกตัวขึ้นต้น cta-spot- (hf_render เปลี่ยนชื่อได้)
+-->
+<html
+  lang="th"
+  data-composition-variables='[
+    {"id":"variant","type":"string","label":"แบบข้อความ (V1/V2/V3)","default":"V1"},
+    {"id":"kicker","type":"string","label":"ป้ายเล็กบนสุด (ว่าง = ไม่แสดง)","default":"เฉลยจุดซูม"},
+    {"id":"title","type":"string","label":"หัวเรื่อง","default":"รู้ตั้งแต่เลขไหน?"},
+    {"id":"tpx","type":"number","label":"ขนาดหัวเรื่อง (px)","default":104,"min":56,"max":104,"step":1},
+    {"id":"callout","type":"string","label":"ป้ายชี้จุดซูม (ว่าง = ไม่แสดง)","default":"ลายที่ซูมให้ดู อยู่ตรงนี้เอง!"},
+    {"id":"cpx","type":"number","label":"ขนาดป้ายชี้ (px)","default":44,"min":28,"max":44,"step":1},
+    {"id":"chips","type":"string","label":"ปุ่มคำตอบ คั่นด้วย |","default":"3|2|1|ยังไม่รู้เลย"},
+    {"id":"q3","type":"string","label":"คำถามย่อยแทนปุ่ม (V3 · ว่าง = ไม่แสดง)","default":""},
+    {"id":"q3px","type":"number","label":"ขนาดคำถามย่อย (px)","default":64,"min":40,"max":64,"step":1},
+    {"id":"ask","type":"string","label":"ข้อความชวนคอมเมนต์","default":"คอมเมนต์มาเลย"},
+    {"id":"img","type":"string","label":"รูปซอง (ไฟล์เดียวกับฉากเฉลย)","default":"assets/packs/op-15.webp"},
+    {"id":"name","type":"string","label":"ชื่อชุด (เฉลย)","default":"OP-15"},
+    {"id":"tag","type":"string","label":"ป้ายใต้ชื่อ","default":"One Piece"},
+    {"id":"fs","type":"number","label":"ขนาดชื่อเฉลย (px)","default":72,"min":44,"max":72,"step":1},
+    {"id":"zx","type":"number","label":"จุดซูม X (% ของจัตุรัส contain)","default":50.34,"min":0,"max":100,"step":0.01},
+    {"id":"zy","type":"number","label":"จุดซูม Y (% ของจัตุรัส contain)","default":33.98,"min":0,"max":100,"step":0.01},
+    {"id":"z0","type":"number","label":"ซูมเริ่ม (เท่า)","default":4.2,"min":1,"max":8,"step":0.1},
+    {"id":"zf","type":"string","label":"ตัวคูณซูมตอนนับ 3|2|1 (ชุดเดียวกับ fmt-quiz)","default":"0.86|0.72|0.6"},
+    {"id":"src","type":"string","label":"กรอบซองเฟรมสุดท้ายของฉากก่อน cx,cy,w,h,rot","default":"540,878,660,660,-3"},
+    {"id":"dur","type":"number","label":"ความยาวฉาก (วิ)","default":5.4,"min":1,"max":60,"step":0.01}
+  ]'
+>
+  <head>
+    <meta charset="UTF-8" />
+  </head>
+  <body>
+    <template>
+      <style>
+        @font-face { font-family: "Kanit"; src: url("assets/fonts/Kanit-Black.ttf"); font-weight: 900; }
+        @font-face { font-family: "Kanit"; src: url("assets/fonts/Kanit-ExtraBold.ttf"); font-weight: 800; }
+        @font-face { font-family: "Kanit"; src: url("assets/fonts/Kanit-SemiBold.ttf"); font-weight: 600; }
+        #root { position: absolute; inset: 0; overflow: hidden; font-family: "Kanit", sans-serif; color: #ffffff; }
+
+        /* ── หัว: ป้ายเล็ก (y ~192–254) + หัวเรื่อง (y ~262–378) */
+        #cta-spot-head { position: absolute; left: 0; right: 0; top: 192px; z-index: 7; }
+        #cta-spot-kicker-row { display: flex; justify-content: center; height: 62px; }
+        #cta-spot-kicker {
+          display: block; padding: 6px 32px 10px; border-radius: 999px; background: #1b8dff;
+          box-shadow: 0 0 34px rgba(89, 210, 255, 0.8); font-weight: 800; font-size: 38px; line-height: 1.2; white-space: nowrap; will-change: transform;
+        }
+        .cta-spot-q {
+          display: block; text-align: center; font-weight: 900; line-height: 1.12; white-space: nowrap;
+          -webkit-text-stroke: 14px #03102a; paint-order: stroke fill;
+          text-shadow: 0 10px 0 #03102a, 0 0 40px rgba(27, 141, 255, 0.55); will-change: transform, opacity;
+        }
+        #cta-spot-title { --qmt: 8px; margin-top: var(--qmt); font-size: 104px; color: #ffffff; }
+
+        /* ── ซอง: กล่อง contain จัตุรัส 560 ที่ (260, 400) — จัตุรัสเดียวกับ gloss_box / fmt-quiz
+           เงาย่อจาก fmt-quiz (26/50 ที่ 660 px) ให้เฟรมแรกที่สเกล 660/560 เท่ากันพอดี */
+        #cta-spot-pack { position: absolute; left: 260px; top: 400px; width: 560px; height: 560px; z-index: 2; will-change: transform; }
+        #cta-spot-pimg, #cta-spot-pdim { position: absolute; left: 0; top: 0; width: 560px; height: 560px; object-fit: contain; }
+        #cta-spot-pimg { filter: drop-shadow(0 22px 42px rgba(0, 0, 0, 0.6)); }
+        /* ม่านมืด = สำเนาซองที่หรี่ลง + รูกลมขอบนุ่มตรงจุดซูม (mask ตั้งจาก JS) → มืดเฉพาะตัวซอง ไม่เป็นกล่องเหลี่ยมบนพื้นหลัง */
+        #cta-spot-pdim { filter: brightness(0.2) saturate(0.55); opacity: 0; will-change: opacity; }
+
+        /* ── วงซ้อน 3 วง (ตกแต่ง — ตัวเลขอยู่ที่ป้ายเลขแยกต่างหาก) */
+        #cta-spot-rings { position: absolute; left: 0; top: 0; width: 0; height: 0; z-index: 4; will-change: transform; }
+        .cta-spot-ring, .cta-spot-lit { position: absolute; box-sizing: border-box; border-radius: 50%; border-style: solid; opacity: 0; will-change: opacity; }
+        .cta-spot-ring { border-color: #59d2ff; box-shadow: 0 0 16px rgba(27, 141, 255, 0.95), inset 0 0 10px rgba(27, 141, 255, 0.55); }
+        .cta-spot-lit { border-color: var(--hot, #ffc24a); box-shadow: 0 0 20px var(--hot, #ffc24a), 0 0 44px var(--hot, #ffc24a), inset 0 0 14px var(--hot, #ffc24a); }
+        #cta-spot-dash { position: absolute; overflow: visible; opacity: 0; will-change: transform, opacity; }
+        #cta-spot-dash circle { fill: none; stroke: rgba(89, 210, 255, 0.72); stroke-width: 4; stroke-dasharray: 16 12; }
+
+        /* ── ป้ายเลข 3 · 2 · 1 บนขอบแต่ละวง (หันออกจากกลางซอง) */
+        #cta-spot-marks { position: absolute; left: 0; top: 0; width: 0; height: 0; z-index: 6; }
+        .cta-spot-mark { position: absolute; width: 0; height: 0; will-change: transform, opacity; }
+        .cta-spot-mark-d {
+          position: absolute; left: -24px; top: -24px; width: 48px; height: 48px; box-sizing: border-box; border-radius: 50%;
+          background: #03102a; border: 4px solid #59d2ff; box-shadow: 0 0 14px rgba(27, 141, 255, 0.9);
+          text-align: center; font-weight: 900; font-size: 30px; line-height: 40px; color: #ffffff; will-change: transform;
+        }
+
+        /* ── ป้ายชี้ + เส้นชี้ (ฝั่งตรงข้ามจุดซูม · ตำแหน่งตั้งจาก JS) */
+        #cta-spot-lead { position: absolute; left: 0; top: 0; width: 1080px; height: 1920px; z-index: 5; overflow: visible; pointer-events: none; }
+        #cta-spot-lead-p { fill: none; stroke: #59d2ff; stroke-width: 5; stroke-linecap: round; filter: drop-shadow(0 0 8px #1b8dff); }
+        #cta-spot-lead-dot { fill: #e8f7ff; filter: drop-shadow(0 0 8px #59d2ff); }
+        #cta-spot-callout { position: absolute; left: 120px; top: 820px; width: 840px; display: flex; justify-content: center; z-index: 6; }
+        #cta-spot-callout-pill {
+          display: block; padding: 6px 30px 12px; border-radius: 999px; background: rgba(3, 16, 42, 0.94);
+          border: 4px solid #59d2ff; box-shadow: 0 0 30px rgba(27, 141, 255, 0.75);
+          font-weight: 800; font-size: 44px; line-height: 1.2; white-space: nowrap; color: #ffffff; will-change: transform, opacity;
+        }
+
+        /* ── เฉลย: ชื่อทอง + ค่าย · กล่อง x 70–930 — ชื่อสั้นอยู่กลาง 540 ชื่อยาว (> 780 px) ชิดขวาที่ 930
+           (ตัวเว้นซ้ายตั้งต้น 80 px ยอมหดก่อน · ไม่ต้องวัดตัวอักษรใน Chrome) — ไม่ล้นเข้าแถบปุ่มขวาของ TikTok */
+        #cta-spot-ans, #cta-spot-tagrow { position: absolute; left: 70px; width: 860px; display: flex; z-index: 6; }
+        #cta-spot-ans { top: 975px; }
+        #cta-spot-tagrow { top: 1052px; }
+        #cta-spot-ans::before, #cta-spot-tagrow::before { content: ""; flex: 1 1 80px; min-width: 0; }
+        #cta-spot-ans::after, #cta-spot-tagrow::after { content: ""; flex: 1 1 0px; min-width: 0; }
+        #cta-spot-name {
+          flex: 0 0 auto; display: block; font-weight: 900; line-height: 1.02; white-space: nowrap;
+          background: linear-gradient(180deg, #fff4c9 0%, #ffc24a 45%, #fff1b8 68%, #c98a12 100%);
+          -webkit-background-clip: text; background-clip: text; color: transparent;
+          filter: drop-shadow(0 6px 0 #03102a) drop-shadow(0 0 26px rgba(255, 194, 74, 0.65));
+        }
+        #cta-spot-tagline { flex: 0 0 auto; display: block; font-weight: 600; font-size: 28px; line-height: 1.25; white-space: nowrap; color: #59d2ff; will-change: transform, opacity; }
+
+        /* ── ปุ่มคำตอบ (สไตล์วงนับถอยหลังของ fmt-quiz: พื้นกรมท่า + รางฟ้าจาง · ตอนสว่าง = เส้นสีเน้นวิ่งรอบ) */
+        #cta-spot-chips { position: absolute; left: 0; right: 0; top: 1110px; height: 100px; display: flex; justify-content: center; align-items: center; gap: 26px; z-index: 6; }
+        .cta-spot-chipw { flex: 0 0 auto; display: block; will-change: transform, opacity; }
+        .cta-spot-chip {
+          position: relative; display: flex; align-items: center; justify-content: center; box-sizing: border-box;
+          height: 100px; min-width: 100px; padding: 0 34px 4px; border-radius: 50px;
+          background: rgba(3, 16, 42, 0.92); border: 8px solid rgba(89, 210, 255, 0.35); box-shadow: 0 0 22px rgba(27, 141, 255, 0.35);
+          will-change: transform;
+        }
+        .cta-spot-chip.cta-spot-chip-d { width: 100px; padding: 0; }
+        .cta-spot-chip-t { display: block; font-weight: 900; font-size: 40px; line-height: 1.2; white-space: nowrap; color: #ffffff; }
+        .cta-spot-chip-d .cta-spot-chip-t { font-size: 58px; line-height: 1; }
+        .cta-spot-chip-arc { position: absolute; left: -8px; top: -8px; width: 100px; height: 100px; overflow: visible; }
+        .cta-spot-chip-arc circle { fill: none; stroke: var(--hot, #ffc24a); stroke-width: 8; stroke-linecap: round; filter: drop-shadow(0 0 8px var(--hot, #ffc24a)); opacity: 0; }
+        /* V3: คำถามย่อยแทนปุ่ม */
+        #cta-spot-q3row { position: absolute; left: 0; right: 0; top: 1116px; z-index: 6; }
+        #cta-spot-q3 { font-size: 64px; color: var(--hot, #ffc24a); -webkit-text-stroke: 12px #03102a; }
+
+        /* ── ชวนคอมเมนต์ */
+        #cta-spot-askrow { position: absolute; left: 0; right: 0; top: 1228px; height: 56px; display: flex; justify-content: center; align-items: center; gap: 14px; z-index: 6; will-change: transform, opacity; }
+        #cta-spot-bubble { flex: 0 0 auto; display: block; width: 48px; height: 44px; overflow: visible; will-change: transform; }
+        #cta-spot-ask {
+          flex: 0 0 auto; display: block; font-weight: 800; font-size: 40px; line-height: 1.25; white-space: nowrap; color: var(--hot, #ffc24a);
+          -webkit-text-stroke: 8px #03102a; paint-order: stroke fill; text-shadow: 0 4px 0 #03102a, 0 0 22px rgba(3, 16, 42, 0.9);
+        }
+        #cta-spot-kicker:empty, #cta-spot-callout-pill:empty, #cta-spot-name:empty, #cta-spot-tagline:empty, #cta-spot-q3:empty, #cta-spot-ask:empty { display: none; }
+      </style>
+
+      <div id="root" data-composition-id="cta-spot" data-width="1080" data-height="1920">
+        <div id="cta-spot-pack">
+          <img id="cta-spot-pimg" data-var-src="img" src="assets/packs/op-15.webp" alt="" />
+          <img id="cta-spot-pdim" data-var-src="img" src="assets/packs/op-15.webp" alt="" aria-hidden="true" data-layout-ignore />
+        </div>
+        <div id="cta-spot-rings" aria-hidden="true" data-layout-ignore>
+          <svg id="cta-spot-dash" viewBox="0 0 300 300"><circle cx="150" cy="150" r="144" /></svg>
+          <div class="cta-spot-ring" id="cta-spot-r0"></div>
+          <div class="cta-spot-ring" id="cta-spot-r1"></div>
+          <div class="cta-spot-ring" id="cta-spot-r2"></div>
+          <div class="cta-spot-lit" id="cta-spot-l0"></div>
+          <div class="cta-spot-lit" id="cta-spot-l1"></div>
+          <div class="cta-spot-lit" id="cta-spot-l2"></div>
+        </div>
+        <svg id="cta-spot-lead" viewBox="0 0 1080 1920" aria-hidden="true" data-layout-ignore>
+          <path id="cta-spot-lead-p" d="M 540 700 L 540 820" />
+          <circle id="cta-spot-lead-dot" cx="540" cy="700" r="7" />
+        </svg>
+        <div id="cta-spot-marks">
+          <div class="cta-spot-mark" id="cta-spot-m0"><div class="cta-spot-mark-d" id="cta-spot-md0">3</div></div>
+          <div class="cta-spot-mark" id="cta-spot-m1"><div class="cta-spot-mark-d" id="cta-spot-md1">2</div></div>
+          <div class="cta-spot-mark" id="cta-spot-m2"><div class="cta-spot-mark-d" id="cta-spot-md2">1</div></div>
+        </div>
+        <div id="cta-spot-callout"><div id="cta-spot-callout-pill" data-var-text="callout" style="font-size: calc(var(--cpx, 44) * 1px)">ลายที่ซูมให้ดู อยู่ตรงนี้เอง!</div></div>
+        <div id="cta-spot-ans"><span id="cta-spot-name" data-var-text="name" style="font-size: calc(var(--fs, 72) * 1px)">OP-15</span></div>
+        <div id="cta-spot-tagrow"><span id="cta-spot-tagline" data-var-text="tag">One Piece</span></div>
+        <div id="cta-spot-chips"></div>
+        <div id="cta-spot-q3row" class="dvx-head"><div class="cta-spot-q dvx-q dvx-q2" id="cta-spot-q3" data-var-text="q3" style="font-size: calc(var(--q3px, 64) * 1px)"></div></div>
+        <div id="cta-spot-askrow">
+          <svg id="cta-spot-bubble" viewBox="0 0 48 44" aria-hidden="true" data-layout-ignore>
+            <path d="M8 4 H40 A6 6 0 0 1 46 10 V26 A6 6 0 0 1 40 32 H22 L12 40 L13 32 H8 A6 6 0 0 1 2 26 V10 A6 6 0 0 1 8 4 Z" fill="#1b8dff" stroke="#e8f7ff" stroke-width="3" stroke-linejoin="round" />
+            <circle cx="15" cy="18" r="3.2" fill="#ffffff" /><circle cx="24" cy="18" r="3.2" fill="#ffffff" /><circle cx="33" cy="18" r="3.2" fill="#ffffff" />
+          </svg>
+          <span id="cta-spot-ask" data-var-text="ask">คอมเมนต์มาเลย</span>
+        </div>
+        <div id="cta-spot-head" class="dvx-head">
+          <div id="cta-spot-kicker-row"><div id="cta-spot-kicker" class="dvx-kick" data-var-text="kicker">เฉลยจุดซูม</div></div>
+          <div class="cta-spot-q dvx-q dvx-q1" id="cta-spot-title" data-var-text="title" style="font-size: calc(var(--tpx, 104) * 1px)">รู้ตั้งแต่เลขไหน?</div>
+        </div>
+      </div>
+
+      <script>
+        (function () {
+          const v = (window.__hyperframes && window.__hyperframes.getVariables && window.__hyperframes.getVariables()) || {};
+          const num = (x, d) => (x != null && x !== "" && isFinite(Number(x)) ? Number(x) : d);
+          const str = (x) => (x == null ? "" : String(x)).trim();
+          const $ = (id) => document.getElementById(id);
+          const DUR = Math.max(1, num(v.dur, 5.4));
+          const END = DUR - 0.4;                                     // หลังจากนี้นิ่งสนิท (เฟรมจบสะอาด · วนกลับได้)
+          const K = Math.min(1, Math.max(0.5, (DUR - 0.45) / 2.1));  // ฉากสั้นผิดปกติ → บีบจังหวะเข้า (ปกติ ≥ 3 วิ = 1)
+          const at = (t) => t * K;
+          const tl = gsap.timeline({ paused: true });
+
+          // ── ค่าคงที่ของเลย์เอาต์ (คำนวณครั้งเดียว ไม่วัด DOM ระหว่างเรนเดอร์)
+          const BOX = 560, BX = 260, BY = 400, PCX = BX + BOX / 2, PCY = BY + BOX / 2;
+          const LENS_CX = 540, LENS_CY = 950, LENS_D = 710, LENS_B = 10;   // ขอบเลนส์ fmt-quiz: เลนส์ 700 + ขอบ 10 (นอก 720)
+          const RB = 5, MARK = 48, DEG = Math.PI / 180;
+
+          // ── จุดซูม + เส้นผ่านศูนย์กลางวง (เส้นกลางขอบ) = BOX / (z0·zf) · ลำดับ zf = นับ "3", "2", "1"
+          const ZX = Math.min(1, Math.max(0, num(v.zx, 50.34) / 100));
+          const ZY = Math.min(1, Math.max(0, num(v.zy, 33.98) / 100));
+          const Z0 = Math.max(1, num(v.z0, 4.2));
+          let ZF = str(v.zf || "0.86|0.72|0.6").split("|").map(Number);
+          if (ZF.length !== 3 || !ZF.every((f) => isFinite(f) && f > 0)) ZF = [0.86, 0.72, 0.6];
+          const CX = BX + BOX * ZX, CY = BY + BOX * ZY;
+          const D = ZF.map((f) => BOX / (Z0 * f));
+          const R = D.map((d) => d / 2);
+          const RMAX = Math.max(R[0], R[1], R[2]);
+          const order = [0, 1, 2].sort((a, b) => R[b] - R[a]);     // ใหญ่ → เล็ก (ปกติ วง "1" → "2" → "3")
+
+          // ── 1. match cut: ซองเริ่มที่กรอบเฟรมสุดท้ายของฉากเฉลย แล้วลอยมาที่กล่อง 560
+          const sv = str(v.src).split(",").map(Number);
+          const SRC = sv.length >= 3 && sv.slice(0, 3).every((x) => isFinite(x)) ? sv : [540, 878, 660, 660, -3];
+          const sw = isFinite(SRC[3]) && SRC[3] > 0 ? Math.min(SRC[2], SRC[3]) : SRC[2];
+          const S0 = Math.max(0.05, sw / BOX), ROT0 = isFinite(SRC[4]) ? SRC[4] : 0;
+          tl.fromTo("#cta-spot-pack", { x: SRC[0] - PCX, y: SRC[1] - PCY, scale: S0, rotation: ROT0 },
+            { x: 0, y: 0, scale: 1, rotation: 0, duration: 0.45, ease: "power3.inOut" }, 0);
+
+          // ── 2. ม่านมืด: สำเนาซองหรี่ · รูกลมขอบนุ่มเท่าวงใหญ่สุด (พิกัดในกล่องซอง จึงเลื่อนตามซองเสมอ)
+          const pdim = $("cta-spot-pdim");
+          const hr = RMAX + RB / 2 + 2;
+          const mask = "radial-gradient(circle at " + (BOX * ZX).toFixed(1) + "px " + (BOX * ZY).toFixed(1) + "px, rgba(0,0,0,0) " +
+            hr.toFixed(1) + "px, #000 " + (hr + 30).toFixed(1) + "px)";
+          pdim.style.webkitMaskImage = mask;
+          pdim.style.maskImage = mask;
+          tl.fromTo(pdim, { opacity: 0 }, { opacity: 0.72, duration: 0.4, ease: "power2.out" }, at(0.35));
+
+          // ── 3. วงซ้อน: ขอบเลนส์ fmt-quiz (700 px ที่ 540,950) หดลงมาเป็นวงใหญ่สุด แล้ววงที่เหลือหดตามเข้าไปข้างใน
+          const rings = $("cta-spot-rings");
+          rings.style.left = CX + "px";
+          rings.style.top = CY + "px";
+          const geo = (d, b) => ({ width: d + b, height: d + b, left: -(d + b) / 2, top: -(d + b) / 2, borderWidth: b });
+          [0, 1, 2].forEach((j) => {
+            const g = geo(D[j], RB), el = $("cta-spot-l" + j);
+            el.style.width = g.width + "px";
+            el.style.height = g.height + "px";
+            el.style.left = g.left + "px";
+            el.style.top = g.top + "px";
+            el.style.borderWidth = RB + "px";
+          });
+          tl.fromTo(rings, { x: LENS_CX - CX, y: LENS_CY - CY }, { x: 0, y: 0, duration: 0.45, ease: "power3.inOut" }, at(0.1));
+          const land = {};
+          const big = order[0];
+          tl.fromTo("#cta-spot-r" + big, geo(LENS_D, LENS_B), Object.assign(geo(D[big], RB), { duration: 0.45, ease: "power3.inOut" }), at(0.1));
+          tl.fromTo("#cta-spot-r" + big, { opacity: 0 }, { opacity: 1, duration: 0.15, ease: "power1.out" }, at(0.1));
+          land[big] = at(0.1) + 0.45;
+          [order[1], order[2]].forEach((j, k) => {
+            const t0 = at(k ? 0.52 : 0.4);
+            tl.fromTo("#cta-spot-r" + j, geo(D[order[k]] + 22, RB), Object.assign(geo(D[j], RB), { duration: 0.3, ease: "power3.out" }), t0);
+            tl.fromTo("#cta-spot-r" + j, { opacity: 0 }, { opacity: 1, duration: 0.1, ease: "power1.out" }, t0);
+            land[j] = t0 + 0.3;
+          });
+          // ขอบประนอกวงใหญ่สุด หมุนช้า ๆ 0 → 60° จนถึงช่วงนิ่ง
+          const dash = $("cta-spot-dash"), RD = RMAX + 34, SD = Math.ceil(2 * RD + 12);
+          dash.setAttribute("viewBox", "0 0 " + SD + " " + SD);
+          dash.style.width = SD + "px";
+          dash.style.height = SD + "px";
+          dash.style.left = -SD / 2 + "px";
+          dash.style.top = -SD / 2 + "px";
+          const dc = dash.querySelector("circle");
+          dc.setAttribute("cx", SD / 2);
+          dc.setAttribute("cy", SD / 2);
+          dc.setAttribute("r", RD);
+          tl.fromTo(dash, { opacity: 0, scale: 1.25 }, { opacity: 1, scale: 1, duration: 0.4, ease: "power3.out" }, at(0.35));
+          tl.fromTo(dash, { rotation: 0 }, { rotation: 60, duration: Math.max(0.3, END - at(0.35)), ease: "none" }, at(0.35));
+
+          // ── 4. ป้ายเลขบนขอบวง: กางเป็นพัดรอบทิศ "ออกจากกลางซอง" · อ่าน 3 → 2 → 1 จากซ้ายไปขวา/บนลงล่าง
+          //    มุมพัดกว้างพอไม่ให้ป้ายชนกัน · ถ้าพัดล้นเข้าหัวเรื่อง/ใต้กล่องซอง ลองทิศอื่น
+          const chord = (a, b, t) => Math.sqrt(Math.max(0, a * a + b * b - 2 * a * b * Math.cos(t)));
+          let dl = 30 * DEG;
+          while (dl < 80 * DEG && (chord(R[0], R[1], dl) < MARK + 8 || chord(R[1], R[2], dl) < MARK + 8)) dl += 2 * DEG;
+          const fan = (th) => {
+            const sgn = Math.cos(th) - Math.sin(th) >= 0 ? 1 : -1;
+            return [0, 1, 2].map((j) => {
+              const a = th + sgn * (j - 1) * dl;
+              return { x: CX + R[j] * Math.cos(a), y: CY + R[j] * Math.sin(a) };
+            });
+          };
+          const fits = (ps) => ps.every((p) => p.y - MARK / 2 >= 396 && p.y + MARK / 2 <= BY + BOX - 4 && p.x - MARK / 2 >= 84 && p.x + MARK / 2 <= 926);
+          const away = Math.hypot(CX - PCX, CY - PCY) > 24 ? Math.atan2(CY - PCY, CX - PCX) : -Math.PI / 2;
+          const side = CX >= PCX ? 0 : Math.PI;
+          let pos = fan(away);
+          for (const th of [away, -Math.PI / 2, side, Math.PI - side, Math.PI / 2]) {
+            const f = fan(th);
+            if (fits(f)) { pos = f; break; }
+          }
+          [0, 1, 2].forEach((j) => {
+            const m = $("cta-spot-m" + j);
+            m.style.left = pos[j].x.toFixed(1) + "px";
+            m.style.top = pos[j].y.toFixed(1) + "px";
+            tl.fromTo(m, { scale: 0, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.3, ease: "back.out(2)" }, land[j] - 0.03);
+          });
+
+          // ── 5. หัวเรื่อง
+          tl.fromTo("#cta-spot-kicker", { scale: 0.2, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.4, ease: "back.out(2.2)" }, at(0.5));
+          tl.fromTo("#cta-spot-title", { scale: 1.8, opacity: 0, filter: "blur(16px)" }, { scale: 1, opacity: 1, filter: "blur(0px)", duration: 0.36, ease: "power4.out" }, at(0.62));
+
+          // ── 6. ป้ายชี้ฝั่งตรงข้ามจุดซูม (จุดอยู่ครึ่งบน → ป้ายอยู่ช่วงล่างของกล่องซอง) + เส้นชี้จากขอบวงใหญ่สุด
+          const CPX = num(v.cpx, 44), PH = Math.round(CPX * 1.2 + 26);
+          if (str(v.callout)) {
+            const below = CY <= PCY + 10;
+            let top;
+            if (below) {
+              const a = CY + RMAX + 56, b = BY + BOX - 6;
+              top = Math.max(CY + RMAX + 26, Math.min((a + b) / 2 - PH / 2, 968 - PH));
+            } else {
+              const a = BY + 4, b = CY - RMAX - 56;
+              top = Math.min(CY - RMAX - 26 - PH, Math.max((a + b) / 2 - PH / 2, 392));
+            }
+            const PX = 540 + Math.max(-80, Math.min(80, (PCX - CX) * 0.8));
+            const box = $("cta-spot-callout");
+            box.style.left = (PX - 420).toFixed(1) + "px";
+            box.style.top = top.toFixed(1) + "px";
+            const ex = PX, ey = below ? top - 3 : top + PH + 3;
+            const dx = ex - CX, dy = ey - CY, dd = Math.hypot(dx, dy) || 1;
+            const r0 = RMAX + RB / 2 + 7;
+            const sx = CX + (dx / dd) * r0, sy = CY + (dy / dd) * r0;
+            const L = Math.hypot(ex - sx, ey - sy);
+            const lp = $("cta-spot-lead-p"), dot = $("cta-spot-lead-dot");
+            if (L > 12) {
+              lp.setAttribute("d", "M " + sx.toFixed(1) + " " + sy.toFixed(1) + " L " + ex.toFixed(1) + " " + ey.toFixed(1));
+              lp.style.strokeDasharray = L.toFixed(1) + " " + (L + 20).toFixed(1);   // ช่องว่างยาวกว่าเส้น — ไม่มีจุดหัวมนค้างก่อนวาด
+              dot.setAttribute("cx", sx.toFixed(1));
+              dot.setAttribute("cy", sy.toFixed(1));
+              tl.fromTo(lp, { strokeDashoffset: L + 10 }, { strokeDashoffset: 0, duration: 0.25, ease: "power2.out" }, at(0.85));
+              tl.fromTo(dot, { scale: 0, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.22, ease: "back.out(3)" }, at(0.85));
+            } else {
+              $("cta-spot-lead").style.display = "none";
+            }
+            tl.fromTo("#cta-spot-callout-pill", { scale: 0.3, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.36, ease: "back.out(2)" }, at(0.92));
+          } else {
+            $("cta-spot-callout").style.display = "none";
+            $("cta-spot-lead").style.display = "none";
+          }
+
+          // ── 7. เฉลย: ชื่อทองกวาดเข้า (clip-path กว้างกว่ากล่อง ไม่ตัดแสงเรือง) + ป้ายค่าย
+          tl.fromTo("#cta-spot-name", { clipPath: "inset(-30% 110% -30% -10%)" }, { clipPath: "inset(-30% -10% -30% -10%)", duration: 0.3, ease: "power3.out" }, at(1.0));
+          tl.fromTo("#cta-spot-tagline", { opacity: 0, y: 12 }, { opacity: 1, y: 0, duration: 0.3, ease: "power2.out" }, at(1.15));
+
+          // ── 8. ปุ่มคำตอบ (V1 3·2·1·ยังไม่รู้เลย · V2 ถูก·ผิด) หรือคำถามย่อย (V3)
+          const variant = str(v.variant).toUpperCase();
+          const chips = str(v.chips) ? str(v.chips).split("|").map((s) => s.trim()).filter(Boolean).slice(0, 5) : [];
+          const useQ3 = !!str(v.q3) && (variant === "V3" || !chips.length);
+          const chipBy = {};
+          if (!useQ3) {
+            const host = $("cta-spot-chips");
+            chips.forEach((t, i) => {
+              const digit = /^[0-9]$/.test(t);
+              const w = document.createElement("div");
+              w.className = "cta-spot-chipw";
+              w.id = "cta-spot-cw" + i;
+              const c = document.createElement("div");
+              c.className = "cta-spot-chip" + (digit ? " cta-spot-chip-d" : "");
+              c.id = "cta-spot-c" + i;
+              if (digit) {
+                c.innerHTML = '<svg class="cta-spot-chip-arc" viewBox="0 0 100 100" aria-hidden="true" data-layout-ignore>' +
+                  '<circle cx="50" cy="50" r="46" transform="rotate(-90 50 50)" /></svg>';
+              }
+              const s = document.createElement("span");
+              s.className = "cta-spot-chip-t";
+              s.textContent = t;
+              c.appendChild(s);
+              w.appendChild(c);
+              host.appendChild(w);
+              if (digit && !chipBy[t]) chipBy[t] = { c, arc: c.querySelector("circle") };
+              tl.fromTo(w, { scale: 0.3, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.35, ease: "back.out(2.2)" }, at(1.25) + 0.12 * i);
+            });
+            $("cta-spot-q3row").style.display = "none";
+          } else {
+            $("cta-spot-chips").style.display = "none";
+            tl.fromTo("#cta-spot-q3", { scale: 1.8, opacity: 0, filter: "blur(14px)" }, { scale: 1, opacity: 1, filter: "blur(0px)", duration: 0.36, ease: "power4.out" }, at(1.25));
+          }
+          const ARC = 2 * Math.PI * 46;
+          Object.keys(chipBy).forEach((t) => {
+            chipBy[t].arc.style.strokeDasharray = ARC.toFixed(1) + " " + (ARC + 20).toFixed(1);
+            chipBy[t].arc.style.strokeDashoffset = (ARC + 10).toFixed(1);
+          });
+
+          // ── 9. ชวนคอมเมนต์
+          if (str(v.ask)) {
+            tl.fromTo("#cta-spot-askrow", { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.3, ease: "power3.out" }, at(1.75));
+            tl.fromTo("#cta-spot-bubble", { y: 0 }, { y: -12, duration: 0.14, ease: "power2.out", yoyo: true, repeat: 1, immediateRender: false }, at(1.75) + 0.2);
+          } else {
+            $("cta-spot-askrow").style.display = "none";
+          }
+
+          // ── 10. คลื่นไฟ 3 → 2 → 1: วงสว่างเป็นสีเน้น + ป้ายเลขเด้ง + ปุ่มเลขเดียวกันมีเส้นวิ่งรอบ (finite · จบก่อน END)
+          const LBL = ["3", "2", "1"];
+          const W0 = Math.max(at(1.95), at(1.75) + 0.35), STEP = 0.36, UP = 0.14, DOWN = 0.42, TAILW = 0.6, CYC = 3 * STEP + 0.5;
+          const nW = Math.max(0, Math.floor((END - W0 - 2 * STEP - TAILW) / CYC) + 1);
+          for (let c = 0; c < nW; c++) {
+            for (let j = 0; j < 3; j++) {
+              const t = W0 + c * CYC + j * STEP;
+              tl.fromTo("#cta-spot-l" + j, { opacity: 0 }, { opacity: 1, duration: UP, ease: "power2.out", immediateRender: false }, t);
+              tl.fromTo("#cta-spot-l" + j, { opacity: 1 }, { opacity: 0, duration: DOWN, ease: "power2.in", immediateRender: false }, t + UP);
+              tl.fromTo("#cta-spot-md" + j, { scale: 1 }, { scale: 1.24, duration: UP, ease: "power2.out", immediateRender: false }, t);
+              tl.fromTo("#cta-spot-md" + j, { scale: 1.24 }, { scale: 1, duration: DOWN, ease: "power2.inOut", immediateRender: false }, t + UP);
+              const ch = chipBy[LBL[j]];
+              if (ch) {
+                tl.fromTo(ch.arc, { strokeDashoffset: ARC + 10, opacity: 1 }, { strokeDashoffset: 0, opacity: 1, duration: 0.3, ease: "power2.out", immediateRender: false }, t);
+                tl.fromTo(ch.arc, { opacity: 1 }, { opacity: 0, duration: 0.26, ease: "power1.in", immediateRender: false }, t + 0.34);
+                tl.fromTo(ch.c, { scale: 1 }, { scale: 1.1, duration: UP, ease: "power2.out", immediateRender: false }, t);
+                tl.fromTo(ch.c, { scale: 1.1 }, { scale: 1, duration: DOWN, ease: "power2.inOut", immediateRender: false }, t + UP);
+              }
+            }
+          }
+
+          window.__timelines["cta-spot"] = tl;
+        })();
+      </script>
+    </template>
+  </body>
+</html>

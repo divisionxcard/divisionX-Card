@@ -219,7 +219,7 @@ def rank_plan(days=7, machine=None, voice="Puck", pick=None):
     lines.append(choose("rank", "cta"))
     scene = {"type": "rank", "span": 6, "kicker": choose("rank", "kicker", **fill), "q1": q1, "q2": q2,
              "sub": f"ยอดขายจริงจาก{where}{'' if machine else ' ทุกสาขา'} · {thai_range(d0, d1)}",
-             "items": [{k: it[k] for k in ("sku", "name", "tag")} for it in items]}
+             "items": [{k: it[k] for k in ("sku", "name", "tag", "say")} for it in items]}   # say = ฉากปิดพูดชื่อเต็ม
     style = choose("rank", "voice_style")
     return {"project": f"rank-{d1:%Y%m%d}" + (f"-{machine}" if machine else ""), "engine": "hyperframes",
             "format": "rank", "voice": voice, "voice_style": style, "copy": used,
@@ -266,6 +266,18 @@ def versus_plan(days=7, machine=None, voice="Puck", picks=None, pick=None, theme
         ops = sorted((s for s in sold if _op_number(s) > 0), key=_op_number, reverse=True)
         ids = ops[:2] + [best("PKM"), best("DB")]
     ids = list(dict.fromkeys(x for x in ids if x))[:4]
+    # ยอดเท่ากันพอดี = บอกผู้ชนะไม่ได้ (เดิม >= ให้ซองแรกชนะเงียบ ๆ แล้วพูดว่า "ขายดีกว่า" — ไม่จริง · ตรวจ 16 ต.ค.)
+    # รอบแรกเสมอ → สลับผู้ท้าชิงเป็นซองสำรองที่ไม่เสมอ · รอบหลังเสมอแชมป์ → จบศึกที่รอบก่อนหน้า
+    if len(ids) >= 2 and sold[ids[0]] == sold[ids[1]]:
+        spare = next((s for s in by_sales if s not in ids and sold[s] != sold[ids[0]]), None)
+        ids = [ids[0], spare] + ids[2:] if spare else ids[:1]
+    if len(ids) >= 2:
+        champ, keep = (ids[0] if sold[ids[0]] > sold[ids[1]] else ids[1]), 2
+        for c in ids[2:]:
+            if sold[c] == sold[champ]:
+                break
+            champ, keep = (champ if sold[champ] > sold[c] else c), keep + 1
+        ids = ids[:keep]
     if len(ids) < 2:
         raise ValueError("ผู้เข้าแข่งที่มียอดขายไม่พอ (ต้องอย่างน้อย 2)")
     items = []
@@ -302,7 +314,7 @@ def versus_plan(days=7, machine=None, voice="Puck", picks=None, pick=None, theme
     scene = {"type": "versus", "span": 1 + 2 * R, "kicker": choose("versus", "kicker"), "q1": q1, "q2": q2,
              "sub": f"เฉลยจากยอดขายจริงตู้ DivisionX · {thai_range(d0, d1)}",
              "final": choose("versus", "final", **fill),
-             "items": [{k: it[k] for k in ("sku", "name", "tag")} for it in items], "rounds": rounds}
+             "items": [{k: it[k] for k in ("sku", "name", "tag", "say")} for it in items], "rounds": rounds}
     style = choose("versus", "voice_style")
     return {"project": f"versus-{d1:%Y%m%d}" + (f"-{theme}" if theme != "newest" else ""), "engine": "hyperframes",
             "format": "versus", "theme": theme, "voice": voice, "voice_style": style, "copy": used,
@@ -326,7 +338,7 @@ def quiz_plan(sku=None, voice="Puck", days=7, machine=None, pick=None):
     hook, q1, q2 = choose("quiz", "hook")
     lines = [hook, choose("quiz", "count"), choose("quiz", "reveal", say=say), choose("quiz", "cta")]
     scene = {"type": "quiz", "span": 3, "sku": sku, "kicker": choose("quiz", "kicker"), "q1": q1, "q2": q2,
-             "sub": f"ใบ้ให้: ซอง {brand}", "prompt": choose("quiz", "prompt"), "name": name,
+             "sub": f"ใบ้ให้: ซอง {brand}", "prompt": choose("quiz", "prompt"), "name": name, "say": say,
              "tag": f"{brand} Card Game" if brand in ("One Piece", "Pokémon") else brand}
     style = choose("quiz", "voice_style")
     return {"project": f"quiz-{re.sub(r'[^a-z0-9]+', '-', sku.lower()).strip('-')}", "engine": "hyperframes",

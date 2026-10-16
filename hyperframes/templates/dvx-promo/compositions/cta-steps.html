@@ -1,0 +1,531 @@
+<!doctype html>
+<!--
+  cta-steps — ฉากปิด "กดตู้ 4 ขั้น · มือใหม่ก็กดได้" (สเปกฉากปิด 16 ต.ค. 2026 · layout "steps")
+
+  ทำไม: คลิปพิกัดตู้ตอบ "ตู้อยู่ไหน" — ฉากนี้ตอบ "ถึงแล้วกดยังไง" · คนดูที่ไม่เคยใช้ตู้การ์ดได้ขั้นตอนครบ
+    เช็กลิสต์ว่าง 4 แถวค้างบนจอ แล้วติดไฟทีละแถวตามเสียงที่พูด (open loop → อยู่ดูจนจบ)
+  ข้อความ: ตรงกับหน้า /how-to ทุกตัวอักษร (s1..s4 / d1..d4 มาจากค่าคงที่ชุดเดียวกับ deploy/app/how-to/page.jsx)
+    ขั้น 3 แสดง "สแกน QR พร้อมเพย์" คู่กับ "หรือชำระตามวิธีที่หน้าจอแสดง" เสมอ · ไอคอนเป็นภาพทั่วไป ไม่ใช่จอตู้จำลอง
+    และโทรศัพท์มีแค่สี่เหลี่ยม 3 มุม (ไม่ใช่ QR ที่สแกนได้)
+
+  จังหวะ (วินาทีภายในฉาก):
+    0.00  match cut — rank/versus/quiz: ซองฮีโร่เริ่มที่กรอบเฟรมสุดท้ายของฉากรูปแบบ (src = cx,cy,w,h,rot) แล้วบินเข้าช่องไอคอนขั้น 1
+          map (icon1 ว่าง): กรอบการ์ดรูปตู้ที่ src หดลงเป็นช่องไอคอนขั้น 1 (มีรูปถ้าส่ง photo มา · จางออกใน 0.3 วิ) + เช็กลิสต์ลอยขึ้นจาก y+200
+    0.10  ป้ายวิธีการซื้อกวาดเข้า · 0.20 q1 กระแทก · 0.36 q2 กระแทก
+    0.28–1.16 แถวว่างเข้า (45 %) · ป้ายเลขเด้งบนลงล่าง · รางเชื่อมลากลง
+    st1..st4 (เวลาที่เสียงพูดแต่ละขั้น — hf_render คำนวณ) สายฟ้าวิ่งลงรางถึงป้ายเลข → แถวติดไฟ ข้อความกวาดเข้า · แถวก่อนหน้าได้ ✓
+    st4+0.35 ป้ายลิงก์ /how-to ขึ้น · แสงกวาดผ่านลิงก์ · ช่วงค้าง: ขั้น 4 เต้น + ซองหล่นลงช่องรับซ้ำทุก 1.4 วิ (นับรอบจาก dur)
+    0.4 วิสุดท้ายนิ่งสนิท (ภาพแคปหน้าจอสะอาด)
+  ขนาดตัวอักษร: qs1/qs2 วัดฝั่ง Python (fit_px) · sfs/dfs/ffs มีค่าเริ่มต้นที่วัดกับข้อความ /how-to แล้ว (ส่งมาทับได้ถ้าข้อความเปลี่ยน)
+  ฉากนี้โปร่ง — พื้นหลังกรมท่า/ลายพื้นหลังมาจาก index.html
+-->
+<html
+  lang="th"
+  data-composition-variables='[
+    {"id":"variant","type":"string","label":"รุ่นข้อความ (H1–H5)","default":"H1"},
+    {"id":"label","type":"string","label":"ป้ายบนสุด","default":"วิธีการซื้อ"},
+    {"id":"q1","type":"string","label":"หัวเรื่องบรรทัด 1","default":"กดตู้ง่าย ๆ"},
+    {"id":"q2","type":"string","label":"หัวเรื่องบรรทัด 2 (สีเน้น)","default":"แค่ 4 ขั้นตอน"},
+    {"id":"qs1","type":"number","label":"ขนาดหัวเรื่องบรรทัด 1 (px)","default":104,"min":48,"max":104,"step":1},
+    {"id":"qs2","type":"number","label":"ขนาดหัวเรื่องบรรทัด 2 (px)","default":124,"min":48,"max":124,"step":1},
+    {"id":"s1","type":"string","label":"ขั้น 1 (ตัวใหญ่)","default":"เลือกการ์ด"},
+    {"id":"d1","type":"string","label":"ขั้น 1 (ตัวเล็ก)","default":"แตะหน้าจอ เลื่อนเลือกชุด/การ์ดที่ต้องการ"},
+    {"id":"s2","type":"string","label":"ขั้น 2 (ตัวใหญ่)","default":"ยืนยันรายการ"},
+    {"id":"d2","type":"string","label":"ขั้น 2 (ตัวเล็ก)","default":"ตรวจสอบรายการให้ครบก่อนชำระเงิน"},
+    {"id":"s3","type":"string","label":"ขั้น 3 (ตัวใหญ่)","default":"สแกน QR พร้อมเพย์"},
+    {"id":"d3","type":"string","label":"ขั้น 3 (ตัวเล็ก)","default":"หรือชำระตามวิธีที่หน้าจอแสดง"},
+    {"id":"s4","type":"string","label":"ขั้น 4 (ตัวใหญ่)","default":"รับสินค้า"},
+    {"id":"d4","type":"string","label":"ขั้น 4 (ตัวเล็ก)","default":"รอสินค้าหล่นที่ช่องรับด้านล่าง"},
+    {"id":"sfs","type":"number","label":"ขนาดตัวใหญ่ของขั้น (px)","default":60,"min":36,"max":60,"step":1},
+    {"id":"dfs","type":"number","label":"ขนาดตัวเล็กของขั้น (px)","default":30,"min":22,"max":30,"step":1},
+    {"id":"st1","type":"number","label":"เวลาพูดขั้น 1 (วิ)","default":2.6,"min":0,"max":60,"step":0.01},
+    {"id":"st2","type":"number","label":"เวลาพูดขั้น 2 (วิ)","default":3.3,"min":0,"max":60,"step":0.01},
+    {"id":"st3","type":"number","label":"เวลาพูดขั้น 3 (วิ)","default":4.1,"min":0,"max":60,"step":0.01},
+    {"id":"st4","type":"number","label":"เวลาพูดขั้น 4 (วิ)","default":5.0,"min":0,"max":60,"step":0.01},
+    {"id":"icon1","type":"string","label":"รูปซองฮีโร่ขั้น 1 (ว่าง = มือแตะจอ)","default":"assets/pack.webp"},
+    {"id":"photo","type":"string","label":"รูปตู้ในการ์ดเฟรมสุดท้ายของคลิปพิกัด (ว่าง = กรอบเปล่า)","default":""},
+    {"id":"src","type":"string","label":"กรอบฮีโร่เฟรมสุดท้าย cx,cy,w,h,rot","default":"540,878,660,660,-3"},
+    {"id":"url","type":"string","label":"ลิงก์","default":"division-x-card.vercel.app/how-to"},
+    {"id":"foot","type":"string","label":"ป้ายลิงก์ล่าง","default":"▶ ดูคลิปวิธีกดตู้ · division-x-card.vercel.app/how-to"},
+    {"id":"ffs","type":"number","label":"ขนาดป้ายลิงก์ (px)","default":32,"min":24,"max":34,"step":1},
+    {"id":"dur","type":"number","label":"ความยาวฉาก (วิ)","default":6.4,"min":2,"max":60,"step":0.01}
+  ]'
+>
+  <head>
+    <meta charset="UTF-8" />
+  </head>
+  <body>
+    <template>
+      <style>
+        @font-face { font-family: "Kanit"; src: url("assets/fonts/Kanit-Black.ttf"); font-weight: 900; }
+        @font-face { font-family: "Kanit"; src: url("assets/fonts/Kanit-ExtraBold.ttf"); font-weight: 800; }
+        @font-face { font-family: "Kanit"; src: url("assets/fonts/Kanit-SemiBold.ttf"); font-weight: 600; }
+        #root { position: absolute; inset: 0; overflow: hidden; font-family: "Kanit", sans-serif; color: #ffffff; }
+
+        /* ── ป้าย "วิธีการซื้อ" (x 72, y 166–218) */
+        #cta-steps-label { position: absolute; left: 72px; top: 166px; height: 52px; display: flex; align-items: center; gap: 12px; z-index: 7; will-change: transform, clip-path; }
+        #cta-steps-label-bolt { display: block; width: 28px; height: 42px; filter: drop-shadow(0 0 10px #1b8dff); }
+        #cta-steps-label-t { display: block; font-weight: 800; font-size: 40px; line-height: 52px; color: #59d2ff; white-space: nowrap; }
+        #cta-steps-label-t:empty { display: none; }
+
+        /* ── หัวเรื่องชิดซ้าย 2 บรรทัด (x 70, ช่วง y 214–470) · ชิดล่างของช่อง — แบบบรรทัดเดียว (H5) ก็อยู่ติดเช็กลิสต์
+           เว้น 30px ระหว่างบรรทัด: วรรณยุกต์ซ้อนของบรรทัดล่าง ("นี้" "ขั้น") สูงเกินกรอบบรรทัด ไปชนขอบกรมท่า 14px + เงา 10px
+           ของบรรทัดบน แล้วขอบของบรรทัดล่างกินตัวบรรทัดบน (16 ต.ค. — 16px ยังชน) */
+        #cta-steps-head { position: absolute; left: 70px; top: 214px; width: 900px; height: 256px; z-index: 7; display: flex; flex-direction: column; justify-content: flex-end; }
+        .cta-steps-q {
+          display: block; text-align: left; font-weight: 900; white-space: nowrap; transform-origin: 0% 62%;
+          -webkit-text-stroke: 14px #03102a; paint-order: stroke fill;
+          text-shadow: 0 10px 0 #03102a, 0 0 40px rgba(27, 141, 255, 0.55); will-change: transform, opacity, filter;
+        }
+        #cta-steps-q1 { line-height: 1; color: #ffffff; }
+        #cta-steps-q2 { line-height: 0.98; --qmt: 30px; margin-top: var(--qmt); color: var(--hot, #ffc24a); }
+        .cta-steps-q:empty { display: none; }
+
+        /* ── เช็กลิสต์ 4 แถว (y 470/646/822/998 · สูง 160) · รางเชื่อมที่ x 128 */
+        #cta-steps-list { position: absolute; left: 0; top: 0; width: 1080px; height: 1920px; z-index: 2; will-change: transform; }
+        #cta-steps-rail, #cta-steps-rail-lit { position: absolute; left: 124px; top: 550px; width: 8px; height: 528px; border-radius: 4px; transform-origin: 50% 0%; }
+        #cta-steps-rail { background: rgba(89, 210, 255, 0.26); box-shadow: 0 0 14px rgba(27, 141, 255, 0.45); }
+        #cta-steps-rail-lit { background: #59d2ff; box-shadow: 0 0 18px #1b8dff, 0 0 6px #e8f7ff; }
+        .cta-steps-row {
+          position: absolute; left: 200px; width: 730px; height: 160px; border-radius: 30px; opacity: 0;
+          background: linear-gradient(90deg, rgba(11, 45, 104, 0.94) 0%, rgba(6, 27, 58, 0.92) 100%);
+          border: 3px solid rgba(89, 210, 255, 0.3); box-shadow: 0 18px 40px rgba(0, 0, 0, 0.35);
+          will-change: transform, opacity;
+        }
+        .cta-steps-lit { position: absolute; inset: -3px; border-radius: 30px; border: 3px solid #59d2ff; opacity: 0;
+          box-shadow: 0 0 30px rgba(27, 141, 255, 0.75), inset 0 0 24px rgba(27, 141, 255, 0.35); }
+        .cta-steps-cur { position: absolute; inset: -4px; border-radius: 32px; border: 4px solid var(--hot, #ffc24a); opacity: 0;
+          box-shadow: 0 0 34px color-mix(in srgb, var(--hot, #ffc24a) 70%, transparent), inset 0 0 22px color-mix(in srgb, var(--hot, #ffc24a) 30%, transparent); }
+        .cta-steps-tile {
+          position: absolute; left: 10px; top: 10px; width: 140px; height: 140px; border-radius: 26px;
+          background: radial-gradient(circle at 50% 40%, rgba(27, 141, 255, 0.28), rgba(3, 16, 42, 0.92) 70%);
+          border: 3px solid rgba(89, 210, 255, 0.5); box-shadow: inset 0 0 22px rgba(27, 141, 255, 0.35);
+        }
+        .cta-steps-ico { position: absolute; left: 50%; top: 50%; width: 112px; height: 112px; margin: -56px 0 0 -56px; overflow: hidden; opacity: 0; will-change: transform, opacity; }
+        /* โครงว่าง (skeleton) ก่อนแถวติดไฟ — ไม่ใช่ข้อความ จึงไม่ต้องผ่านเกณฑ์สีตัวอักษร */
+        .cta-steps-sk { position: absolute; left: 174px; top: 46px; width: 440px; height: 70px; }
+        .cta-steps-bar { position: absolute; left: 0; border-radius: 12px; overflow: hidden; background: rgba(89, 210, 255, 0.24); }
+        .cta-steps-bar.b1 { top: 0; width: 290px; height: 30px; }
+        .cta-steps-bar.b2 { top: 48px; width: 430px; height: 16px; border-radius: 8px; background: rgba(159, 196, 232, 0.2); }
+        .cta-steps-shim { position: absolute; left: 0; top: 0; width: 40%; height: 100%;
+          background: linear-gradient(90deg, rgba(232, 247, 255, 0), rgba(232, 247, 255, 0.45), rgba(232, 247, 255, 0)); will-change: transform; }
+        .cta-steps-txt { position: absolute; left: 172px; top: 20px; width: 540px; }
+        .cta-steps-big { display: block; font-weight: 900; font-size: calc(var(--sfs, 60) * 1px); line-height: 1.3; color: #ffffff; white-space: nowrap; opacity: 0;
+          text-shadow: 0 4px 0 #03102a; will-change: transform, opacity, clip-path; }
+        .cta-steps-small { display: block; font-weight: 600; font-size: calc(var(--dfs, 30) * 1px); line-height: 1.4; color: #9fc4e8; white-space: nowrap; opacity: 0; will-change: transform, opacity; }
+        .cta-steps-big:empty, .cta-steps-small:empty { display: none; }
+
+        /* ── ป้ายเลขโครเมียม 116 (ขั้น 4 สีทอง) — อยู่นอกแถว จึงสว่างเต็มตั้งแต่เด้งเข้า */
+        .cta-steps-badge {
+          position: absolute; left: 70px; width: 116px; height: 116px; border-radius: 50%;
+          background: linear-gradient(160deg, #e9f4ff 0%, #9fb7cf 48%, #ffffff 70%, #6f8aa6 100%);
+          box-shadow: 0 0 24px rgba(89, 210, 255, 0.5), inset 0 0 0 4px rgba(3, 16, 42, 0.35); will-change: transform;
+        }
+        #cta-steps-b4 { background: linear-gradient(160deg, #fff4c9 0%, #ffc24a 45%, #fff1b8 68%, #c98a12 100%);
+          box-shadow: 0 0 30px rgba(255, 194, 74, 0.65), inset 0 0 0 4px rgba(3, 16, 42, 0.3); }
+        .cta-steps-bfl { position: absolute; inset: 0; border-radius: 50%; background: var(--hot, #ffc24a); opacity: 0; }
+        .cta-steps-bring { position: absolute; inset: -10px; border-radius: 50%; border: 6px solid var(--hot, #ffc24a); opacity: 0;
+          box-shadow: 0 0 30px var(--hot, #ffc24a); will-change: transform, opacity; }
+        .cta-steps-bn { position: absolute; left: 0; top: 0; width: 116px; height: 116px; text-align: center; font-weight: 900; font-size: 68px; line-height: 116px; color: #03102a; }
+        .cta-steps-chk { position: absolute; left: 80px; top: 80px; width: 46px; height: 46px; overflow: visible; will-change: transform; }
+        .cta-steps-sparks { position: absolute; left: 128px; width: 0; height: 0; }
+        .cta-steps-spark { position: absolute; left: 0; top: 0; border-radius: 50%; opacity: 0; will-change: transform, opacity; }
+        /* หัวสายฟ้าวิ่งลงราง: จุดเรืองแสง + หางซิกแซก 60 px · จุดอยู่ที่ (30, 84) ของภาพ → y ของ tween = ตำแหน่งจุด */
+        #cta-steps-zap { position: absolute; left: 98px; top: -84px; width: 60px; height: 100px; overflow: visible; opacity: 0; will-change: transform, opacity; }
+
+        /* ── ฮีโร่ (match cut): ซองจากฉากรูปแบบ / กรอบการ์ดรูปตู้จากคลิปพิกัด — ขนาด/ตำแหน่งตั้งจาก src ตอนประกอบ */
+        #cta-steps-hero { position: absolute; left: 210px; top: 480px; width: 140px; height: 140px; z-index: 6; will-change: transform; }
+        #cta-steps-hero-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
+        #cta-steps-ghost { position: absolute; left: 210px; top: 480px; width: 140px; height: 140px; z-index: 6; overflow: hidden; border-radius: 34px;
+          border: 6px solid #59d2ff; background: rgba(6, 27, 58, 0.9); box-shadow: 0 0 60px rgba(27, 141, 255, 0.85), 0 30px 70px rgba(0, 0, 0, 0.5); will-change: transform, opacity; }
+        #cta-steps-ghost-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transform-origin: 50% 45%; transform: scale(1.1); }
+
+        /* ── ป้ายลิงก์ล่าง (y 1198–1258 · ชิดซ้าย x 70 ไม่เกิน 930) */
+        #cta-steps-foot {
+          position: absolute; left: 70px; top: 1198px; height: 60px; max-width: 860px; z-index: 5; overflow: hidden;
+          display: flex; align-items: center; gap: 12px; padding: 0 28px 0 9px; border-radius: 999px;
+          background: rgba(3, 16, 42, 0.92); border: 3px solid #59d2ff; box-shadow: 0 0 30px rgba(27, 141, 255, 0.6);
+          opacity: 0; will-change: transform, opacity;
+        }
+        #cta-steps-play { flex: 0 0 40px; display: block; width: 40px; height: 40px; }
+        .cta-steps-ft { display: block; font-weight: 800; font-size: calc(var(--ffs, 32) * 1px); line-height: 1.25; white-space: nowrap; }
+        #cta-steps-foot-cap { color: #ffffff; }
+        #cta-steps-foot-dot { color: #9fc4e8; }
+        #cta-steps-foot-url { color: #59d2ff; }
+        #cta-steps-gloss { position: absolute; left: -25%; top: -10px; width: 110px; height: 80px; transform: skewX(-20deg); pointer-events: none;
+          background: linear-gradient(90deg, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0.6), rgba(255, 255, 255, 0)); mix-blend-mode: screen; }
+      </style>
+
+      <div id="root" data-composition-id="cta-steps" data-width="1080" data-height="1920">
+        <div id="cta-steps-list">
+          <div id="cta-steps-rail" aria-hidden="true" data-layout-ignore></div>
+          <div id="cta-steps-rail-lit" aria-hidden="true" data-layout-ignore></div>
+
+          <div class="cta-steps-row" id="cta-steps-r1" style="top: 470px">
+            <div class="cta-steps-lit" id="cta-steps-r1-lit" aria-hidden="true" data-layout-ignore></div>
+            <div class="cta-steps-cur" id="cta-steps-r1-cur" aria-hidden="true" data-layout-ignore></div>
+            <div class="cta-steps-tile" id="cta-steps-r1-tile">
+              <svg class="cta-steps-ico" id="cta-steps-i1" viewBox="0 0 112 112" aria-hidden="true" data-layout-ignore>
+                <path d="M30 24 A 30 30 0 0 1 76 24" fill="none" stroke="#59d2ff" stroke-width="5" stroke-linecap="round" />
+                <path d="M39 30 A 18 18 0 0 1 67 30" fill="none" stroke="#59d2ff" stroke-width="5" stroke-linecap="round" opacity="0.7" />
+                <circle id="cta-steps-tap-dot" cx="53" cy="36" r="8" fill="#e8f7ff" />
+                <rect x="28" y="70" width="24" height="15" rx="7.5" fill="#e8f7ff" stroke="#03102a" stroke-width="3" />
+                <rect x="44" y="34" width="19" height="52" rx="9.5" fill="#e8f7ff" stroke="#03102a" stroke-width="3" />
+                <rect x="59" y="56" width="15" height="26" rx="7.5" fill="#e8f7ff" stroke="#03102a" stroke-width="3" />
+                <rect x="71" y="60" width="15" height="24" rx="7.5" fill="#e8f7ff" stroke="#03102a" stroke-width="3" />
+                <rect x="40" y="66" width="48" height="40" rx="15" fill="#e8f7ff" stroke="#03102a" stroke-width="3" />
+                <rect x="47" y="58" width="13" height="18" fill="#e8f7ff" />
+                <circle id="cta-steps-tap-ring" cx="53" cy="36" r="13" fill="none" stroke="#59d2ff" stroke-width="4" opacity="0" />
+              </svg>
+            </div>
+            <div class="cta-steps-sk" id="cta-steps-r1-sk" aria-hidden="true" data-layout-ignore><div class="cta-steps-bar b1"><div class="cta-steps-shim"></div></div><div class="cta-steps-bar b2"><div class="cta-steps-shim"></div></div></div>
+            <div class="cta-steps-txt"><span class="cta-steps-big" id="cta-steps-s1" data-var-text="s1">เลือกการ์ด</span><span class="cta-steps-small" id="cta-steps-d1" data-var-text="d1">แตะหน้าจอ เลื่อนเลือกชุด/การ์ดที่ต้องการ</span></div>
+          </div>
+
+          <div class="cta-steps-row" id="cta-steps-r2" style="top: 646px">
+            <div class="cta-steps-lit" id="cta-steps-r2-lit" aria-hidden="true" data-layout-ignore></div>
+            <div class="cta-steps-cur" id="cta-steps-r2-cur" aria-hidden="true" data-layout-ignore></div>
+            <div class="cta-steps-tile" id="cta-steps-r2-tile">
+              <svg class="cta-steps-ico" id="cta-steps-i2" viewBox="0 0 112 112" aria-hidden="true" data-layout-ignore>
+                <rect x="20" y="14" width="72" height="92" rx="12" fill="rgba(89,210,255,0.16)" stroke="#59d2ff" stroke-width="5" />
+                <rect x="38" y="6" width="36" height="17" rx="6" fill="#59d2ff" />
+                <rect x="30" y="34" width="15" height="15" rx="3" fill="none" stroke="#e8f7ff" stroke-width="3" />
+                <rect x="30" y="56" width="15" height="15" rx="3" fill="none" stroke="#e8f7ff" stroke-width="3" />
+                <rect x="30" y="78" width="15" height="15" rx="3" fill="none" stroke="#e8f7ff" stroke-width="3" />
+                <path d="M53 41.5 H82 M53 63.5 H82 M53 85.5 H76" stroke="#e8f7ff" stroke-width="5" stroke-linecap="round" opacity="0.85" />
+                <path class="cta-steps-tick" d="M31.5 41 L36.5 46 L46 34" fill="none" stroke="var(--hot, #ffc24a)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" />
+                <path class="cta-steps-tick" d="M31.5 63 L36.5 68 L46 56" fill="none" stroke="var(--hot, #ffc24a)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" />
+                <path class="cta-steps-tick" d="M31.5 85 L36.5 90 L46 78" fill="none" stroke="var(--hot, #ffc24a)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+            </div>
+            <div class="cta-steps-sk" id="cta-steps-r2-sk" aria-hidden="true" data-layout-ignore><div class="cta-steps-bar b1"><div class="cta-steps-shim"></div></div><div class="cta-steps-bar b2"><div class="cta-steps-shim"></div></div></div>
+            <div class="cta-steps-txt"><span class="cta-steps-big" id="cta-steps-s2" data-var-text="s2">ยืนยันรายการ</span><span class="cta-steps-small" id="cta-steps-d2" data-var-text="d2">ตรวจสอบรายการให้ครบก่อนชำระเงิน</span></div>
+          </div>
+
+          <div class="cta-steps-row" id="cta-steps-r3" style="top: 822px">
+            <div class="cta-steps-lit" id="cta-steps-r3-lit" aria-hidden="true" data-layout-ignore></div>
+            <div class="cta-steps-cur" id="cta-steps-r3-cur" aria-hidden="true" data-layout-ignore></div>
+            <div class="cta-steps-tile" id="cta-steps-r3-tile">
+              <!-- โทรศัพท์ + สี่เหลี่ยม 3 มุม: เป็นไอคอน ไม่มีจุดข้อมูล จึงสแกนไม่ได้ -->
+              <svg class="cta-steps-ico" id="cta-steps-i3" viewBox="0 0 112 112" aria-hidden="true" data-layout-ignore>
+                <rect x="29" y="5" width="54" height="102" rx="13" fill="#061b3a" stroke="#59d2ff" stroke-width="5" />
+                <rect x="37" y="17" width="38" height="68" rx="5" fill="#e8f7ff" />
+                <rect x="42" y="23" width="12" height="12" rx="1.5" fill="none" stroke="#03102a" stroke-width="3" />
+                <rect x="46" y="27" width="4" height="4" fill="#03102a" />
+                <rect x="58" y="23" width="12" height="12" rx="1.5" fill="none" stroke="#03102a" stroke-width="3" />
+                <rect x="62" y="27" width="4" height="4" fill="#03102a" />
+                <rect x="42" y="41" width="12" height="12" rx="1.5" fill="none" stroke="#03102a" stroke-width="3" />
+                <rect x="46" y="45" width="4" height="4" fill="#03102a" />
+                <rect x="42" y="66" width="28" height="11" rx="5.5" fill="#1b8dff" />
+                <rect x="47" y="93" width="18" height="5" rx="2.5" fill="#59d2ff" />
+                <g id="cta-steps-scan" opacity="0"><rect x="35" y="15" width="42" height="12" fill="rgba(89,210,255,0.35)" /><rect x="35" y="20" width="42" height="3" fill="#1b8dff" /></g>
+              </svg>
+            </div>
+            <div class="cta-steps-sk" id="cta-steps-r3-sk" aria-hidden="true" data-layout-ignore><div class="cta-steps-bar b1"><div class="cta-steps-shim"></div></div><div class="cta-steps-bar b2"><div class="cta-steps-shim"></div></div></div>
+            <div class="cta-steps-txt"><span class="cta-steps-big" id="cta-steps-s3" data-var-text="s3">สแกน QR พร้อมเพย์</span><span class="cta-steps-small" id="cta-steps-d3" data-var-text="d3">หรือชำระตามวิธีที่หน้าจอแสดง</span></div>
+          </div>
+
+          <div class="cta-steps-row" id="cta-steps-r4" style="top: 998px">
+            <div class="cta-steps-lit" id="cta-steps-r4-lit" aria-hidden="true" data-layout-ignore></div>
+            <div class="cta-steps-cur" id="cta-steps-r4-cur" aria-hidden="true" data-layout-ignore></div>
+            <div class="cta-steps-tile" id="cta-steps-r4-tile">
+              <!-- ช่องรับสินค้า + ซองหล่นลง (ซองวาดก่อนขอบหน้า จึงจมลงหลังขอบช่อง) -->
+              <svg class="cta-steps-ico" id="cta-steps-i4" viewBox="0 0 112 112" aria-hidden="true" data-layout-ignore>
+                <defs><linearGradient id="cta-steps-gold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff4c9" /><stop offset="0.45" stop-color="#ffc24a" /><stop offset="1" stop-color="#c98a12" /></linearGradient></defs>
+                <rect x="12" y="58" width="88" height="46" rx="12" fill="#020a1a" stroke="#59d2ff" stroke-width="5" />
+                <g id="cta-steps-drop">
+                  <rect x="39" y="30" width="34" height="50" rx="4" fill="url(#cta-steps-gold)" stroke="#03102a" stroke-width="3" />
+                  <path d="M40 37 L44.5 33 L49 37 L53.5 33 L58 37 L62.5 33 L67 37 L71.5 33" fill="none" stroke="#03102a" stroke-width="2.5" stroke-linejoin="round" />
+                  <rect x="46" y="46" width="20" height="14" rx="3" fill="#03102a" opacity="0.35" />
+                </g>
+                <rect x="12" y="76" width="88" height="28" rx="10" fill="#0a2a6b" stroke="#59d2ff" stroke-width="5" />
+                <rect x="34" y="86" width="44" height="7" rx="3.5" fill="#59d2ff" opacity="0.8" />
+              </svg>
+            </div>
+            <div class="cta-steps-sk" id="cta-steps-r4-sk" aria-hidden="true" data-layout-ignore><div class="cta-steps-bar b1"><div class="cta-steps-shim"></div></div><div class="cta-steps-bar b2"><div class="cta-steps-shim"></div></div></div>
+            <div class="cta-steps-txt"><span class="cta-steps-big" id="cta-steps-s4" data-var-text="s4">รับสินค้า</span><span class="cta-steps-small" id="cta-steps-d4" data-var-text="d4">รอสินค้าหล่นที่ช่องรับด้านล่าง</span></div>
+          </div>
+
+          <div class="cta-steps-badge" id="cta-steps-b1" style="top: 492px">
+            <div class="cta-steps-bring" id="cta-steps-b1-ring" aria-hidden="true" data-layout-ignore></div>
+            <div class="cta-steps-bfl" id="cta-steps-b1-fl" aria-hidden="true" data-layout-ignore></div>
+            <span class="cta-steps-bn" id="cta-steps-b1-n">1</span>
+            <svg class="cta-steps-chk" id="cta-steps-c1" viewBox="0 0 46 46" aria-hidden="true" data-layout-ignore><circle cx="23" cy="23" r="20" fill="#59d2ff" stroke="#03102a" stroke-width="3.5" /><path d="M13 23.5 L20 30.5 L33 16" fill="none" stroke="#03102a" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round" /></svg>
+          </div>
+          <div class="cta-steps-badge" id="cta-steps-b2" style="top: 668px">
+            <div class="cta-steps-bring" id="cta-steps-b2-ring" aria-hidden="true" data-layout-ignore></div>
+            <div class="cta-steps-bfl" id="cta-steps-b2-fl" aria-hidden="true" data-layout-ignore></div>
+            <span class="cta-steps-bn" id="cta-steps-b2-n">2</span>
+            <svg class="cta-steps-chk" id="cta-steps-c2" viewBox="0 0 46 46" aria-hidden="true" data-layout-ignore><circle cx="23" cy="23" r="20" fill="#59d2ff" stroke="#03102a" stroke-width="3.5" /><path d="M13 23.5 L20 30.5 L33 16" fill="none" stroke="#03102a" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round" /></svg>
+          </div>
+          <div class="cta-steps-badge" id="cta-steps-b3" style="top: 844px">
+            <div class="cta-steps-bring" id="cta-steps-b3-ring" aria-hidden="true" data-layout-ignore></div>
+            <div class="cta-steps-bfl" id="cta-steps-b3-fl" aria-hidden="true" data-layout-ignore></div>
+            <span class="cta-steps-bn" id="cta-steps-b3-n">3</span>
+            <svg class="cta-steps-chk" id="cta-steps-c3" viewBox="0 0 46 46" aria-hidden="true" data-layout-ignore><circle cx="23" cy="23" r="20" fill="#59d2ff" stroke="#03102a" stroke-width="3.5" /><path d="M13 23.5 L20 30.5 L33 16" fill="none" stroke="#03102a" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round" /></svg>
+          </div>
+          <div class="cta-steps-badge" id="cta-steps-b4" style="top: 1020px">
+            <div class="cta-steps-bring" id="cta-steps-b4-ring" aria-hidden="true" data-layout-ignore></div>
+            <div class="cta-steps-bfl" id="cta-steps-b4-fl" aria-hidden="true" data-layout-ignore></div>
+            <span class="cta-steps-bn" id="cta-steps-b4-n">4</span>
+          </div>
+
+          <div class="cta-steps-sparks" id="cta-steps-p1" style="top: 550px" aria-hidden="true" data-layout-ignore></div>
+          <div class="cta-steps-sparks" id="cta-steps-p2" style="top: 726px" aria-hidden="true" data-layout-ignore></div>
+          <div class="cta-steps-sparks" id="cta-steps-p3" style="top: 902px" aria-hidden="true" data-layout-ignore></div>
+          <div class="cta-steps-sparks" id="cta-steps-p4" style="top: 1078px" aria-hidden="true" data-layout-ignore></div>
+
+          <svg id="cta-steps-zap" viewBox="0 0 60 100" aria-hidden="true" data-layout-ignore>
+            <polyline points="30,2 19,24 38,38 21,60 30,84" fill="none" stroke="#e8f7ff" stroke-width="6" stroke-linejoin="round" stroke-linecap="round" style="filter: drop-shadow(0 0 8px #59d2ff) drop-shadow(0 0 18px #1b8dff)" />
+            <circle cx="30" cy="84" r="11" fill="#ffffff" style="filter: drop-shadow(0 0 10px #59d2ff) drop-shadow(0 0 22px #1b8dff)" />
+          </svg>
+        </div>
+
+        <div id="cta-steps-hero"><img id="cta-steps-hero-img" data-var-src="icon1" src="assets/pack.webp" alt="" /></div>
+        <div id="cta-steps-ghost" aria-hidden="true" data-layout-ignore><img id="cta-steps-ghost-img" data-var-src="photo" src="assets/pack.webp" alt="" /></div>
+
+        <div id="cta-steps-foot">
+          <svg id="cta-steps-play" viewBox="0 0 40 40" aria-hidden="true" data-layout-ignore><circle cx="20" cy="20" r="20" fill="#59d2ff" /><path d="M15.5 11.5 L29 20 L15.5 28.5 Z" fill="#03102a" /></svg>
+          <span class="cta-steps-ft" id="cta-steps-foot-cap">ดูคลิปวิธีกดตู้</span>
+          <span class="cta-steps-ft" id="cta-steps-foot-dot">·</span>
+          <span class="cta-steps-ft" id="cta-steps-foot-url">division-x-card.vercel.app/how-to</span>
+          <div id="cta-steps-gloss" aria-hidden="true" data-layout-ignore></div>
+        </div>
+
+        <div id="cta-steps-label">
+          <svg id="cta-steps-label-bolt" viewBox="0 0 28 42" aria-hidden="true" data-layout-ignore><path d="M17 0 L1 24 L12 24 L8 42 L27 15 L15.5 15 L20 0 Z" fill="#59d2ff" /></svg>
+          <span id="cta-steps-label-t" class="dvx-near" data-var-text="label">วิธีการซื้อ</span>
+        </div>
+        <div id="cta-steps-head" class="dvx-head">
+          <div class="cta-steps-q dvx-q dvx-q1" id="cta-steps-q1" data-var-text="q1" style="font-size: calc(var(--qs1, 104) * 1px)">กดตู้ง่าย ๆ</div>
+          <div class="cta-steps-q dvx-q dvx-q2" id="cta-steps-q2" data-var-text="q2" style="font-size: calc(var(--qs2, 124) * 1px)">แค่ 4 ขั้นตอน</div>
+        </div>
+      </div>
+
+      <script>
+        (function () {
+          const v = (window.__hyperframes && window.__hyperframes.getVariables && window.__hyperframes.getVariables()) || {};
+          const num = (x, d) => (x != null && x !== "" && isFinite(Number(x)) ? Number(x) : d);
+          const str = (x) => (x == null ? "" : String(x)).trim();
+          const $ = (id) => document.getElementById("cta-steps-" + id);
+          const DUR = Math.max(2, num(v.dur, 6.4));
+          const STILL = DUR - 0.4;                       // 0.4 วิสุดท้าย: ไม่มีอะไรในฉากนี้ขยับ
+          const tl = gsap.timeline({ paused: true });
+          const prand = (n) => {
+            const x = Math.sin(n * 127.1 + 311.7) * 43758.5453;
+            return x - Math.floor(x);
+          };
+
+          // ── ค่าคงที่ของเลย์เอาต์ (ตรงกับ CSS — ไม่วัด DOM)
+          const ROW_TOP = [470, 646, 822, 998], ROW_H = 160;
+          const rowCY = (k) => ROW_TOP[k - 1] + ROW_H / 2;        // 550 / 726 / 902 / 1078
+          const TILE_CX = 200 + 10 + 70, TILE = 140, PACK_BOX = 124;
+          const RAIL_TOP = rowCY(1), RAIL_LEN = rowCY(4) - rowCY(1);
+
+          // ── เวลาติดไฟแต่ละขั้น: ตามเสียง (st1..st4) · ห่างกัน ≥ 0.35 · ขั้น 4 ต้องจบท่าก่อนช่วงนิ่ง
+          const ST = [1, 2, 3, 4].map((k) => num(v["st" + k], [2.6, 3.3, 4.1, 5.0][k - 1]));
+          const IG = [];
+          for (let i = 0; i < 4; i++) IG[i] = Math.max(i === 0 ? 0.5 : IG[i - 1] + 0.35, ST[i]);
+          const LAST = STILL - 0.6;
+          if (IG[3] > LAST) {
+            IG[3] = LAST;
+            for (let i = 2; i >= 0; i--) IG[i] = Math.min(IG[i], IG[i + 1] - 0.35);
+          }
+
+          // ── กรอบฮีโร่บนเฟรมสุดท้ายของฉากก่อนหน้า (cx,cy,w,h,rot)
+          const S = str(v.src).split(",").map((x) => Number(x));
+          const okSrc = S.length >= 4 && S.slice(0, 4).every((x) => isFinite(x)) && S[2] > 0 && S[3] > 0;
+          const CX = okSrc ? S[0] : TILE_CX, CY = okSrc ? S[1] : rowCY(1);
+          const W = okSrc ? S[2] : TILE, H = okSrc ? S[3] : TILE, ROT = okSrc && isFinite(S[4]) ? S[4] : 0;
+          const PACK = str(v.icon1) !== "";
+
+          // ── ป้ายลิงก์: ตัด ▶ หน้าข้อความ (วาดเป็นปุ่มเล่นแทน) · แยกคำบรรยายกับลิงก์ที่ " · " ตัวสุดท้าย
+          const foot = str(v.foot).replace(/^▶\s*/, "");
+          let cap = foot, link = "";
+          const cut = foot.lastIndexOf(" · ");
+          if (cut >= 0) {
+            cap = foot.slice(0, cut).trim();
+            link = foot.slice(cut + 3).trim();
+          }
+          if (!foot) link = str(v.url);
+          $("foot-cap").textContent = cap;
+          $("foot-url").textContent = link;
+          if (!cap) $("foot-cap").remove();
+          if (!link) $("foot-url").remove();
+          if (!cap || !link) $("foot-dot").remove();
+          const HAS_FOOT = !!(cap || link);
+          if (!HAS_FOOT) $("foot").remove();
+
+          // ── 0. match cut
+          if (PACK) {
+            $("i1").remove();
+            const hero = $("hero");
+            hero.style.left = CX - W / 2 + "px";
+            hero.style.top = CY - H / 2 + "px";
+            hero.style.width = W + "px";
+            hero.style.height = H + "px";
+            // เงาเท่าสัดส่วนเดียวกับซองในฉากรูปแบบ (quiz 660 → 26/50 px)
+            $("hero-img").style.filter = "drop-shadow(0 " + Math.max(3, Math.round(W * 0.04)) + "px " + Math.max(6, Math.round(W * 0.077)) + "px rgba(0, 0, 0, 0.6))";
+            const S1 = PACK_BOX / Math.max(W, H);
+            tl.fromTo(hero, { x: 0, y: 0, scale: 1, rotation: ROT }, { x: TILE_CX - CX, y: rowCY(1) - CY, scale: S1, rotation: 0, duration: 0.5, ease: "power3.inOut" }, 0);
+            // ขั้น 1 ติดไฟ: ซองเด้งในช่อง
+            tl.fromTo(hero, { scale: S1 }, { scale: S1 * 1.16, duration: 0.12, ease: "power2.out", immediateRender: false }, IG[0]);
+            tl.fromTo(hero, { scale: S1 * 1.16 }, { scale: S1, duration: 0.35, ease: "back.out(2)", immediateRender: false }, IG[0] + 0.12);
+            $("ghost").remove();
+          } else {
+            $("hero").remove();
+            const ghost = $("ghost");
+            if (okSrc) {
+              // คลิปพิกัด: การ์ดรูปตู้หดลงเป็นช่องไอคอนขั้น 1 (รูปจางออกเร็ว — ไม่ค้างรูปตู้บนจอ)
+              // ตั้งกรอบเริ่มแบบคงที่ แล้วขยับด้วย transform เท่านั้น (left/top ปัดเป็นพิกเซลเต็ม — เรนเดอร์ทีละเฟรมแล้วกระตุก · lint error)
+              ghost.style.left = CX - W / 2 + "px";
+              ghost.style.top = CY - H / 2 + "px";
+              ghost.style.width = W + "px";
+              ghost.style.height = H + "px";
+              ghost.style.transformOrigin = "50% 50%";
+              tl.fromTo(ghost, { x: 0, y: 0, scaleX: 1, scaleY: 1, rotation: ROT, opacity: 1 },
+                { x: TILE_CX - CX, y: rowCY(1) - CY, scaleX: TILE / W, scaleY: TILE / H, rotation: 0, duration: 0.5, ease: "power3.inOut" }, 0);
+              tl.fromTo(ghost, { opacity: 1 }, { opacity: 0, duration: 0.2, ease: "power1.out", immediateRender: false }, 0.5);
+              if (str(v.photo)) tl.fromTo("#cta-steps-ghost-img", { opacity: 1 }, { opacity: 0, duration: 0.26, ease: "power1.in" }, 0.04);
+              else $("ghost-img").remove();
+            } else {
+              ghost.remove();
+            }
+            // "การ์ดลอยขึ้นจาก y+200"
+            tl.fromTo("#cta-steps-list", { y: 200 }, { y: 0, duration: 0.5, ease: "power3.out" }, 0);
+          }
+
+          // ── 1. ป้าย + หัวเรื่อง
+          tl.fromTo("#cta-steps-label", { clipPath: "inset(-40% 100% -40% 0%)", x: -18 }, { clipPath: "inset(-40% 0% -40% 0%)", x: 0, duration: 0.3, ease: "power3.out" }, 0.1);
+          if (str(v.q1)) tl.fromTo("#cta-steps-q1", { scale: 1.8, opacity: 0, filter: "blur(16px)" }, { scale: 1, opacity: 1, filter: "blur(0px)", duration: 0.36, ease: "power4.out" }, 0.2);
+          if (str(v.q2)) tl.fromTo("#cta-steps-q2", { scale: 1.8, opacity: 0, filter: "blur(16px)" }, { scale: 1, opacity: 1, filter: "blur(0px)", duration: 0.36, ease: "power4.out" }, 0.36);
+
+          // ── 2. เช็กลิสต์ว่าง: แถวหรี่ 45 % · ป้ายเลขเด้งบนลงล่าง · รางลากลง
+          for (let k = 1; k <= 4; k++) {
+            if (PACK) tl.fromTo("#cta-steps-r" + k, { opacity: 0, x: -50 }, { opacity: 0.45, x: 0, duration: 0.35, ease: "power3.out" }, 0.28 + (k - 1) * 0.1);
+            else tl.fromTo("#cta-steps-r" + k, { opacity: 0 }, { opacity: 0.45, duration: 0.3, ease: "power1.out" }, 0.04 + (k - 1) * 0.06);
+            tl.fromTo("#cta-steps-b" + k, { scale: 0 }, { scale: 1, duration: 0.4, ease: "back.out(2)" }, 0.4 + (k - 1) * 0.12);
+          }
+          tl.fromTo("#cta-steps-rail", { scaleY: 0 }, { scaleY: 1, duration: 0.6, ease: "power2.inOut" }, 0.4);
+          tl.fromTo("#cta-steps-rail-lit", { scaleY: 0 }, { scaleY: 0, duration: 0.01, ease: "none" }, 0.4);
+          [1, 2, 3].forEach((k) => tl.fromTo("#cta-steps-c" + k, { scale: 0, rotation: -40 }, { scale: 0, rotation: -40, duration: 0.01, ease: "none" }, 0.4));
+
+          // โครงว่างวิบวับระหว่างรอ (finite · หยุดก่อนแถวนั้นติดไฟ)
+          for (let k = 1; k <= 4; k++) {
+            const s0 = 1.0 + (k - 1) * 0.14, cyc = 1.2;
+            const cnt = Math.floor((IG[k - 1] - 0.1 - s0) / cyc);
+            if (cnt >= 1) tl.fromTo("#cta-steps-r" + k + "-sk .cta-steps-shim", { xPercent: -110 }, { xPercent: 260, duration: cyc, ease: "none", repeat: cnt - 1 }, s0);
+          }
+
+          // ── 3. ติดไฟทีละขั้นตามเสียง
+          const ticks = Array.from(document.querySelectorAll("#cta-steps-i2 .cta-steps-tick"));
+          ticks.forEach((p) => {
+            const L = p.getTotalLength();
+            p.style.strokeDasharray = L;
+            p.style.strokeDashoffset = L;
+          });
+          const sparkCols = ["#59d2ff", "#e8f7ff", "#1b8dff", "#ffc24a"];
+          function burst(k, at) {
+            const field = $("p" + k), parts = [];
+            for (let i = 0; i < 9; i++) {
+              const el = document.createElement("div");
+              el.className = "cta-steps-spark";
+              const size = 7 + prand(k * 41 + i * 3 + 1) * 8;
+              el.style.width = size + "px";
+              el.style.height = size + "px";
+              el.style.marginLeft = -size / 2 + "px";
+              el.style.marginTop = -size / 2 + "px";
+              el.style.background = sparkCols[i % sparkCols.length];
+              el.style.boxShadow = "0 0 12px " + sparkCols[i % sparkCols.length];
+              field.appendChild(el);
+              // ออกด้านซ้าย/บน/ล่างของป้าย (ไม่พุ่งเข้าข้อความในแถว)
+              const ang = Math.PI * (0.55 + prand(k * 17 + i * 5 + 2) * 0.9) + (i % 2 ? 0 : Math.PI * 0.95);
+              const sp = 260 + prand(k * 13 + i * 7 + 3) * 220;
+              parts.push({ el, vx: Math.cos(ang) * sp, vy: Math.sin(ang) * sp });
+            }
+            const FL = 0.5, d = { T: 0 };
+            tl.fromTo(d, { T: 0 }, {
+              T: 1, duration: FL, ease: "none", immediateRender: false,
+              onUpdate: () => {
+                const t = d.T * FL, fade = Math.min(1, (1 - d.T) / 0.4);
+                parts.forEach((p) => {
+                  p.el.style.transform = "translate(" + p.vx * t + "px," + (p.vy * t + 300 * t * t) + "px)";
+                  p.el.style.opacity = String(d.T === 0 || d.T === 1 ? 0 : fade);
+                });
+              },
+            }, at);
+          }
+
+          let prevP = 0;
+          for (let k = 1; k <= 4; k++) {
+            const T = IG[k - 1];
+            const yTo = rowCY(k), yFrom = k === 1 ? ROW_TOP[0] - 6 : rowCY(k - 1);
+            // หัวสายฟ้าวิ่งลงรางถึงป้ายเลข k (0.18 วิ) · รางส่วนที่ผ่านแล้วสว่างค้าง
+            tl.fromTo("#cta-steps-zap", { y: yFrom, opacity: 1 }, { y: yTo, opacity: 1, duration: 0.18, ease: "power2.in", immediateRender: false }, T - 0.18);
+            tl.fromTo("#cta-steps-zap", { opacity: 1 }, { opacity: 0, duration: 0.1, ease: "power1.out", immediateRender: false }, T);
+            const p = (yTo - RAIL_TOP) / RAIL_LEN;
+            if (k > 1) tl.fromTo("#cta-steps-rail-lit", { scaleY: prevP }, { scaleY: p, duration: 0.18, ease: "power2.in", immediateRender: false }, T - 0.18);
+            prevP = p;
+            // ป้ายเลขวาบสีเน้น + วงแสง + ประกาย
+            tl.fromTo("#cta-steps-b" + k + "-fl", { opacity: 0.95 }, { opacity: 0, duration: 0.45, ease: "power2.out", immediateRender: false }, T);
+            tl.fromTo("#cta-steps-b" + k + "-ring", { scale: 0.9, opacity: 1 }, { scale: 1.5, opacity: 0, duration: 0.55, ease: "power2.out", immediateRender: false }, T);
+            tl.fromTo("#cta-steps-b" + k, { scale: 1 }, { scale: 1.16, duration: 0.1, ease: "power2.out", immediateRender: false }, T);
+            tl.fromTo("#cta-steps-b" + k, { scale: 1.16 }, { scale: 1, duration: 0.32, ease: "back.out(2.2)", immediateRender: false }, T + 0.1);
+            burst(k, T);
+            // แถวติดไฟ: สว่างเต็ม · ขอบฟ้า + ขอบสีเน้น (แถวปัจจุบัน) · โครงว่างหาย
+            tl.fromTo("#cta-steps-r" + k, { opacity: 0.45 }, { opacity: 1, duration: 0.18, ease: "power1.out", immediateRender: false }, T);
+            tl.fromTo("#cta-steps-r" + k + "-lit", { opacity: 0 }, { opacity: 1, duration: 0.2, ease: "power1.out" }, T);
+            tl.fromTo("#cta-steps-r" + k + "-cur", { opacity: 0 }, { opacity: 1, duration: 0.2, ease: "power1.out" }, T);
+            tl.fromTo("#cta-steps-r" + k + "-sk", { opacity: 1 }, { opacity: 0, duration: 0.15, ease: "power1.out" }, T);
+            if (k > 1) {
+              tl.fromTo("#cta-steps-r" + (k - 1) + "-cur", { opacity: 1 }, { opacity: 0, duration: 0.25, ease: "power1.out", immediateRender: false }, T);
+              tl.fromTo("#cta-steps-c" + (k - 1), { scale: 0, rotation: -40 }, { scale: 1, rotation: 0, duration: 0.32, ease: "back.out(3)", immediateRender: false }, T + 0.06);
+            }
+            // ไอคอนเด้ง (ขั้น 1 ของคลิปซอง = ซองฮีโร่เด้งแทน — ทำไว้ข้างบน)
+            if (k > 1 || !PACK) tl.fromTo("#cta-steps-i" + k, { scale: 0.4, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.4, ease: "back.out(2.4)" }, T + 0.02);
+            // ข้อความใหญ่กวาดเข้า (clip-path ทั้งก้อน — ไม่แยกตัวอักษร สระ/วรรณยุกต์ไม่หลุด) · ตัวเล็กตามมา 0.15 วิ
+            tl.fromTo("#cta-steps-s" + k, { clipPath: "inset(-30% 100% -30% 0%)", opacity: 0, x: 26 }, { clipPath: "inset(-30% 0% -30% 0%)", opacity: 1, x: 0, duration: 0.3, ease: "power3.out" }, T + 0.04);
+            tl.fromTo("#cta-steps-d" + k, { opacity: 0, y: 10 }, { opacity: 1, y: 0, duration: 0.25, ease: "power2.out" }, T + 0.19);
+          }
+
+          // ── ท่าเฉพาะของไอคอน
+          const T1 = IG[0], T2 = IG[1], T3 = IG[2], T4 = IG[3];
+          if (!PACK) tl.fromTo("#cta-steps-tap-ring", { opacity: 0.95, scale: 0.6, transformOrigin: "50% 50%" }, { opacity: 0, scale: 2.1, duration: 0.5, ease: "power2.out", immediateRender: false }, T1 + 0.22);
+          if (ticks.length) tl.to(ticks, { strokeDashoffset: 0, duration: 0.16, ease: "power2.out", stagger: 0.1 }, T2 + 0.28);
+          // ขั้น 3: เส้นสแกนกวาดลงจอโทรศัพท์ครั้งเดียว แล้วหาย (ไม่ค้างบนสี่เหลี่ยม)
+          tl.fromTo("#cta-steps-scan", { y: 0, opacity: 1 }, { y: 60, opacity: 1, duration: 0.5, ease: "sine.inOut", immediateRender: false }, T3 + 0.32);
+          tl.fromTo("#cta-steps-scan", { opacity: 1 }, { opacity: 0, duration: 0.1, ease: "none", immediateRender: false }, T3 + 0.82);
+          // ขั้น 4: ซองหล่นลงช่องรับ
+          const D0 = T4 + 0.12, CYC = 1.4;
+          tl.fromTo("#cta-steps-drop", { y: -64, opacity: 1 }, { y: 0, opacity: 1, duration: 0.45, ease: "bounce.out" }, D0);
+
+          // ── 4. ป้ายลิงก์ /how-to ขึ้น + แสงกวาด
+          const FOOT_T = Math.max(0.6, Math.min(T4 + 0.35, STILL - 0.4));
+          if (HAS_FOOT) {
+            tl.fromTo("#cta-steps-foot", { y: 24, opacity: 0 }, { y: 0, opacity: 1, duration: 0.35, ease: "power3.out" }, FOOT_T);
+            const G = Math.max(FOOT_T + 0.2, Math.min(T4 + 0.8, STILL - 0.45));
+            if (G + 0.45 <= STILL + 1e-6) {
+              const fw = Math.max(200, $("foot").offsetWidth || 820);   // กว้างของป้ายจริง (ตามข้อความ)
+              tl.fromTo("#cta-steps-gloss", { x: 0 }, { x: fw * 1.35 + 110, duration: 0.45, ease: "power2.inOut" }, G);
+            }
+          }
+
+          // ── 5. ช่วงค้าง: ขั้น 4 เต้น + ซองหล่นซ้ำทุก 1.4 วิ (นับรอบจาก dur · จบก่อนช่วงนิ่ง)
+          for (let i = 1; ; i++) {
+            const Di = D0 + CYC * i;
+            if (Di + 0.45 > STILL) break;
+            tl.fromTo("#cta-steps-drop", { y: 0, opacity: 1 }, { y: 20, opacity: 0, duration: 0.22, ease: "power2.in", immediateRender: false }, Di - 0.3);
+            tl.fromTo("#cta-steps-drop", { y: -64, opacity: 1 }, { y: 0, opacity: 1, duration: 0.45, ease: "bounce.out", immediateRender: false }, Di);
+          }
+          const H0 = T4 + 0.6, reps = Math.floor((STILL - H0) / CYC);
+          if (reps >= 1) {
+            tl.fromTo("#cta-steps-r4-cur", { opacity: 1 }, { opacity: 0.3, duration: CYC / 2, ease: "sine.inOut", yoyo: true, repeat: reps * 2 - 1, immediateRender: false }, H0);
+            tl.fromTo("#cta-steps-b4", { scale: 1 }, { scale: 1.07, duration: CYC / 2, ease: "sine.inOut", yoyo: true, repeat: reps * 2 - 1, immediateRender: false }, H0);
+          }
+
+          window.__timelines["cta-steps"] = tl;
+        })();
+      </script>
+    </template>
+  </body>
+</html>

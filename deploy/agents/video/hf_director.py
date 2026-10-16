@@ -16,6 +16,7 @@
 ใช้ที่ไหน:
     publish.py (GitHub Actions) — งานจากหน้าเว็บที่ส่งมาแค่ {"format": "auto"|..., ...} ไม่มีสคริปต์ → ผู้กำกับเขียนแผนให้
     CLI (จาก deploy/):  ../.venv-image/Scripts/python.exe -m agents.video.hf_director --format auto --render
+                        ทดสอบภาพไม่กินโควตาเสียง: --format quiz --cta steps --render --silent-voice
 """
 import argparse
 import datetime as dt
@@ -23,6 +24,7 @@ import json
 import random
 import sys
 
+from . import hf_cta as C
 from . import hf_formats as F
 from .hf_render import LOOK_SPACE
 
@@ -72,6 +74,44 @@ class Director:
             return self.rng.choice(cand)
         return pick
 
+    # ── ฉากปิด (hf_cta) — เจ้าของ 16 ต.ค.: "ฉากปิดซ้ำกันทุกคลิป" ────────────────────────────────────
+    def _cta_hist(self):
+        """[(layout, mode, variant, format)] ใหม่ → เก่า · แผนเก่าที่ไม่มี plan['cta'] = ฉากปิดเดิม (legacy)"""
+        out = []
+        for p in self.hist:
+            c = p.get("cta") if isinstance(p.get("cta"), dict) else {"layout": "legacy"}
+            out.append((c.get("layout"), c.get("mode"), c.get("variant"), p.get("format")))
+        return out
+
+    def cta_layout(self, fmt, cands):
+        """เลือกแบบ: ไม่ซ้ำคลิปก่อนหน้า (ทุกรูปแบบ) และคลิปก่อนหน้าของรูปแบบเดียวกัน · เพดานแบบให้ข้อมูล (C.CAPS)
+        ไม่เหลือตัวเลือก → คลายเพดานก่อน แล้วกฎทุกรูปแบบ แล้วเอาตัวน้ำหนักสูงสุด · สุ่มถ่วงน้ำหนักด้วย seed"""
+        h = self._cta_hist()
+        prev_any = h[0][0] if h else None
+        prev_fmt = next((x[0] for x in h if x[3] == fmt), None)
+
+        def key(layout, mode):
+            return "board:pack" if layout == "board" and mode == "pack" else layout
+
+        def capped(c):
+            k = key(c[0], c[1])
+            if k not in C.CAPS:
+                return False
+            limit, window = C.CAPS[k]
+            return sum(1 for x in h[:window - 1] if key(x[0], x[1]) == k) >= limit   # รวมคลิปนี้ = window คลิป
+        tiers = ([c for c in cands if c[0] not in (prev_any, prev_fmt) and not capped(c)],
+                 [c for c in cands if c[0] not in (prev_any, prev_fmt)],
+                 [c for c in cands if c[0] != prev_fmt],
+                 cands[:1])
+        pool = next((t for t in tiers if t), [])
+        return self.rng.choices(pool, weights=[c[2] for c in pool], k=1)[0] if pool else None
+
+    def cta_variant(self, layout, recs):
+        """ระเบียนข้อความ — เลี่ยงแบบที่ 2 คลิปล่าสุดที่ใช้ฉากปิดแบบเดียวกันเพิ่งใช้ (ทุกรูปแบบ)"""
+        used = [x[2] for x in self._cta_hist() if x[0] == layout][:2]
+        cand = [r for r in recs if r["id"] not in used] or list(recs)
+        return self.rng.choice(cand)
+
 
 def _map_ready(rows):
     """สาขาที่ทำคลิปพิกัดได้สวย: มีรูปตู้จริง + มีพิกัดในกรอบแผนที่"""
@@ -81,6 +121,55 @@ def _map_ready(rows):
         if ll and F._map_xy(*ll) and F.branch_photo(r["machine_id"]):
             ok.append(r["machine_id"])
     return ok
+
+
+def closing(d, fmt, plan, note, force=None):
+    """ฉากปิดตามเนื้อหา — แทนบรรทัดปิด + ฉาก cta เดิมที่แผนรูปแบบใส่มา (แผนทุกแบบจบด้วยบรรทัดปิด 1 บรรทัดพอดี)
+    force = ชื่อแบบ (ทดสอบ/สั่งเอง) — ใช้ได้เฉพาะถ้าข้อมูลพอสำหรับแบบนั้น ไม่งั้นหมุนตามปกติ"""
+    try:
+        snap = C.stock_snapshot()
+    except Exception as e:                            # อ่านสต็อกไม่ได้ → ตัดแบบที่อ้างของในตู้ทิ้ง (ไม่เดา)
+        snap = {"rows": F.branches(), "fresh": {}, "packs": {}, "all_fresh": False}
+        note["stock_error"] = str(e)[:120]
+    body = plan["script"].split("\n")[:-1]
+    est = len("".join(body)) / C.CHARS_PER_S         # ความยาวคลิปโดยประมาณก่อนบรรทัดปิด (วินาที)
+    cands, tried = C.candidates(fmt, plan, snap), set()
+    if force and any(c[0] == force for c in cands):
+        cands = [c for c in cands if c[0] == force]
+    elif force:
+        note["cta_force_skipped"] = force             # ข้อมูลไม่พอสำหรับแบบที่ขอ (เช่น shelf ไม่มีตู้เดียว)
+    built = None
+    while built is None:
+        pick = d.cta_layout(fmt, [c for c in cands if (c[0], c[1]) not in tried])
+        if not pick:
+            break
+        layout, mode, _w, ctx = pick
+        recs = C.variants(layout, mode, fmt, plan, ctx)
+        first = d.cta_variant(layout, recs) if recs else None
+        order = ([first] + [r for r in recs if r is not first]) if first else []
+        hold = C.TIMING.get(f"{layout}:{mode}", C.TIMING[layout])[0]
+        for rec in order:
+            lines, scene, prev_ext, meta = C.cta_plan(fmt, plan, layout, mode, rec, ctx, snap)
+            if est + len("".join(lines)) / C.CHARS_PER_S + hold > C.MAX_CLIP and rec is not order[-1]:
+                continue                               # คลิปจะยาวเกิน → ลองประโยคที่สั้นกว่า
+            if C.cta_check(lines, scene, rec):
+                continue
+            built = (lines, scene, prev_ext, meta, rec)
+            break
+        tried.add((layout, mode))
+    if built is None:                                 # สำรอง: บอร์ดสาขา (ต้องใช้แค่ branches() — จริงเสมอ)
+        rec = C.CTA_COPY["board"]["fallback"][0]
+        lines, scene, prev_ext, meta = C.cta_plan(fmt, plan, "board", "branch", rec, {}, snap)
+        built = (lines, scene, prev_ext, meta, rec)
+        note["cta_fallback"] = True
+    lines, scene, prev_ext, meta, rec = built
+    plan["script"] = "\n".join(body + lines)
+    plan["scenes"] = plan["scenes"][:-1] + [scene]
+    if prev_ext is not None and len(plan["scenes"]) >= 2:
+        plan["scenes"][-2]["extend"] = prev_ext
+    plan["cta"] = meta
+    plan.setdefault("copy", {})["cta"] = rec["id"]
+    return plan
 
 
 def direct(req=None, seed=None, project=None, hist=None):
@@ -135,13 +224,38 @@ def direct(req=None, seed=None, project=None, hist=None):
                     break
         plan = F.rank_plan(days=days, machine=machine, voice=voice, pick=pick)
 
-    plan["look"] = req["look"] if isinstance(req.get("look"), dict) else d.look()
-    plan["director"] = {"seed": str(seed), "requested": req.get("format") or "auto", **note}
     if machine and not plan.get("machine"):
         plan["machine"] = machine
+    closing(d, fmt, plan, note, force=req.get("cta"))
+    plan["look"] = req["look"] if isinstance(req.get("look"), dict) else d.look()
+    plan["director"] = {"seed": str(seed), "requested": req.get("format") or "auto", **note}
     if project:
         plan["project"] = project
     return plan
+
+
+def _silent_voice():
+    """แทนเสียง Gemini ด้วยเสียงเงียบยาวตามตัวอักษร (13 ตัว/วิ) และข้าม whisper → hf_render แบ่งเวลาตามตัวอักษรเอง
+
+    ทำไมมี (16 ต.ค. 2026): โควตาเสียงฟรี 10 ครั้ง/วัน ใช้คีย์เดียวกันทั้งเครื่องนี้และ GitHub Actions — ทดสอบฉากปิด
+    ไม่กี่รอบก็กินโควตาที่เจ้าของต้องใช้ทำคลิปจริงจนหมดวัน · ตรวจภาพ/รอยต่อ/ซับ/ค่าที่ส่งต่อได้ครบ ยกเว้นสำเนียงกับจังหวะคำจริง"""
+    import wave
+    from . import hf_render, voice
+
+    def synth(text, out_wav, voice=None, model=None, retries=3, style=None):
+        lines = [ln for ln in text.splitlines() if ln.strip()]
+        with wave.open(str(out_wav), "wb") as w:
+            w.setnchannels(1)
+            w.setsampwidth(2)
+            w.setframerate(24000)
+            w.writeframes(b"\x00\x00" * int(sum(len(ln) / 13.0 + 0.35 for ln in lines) * 24000))
+        return out_wav
+
+    def word_times(*_a, **_k):
+        raise RuntimeError("--silent-voice: ไม่ถอดคำ")
+
+    voice.synth = synth
+    hf_render.align.word_times = word_times
 
 
 def main(argv=None):
@@ -157,12 +271,17 @@ def main(argv=None):
     ap.add_argument("--seed")
     ap.add_argument("--project")
     ap.add_argument("--no-history", action="store_true", help="ไม่อ่านประวัติจาก video_jobs")
+    ap.add_argument("--cta", choices=tuple(C.TIMING_LAYOUTS), help="บังคับแบบฉากปิด (ทดสอบ)")
     ap.add_argument("--render", action="store_true")
+    ap.add_argument("--silent-voice", action="store_true",
+                    help="ทดสอบภาพทั้งท่อโดยไม่ใช้โควตาเสียง: เสียงเงียบ + เวลาแบ่งตามตัวอักษร (ห้ามเอาไปโพสต์)")
     a = ap.parse_args(argv)
-    plan = direct({"format": a.format, "machine": a.machine, "sku": a.sku}, seed=a.seed, project=a.project,
-                  hist=[] if a.no_history else None)
-    print(json.dumps({k: plan[k] for k in ("project", "format", "voice", "look", "copy", "director") if k in plan},
-                     ensure_ascii=False))
+    if a.silent_voice:
+        _silent_voice()
+    plan = direct({"format": a.format, "machine": a.machine, "sku": a.sku, "cta": a.cta}, seed=a.seed,
+                  project=a.project, hist=[] if a.no_history else None)
+    print(json.dumps({k: plan[k] for k in ("project", "format", "voice", "look", "copy", "director", "cta")
+                      if k in plan}, ensure_ascii=False))
     print(plan["script"])
     if a.render:
         from . import hf_render

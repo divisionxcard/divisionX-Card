@@ -97,7 +97,16 @@
       }
       .ts-chrome .dvx-q2 { background: linear-gradient(180deg, #ffffff 0%, var(--hot, #ffc24a) 40%, color-mix(in srgb, var(--hot, #ffc24a) 55%, #2a1a00) 58%, var(--hot, #ffc24a) 80%, #ffffff 100%); -webkit-background-clip: text; background-clip: text; }
       .ts-chrome .dvx-head { filter: drop-shadow(0 7px 0 #03102a) drop-shadow(0 0 22px rgba(27, 141, 255, 0.6)); }
+      /* โครเมียม = พื้นไล่สีตัดตามรูปตัวอักษร (background-clip: text) — พื้นวาดได้แค่ในกล่องของตัวมันเอง วรรณยุกต์/สระบนที่ล้นเหนือ
+         กรอบบรรทัด (line-height 1–1.12) จึงหายทั้งตัว: "นี้" เหลือ "นี" · "ตู้" เหลือ "ตู" (เจอตอนตรวจฉากปิด 16 ต.ค. — เป็นทุกฉากที่ใช้โครเมียม)
+         ขยายกล่องขึ้นด้วย padding แล้วหักคืนด้วย margin ติดลบ ตัวอักษรอยู่ที่เดิม · ฉากที่ตั้ง margin-top ของหัวเรื่องเองต้องประกาศเป็น
+         --qmt (กฎนี้ !important ทับ margin-top ตรง ๆ) */
+      .ts-chrome .dvx-q { padding-top: 0.32em !important; margin-top: calc(var(--qmt, 0px) - 0.32em) !important; }
       .ts-neon .dvx-q { -webkit-text-stroke: 0 !important; color: #f2fbff !important; text-shadow: 0 0 10px #59d2ff, 0 0 28px #1b8dff, 0 0 60px rgba(27, 141, 255, 0.85) !important; }
+      /* ฉากปิด (cta-*) หัวเรื่องเล็กกว่าและวางทับลำแสง/รูป — ไร้ขอบเลย แสงฟ้ารอบตัวอักษรถูกนับเป็นพื้น คอนทราสต์ตกเหลือ ~2.9:1
+         จึงเก็บขอบกรมท่าบาง ๆ ไว้ใต้แสงเรือง · จำกัดเฉพาะฉากปิด ฉากเปิดของรูปแบบผ่านตรวจอยู่แล้ว (16 ต.ค.)
+         slot ตัวเดียวถือทั้ง ts-* และ data-composition-id จึงต้องเขียนติดกัน ไม่ใช่ลูกหลาน */
+      .ts-neon[data-composition-id^="cta-"] .dvx-q { -webkit-text-stroke: 6px #03102a !important; paint-order: stroke fill; }
       .ts-neon .dvx-q2 { color: var(--hot, #ffc24a) !important; text-shadow: 0 0 10px var(--hot, #ffc24a), 0 0 30px var(--hot, #ffc24a), 0 0 64px rgba(255, 255, 255, 0.35) !important; }
       .ts-neon .dvx-kick { background: rgba(3, 16, 42, 0.9) !important; border: 3px solid #59d2ff; }
     </style>
@@ -137,6 +146,9 @@
       (function () {
         const DUR = {{DURATION}};
         const CUTS = {{CUTS}};
+        // รอยต่อที่ "นุ่ม" = แสงวาบอย่างเดียว (เข้าฉากปิดแบบใหม่ — พระเอกบินต่อจากฉากก่อน แถบทึบ/กลิตช์/สายฟ้าบังหมด)
+        // ไม่ถูกแทนค่า (ตัวประกอบรุ่นเก่า) = ไม่มีรอยต่อนุ่ม
+        const SOFT = JSON.parse('{{SOFT}}'.replace(/^\{\{SOFT\}\}$/, "[]"));
         const BG = "{{BG}}", CUT = "{{CUT}}";
         const tl = gsap.timeline({ paused: true });
         const prand = (n) => {
@@ -184,6 +196,11 @@
         CUTS.forEach((t, i) => {
           const at = Math.max(0, t - 0.06);
           const first = i === 0;
+          if (SOFT.indexOf(i) >= 0) {
+            tl.fromTo("#fx-flash", { opacity: 0 }, { opacity: 0.55, duration: 0.05, ease: "none", immediateRender: false }, at);
+            tl.to("#fx-flash", { opacity: 0, duration: 0.32, ease: "power2.out" }, at + 0.05);
+            return;
+          }
           // แสงวาบมีทุกแบบ (เบาลงเมื่อมีตัวเปลี่ยนฉากอื่นทำงานหลัก)
           const peak = CUT === "flash" ? 1 : CUT === "bolt" ? (first ? 0.9 : 0.75) : 0.45;
           tl.fromTo("#fx-flash", { opacity: 0 }, { opacity: peak, duration: 0.05, ease: "none", immediateRender: first }, at);
@@ -216,6 +233,21 @@
         });
 
         window.__timelines["main"] = tl;
+
+        // หัวเรื่องโครเมียมขยายกล่องขึ้นด้วย padding ใส (กฎ .ts-chrome .dvx-q) — ตัวตรวจ layout ไม่ดู background-clip: text จึงเห็นกล่อง
+        // ที่มีพื้นไล่สี + padding เป็น "ชิป" ทึบ แล้วฟ้องสองอย่างทั้งที่ตรงนั้นไม่มีพิกเซลวาด:
+        //   text_occluded — บังข้อความเหนือหัวเรื่อง (ป้ายยกเว้นต้องอยู่ที่ "ข้อความที่ถูกบัง": หัวเรื่อง · .dvx-kick · .dvx-near)
+        //   text_box_overflow — ตัวอักษรล้นชิปของตัวเอง (ยกเว้นที่หัวเรื่อง)
+        // ติดเฉพาะชุดโครเมียม — ตำแหน่งตัวอักษรเท่ากันทุกชุด ชุดอื่นจึงยังตรวจของจริงให้ครบ · ฉากย่อยถูกแทรกเข้า DOM ทีหลัง จึงคอยดู
+        const flag = (sel, attr) => document.querySelectorAll(sel).forEach((el) => {
+          if (!el.hasAttribute(attr)) el.setAttribute(attr, "");
+        });
+        const markChrome = () => {
+          flag(".ts-chrome .dvx-q, .ts-chrome .dvx-kick, .ts-chrome .dvx-near", "data-layout-allow-occlusion");
+          flag(".ts-chrome .dvx-q", "data-layout-allow-overflow");
+        };
+        markChrome();
+        new MutationObserver(markChrome).observe(document.documentElement, { childList: true, subtree: true });
       })();
     </script>
   </body>

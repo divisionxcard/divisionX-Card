@@ -1,0 +1,532 @@
+<!doctype html>
+<!--
+  cta-board — ฉากปิด "บอร์ดสาขา" (สเปก layout "board" · 16 ต.ค. 2026)
+
+  สองโหมด (ข้อมูลเป็นตัวกำหนด ไม่สุ่ม):
+    pack   (rank / versus / quiz) "ซองที่เพิ่งเห็น ล่าสุดมีที่สาขาไหน"
+           ซองตัวเอกเริ่มตรงตำแหน่งเฟรมสุดท้ายของฉากก่อน (src = cx,cy,w,h,องศา) แล้วบินขึ้นไปกลางบน ·
+           ป้ายวันที่สต็อกแบบสองสี · ช่องเฉพาะตู้ที่ล่าสุดมีซองนี้ — ตู้ที่ไม่มีไม่แสดงเลย (ไม่หรี่ ไม่ติดป้าย)
+           ลำแสงสแกนกวาดลง ช่องติดไฟทีละแถว + เครื่องหมายถูกเด้ง
+    branch (map) "นอกจากสาขานี้ ใกล้คุณสาขาไหน"
+           การ์ดรูปตู้ของฉากแผนที่หมุนตะแคง แล้วบอร์ดพลิกเข้ามาบนแกนเดียวกัน · ทุกตู้ ช่องละตู้
+           (เซ็นทรัลพระราม 2 จึงมีสองช่อง) · ช่องพลิกลงทีละช่องแบบป้ายสนามบิน — พลิกทั้งช่องเท่านั้น
+           (พลิกทีละตัวอักษรแล้วสระ/วรรณยุกต์ไทยหลุด) · ตู้ในคลิปติดขอบสีเน้น + หมุดทอง + วงคลื่นแบบฉากแผนที่
+
+  กติกาความจริง: ข้อความทุกตัวมาจากตัวแปร (ฝั่ง Python คุมให้ตรงกับเสียง) · ไม่มีตัวเลขยอดขาย/จำนวนสต็อก ·
+    ช่องส่งมาเป็นสตริง "ห้าง|ชั้น|โฟกัส|จุดสังเกต;…" (โฟกัส "1" = ตู้ในคลิป · จุดสังเกตแสดงเฉพาะแบบคอลัมน์เดียว)
+  พื้นที่ปลอดภัย: ของสำคัญอยู่ใน y 196–1300 · ตั้งแต่ y 640 ลงไปไม่เกิน x 930 (แถบปุ่มขวาของ TikTok) ·
+    แถบซับ 1330–1520 ว่างเสมอ · 0.35 วิสุดท้ายนิ่งสนิท (แคปหน้าจอได้ภาพสะอาด)
+  ฉากโปร่ง — พื้นหลังกรมท่า/โลโก้มุมอยู่ที่ index.html (พื้นเบลอรูปตู้ตอนต้นโหมด branch = ต่อภาพจากฉากแผนที่ แล้วจางหายใน 0.4 วิ)
+-->
+<html
+  lang="th"
+  data-composition-variables='[
+    {"id":"mode","type":"string","label":"โหมด (pack = ตามซอง · branch = ทุกสาขา)","default":"branch"},
+    {"id":"variant","type":"string","label":"รหัสสำนวน (P1/P2/B1/B2/B3)","default":"B1"},
+    {"id":"stamp_l","type":"string","label":"ป้ายวันที่สต็อก (ครึ่งซ้าย)","default":"สต็อก ณ 16 ต.ค."},
+    {"id":"stamp_r","type":"string","label":"ป้ายเตือน (ครึ่งขวา)","default":"เช็กหน้าตู้ก่อนไป"},
+    {"id":"hero","type":"string","label":"รูปซองตัวเอก (pack)","default":"assets/packs/op-16.webp"},
+    {"id":"hero_name","type":"string","label":"ชื่อซองตัวเอก","default":"OP-16"},
+    {"id":"hfs","type":"number","label":"ขนาดชื่อซอง (px)","default":44,"min":24,"max":44,"step":1},
+    {"id":"head","type":"string","label":"หัวเรื่อง (pack)","default":"ล่าสุดมีครบทุกสาขา"},
+    {"id":"hpx","type":"number","label":"ขนาดหัวเรื่อง pack (px)","default":88,"min":48,"max":88,"step":1},
+    {"id":"kicker","type":"string","label":"ป้ายเล็กบนสุด (branch)","default":"12 ตู้ ใน 11 ห้าง"},
+    {"id":"q1","type":"string","label":"คำถามบรรทัด 1 (branch)","default":"นอกจากสาขานี้"},
+    {"id":"q2","type":"string","label":"คำถามบรรทัด 2 (branch · สีเน้น)","default":"ใกล้คุณสาขาไหน?"},
+    {"id":"qs1","type":"number","label":"ขนาดคำถามบรรทัด 1 (px)","default":104,"min":48,"max":104,"step":1},
+    {"id":"qs2","type":"number","label":"ขนาดคำถามบรรทัด 2 (px)","default":104,"min":48,"max":104,"step":1},
+    {"id":"sub","type":"string","label":"บรรทัดรอง B3 (ว่าง = ไม่แสดง)","default":""},
+    {"id":"ask","type":"string","label":"ข้อความชวนคอมเมนต์ B1 (ว่าง = ไม่แสดง)","default":"คอมเมนต์ชื่อห้างมาเลย"},
+    {"id":"tiles","type":"string","label":"ช่องสาขา ห้าง|ชั้น|โฟกัส|จุดสังเกต;…","default":"เดอะมอลล์บางแค|3|0|;เซ็นทรัลพระราม 2|4|0|;เซ็นทรัลชลบุรี|4|0|;เซ็นทรัลพระราม 9|7|0|;เซ็นทรัลรามอินทรา|3|0|;เดอะมอลล์บางกะปิ|1|0|;เซ็นทรัลศาลายา|3|0|;เซ็นทรัลเวสต์เกต|2|0|;ซีคอนบางแค|4|0|;เซ็นทรัลพระราม 2|G|0|;เซ็นทรัลเวสต์วิลล์|1|0|;ไอคอนสยาม|6|1|"},
+    {"id":"tpx","type":"number","label":"ขนาดชื่อห้างในช่อง (px)","default":30,"min":20,"max":32,"step":1},
+    {"id":"cols","type":"number","label":"จำนวนคอลัมน์ (1-3)","default":3,"min":1,"max":3,"step":1},
+    {"id":"url","type":"string","label":"ลิงก์หน้าสาขา","default":"division-x-card.vercel.app/branches"},
+    {"id":"foot","type":"string","label":"ข้อความท้าย","default":"พิกัด + ปุ่มนำทาง · division-x-card.vercel.app/branches"},
+    {"id":"photo","type":"string","label":"รูปตู้สาขาในคลิป (branch · ต่อภาพจากฉากแผนที่)","default":"assets/branches/pf01.jpg"},
+    {"id":"plabel","type":"string","label":"ป้ายบนรูปตู้จากฉากแผนที่ (ว่าง = ไม่แสดง)","default":""},
+    {"id":"pfs","type":"number","label":"ขนาดป้ายบนรูปตู้ (px)","default":38,"min":22,"max":40,"step":1},
+    {"id":"src","type":"string","label":"จุดเริ่ม cx,cy,w,h,องศา (เฟรมสุดท้ายของฉากก่อน)","default":"540,956,554,720,0"},
+    {"id":"dur","type":"number","label":"ความยาวฉาก (วิ)","default":5.4,"min":1,"max":60,"step":0.01}
+  ]'
+>
+  <head>
+    <meta charset="UTF-8" />
+  </head>
+  <body>
+    <template>
+      <style>
+        @font-face { font-family: "Kanit"; src: url("assets/fonts/Kanit-Black.ttf"); font-weight: 900; }
+        @font-face { font-family: "Kanit"; src: url("assets/fonts/Kanit-ExtraBold.ttf"); font-weight: 800; }
+        @font-face { font-family: "Kanit"; src: url("assets/fonts/Kanit-SemiBold.ttf"); font-weight: 600; }
+        #root { position: absolute; inset: 0; overflow: hidden; font-family: "Kanit", sans-serif; color: #ffffff; }
+        #cta-board-stage { position: absolute; inset: 0; }
+        /* โหมดตั้งครั้งเดียวตอนประกอบ (ไม่ tween display) */
+        #cta-board-stage[data-mode="branch"] .cta-board-pk, #cta-board-stage[data-mode="pack"] .cta-board-br { display: none; }
+
+        /* ── branch: ต่อภาพจากฉากแผนที่ (พื้นเบลอ + การ์ดรูปตู้ ตำแหน่งเดียวกับเฟรมสุดท้าย) */
+        #cta-board-pbg { position: absolute; inset: 0; z-index: 1; overflow: hidden; will-change: opacity; }
+        #cta-board-pbg img { position: absolute; left: -80px; top: -80px; width: 1240px; height: 2080px; object-fit: cover; filter: blur(30px) brightness(0.42) saturate(1.25); }
+        #cta-board-pcard {
+          position: absolute; left: 263px; top: 596px; width: 554px; height: 720px; z-index: 7; border-radius: 34px; overflow: hidden;
+          border: 6px solid #59d2ff; box-shadow: 0 0 60px rgba(27, 141, 255, 0.85), 0 30px 70px rgba(0, 0, 0, 0.6); will-change: transform, opacity;
+        }
+        #cta-board-pimg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transform-origin: 50% 45%; transform: scale(1.1); }
+        #cta-board-plabel { position: absolute; left: 0; right: 0; bottom: 22px; display: flex; justify-content: center; }
+        #cta-board-plabel-pill {
+          display: block; padding: 6px 30px 10px; border-radius: 999px; background: rgba(3, 16, 42, 0.9); border: 3px solid #ffc24a;
+          font-weight: 800; line-height: 1.2; color: #ffffff; white-space: nowrap; box-shadow: 0 0 26px rgba(255, 194, 74, 0.6);
+        }
+        #cta-board-plabel-pill:empty { display: none; }
+
+        /* ── บอร์ด (แผงรองช่อง) · branch มีพื้นแผงที่พลิกเข้ามา · pack แผงโปร่ง */
+        #cta-board-panel { position: absolute; left: 52px; top: 522px; width: 896px; height: 552px; z-index: 2; will-change: transform, opacity; }
+        #cta-board-panel-bg {
+          position: absolute; inset: 0; border-radius: 30px;
+          background: linear-gradient(180deg, rgba(11, 40, 88, 0.94) 0%, rgba(3, 16, 42, 0.96) 100%);
+          border: 3px solid rgba(89, 210, 255, 0.55);
+          box-shadow: 0 0 50px rgba(27, 141, 255, 0.4), 0 26px 60px rgba(0, 0, 0, 0.55), inset 0 0 34px rgba(27, 141, 255, 0.16);
+        }
+        .cta-board-screw { position: absolute; width: 10px; height: 10px; border-radius: 50%; background: rgba(89, 210, 255, 0.45); box-shadow: 0 0 8px rgba(89, 210, 255, 0.6); }
+
+        /* ── ช่องสาขา (สร้างจากตัวแปร tiles ตอนประกอบ) */
+        .cta-board-tile { position: absolute; will-change: transform, opacity; }
+        .cta-board-tbg {
+          position: absolute; inset: 0; border-radius: 18px;
+          background: linear-gradient(180deg, rgba(16, 58, 114, 0.95) 0%, rgba(6, 27, 58, 0.97) 100%);
+          border: 3px solid rgba(89, 210, 255, 0.38); box-shadow: 0 10px 24px rgba(0, 0, 0, 0.45);
+        }
+        .cta-board-tclip { position: absolute; inset: 0; border-radius: 18px; overflow: hidden; }
+        .cta-board-glint {
+          position: absolute; left: -60%; top: 0; width: 30%; height: 100%;
+          background: linear-gradient(100deg, rgba(232, 247, 255, 0) 0%, rgba(232, 247, 255, 0.42) 50%, rgba(232, 247, 255, 0) 100%);
+          will-change: transform;
+        }
+        .cta-board-flash { position: absolute; inset: 0; border-radius: 18px; background: rgba(240, 250, 255, 0.95); opacity: 0; }
+        .cta-board-lit {
+          position: absolute; inset: -3px; border-radius: 21px; border: 4px solid var(--hot, #ffc24a); opacity: 0;
+          box-shadow: 0 0 26px color-mix(in srgb, var(--hot, #ffc24a) 75%, transparent), inset 0 0 18px color-mix(in srgb, var(--hot, #ffc24a) 30%, transparent);
+        }
+        .cta-board-tbody { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: center; padding: 0 16px; }
+        .cta-board-tname { display: block; font-weight: 800; font-size: calc(var(--tpx, 30) * 1px); line-height: 1.22; white-space: nowrap; color: #ffffff; }
+        .cta-board-tfloor { display: flex; align-items: center; gap: 6px; margin-top: 1px; font-weight: 800; font-size: 28px; line-height: 1.2; white-space: nowrap; color: var(--hot, #ffc24a); }
+        .cta-board-chk { display: block; flex: 0 0 26px; width: 26px; height: 26px; overflow: visible; }
+        .cta-board-chk path { fill: none; stroke: var(--hot, #ffc24a); stroke-width: 3.8; stroke-linecap: round; stroke-linejoin: round; }
+        /* คอลัมน์เดียว (4 ช่องหรือน้อยกว่า): ✓ ซ้าย · ห้าง + จุดสังเกต · ชั้นชิดขวา */
+        .cta-board-c1 .cta-board-tbody { flex-direction: row; align-items: center; gap: 18px; padding: 0 28px 0 20px; }
+        .cta-board-badge { display: flex; flex: 0 0 54px; width: 54px; height: 54px; border-radius: 50%; align-items: center; justify-content: center;
+          background: var(--hot, #ffc24a); box-shadow: 0 0 20px color-mix(in srgb, var(--hot, #ffc24a) 70%, transparent); }
+        .cta-board-badge svg { display: block; width: 32px; height: 32px; overflow: visible; }
+        .cta-board-badge path { fill: none; stroke: #03102a; stroke-width: 4.2; stroke-linecap: round; stroke-linejoin: round; }
+        .cta-board-tcol { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; justify-content: center; }
+        .cta-board-c1 .cta-board-tname { font-size: 38px; line-height: 1.2; }
+        .cta-board-tlm { display: block; font-weight: 600; font-size: 28px; line-height: 1.2; color: #9fc4e8; white-space: nowrap; }
+        .cta-board-tfl1 { display: block; flex: 0 0 auto; font-weight: 900; font-size: 38px; line-height: 1.2; white-space: nowrap; color: var(--hot, #ffc24a); }
+        /* branch: ช่องแบบป้ายพลิก (รอยต่อกลางช่อง) · ชั้นสีทอง */
+        .cta-board-flap .cta-board-tbg {
+          border-radius: 16px; border: 2px solid rgba(89, 210, 255, 0.48);
+          background: linear-gradient(180deg, #123b76 0%, #0b2c5c calc(50% - 1px), rgba(2, 10, 26, 0.9) calc(50% - 1px), rgba(2, 10, 26, 0.9) calc(50% + 1px), #0a2a58 calc(50% + 1px), #061c40 100%);
+        }
+        .cta-board-flap .cta-board-tclip, .cta-board-flap .cta-board-flash { border-radius: 16px; }
+        .cta-board-flap .cta-board-lit { border-radius: 19px; border-width: 6px; inset: -4px; }
+        .cta-board-flap .cta-board-tfloor { margin-top: 6px; font-size: 30px; color: #ffc24a; }
+        .cta-board-focus { z-index: 2; }
+        .cta-board-pin { position: absolute; right: 16px; bottom: 12px; width: 34px; height: 44px; overflow: visible; filter: drop-shadow(0 0 10px #ffc24a); will-change: transform, opacity; }
+        .cta-board-ring { position: absolute; width: 80px; height: 80px; border-radius: 50%; border: 6px solid #ffc24a; opacity: 0; will-change: transform, opacity; }
+
+        /* ── pack: ลำแสงสแกน */
+        #cta-board-beam {
+          position: absolute; left: 50px; top: 0; width: 900px; height: 6px; z-index: 3; border-radius: 3px; opacity: 0;
+          background: linear-gradient(90deg, rgba(89, 210, 255, 0) 0%, #e8f7ff 18%, #59d2ff 50%, #e8f7ff 82%, rgba(89, 210, 255, 0) 100%);
+          box-shadow: 0 0 22px #59d2ff, 0 0 60px #1b8dff; will-change: transform, opacity;
+        }
+        #cta-board-beam-tail { position: absolute; left: 6%; right: 6%; bottom: 6px; height: 90px; background: linear-gradient(0deg, rgba(89, 210, 255, 0.22), rgba(89, 210, 255, 0)); }
+
+        /* ── pack: ซองตัวเอก + ป้ายชื่อ */
+        #cta-board-halo {
+          position: absolute; left: 310px; top: 182px; width: 460px; height: 460px; z-index: 2; border-radius: 50%; opacity: 0;
+          background: radial-gradient(circle, color-mix(in srgb, var(--hot, #ffc24a) 55%, transparent) 0%, color-mix(in srgb, var(--hot, #ffc24a) 16%, transparent) 42%, rgba(3, 16, 42, 0) 70%);
+          will-change: transform, opacity;
+        }
+        #cta-board-burst { position: absolute; left: 390px; top: 262px; width: 300px; height: 300px; z-index: 3; border-radius: 50%; opacity: 0;
+          border: 8px solid var(--hot, #ffc24a); box-shadow: 0 0 40px var(--hot, #ffc24a); will-change: transform, opacity; }
+        #cta-board-hero { position: absolute; left: 395px; top: 267px; width: 290px; height: 290px; z-index: 4; will-change: transform; }
+        #cta-board-bob { position: absolute; inset: 0; will-change: transform; }
+        #cta-board-himg {
+          position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain;
+          filter: drop-shadow(0 20px 34px rgba(0, 0, 0, 0.6)) drop-shadow(0 0 16px color-mix(in srgb, var(--hot, #ffc24a) 45%, transparent));
+        }
+        #cta-board-chip-row { position: absolute; left: 0; right: 0; top: 548px; z-index: 5; display: flex; justify-content: center; }
+        #cta-board-chip {
+          display: block; padding: 0 30px 4px; border-radius: 999px; background: #1b8dff; border: 3px solid rgba(232, 247, 255, 0.9);
+          box-shadow: 0 0 30px rgba(27, 141, 255, 0.9); font-weight: 900; line-height: 1.12; white-space: nowrap; color: #ffffff; will-change: transform, opacity;
+        }
+        /* ป้ายวันที่สต็อกสองสี: ซ้ายสีเน้น ตัวกรมท่า · ขวาพื้นกรมท่า ตัวขาว */
+        #cta-board-stamp-row { position: absolute; left: 0; right: 0; top: 200px; z-index: 6; display: flex; justify-content: center; }
+        #cta-board-stamp { display: flex; border-radius: 999px; overflow: hidden; border: 3px solid #59d2ff; box-shadow: 0 0 26px rgba(89, 210, 255, 0.55); will-change: transform, opacity; }
+        #cta-board-stamp-l { display: block; padding: 3px 22px 7px; background: var(--hot, #ffc24a); color: #03102a; font-weight: 800; font-size: 34px; line-height: 1.2; white-space: nowrap; }
+        #cta-board-stamp-r { display: block; padding: 3px 24px 7px; background: #03102a; color: #ffffff; font-weight: 800; font-size: 34px; line-height: 1.2; white-space: nowrap; }
+        #cta-board-stamp-l:empty, #cta-board-stamp-r:empty { display: none; }
+
+        /* ── หัวเรื่อง (คลาส dvx-* ให้ชุดหน้าตา ts-* ของคลิปมีผล · ห้ามใส่ filter บน .dvx-q) */
+        .cta-board-q {
+          display: block; text-align: center; font-weight: 900; line-height: 1.12; white-space: nowrap;
+          -webkit-text-stroke: 14px #03102a; paint-order: stroke fill;
+          text-shadow: 0 10px 0 #03102a, 0 0 40px rgba(27, 141, 255, 0.55); will-change: transform, opacity;
+        }
+        /* y ≥ 640 ห้ามเกิน x 930 → กล่องหัวเรื่อง pack กว้าง 780 กึ่งกลาง 540 (150–930) */
+        #cta-board-hwrap { position: absolute; left: 150px; width: 780px; top: 618px; z-index: 6; }
+        #cta-board-head { color: var(--hot, #ffc24a); -webkit-text-stroke-width: 12px; }
+        #cta-board-bhead { position: absolute; left: 0; right: 0; top: 196px; z-index: 6; }
+        #cta-board-kick-row { display: flex; justify-content: center; }
+        #cta-board-kick {
+          display: block; padding: 4px 30px 9px; border-radius: 999px; background: #1b8dff; box-shadow: 0 0 34px rgba(89, 210, 255, 0.8);
+          font-weight: 800; font-size: 36px; line-height: 1.2; white-space: nowrap; will-change: transform, opacity;
+        }
+        #cta-board-q1 { --qmt: 10px; margin-top: var(--qmt); color: #ffffff; }
+        #cta-board-q2 { color: var(--hot, #ffc24a); }
+        #cta-board-kick:empty, #cta-board-q1:empty, #cta-board-q2:empty, #cta-board-head:empty, #cta-board-chip:empty { display: none; }
+
+        /* ── branch: บรรทัดชวน (B1 ask) หรือบรรทัดรอง (B3 sub) ช่องเดียวกัน */
+        #cta-board-act { position: absolute; left: 70px; width: 860px; top: 1088px; z-index: 6; display: flex; justify-content: center; }
+        #cta-board-askrow { display: flex; align-items: center; gap: 16px; will-change: transform, opacity; }
+        #cta-board-bub { display: block; flex: 0 0 62px; width: 62px; height: 56px; overflow: visible; will-change: transform; }
+        #cta-board-ask {
+          display: block; font-weight: 900; font-size: 52px; line-height: 1.15; white-space: nowrap; color: var(--hot, #ffc24a);
+          -webkit-text-stroke: 10px #03102a; paint-order: stroke fill;
+          text-shadow: 0 6px 0 #03102a, 0 0 28px color-mix(in srgb, var(--hot, #ffc24a) 50%, transparent);
+        }
+        #cta-board-sub {
+          display: block; font-weight: 800; font-size: 40px; line-height: 1.2; white-space: nowrap; color: #e8f7ff;
+          -webkit-text-stroke: 8px #03102a; paint-order: stroke fill; text-shadow: 0 5px 0 #03102a, 0 0 22px rgba(27, 141, 255, 0.6);
+          will-change: transform, opacity;
+        }
+
+        /* ── ท้ายการ์ด (ทั้งสองโหมด): หมุด + ลิงก์หน้าสาขา (หน้านั้นมีปุ่มนำทาง ไม่มีสต็อก) · ภายใน x 70–930 */
+        #cta-board-foot { position: absolute; left: 70px; width: 860px; top: 1176px; z-index: 6; display: flex; justify-content: center; will-change: transform, opacity; }
+        #cta-board-foot-pill {
+          display: flex; align-items: center; gap: 10px; max-width: 860px; padding: 5px 24px 8px 18px; border-radius: 999px;
+          background: rgba(3, 16, 42, 0.92); border: 3px solid #59d2ff; box-shadow: 0 0 30px rgba(27, 141, 255, 0.6);
+        }
+        #cta-board-foot-pin { display: block; flex: 0 0 30px; width: 30px; height: 38px; overflow: visible; }
+        #cta-board-foot-pin path { fill: var(--hot, #ffc24a); }
+        #cta-board-foot-a { display: block; font-weight: 800; font-size: 27px; line-height: 1.2; white-space: nowrap; color: var(--hot, #ffc24a); }
+        #cta-board-foot-b { display: block; font-weight: 800; font-size: 30px; line-height: 1.2; white-space: nowrap; color: #ffffff; }
+        #cta-board-foot-a:empty, #cta-board-foot-b:empty { display: none; }
+      </style>
+
+      <div id="root" data-composition-id="cta-board" data-width="1080" data-height="1920">
+        <div id="cta-board-stage" data-mode="branch">
+          <div id="cta-board-pbg" class="cta-board-br" aria-hidden="true" data-layout-ignore><img id="cta-board-pbg-img" data-var-src="photo" src="assets/branches/pf01.jpg" alt="" /></div>
+
+          <div id="cta-board-panel"><div id="cta-board-panel-bg" class="cta-board-br" aria-hidden="true" data-layout-ignore></div></div>
+          <div id="cta-board-beam" class="cta-board-pk" aria-hidden="true" data-layout-ignore><div id="cta-board-beam-tail"></div></div>
+
+          <div id="cta-board-halo" class="cta-board-pk" aria-hidden="true" data-layout-ignore></div>
+          <div id="cta-board-burst" class="cta-board-pk" aria-hidden="true" data-layout-ignore></div>
+          <div id="cta-board-hero" class="cta-board-pk"><div id="cta-board-bob"><img id="cta-board-himg" data-var-src="hero" src="assets/packs/op-16.webp" alt="" /></div></div>
+          <div id="cta-board-chip-row" class="cta-board-pk"><div id="cta-board-chip" class="dvx-near" data-var-text="hero_name" style="font-size: calc(var(--hfs, 44) * 1px)">OP-16</div></div>
+          <div id="cta-board-stamp-row" class="cta-board-pk"><div id="cta-board-stamp"><span id="cta-board-stamp-l" data-var-text="stamp_l">สต็อก ณ 16 ต.ค.</span><span id="cta-board-stamp-r" data-var-text="stamp_r">เช็กหน้าตู้ก่อนไป</span></div></div>
+          <div id="cta-board-hwrap" class="cta-board-pk dvx-head"><div id="cta-board-head" class="cta-board-q dvx-q dvx-q2" data-var-text="head" style="font-size: calc(var(--hpx, 88) * 1px)">ล่าสุดมีครบทุกสาขา</div></div>
+
+          <div id="cta-board-bhead" class="cta-board-br dvx-head">
+            <div id="cta-board-kick-row"><div id="cta-board-kick" class="dvx-kick" data-var-text="kicker">12 ตู้ ใน 11 ห้าง</div></div>
+            <div id="cta-board-q1" class="cta-board-q dvx-q dvx-q1" data-var-text="q1" style="font-size: calc(var(--qs1, 104) * 1px)">นอกจากสาขานี้</div>
+            <div id="cta-board-q2" class="cta-board-q dvx-q dvx-q2" data-var-text="q2" style="font-size: calc(var(--qs2, 104) * 1px)">ใกล้คุณสาขาไหน?</div>
+          </div>
+          <div id="cta-board-act" class="cta-board-br">
+            <div id="cta-board-askrow">
+              <svg id="cta-board-bub" viewBox="0 0 62 56" aria-hidden="true" data-layout-ignore><path d="M10 3 H52 A8 8 0 0 1 60 11 V35 A8 8 0 0 1 52 43 H29 L15 54 L18 43 H10 A8 8 0 0 1 2 35 V11 A8 8 0 0 1 10 3 Z" fill="#59d2ff" stroke="#03102a" stroke-width="4" stroke-linejoin="round" /><circle cx="19" cy="23" r="4.6" fill="#03102a" /><circle cx="31" cy="23" r="4.6" fill="#03102a" /><circle cx="43" cy="23" r="4.6" fill="#03102a" /></svg>
+              <span id="cta-board-ask" data-var-text="ask">คอมเมนต์ชื่อห้างมาเลย</span>
+            </div>
+            <span id="cta-board-sub" data-var-text="sub"></span>
+          </div>
+
+          <div id="cta-board-foot"><div id="cta-board-foot-pill">
+            <svg id="cta-board-foot-pin" viewBox="0 0 72 92" aria-hidden="true" data-layout-ignore><path d="M36 90 C36 90 6 54 6 34 A30 30 0 0 1 66 34 C66 54 36 90 36 90 Z" /><circle cx="36" cy="34" r="12" fill="#03102a" /></svg>
+            <span id="cta-board-foot-a"></span><span id="cta-board-foot-b"></span>
+          </div></div>
+
+          <div id="cta-board-pcard" class="cta-board-br" aria-hidden="true" data-layout-ignore>
+            <img id="cta-board-pimg" data-var-src="photo" src="assets/branches/pf01.jpg" alt="" />
+            <div id="cta-board-plabel"><span id="cta-board-plabel-pill" data-var-text="plabel" style="font-size: calc(var(--pfs, 38) * 1px)"></span></div>
+          </div>
+        </div>
+      </div>
+
+      <script>
+        (function () {
+          const v = (window.__hyperframes && window.__hyperframes.getVariables && window.__hyperframes.getVariables()) || {};
+          const num = (x, d) => (x != null && x !== "" && isFinite(Number(x)) ? Number(x) : d);
+          const str = (x) => (x == null ? "" : String(x)).trim();
+          const DUR = num(v.dur, 5.4);
+          const END = Math.max(1.95, DUR - 0.35);          // หลังจากนี้นิ่งสนิท (เฟรมแคปหน้าจอ)
+          const MODE = str(v.mode).toLowerCase() === "pack" ? "pack" : "branch";
+          const tl = gsap.timeline({ paused: true });
+          const prand = (n) => {
+            const x = Math.sin(n * 127.1 + 311.7) * 43758.5453;
+            return x - Math.floor(x);
+          };
+          const $ = (id) => document.getElementById(id);
+          const stage = $("cta-board-stage");
+          stage.setAttribute("data-mode", MODE);
+          // ขนาดตัวอักษรมาจาก Python (วัดด้วย Kanit จริงแล้ว) · 0/ว่าง = ใช้ค่าปกติ ไม่ให้ตัวหนังสือหาย
+          [["hfs", 44], ["hpx", 88], ["qs1", 104], ["qs2", 104], ["tpx", 30], ["pfs", 38]].forEach(([k, d]) => {
+            if (!(num(v[k], 0) > 0)) stage.style.setProperty("--" + k, String(d));
+          });
+          const mk = (tag, cls, parent, text) => {
+            const el = document.createElement(tag);
+            if (cls) el.className = cls;
+            if (text != null) el.textContent = text;
+            parent.appendChild(el);
+            return el;
+          };
+          const deco = (el) => {
+            el.setAttribute("aria-hidden", "true");
+            el.setAttribute("data-layout-ignore", "");
+            return el;
+          };
+          // src = "cx,cy,w,h,องศา" ของตัวเอกในเฟรมสุดท้ายของฉากก่อน (รับ "cx,cy,w,องศา" ด้วย)
+          function parseSrc(s, d) {
+            const p = String(s || "").split(",").map((x) => Number(String(x).trim()));
+            if (p.length < 3 || !p.slice(0, 3).every((x) => isFinite(x))) return { cx: d[0], cy: d[1], w: d[2], h: d[3], rot: d[4] };
+            let h = p[2], rot = 0;
+            if (p.length >= 5) { h = isFinite(p[3]) && p[3] > 0 ? p[3] : p[2]; rot = isFinite(p[4]) ? p[4] : 0; }
+            else if (p.length === 4 && isFinite(p[3])) { if (Math.abs(p[3]) <= 45) rot = p[3]; else h = p[3]; }
+            return { cx: p[0], cy: p[1], w: Math.max(1, p[2]), h: Math.max(1, h), rot };
+          }
+          function order(n, seed) {
+            const a = Array.from({ length: n }, (_, i) => i);
+            for (let i = n - 1; i > 0; i--) {
+              const j = Math.floor(prand(seed + i * 7.3) * (i + 1));
+              const t = a[i]; a[i] = a[j]; a[j] = t;
+            }
+            return a;
+          }
+          const CHECK = '<svg viewBox="0 0 24 24" aria-hidden="true" data-layout-ignore><path d="M4 12.6 L9.6 18.2 L20.2 6.4" /></svg>';
+          const PIN = '<path d="M36 90 C36 90 6 54 6 34 A30 30 0 0 1 66 34 C66 54 36 90 36 90 Z" fill="#ffc24a" stroke="#03102a" stroke-width="5" /><circle cx="36" cy="34" r="12" fill="#03102a" />';
+
+          // ── ข้อความท้าย: ส่วนลิงก์เป็นสีขาว ส่วนนำหน้าสีเน้น (ข้อความเดิมทุกตัวอักษร)
+          const LINK = str(v.url), FOOT = str(v.foot) || (LINK ? "พิกัด + ปุ่มนำทาง · " + LINK : "");
+          const at = LINK ? FOOT.indexOf(LINK) : -1;
+          $("cta-board-foot-a").textContent = at >= 0 ? FOOT.slice(0, at).trim() : FOOT;
+          $("cta-board-foot-b").textContent = at >= 0 ? FOOT.slice(at).trim() : "";
+          if (!FOOT) $("cta-board-foot").style.display = "none";
+
+          // ── ช่องสาขา: "ห้าง|ชั้น|โฟกัส|จุดสังเกต;…" ตามลำดับ branches() · ช่องละตู้
+          const tiles = str(v.tiles).split(";").map((s) => s.split("|").map((x) => x.trim())).filter((p) => p[0])
+            .map((p) => ({ mall: p[0], floor: (p[1] || "").replace(/^ชั้น\s*/, ""), focus: p[2] === "1", lm: p[3] || "" }));
+          const N = tiles.length;
+          let cols = Math.round(num(v.cols, 0));
+          if (!(cols >= 1 && cols <= 3)) cols = MODE === "pack" ? (N >= 10 ? 3 : N >= 5 ? 2 : 1) : (N > 6 ? 3 : 2);
+          let rows = Math.max(1, Math.ceil(N / cols));
+          // เกิน 4 แถวแล้วชนป้ายท้าย → เพิ่มคอลัมน์ (tpx วัดไว้สำหรับช่องกว้าง 276 อยู่แล้ว ชื่อจึงพอดีเสมอ)
+          while (cols < 3 && rows > 4) { cols += 1; rows = Math.ceil(N / cols); }
+          const ASK = str(v.ask), SUB = str(v.sub);
+          const ACT = MODE === "branch" && !!(ASK || SUB);
+          const BAND = MODE === "pack"
+            ? { top: 744, bottom: 1162, hmax: cols === 1 ? 100 : 92 }
+            : { top: 540, bottom: ACT ? 1066 : 1160, hmax: 120 };
+          const X0 = 70, W = 860, GY = 12, GX = cols === 3 ? 16 : 20, PAD = 18;
+          const TW = cols === 1 ? W : (W - GX * (cols - 1)) / cols;
+          const TH = Math.min(BAND.hmax, (BAND.bottom - BAND.top - GY * (rows - 1)) / rows);
+          const PITCH = TH + GY, BAND_H = rows * PITCH - GY;
+          const PX = X0 - PAD, PY = BAND.top - PAD, PW = W + 2 * PAD, PH = BAND_H + 2 * PAD;
+          const panel = $("cta-board-panel");
+          panel.style.left = PX + "px";
+          panel.style.top = PY + "px";
+          panel.style.width = PW + "px";
+          panel.style.height = PH + "px";
+          if (!N) panel.style.display = "none";
+          if (MODE === "branch") {
+            [[14, 14], [PW - 24, 14], [14, PH - 24], [PW - 24, PH - 24]].forEach(([x, y]) => {
+              const s = deco(mk("div", "cta-board-screw", panel));
+              s.style.left = x + "px";
+              s.style.top = y + "px";
+            });
+          }
+          const T = tiles.map((t, i) => {
+            const r = Math.floor(i / cols), c = i % cols;
+            const inRow = Math.min(cols, N - r * cols);
+            const x = X0 + (W - (inRow * TW + (inRow - 1) * GX)) / 2 + c * (TW + GX);   // แถวสุดท้ายไม่เต็ม = จัดกลาง
+            const y = BAND.top + r * PITCH;
+            const focus = MODE === "branch" && t.focus;
+            const el = mk("div", "cta-board-tile cta-board-c" + cols + (MODE === "branch" ? " cta-board-flap" : "") + (focus ? " cta-board-focus" : ""), panel);
+            el.id = "cta-board-t" + i;
+            el.style.left = x - PX + "px";
+            el.style.top = y - PY + "px";
+            el.style.width = TW + "px";
+            el.style.height = TH + "px";
+            deco(mk("div", "cta-board-tbg", el));
+            const clip = deco(mk("div", "cta-board-tclip", el));
+            mk("div", "cta-board-glint", clip).id = "cta-board-g" + i;
+            const flash = deco(mk("div", "cta-board-flash", el));
+            flash.id = "cta-board-f" + i;
+            const lit = deco(mk("div", "cta-board-lit", el));
+            lit.id = "cta-board-l" + i;
+            const body = mk("div", "cta-board-tbody", el);
+            let chk = null;
+            if (MODE === "pack" && cols === 1) {
+              chk = deco(mk("div", "cta-board-badge", body));
+              chk.innerHTML = CHECK;
+              const col = mk("div", "cta-board-tcol", body);
+              mk("div", "cta-board-tname", col, t.mall);
+              if (t.lm) mk("div", "cta-board-tlm", col, t.lm);
+              if (t.floor) mk("div", "cta-board-tfl1", body, "ชั้น " + t.floor);
+            } else if (MODE === "pack") {
+              mk("div", "cta-board-tname", body, t.mall);
+              const f = mk("div", "cta-board-tfloor", body);
+              f.insertAdjacentHTML("beforeend", CHECK);
+              chk = f.lastElementChild;
+              chk.setAttribute("class", "cta-board-chk");
+              if (t.floor) mk("span", "", f, "ชั้น " + t.floor);
+            } else {
+              mk("div", "cta-board-tname", body, t.mall);
+              if (t.floor) mk("div", "cta-board-tfloor", body, "ชั้น " + t.floor);
+            }
+            if (chk) chk.id = "cta-board-k" + i;
+            let pin = null, rings = [];
+            if (focus) {
+              el.insertAdjacentHTML("beforeend", '<svg class="cta-board-pin" viewBox="0 0 72 92" aria-hidden="true" data-layout-ignore>' + PIN + "</svg>");
+              pin = el.lastElementChild;
+              pin.id = "cta-board-pin" + i;
+              // วงคลื่นแบบหมุดฉากแผนที่ · อยู่ในกรอบช่อง (ไม่ลามทับชื่อสาขาข้าง ๆ)
+              const rcx = TW - 16 - 17, rcy = TH - 12 - 27;
+              rings = [0, 1].map((k) => {
+                const rg = mk("div", "cta-board-ring", clip);
+                rg.id = "cta-board-r" + i + "-" + k;
+                rg.style.left = rcx - 40 + "px";
+                rg.style.top = rcy - 40 + "px";
+                return rg;
+              });
+            }
+            return { el, flash, lit, chk, pin, rings, r, focus };
+          });
+
+          // ── ช่องอัปเดต: แสงเลียบเยือนทีละช่องตามลำดับสุ่มคงที่ (finite · จบก่อน END)
+          function glints(t0, skip) {
+            const ids = order(N, 17 + N).filter((i) => !skip[i]);
+            if (!ids.length) return;
+            const GL = 0.5, STEP = 0.56;
+            for (let k = 0, t = t0; t + GL <= END; k++, t += STEP) {
+              tl.fromTo("#cta-board-g" + ids[k % ids.length], { xPercent: 0 }, { xPercent: 560, duration: GL, ease: "power2.inOut", immediateRender: false }, t);
+            }
+          }
+          // เด้งแล้วกลับขนาดเดิม (ใช้ตอนช่องติดไฟ)
+          function bump(el, t, s) {
+            tl.fromTo(el, { scale: 1, transformOrigin: "50% 50%" }, { scale: s, transformOrigin: "50% 50%", duration: 0.09, ease: "power2.out", immediateRender: false }, t);
+            tl.to(el, { scale: 1, duration: 0.3, ease: "power3.out" }, t + 0.09);
+          }
+          function flashOnce(el, t, peak, out) {
+            tl.fromTo(el, { opacity: 0 }, { opacity: peak, duration: 0.03, ease: "none", immediateRender: false }, t);
+            tl.to(el, { opacity: 0, duration: out, ease: "power1.out" }, t + 0.035);
+          }
+
+          if (MODE === "pack") {
+            // ── 1. match cut: ซองตัวเอกเริ่มที่กรอบเฟรมสุดท้ายของฉากก่อน → กลางบน 290 px เอียง −4°
+            const S = parseSrc(v.src, [270, 719, 100, 100, 0]);
+            const HB = 290, HX = 540, HY = 412;
+            tl.fromTo("#cta-board-hero", { x: S.cx - HX, y: S.cy - HY, scale: Math.max(0.05, Math.min(S.w, S.h) / HB), rotation: S.rot },
+              { x: 0, y: 0, scale: 1, rotation: -4, duration: 0.48, ease: "power3.inOut" }, 0);
+            tl.fromTo("#cta-board-halo", { scale: 0.6, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.5, ease: "power2.out" }, 0.06);
+            tl.fromTo("#cta-board-stamp", { scale: 0.3, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.35, ease: "back.out(2.2)" }, 0.1);
+            tl.fromTo("#cta-board-head", { scale: 1.8, opacity: 0, filter: "blur(16px)" }, { scale: 1, opacity: 1, filter: "blur(0px)", duration: 0.36, ease: "power4.out" }, 0.3);
+            tl.fromTo("#cta-board-chip", { scale: 0.2, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.4, ease: "back.out(2.4)" }, 0.46);
+            tl.fromTo("#cta-board-burst", { scale: 0.4, opacity: 0.95 }, { scale: 2.1, opacity: 0, duration: 0.6, ease: "power2.out", immediateRender: false }, 0.46);
+
+            // ── 2. ช่องไหลเข้าตามลำดับอ่าน (เริ่มขอบฟ้าจาง)
+            const stg = N > 1 ? Math.min(0.04, 0.5 / (N - 1)) : 0;
+            T.forEach((o, i) => {
+              tl.fromTo(o.el, { y: 40, opacity: 0 }, { y: 0, opacity: 1, duration: 0.28, ease: "power3.out" }, 0.55 + i * stg);
+            });
+
+            // ── 3. ลำแสงสแกนกวาดลง · แถวที่แสงผ่านติดไฟ (ขอบสีเน้น + ✓ เด้ง + แสงขาว 2 เฟรม)
+            const B0 = BAND.top - 24, B1 = BAND.top + BAND_H + 14;
+            tl.fromTo("#cta-board-beam", { y: B0 }, { y: B1, duration: 0.6, ease: "none" }, 0.95);
+            tl.fromTo("#cta-board-beam", { opacity: 0 }, { opacity: 1, duration: 0.08, ease: "none", immediateRender: false }, 0.95);
+            tl.to("#cta-board-beam", { opacity: 0, duration: 0.12, ease: "power1.in" }, 1.45);
+            T.forEach((o) => {
+              const cy = BAND.top + o.r * PITCH + TH / 2;
+              const t = 0.95 + 0.6 * (cy - B0) / (B1 - B0);
+              tl.fromTo(o.lit, { opacity: 0 }, { opacity: 1, duration: 0.08, ease: "none" }, t);
+              if (o.chk) tl.fromTo(o.chk, { scale: 0, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.22, ease: "back.out(3)" }, t);
+              flashOnce(o.flash, t, 0.85, 0.07);
+              bump(o.el, t, 1.04);
+            });
+
+            // ── 4. ป้ายท้าย
+            tl.fromTo("#cta-board-foot", { y: 24, opacity: 0 }, { y: 0, opacity: 1, duration: 0.35, ease: "power3.out" }, 1.55);
+
+            // ── 5. ช่วงค้าง: ซองโยกขึ้นลง (จบที่ตำแหน่งเดิม) + แสงเลียบทีละช่อง
+            const A0 = 1.9, HALF = 0.8;
+            let halves = Math.floor((END - A0) / HALF);
+            if (halves % 2) halves -= 1;
+            if (halves >= 2) tl.fromTo("#cta-board-bob", { y: 0 }, { y: 10, duration: HALF, ease: "sine.inOut", yoyo: true, repeat: halves - 1, immediateRender: false }, A0);
+            glints(A0, {});
+          } else {
+            // ── 1. match cut: การ์ดรูปตู้ของฉากแผนที่หมุนตะแคง (0→90°) แล้วบอร์ดพลิกเข้ามาบนแกนเดียวกัน (−90→0°)
+            const S = parseSrc(v.src, [540, 956, 554, 720, 0]);
+            const card = $("cta-board-pcard");
+            card.style.left = S.cx - S.w / 2 + "px";
+            card.style.top = S.cy - S.h / 2 + "px";
+            card.style.width = S.w + "px";
+            card.style.height = S.h + "px";
+            tl.fromTo(card, { rotationY: 0, rotation: S.rot, opacity: 1, transformPerspective: 1400 },
+              { rotationY: 90, rotation: S.rot, duration: 0.22, ease: "power2.in", transformPerspective: 1400 }, 0);
+            tl.to(card, { opacity: 0, duration: 0.02, ease: "none" }, 0.22);
+            tl.fromTo("#cta-board-pbg", { opacity: 1 }, { opacity: 0, duration: 0.34, ease: "power1.out" }, 0.04);
+            const AX = S.cx - PX;
+            tl.fromTo(panel, { rotationY: -90, opacity: 0, transformPerspective: 1400, transformOrigin: AX + "px 50%" },
+              { rotationY: 0, opacity: 1, duration: 0.42, ease: "power3.out", transformPerspective: 1400, transformOrigin: AX + "px 50%" }, 0.22);
+
+            // ── 2. หัวเรื่อง
+            tl.fromTo("#cta-board-kick", { scale: 0.2, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.4, ease: "back.out(2.2)" }, 0.25);
+            tl.fromTo("#cta-board-q1", { scale: 1.8, opacity: 0, filter: "blur(16px)" }, { scale: 1, opacity: 1, filter: "blur(0px)", duration: 0.36, ease: "power4.out" }, 0.35);
+            tl.fromTo("#cta-board-q2", { scale: 1.9, opacity: 0, filter: "blur(18px)" }, { scale: 1, opacity: 1, filter: "blur(0px)", duration: 0.4, ease: "power4.out" }, 0.5);
+
+            // ── 3. ช่องพลิกลงทีละช่องแบบป้ายสนามบิน (ทั้งช่อง · บานพับขอบบน)
+            const stg = N > 1 ? Math.min(0.045, 0.55 / (N - 1)) : 0;
+            T.forEach((o, i) => {
+              tl.fromTo(o.el, { rotationX: -90, opacity: 0, transformPerspective: 800, transformOrigin: "50% 0%" },
+                { rotationX: 0, opacity: 1, duration: 0.16, ease: "power2.out", transformPerspective: 800, transformOrigin: "50% 0%" }, 0.5 + i * stg);
+            });
+
+            // ── 4. ตู้ในคลิปติดไฟ + หมุดทองหล่น + วงคลื่น (finite)
+            const skip = {};
+            let rang = false;
+            T.forEach((o, i) => {
+              if (!o.focus) return;
+              skip[i] = true;
+              tl.fromTo(o.lit, { opacity: 0 }, { opacity: 1, duration: 0.12, ease: "none" }, 1.2);
+              flashOnce(o.flash, 1.2, 0.9, 0.16);
+              bump(o.el, 1.2, 1.06);
+              tl.fromTo(o.pin, { y: -70, opacity: 0 }, { y: 0, opacity: 1, duration: 0.4, ease: "bounce.out" }, 1.22);
+              if (rang) return;
+              rang = true;
+              o.rings.forEach((rg, k) => {
+                const cyc = 1.1, s = 1.45 + k * 0.55;
+                const plays = Math.floor((END - s) / cyc);
+                if (plays >= 1) tl.fromTo(rg, { scale: 0.6, opacity: 0.9 }, { scale: 3.2, opacity: 0, duration: cyc, ease: "power2.out", repeat: plays - 1, immediateRender: false }, s);
+              });
+            });
+
+            // ── 5. บรรทัดชวน (B1) หรือบรรทัดรอง (B3) · ป้ายท้าย
+            let act = null;
+            if (ASK) { $("cta-board-sub").style.display = "none"; act = $("cta-board-askrow"); }
+            else if (SUB) { $("cta-board-askrow").style.display = "none"; act = $("cta-board-sub"); }
+            else $("cta-board-act").style.display = "none";
+            if (act) {
+              tl.fromTo(act, { scale: 1.6, opacity: 0, filter: "blur(12px)" }, { scale: 1, opacity: 1, filter: "blur(0px)", duration: 0.34, ease: "power4.out" }, 1.4);
+              if (ASK) tl.fromTo("#cta-board-bub", { y: -18 }, { y: 0, duration: 0.45, ease: "bounce.out", immediateRender: false }, 1.62);
+            }
+            tl.fromTo("#cta-board-foot", { y: 24, opacity: 0 }, { y: 0, opacity: 1, duration: 0.35, ease: "power3.out" }, 1.55);
+
+            // ── 6. ช่วงค้าง: แสงเลียบทีละช่อง (ข้ามช่องตู้ในคลิป)
+            glints(1.9, skip);
+          }
+
+          window.__timelines["cta-board"] = tl;
+        })();
+      </script>
+    </template>
+  </body>
+</html>

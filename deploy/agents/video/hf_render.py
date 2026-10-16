@@ -278,14 +278,44 @@ def auto_scenes(n):
     return [{"type": "hook"}] + [{"type": t} for t in mids] + [{"type": "cta"}]
 
 
-def _instance_file(proj, kind, n):
-    """ฉากชนิดเดียวกันครั้งที่ n (≥2) → ก๊อปไฟล์ฉากแล้วเปลี่ยน id ทั้งหมด (id ห้ามซ้ำทั้งหน้า)"""
-    base = SCENE_FILES[kind]
+# คีย์ของฉากปิดที่เป็นคำสั่งถึง hf_render ไม่ใช่ตัวแปรของฉาก (ไม่ส่งเข้า data-variable-values)
+CTA_SKIP = ("type", "span", "layout", "hold", "min_on", "extend", "inherit", "inherit_map", "fmt")
+
+
+def _steps_times(sc, lines, chunks, words, lo, onsets=None):
+    """ฉากปิด "กดตู้ 4 ขั้น": วินาที (จากต้นฉาก) ที่พูดชื่อแต่ละขั้น → ไฟขั้นนั้นติด · หาจากบรรทัดสุดท้ายของฉาก
+    whisper มักถอด "QR" เป็น "คิวอาร์" หาไม่เจอ → ตำแหน่งตามสัดส่วนตัวอักษรในบรรทัด · ห่างกันอย่างน้อย 0.35 วิ"""
+    s, e = lines[-1]
+    text = sc.get("_line_b") or ""
+    out, prev = {}, None
+    for k in range(1, 5):
+        word = sc.get(f"s{k}") or ""
+        t = phrase_time(word, chunks, words, s, e) if word else None
+        if t is None and word and text and word in text:
+            t = s + (e - s) * text.index(word) / max(1, len(text))
+        if t is None:
+            t = s + (e - s) * (k - 1) / 4
+        t = snap(t, onsets) if onsets else t
+        t = max(t - lo, 0.45 if k == 1 else prev + 0.35)
+        out[f"st{k}"] = round(t, 3)
+        prev = t
+    return out
+
+
+def _scene_base(sc):
+    """ไฟล์ฉาก + prefix id ของฉากนี้ — ฉากปิดมีหลายแบบ (sc["layout"]) แต่ละแบบเป็นไฟล์ cta-<layout>.html ของตัวเอง
+    (เจ้าของ 16 ต.ค.: "ฉากปิดซ้ำกันทุกคลิป" · ไม่มี layout = scene-cta เดิม)"""
+    if sc["type"] == "cta" and sc.get("layout"):
+        return f"cta-{sc['layout']}", f"cta-{sc['layout']}-"
+    return SCENE_FILES[sc["type"]], ID_PREFIX[sc["type"]]
+
+
+def _instance_file(proj, base, pre, n):
+    """ฉากไฟล์เดียวกันครั้งที่ n (≥2) → ก๊อปไฟล์ฉากแล้วเปลี่ยน id ทั้งหมด (id ห้ามซ้ำทั้งหน้า)"""
     if n == 1:
         return base
     cid = f"{base}-{n}"
     src = (proj / "compositions" / f"{base}.html").read_text(encoding="utf-8")
-    pre = ID_PREFIX[kind]
     # prefix ก่อน แล้วค่อยชื่อฉาก — กลับลำดับแล้ว "scene-pack-2" จะโดนแทนซ้ำเป็น "scene-pack2-2"
     out = src.replace(pre, pre[:-1] + f"{n}-").replace(base, cid)
     (proj / "compositions" / f"{cid}.html").write_text(out, encoding="utf-8")
@@ -505,8 +535,9 @@ def _caption_html(text, hot, brand):
     t = html.escape(text)
     for w in sorted(hot, key=len, reverse=True):
         t = re.sub(rf"(?i)({re.escape(html.escape(w))})", r'<b class="hot">\1</b>', t)
+    # "@" กันไฮไลต์ซ้อน: "@divisionxcard" ถูกระบายก่อน (ยาวสุด) แล้ว "DivisionX" ห้ามไปจับข้างในอีกรอบ (สองสีในคำเดียว)
     for w in sorted(brand, key=len, reverse=True):
-        t = re.sub(rf"(?i)(?<![\w>])({re.escape(html.escape(w))})", r'<b class="hl">\1</b>', t)
+        t = re.sub(rf"(?i)(?<![\w>@])({re.escape(html.escape(w))})", r'<b class="hl">\1</b>', t)
     return t
 
 
@@ -521,24 +552,37 @@ def write_project(proj, scenes, timing, chunks, words, total, voice_rel, look=No
     starts = [0.0] + [round(float(timing[first[i]]["start"]), 3) for i in range(1, n)]
     # ฉากรูปแบบค้างต่อเข้าบรรทัดถัดไปได้ (J-cut: เสียงปิดเริ่มก่อน ภาพตามมา) — เฉลยท้ายฉากจะได้ไม่ถูกตัดทิ้ง
     # (ชื่ออันดับ 1 พูดแทบชนท้ายบรรทัด เหลือเวลาดูกระดานเต็มไม่ถึงวินาที) · ฉากถัดไปต้องเหลือ ≥ 1.8 วิ
+    # ฉากปิดแบบให้ข้อมูล (สาขา/วิธีซื้อ) ค้างต่อหลังเสียงจบได้ (sc["hold"]) — 0.9 วิ อ่านทันแค่โลโก้กับแท็ก
+    base_hold = max(0.0, min(3.0, float(scenes[-1].get("hold") or 0))) if scenes else 0.0
     for i in range(1, n):
         ext = float(scenes[i - 1].get("extend", EXTEND.get(scenes[i - 1]["type"], 0)) or 0)
-        nxt_end = round(float(timing[first[i] + spans[i] - 1]["end"]), 3) if i + 1 < n else total + TAIL
+        nxt_end = round(float(timing[first[i] + spans[i] - 1]["end"]), 3) if i + 1 < n else total + TAIL + base_hold
         ext = max(0.0, min(ext, nxt_end - starts[i] - 1.8))
         starts[i] = round(starts[i] + ext, 3)
-    ends = starts[1:] + [round(total + TAIL, 3)]
+    # ...และต้องอยู่บนจอรวมอย่างน้อย min_on — บรรทัดปิดสั้น/J-cut กินเวลาไป → ค้างเพิ่มให้ครบ (เพดาน 3 วิ)
+    hold = base_hold
+    if scenes and scenes[-1].get("min_on"):
+        shown = total + TAIL - starts[-1]
+        hold = max(0.0, min(3.0, max(base_hold, float(scenes[-1]["min_on"]) - shown)))
+    ends = starts[1:] + [round(total + TAIL + hold, 3)]
     duration = ends[-1]
     fmt = any(sc["type"] in EXTEND for sc in scenes)
     onsets = speech_onsets(proj / voice_rel) if fmt else []
     reveals = []                     # (คำตอบ, เริ่มบรรทัดเฉลย, เวลาเฉลย) — เวลาจริงในคลิป · ใช้ตอนวางซับ
     recount = {}                     # segment ของบรรทัดนับถอยหลัง → (เวลา 3, 2, 1) · ใช้ตอนวางซับ
-    count, slots, hot, brand = {}, [], set(), {"DivisionX Card", "DivisionX"}
+    count, slots, hot, brand = {}, [], set(), {"DivisionX Card", "DivisionX", "@divisionxcard"}
+    prev_vals = {}
     for i, sc in enumerate(scenes):
         kind = sc["type"]
-        count[kind] = count.get(kind, 0) + 1
-        cid = _instance_file(proj, kind, count[kind])
+        base, pre = _scene_base(sc)
+        count[base] = count.get(base, 0) + 1
+        cid = _instance_file(proj, base, pre, count[base])
         lo, hi = starts[i], ends[i]
         vals = {}
+        if kind == "cta" and sc.get("layout"):
+            # ฉากปิดรับรูป/ชื่อ/ตำแหน่งต่อจากฉากรูปแบบก่อนหน้า (match cut — ไฟล์เดียวกัน ไม่โหลดซ้ำ)
+            vals.update({k: prev_vals[k] for k in sc.get("inherit") or [] if k in prev_vals})
+            vals.update({dst: prev_vals[src] for dst, src in (sc.get("inherit_map") or {}).items() if src in prev_vals})
         if sc.get("img"):
             vals["img"] = sc["img"]
         if kind in ("hook", "pack") and sc.get("img"):
@@ -564,6 +608,14 @@ def write_project(proj, scenes, timing, chunks, words, total, voice_rel, look=No
                 t = phrase_time(s, chunks, words, lo, hi)
                 if t is not None:
                     vals[f"at{j}"] = round(max(0.2, t - lo), 3)
+        elif kind == "cta" and sc.get("layout"):
+            # ฉากปิดแบบใหม่: ส่งค่าข้อความ/รูปทั้งหมดตามที่แผนเตรียม (รายการส่งเป็นสตริงคั่นด้วย | — ฉากแตกเอง)
+            vals.update({k: v for k, v in sc.items()
+                         if k not in CTA_SKIP and not k.startswith("_") and isinstance(v, (str, int, float))
+                         and not isinstance(v, bool)})
+            vals["dur"] = round(hi - lo, 3)
+            if sc["layout"] == "steps":
+                vals.update(_steps_times(sc, _line_spans(timing, first[i], spans[i], lo, hi), chunks, words, lo, onsets))
         elif kind == "cta":
             vals.update({k: sc[k] for k in ("title", "tag", "linkcap", "link") if sc.get(k)})
         elif kind == "rank":
@@ -586,6 +638,7 @@ def write_project(proj, scenes, timing, chunks, words, total, voice_rel, look=No
             vals["qs1"] = fit_px(vals.get("q1") or "", 900, 940, b1, 56)
             vals["qs2"] = fit_px(vals.get("q2") or "", 900, 940, b2, 60)
         reveals += [(sec, lo + ls, lo + ra) for sec, ls, ra in vals.pop("_reveals", [])]
+        prev_vals = vals
         vv = html.escape(json.dumps(vals, ensure_ascii=False), quote=True)
         slots.append(
             f'      <div id="slot-{i}" {slot_look} data-composition-id="{cid}" '
@@ -617,13 +670,18 @@ def write_project(proj, scenes, timing, chunks, words, total, voice_rel, look=No
     audio = (f'      <audio id="vo" src="{voice_rel}" data-start="0" data-duration="{round(total, 3)}" '
              f'data-track-index="9" data-volume="1"></audio>')
     host = (TEMPLATE / "scaffold" / "host.template.html").read_text(encoding="utf-8")
-    cta_start = next((starts[i] for i, sc in enumerate(scenes) if sc["type"] == "cta"), duration)
+    # โลโก้มุมหายตอนฉากปิดเดิม (มีโลโก้ใหญ่อยู่แล้ว) · ฉากปิดแบบใหม่ไม่มีโลโก้ใหญ่ → อยู่ถึงท้ายคลิป
+    cta_start = next((starts[i] for i, sc in enumerate(scenes) if sc["type"] == "cta" and not sc.get("layout")),
+                     duration)
+    # รอยต่อเข้าฉากปิดแบบใหม่ = แสงวาบอย่างเดียว (แถบทึบ/กลิตช์บังพระเอกที่บินต่อจากฉากก่อน — match cut)
+    soft = [i for i, sc in enumerate(scenes) if i > 0 and sc["type"] == "cta" and sc.get("layout")]
     hot_css = HOT[look["hot"]]
     _log("3/4", "ชุดหน้าตา: พื้นหลัง {bg} · ฉากเปลี่ยน {cut} · หัวเรื่อง {ts} · สีเน้น {hot}".format(**look))
     out = (host.replace("{{DURATION}}", str(duration))
                .replace("{{BG}}", look["bg"])
                .replace("{{CUT}}", look["cut"])
                .replace("{{CUTS}}", json.dumps(starts))
+               .replace("{{SOFT}}", json.dumps(soft))
                .replace("{{LOGO_UNTIL}}", str(round(cta_start, 3)))
                .replace("{{SCENES}}", "\n".join(slots))
                .replace("{{CAPTIONS_SLOT}}", f'      <div id="captions-slot" style="--hot: {hot_css}" data-composition-id="captions" '
@@ -670,6 +728,14 @@ def build_video(plan, out_mp4=None, check=True):
             for k, it in enumerate(sc["items"]):
                 spec = it.get("img") or (f"sku:{it['sku']}" if it.get("sku") else None)
                 it["img"] = resolve_image(spec, proj, f"scene-{i}-{k}")
+            continue
+        if sc["type"] == "cta" and sc.get("layout"):
+            # ฉากปิดแบบใหม่: ไม่มีรูปปริยาย (รูปตู้กลาง machine-scene มีสติกเกอร์เบอร์เก่า) · รูปที่รับต่อจาก
+            # ฉากก่อนหน้า (inherit) มาทีหลังใน write_project · ที่นี่โหลดเฉพาะรูปของฉากปิดเอง (ซองบนชั้น · รูปตู้)
+            for k in ("img", "img1", "img2", "img3", "img4", "img5", "photo", "hero", "icon1",
+                      "p1", "p2", "p3", "p4", "p5", "p6"):
+                if isinstance(sc.get(k), str) and sc[k]:
+                    sc[k] = resolve_image(sc[k], proj, f"scene-{i}-{k}")
             continue
         default = {"hook": "sku:OP 17", "pack": "sku:OP 17", "machine": "machine:hero", "cta": "machine:scene",
                    "quiz": "sku:OP 17"}

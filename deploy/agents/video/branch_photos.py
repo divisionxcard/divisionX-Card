@@ -66,11 +66,13 @@ def _rect(cx, cy, w, h, ang):
             for sx, sy in ((-1, -1), (1, -1), (1, 1), (-1, 1))]
 
 
-def hide_text(im, boxes):
+def hide_text(im, boxes, light=False):
     """ลบตัวหนังสือในกรอบให้กลืนกับพื้นเดิม — ทั้งแถบขาวและลายคลื่น
 
     ย่อ 4 เท่าแล้วกรองมัธยฐาน (หน้าต่าง ≈ ความสูงกรอบ) → เส้นตัวอักษรหาย แต่แสง/ลายใหญ่ของพื้นยังอยู่
     แล้วเบลอนิด ผสมกลับด้วยขอบนุ่ม — เบลอเฉย ๆ ยังเห็นเป็นก้อนสีของตัวเลขอยู่ · ทาสีทึบก็เป็นแผ่นแปะบนลายคลื่น
+    light=True: ตัวหนังสือเข้มเล็ก ๆ บนแถบสว่าง (สูง < ~10px) — ย่อแล้วหมึกกลายเป็นสีเทา เหลือรอยจาง →
+                ขยายสีสว่างทับเส้นเข้มที่ความละเอียดเต็มแทน (MaxFilter) · machine-scene.jpg ต้องใช้แบบนี้
     """
     from PIL import Image, ImageDraw, ImageFilter
     for box in boxes:
@@ -82,9 +84,13 @@ def hide_text(im, boxes):
         r = min(im.width, int(max(x for x, _ in pts)) + pad)
         b = min(im.height, int(max(y for _, y in pts)) + pad)
         reg = im.crop((l, t, r, b))
-        small = reg.resize((max(1, reg.width // 4), max(1, reg.height // 4)), Image.BOX)
-        small = small.filter(ImageFilter.MedianFilter(max(3, round(h / 4) | 1)))
-        fill = small.resize(reg.size, Image.BICUBIC).filter(ImageFilter.GaussianBlur(max(1.0, h * 0.12)))
+        if light:                                      # closing: ขยายสว่างกลบเส้นเข้ม แล้วหดกลับ = ความสว่างเท่าแถบเดิม
+            fill = reg.filter(ImageFilter.MaxFilter(5)).filter(ImageFilter.MinFilter(5)) \
+                      .filter(ImageFilter.MedianFilter(3)).filter(ImageFilter.GaussianBlur(0.8))
+        else:
+            small = reg.resize((max(1, reg.width // 4), max(1, reg.height // 4)), Image.BOX)
+            small = small.filter(ImageFilter.MedianFilter(max(3, round(h / 4) | 1)))
+            fill = small.resize(reg.size, Image.BICUBIC).filter(ImageFilter.GaussianBlur(max(1.0, h * 0.12)))
         mask = Image.new("L", reg.size, 0)
         ImageDraw.Draw(mask).polygon([(x - l, y - t) for x, y in pts], fill=255)
         f = max(2, round(h * 0.15))                    # ขยายแกนทึบก่อนทำขอบนุ่ม — นุ่มเข้าในกรอบแล้วเงาตัวเลขโผล่ที่ขอบ
