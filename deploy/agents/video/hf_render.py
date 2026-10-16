@@ -46,9 +46,15 @@ from . import align, config, segments
 
 TEMPLATE = config.REPO / "hyperframes" / "templates" / "dvx-promo"
 TAIL = 0.9                    # ค้างฉากปิดหลังเสียงจบ (วินาที) ให้คนอ่านแท็ก/โลโก้ทัน
-SCENE_FILES = {"hook": "scene-hook", "pack": "scene-pack", "machine": "scene-machine", "cta": "scene-cta"}
+SCENE_FILES = {"hook": "scene-hook", "pack": "scene-pack", "machine": "scene-machine", "cta": "scene-cta",
+               "rank": "fmt-rank", "versus": "fmt-versus", "quiz": "fmt-quiz", "map": "fmt-map"}
 # prefix ของ id ภายในแต่ละฉาก — ใช้เปลี่ยนชื่อตอนฉากชนิดเดียวกันโผล่ซ้ำในคลิปเดียว (id ห้ามซ้ำทั้งหน้า)
-ID_PREFIX = {"hook": "hook-", "pack": "pack-", "machine": "mach-", "cta": "cta-"}
+ID_PREFIX = {"hook": "hook-", "pack": "pack-", "machine": "mach-", "cta": "cta-", "rank": "rank-", "versus": "vs-",
+             "quiz": "quiz-", "map": "map-"}
+# ฉาก "รูปแบบ" (fmt-*) คลุมหลายบรรทัดของสคริปต์ด้วย "span" แล้วเดินตามเวลาของแต่ละบรรทัดเอง
+# (ของค้างบนจอที่ค่อย ๆ เติม = สิ่งที่คลิปวิวหลักล้านมีเหมือนกัน · ดู hf_formats.py)
+FONT_DIR = TEMPLATE / "assets" / "fonts"
+EXTEND = {"rank": 0.9, "versus": 0.9, "quiz": 1.2, "map": 1.0}   # วินาทีที่ฉากรูปแบบค้างเข้าบรรทัดถัดไป (write_project)
 MACHINE_PHOTOS = {"machine:hero": "machine-hero.jpg", "machine:scene": "machine-scene.jpg"}
 
 
@@ -279,6 +285,168 @@ def _instance_file(proj, kind, n):
     return cid
 
 
+def fit_px(text, weight=800, max_w=640, base=64, low=34):
+    """ขนาดตัวอักษรที่ใหญ่สุดที่ข้อความยาวบรรทัดเดียวไม่เกิน max_w — วัดด้วยฟอนต์ Kanit ตัวจริง (PIL)
+    วัดฝั่ง Python ตอนประกอบโปรเจกต์ แทนการวัดใน Chrome ระหว่างเรนเดอร์ (ฟอนต์อาจยังโหลดไม่เสร็จ)"""
+    try:
+        from PIL import ImageFont
+        f = FONT_DIR / {900: "Kanit-Black.ttf", 800: "Kanit-ExtraBold.ttf"}.get(weight, "Kanit-SemiBold.ttf")
+        for px in range(base, low - 1, -2):
+            if ImageFont.truetype(str(f), px).getlength(text or "") <= max_w:
+                return px
+        return low
+    except Exception:
+        return max(low, min(base, int(max_w / max(1, len(text or "")) * 1.7)))
+
+
+def speech_onsets(wav, noise="-35dB", gap=0.12):
+    """วินาทีที่เสียงพูดเริ่มดังหลังช่วงเงียบ (ffmpeg silencedetect) — ใช้ขยับจังหวะภาพให้ตรงพยางค์แรกจริง
+
+    ทำไม: whisper ให้เวลาคำสั้น ๆ ที่พูดแยกเดี่ยวคลาดมาก — คลิปทายชุดจริง 16 ต.ค.: TTS พูด "สาม/สอง/หนึ่ง"
+    ที่ 4.73/5.75/6.84 วิ แต่ whisper ถอดเป็น "3 2 1" ที่ 5.58/5.82/6.06 (ห่างกันแค่ 0.24 วิ) และ "OP" ผิดไปครึ่งวินาที
+    ช่วงเงียบในไฟล์เสียงคือของจริง จึงแม่นกว่าสำหรับคำที่พูดแยกด้วย … """
+    try:
+        r = subprocess.run([config.ffmpeg_bin(), "-hide_banner", "-nostats", "-i", str(wav), "-af",
+                            f"silencedetect=noise={noise}:d={gap}", "-f", "null", "-"],
+                           capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=120)
+        return [float(x) for x in re.findall(r"silence_end: ([0-9.]+)", r.stderr)]
+    except Exception:
+        return []
+
+
+def snap(t, onsets, win=0.35):
+    """เลื่อน t ไปจุดเริ่มพูดที่ใกล้สุดถ้าอยู่ในระยะ win วิ — ไม่มีก็คืน t เดิม"""
+    best = min(onsets or [], key=lambda o: abs(o - t), default=None)
+    return best if best is not None and abs(best - t) <= win else t
+
+
+def _line_spans(timing, a, k, lo, hi):
+    """เวลา (เริ่ม, จบ) จริงในคลิปของบรรทัด a..a+k-1 — บรรทัดแรกเริ่มที่ต้นฉาก"""
+    out = []
+    for j in range(a, a + k):
+        s, e = float(timing[j]["start"]), float(timing[j]["end"])
+        out.append((lo if j == a else max(lo, s), min(hi, e)))
+    return out
+
+
+def _rank_vals(sc, lines, chunks, words, lo, hi, onsets=None):
+    """กระดานอันดับ 5 ช่อง: บรรทัด 0 = คำถาม · บรรทัด 1..5 = อันดับ 5 → 1 (items[0] = อันดับ 1)"""
+    items = sc.get("items") or []
+    if len(items) != 5 or len(lines) != 6:
+        raise ValueError(f"ฉาก rank ต้องมี 5 อันดับ + 6 บรรทัด (ได้ {len(items)} อันดับ · {len(lines)} บรรทัด)")
+    # ส่งข้อความทุกช่องเสมอ (ว่าง = ซ่อน) — ไม่ปล่อยให้ค่าตัวอย่างของเทมเพลตโผล่ในงานจริง
+    vals = {k: sc.get(k) or "" for k in ("kicker", "q1", "q2", "sub")}
+    vals["_reveals"] = []
+    for r, it in enumerate(items, 1):
+        name = it.get("name") or ""
+        vals.update({f"img{r}": it["img"], f"name{r}": name, f"tag{r}": it.get("tag") or "",
+                     f"fs{r}": fit_px(name, 800, 640, 64, 34)})
+        s, e = lines[6 - r]
+        t = phrase_time(name, chunks, words, s, e) if name else None
+        vals[f"ln{r}"] = round(s - lo, 3)
+        vals[f"at{r}"] = round(max(s + 0.15, snap(t if t is not None else s + 0.45, onsets)) - lo, 3)
+        if name:
+            vals["_reveals"].append((name, s - lo, vals[f"at{r}"]))
+    vals["dur"] = round(hi - lo, 3)
+    return vals
+
+
+def versus_sides(n_rounds, wins):
+    """ฝั่งของผู้เข้าแข่งแต่ละคน — กติกาเดียวกับ JS ใน fmt-versus (ผู้ท้าชิงเข้าฝั่งของผู้แพ้)
+    wins[k] = เลขผู้ชนะรอบ k+1 · คืน (side{เลข: 'L'|'R'}, [(a, b) ต่อรอบ])"""
+    side, pairs, champ = {1: "L", 2: "R"}, [], None
+    for k in range(1, n_rounds + 1):
+        a, b = (1, 2) if k == 1 else (champ, k + 1)
+        if k > 1:
+            side[b] = "R" if side[a] == "L" else "L"
+        pairs.append((a, b))
+        champ = wins[k - 1]
+    return side, pairs
+
+
+def _versus_vals(sc, lines, chunks, words, lo, hi, onsets=None):
+    """เลือกข้าง: บรรทัด 0 = คำถาม · ต่อรอบ 2 บรรทัด ("A หรือ B?" · เฉลยผู้ชนะ) · items = ผู้เข้าแข่งตามลำดับ"""
+    items, rounds = sc.get("items") or [], sc.get("rounds") or []
+    R = len(rounds)
+    if not 1 <= R <= 3 or len(items) != R + 1 or len(lines) != 1 + 2 * R:
+        raise ValueError(f"ฉาก versus: {R} รอบ ต้องมีผู้เข้าแข่ง {R + 1} และ {1 + 2 * R} บรรทัด "
+                         f"(ได้ {len(items)} · {len(lines)})")
+    vals = {k: sc.get(k) or "" for k in ("kicker", "q1", "q2", "sub", "final")}
+    for c, it in enumerate(items, 1):
+        name = it.get("name") or ""
+        vals.update({f"img{c}": it["img"], f"name{c}": name, f"tag{c}": it.get("tag") or "",
+                     f"fs{c}": fit_px(name, 800, 420, 64, 30)})
+    for c in range(len(items) + 1, 5):                 # ช่องที่ไม่ใช้: ไม่ปล่อยค่าตัวอย่างโผล่
+        vals.update({f"img{c}": items[0]["img"], f"name{c}": "", f"tag{c}": ""})
+    vals.update({"rounds": R, "shownum": bool(sc.get("shownum")), "_reveals": []})
+    for k, rd in enumerate(rounds, 1):
+        s_in, _ = lines[2 * k - 1]
+        s_rv, e_rv = lines[2 * k]
+        win = int(rd["win"])
+        wname = items[win - 1].get("name") or ""
+        t = phrase_time(wname, chunks, words, s_rv, e_rv)
+        vals.update({f"win{k}": win, f"sh{k}": round(float(rd["shL"]), 3),
+                     f"in{k}": round(s_in - lo, 3),
+                     f"rv{k}": round(max(s_rv + 0.2, snap(t if t is not None else s_rv + 0.5, onsets)) - lo, 3)})
+        if wname:
+            vals["_reveals"].append((wname, s_rv - lo, vals[f"rv{k}"]))
+    vals["dur"] = round(hi - lo, 3)
+    return vals
+
+
+def _quiz_vals(sc, lines, chunks, words, lo, hi, proj, onsets=None):
+    """ทายชุด: บรรทัด 0 = คำถาม · 1 = "…สาม สอง หนึ่ง" · 2 = "เฉลย! <ชื่อ>" """
+    if len(lines) != 3:
+        raise ValueError(f"ฉาก quiz ต้องมี 3 บรรทัด (ได้ {len(lines)})")
+    name = sc.get("name") or ""
+    vals = {k: sc.get(k) or "" for k in ("kicker", "q1", "q2", "sub", "prompt", "tag")}
+    vals.update({"img": sc["img"], "name": name, "fs": fit_px(name, 900, 940, 150, 70)})
+    # จุดซูม = กลางตัวซองช่วงบน (ลายตัวละคร) — ห่างทั้งรหัสชุดมุมบนซ้ายและชื่อชุดตัวใหญ่ช่วงล่างของซอง
+    # (รอบแรกซูมที่ 58% ของความสูง → ชื่อชุดญี่ปุ่นโผล่ในเลนส์ตั้งแต่ยังไม่เฉลย)
+    box = gloss_box(proj / sc["img"], inset=0) or {"gl": 25, "gt": 5, "gw": 50, "gh": 90}
+    vals["zx"] = round(float(sc.get("zx") or box["gl"] + box["gw"] / 2), 2)
+    vals["zy"] = round(float(sc.get("zy") or box["gt"] + box["gh"] * 0.32), 2)
+    vals["z0"] = float(sc.get("z0") or 4.2)
+    s1, e1 = lines[1]
+    s2, e2 = lines[2]
+    # นับถอยหลัง: whisper ถอด "สาม สอง หนึ่ง" เป็นเลข 3 2 1 ที่เวลาคลาด และ map_segments ตัดบรรทัด 1 จบที่คำไทย
+    # คำสุดท้ายที่จับได้ ("…เลย") → เลขทั้งสามคือ 3 จุดเริ่มพูดแรกหลังจากนั้น (ก่อนคำว่า "เฉลย")
+    after = [o for o in (onsets or []) if e1 + 0.12 <= o < s2 + 0.5]
+    if len(after) >= 3:
+        cd = {3: after[0], 2: after[1], 1: after[2]}
+    else:
+        span = max(1.2, s2 - e1)
+        cd = {k: e1 + span * f for k, f in ((3, 0.15), (2, 0.45), (1, 0.75))}
+    t = phrase_time(name, chunks, words, s2, e2) if name else None
+    rv = max(cd[1] + 0.4, snap(t if t is not None else s2 + 0.45, onsets))
+    vals.update({f"cd{k}": round(cd[k] - lo, 3) for k in cd})
+    vals.update({"rv": round(rv - lo, 3), "dur": round(hi - lo, 3)})
+    if name:
+        vals["_reveals"] = [(name, s2 - lo, vals["rv"])]
+    return vals
+
+
+def _map_vals(sc, lines, chunks, words, lo, hi, onsets=None):
+    """พิกัดตู้: บรรทัด 0 = หมุดทุกสาขา · 1 = "วันนี้พาไปที่ <ห้าง>" · 2 = ชั้น · 3 = จุดสังเกต"""
+    if len(lines) != 4:
+        raise ValueError(f"ฉาก map ต้องมี 4 บรรทัด (ได้ {len(lines)})")
+    mall, landmark = sc.get("mall") or "", sc.get("landmark") or ""
+    vals = {k: sc.get(k) or "" for k in ("kicker", "q1", "q2", "sub", "pins", "offmap", "floor")}
+    vals.update({"mall": mall, "landmark": landmark, "count": int(sc.get("count") or 0),
+                 "fx": float(sc["fx"]), "fy": float(sc["fy"]),
+                 "mfs": fit_px(mall, 900, 900, 104, 56), "lfs": fit_px(landmark, 900, 780, 50, 30)})
+    (s1, e1), (s2, e2), (s3, e3) = lines[1], lines[2], lines[3]
+    t_nm = phrase_time(mall, chunks, words, s1, e1) if mall else None
+    t_fl = phrase_time(f"ชั้น{vals['floor']}", chunks, words, s2, e2) if vals["floor"] else None
+    zm = snap(s1, onsets, 0.25)
+    nm = max(zm + 0.25, snap(t_nm if t_nm is not None else s1 + 0.6, onsets))
+    fl = max(nm + 0.5, snap(t_fl if t_fl is not None else s2 + 0.3, onsets))
+    lm = max(fl + 0.6, snap(s3 + 0.2, onsets))
+    vals.update({"zm": round(zm - lo, 3), "nm": round(nm - lo, 3), "fl": round(fl - lo, 3),
+                 "lm": round(lm - lo, 3), "dur": round(hi - lo, 3)})
+    return vals
+
+
 def _caption_html(text, hot, brand):
     t = html.escape(text)
     for w in sorted(hot, key=len, reverse=True):
@@ -291,9 +459,21 @@ def _caption_html(text, hot, brand):
 def write_project(proj, scenes, timing, chunks, words, total, voice_rel):
     """เขียน index.html ลงโฟลเดอร์โปรเจกต์ (ต้องมี compositions/ + assets/ จากเทมเพลตอยู่แล้ว)"""
     n = len(scenes)
-    starts = [0.0] + [round(float(timing[i]["start"]), 3) for i in range(1, n)]
+    spans = [max(1, int(sc.get("span") or 1)) for sc in scenes]
+    first = [sum(spans[:i]) for i in range(n)]                # บรรทัดแรกของแต่ละฉาก
+    starts = [0.0] + [round(float(timing[first[i]]["start"]), 3) for i in range(1, n)]
+    # ฉากรูปแบบค้างต่อเข้าบรรทัดถัดไปได้ (J-cut: เสียงปิดเริ่มก่อน ภาพตามมา) — เฉลยท้ายฉากจะได้ไม่ถูกตัดทิ้ง
+    # (ชื่ออันดับ 1 พูดแทบชนท้ายบรรทัด เหลือเวลาดูกระดานเต็มไม่ถึงวินาที) · ฉากถัดไปต้องเหลือ ≥ 1.8 วิ
+    for i in range(1, n):
+        ext = float(scenes[i - 1].get("extend", EXTEND.get(scenes[i - 1]["type"], 0)) or 0)
+        nxt_end = round(float(timing[first[i] + spans[i] - 1]["end"]), 3) if i + 1 < n else total + TAIL
+        ext = max(0.0, min(ext, nxt_end - starts[i] - 1.8))
+        starts[i] = round(starts[i] + ext, 3)
     ends = starts[1:] + [round(total + TAIL, 3)]
     duration = ends[-1]
+    fmt = any(sc["type"] in EXTEND for sc in scenes)
+    onsets = speech_onsets(proj / voice_rel) if fmt else []
+    reveals = []                     # (คำตอบ, เริ่มบรรทัดเฉลย, เวลาเฉลย) — เวลาจริงในคลิป · ใช้ตอนวางซับ
     count, slots, hot, brand = {}, [], set(), {"DivisionX Card", "DivisionX"}
     for i, sc in enumerate(scenes):
         kind = sc["type"]
@@ -328,6 +508,21 @@ def write_project(proj, scenes, timing, chunks, words, total, voice_rel):
                     vals[f"at{j}"] = round(max(0.2, t - lo), 3)
         elif kind == "cta":
             vals.update({k: sc[k] for k in ("title", "tag") if sc.get(k)})
+        elif kind == "rank":
+            vals.update(_rank_vals(sc, _line_spans(timing, first[i], spans[i], lo, hi), chunks, words, lo, hi, onsets))
+            hot.update(it.get("name") for it in sc["items"] if it.get("name"))
+        elif kind == "versus":
+            vals.update(_versus_vals(sc, _line_spans(timing, first[i], spans[i], lo, hi), chunks, words, lo, hi, onsets))
+            hot.update(it.get("name") for it in sc["items"] if it.get("name"))
+        elif kind == "quiz":
+            vals.update(_quiz_vals(sc, _line_spans(timing, first[i], spans[i], lo, hi), chunks, words, lo, hi, proj,
+                                   onsets))
+            if sc.get("name"):
+                hot.add(sc["name"])
+        elif kind == "map":
+            vals.update(_map_vals(sc, _line_spans(timing, first[i], spans[i], lo, hi), chunks, words, lo, hi, onsets))
+            hot.update(w for w in (sc.get("mall"), f"ชั้น {sc.get('floor')}" if sc.get("floor") else None) if w)
+        reveals += [(sec, lo + ls, lo + ra) for sec, ls, ra in vals.pop("_reveals", [])]
         vv = html.escape(json.dumps(vals, ensure_ascii=False), quote=True)
         slots.append(
             f'      <div id="slot-{i}" class="scene-slot" data-composition-id="{cid}" '
@@ -340,7 +535,13 @@ def write_project(proj, scenes, timing, chunks, words, total, voice_rel):
     for k, c in enumerate(chunks):
         s, e = round(float(c["start"]), 3), round(float(c["end"]), 3)
         nxt = round(float(chunks[k + 1]["start"]), 3) if k + 1 < len(chunks) else e
-        d = round(max(0.3, (nxt if 0 < nxt - e < 0.45 else e) - s), 3)  # ช่องหายใจสั้น ๆ ไม่ให้ซับกะพริบ
+        end = nxt if 0 < nxt - e < 0.45 else e                         # ช่องหายใจสั้น ๆ ไม่ให้ซับกะพริบ
+        # ซับห้ามเฉลยก่อนภาพ: ท่อนที่มีคำตอบ (ชื่อชุด/ผู้ชนะ) ในบรรทัดเฉลย รอขึ้นพร้อมภาพเฉลย
+        # (คลิปทายชุดจริง: ซับ "เฉลย! OP-15" ขึ้นตั้งแต่คำว่า "เฉลย" ก่อนภาพเฉลยเกือบ 1 วิ)
+        for secret, line_s, reveal in reveals:
+            if line_s - 0.05 <= s < reveal and _norm(secret) in _norm(c["text"]):
+                s = round(reveal, 3)
+        d = round(max(0.3, end - s), 3)
         caps.append(f'        <div id="cap-{k + 1}" class="clip cap" data-start="{s}" data-duration="{d}" '
                     f'data-track-index="0"><span class="cap-text">{_caption_html(c["text"], hot, brand)}</span></div>')
     # ซับอยู่ในฉากย่อยของตัวเอง (แทร็กแน่น ๆ ไม่ปนกับ index.html · แก้ใน Studio เป็นรายท่อนได้ด้วย id)
@@ -383,8 +584,10 @@ def build_video(plan, out_mp4=None, check=True):
 
     segs, wav, total, timing, words, chunks = prepare(plan, work)
     scenes = [dict(s) for s in (plan.get("scenes") or [])] or scenes_from_plan(plan, segs)
-    if len(scenes) != len(segs):
-        raise ValueError(f"scenes มี {len(scenes)} ฉาก แต่สคริปต์มี {len(segs)} บรรทัด — ต้องเท่ากัน (1 บรรทัด = 1 ฉาก)")
+    covered = sum(max(1, int(s.get("span") or 1)) for s in scenes)
+    if covered != len(segs):
+        raise ValueError(f"scenes คลุม {covered} บรรทัด แต่สคริปต์มี {len(segs)} บรรทัด — ต้องเท่ากัน "
+                         f"(ฉากปกติ 1 บรรทัด · ฉากรูปแบบใช้ span)")
 
     # โปรเจกต์ต่องาน = ก๊อปเทมเพลต (ฉาก + ฟอนต์ + โลโก้) ใหม่ทุกครั้ง ไม่แตะเทมเพลตต้นฉบับ
     proj = work / "hf"
@@ -393,9 +596,16 @@ def build_video(plan, out_mp4=None, check=True):
     shutil.copytree(TEMPLATE, proj, ignore=shutil.ignore_patterns(
         "renders", ".hyperframes", "node_modules", "index.html", "voice.wav", ".thumbnails", "captions.html"))
     for i, sc in enumerate(scenes):
-        default = {"hook": "sku:OP 17", "pack": "sku:OP 17", "machine": "machine:hero", "cta": "machine:scene"}
+        if sc.get("items") is not None:                        # ฉากรูปแบบ: รูปต่อรายการ
+            sc["items"] = [dict(it) for it in sc["items"]]
+            for k, it in enumerate(sc["items"]):
+                spec = it.get("img") or (f"sku:{it['sku']}" if it.get("sku") else None)
+                it["img"] = resolve_image(spec, proj, f"scene-{i}-{k}")
+            continue
+        default = {"hook": "sku:OP 17", "pack": "sku:OP 17", "machine": "machine:hero", "cta": "machine:scene",
+                   "quiz": "sku:OP 17"}
         spec = sc.get("img") or (f"sku:{sc['sku']}" if sc.get("sku") else None) or sc.get("photo") \
-            or default[sc["type"]]
+            or default.get(sc["type"])
         sc["img"] = resolve_image(spec, proj, f"scene-{i}")
     shutil.copyfile(wav, proj / "assets" / "voice.wav")
     duration = write_project(proj, scenes, timing, chunks, words, total, "assets/voice.wav")

@@ -1,0 +1,264 @@
+<!doctype html>
+<!--
+  fmt-map — "ตู้อยู่ตรงไหน?" · แผนที่กรุงเทพฯ แบบกราฟิก: หมุดทุกสาขาหล่นลง → ซูมเข้าห้างหนึ่ง → ชั้น (จอลิฟต์) → จุดสังเกต
+
+  ทำไมรูปแบบนี้ (ผลสำรวจตลาด 16 ต.ค. 2026):
+    คลิป "เจอตู้การ์ด/ตู้อยู่ที่ไหน" ทำวิวสูงทั้งไทยและต่างประเทศ (Vending machine spotted 5.86M · Searched EVERY vending
+    machine in my city 117K ใช้แผนที่หมุด) · ไทย: "พิกัดตู้เหลือง เซ็นทรัลพิษณุโลก ชั้น 1 หลังเคเอฟซี" 47K จากห้างเดียว
+    แท็ก #ตู้กดการ์ดวันพีช มีโพสต์แค่ ~15 — ยังไม่มีใครทำจริงจัง · เรามี 12 ตู้ = 12 ตอน
+    ข้อมูลชั้น/จุดสังเกตมาจาก machines.config.branch (คนติดตั้งตู้จดเอง) — ไม่แต่งเส้นทางเดินที่ไม่รู้จริง
+
+  แผนที่: "ภาพกราฟิกโดยประมาณ" ไม่ใช่แผนที่จริง — แม่น้ำเจ้าพระยา + หมุดจากพิกัดห้างโดยประมาณ (hf_formats.MALLS)
+    ผืนแผนที่ 960×700 · ลองจิจูด 100.25–100.70 · ละติจูด 13.611–13.93 (สัดส่วนจริงที่ละติจูด 13.8°)
+  จังหวะ: บรรทัด 0 หมุดหล่น + นับจำนวนตู้ · zm = เริ่มซูม · nm = พูดชื่อห้าง · fl = พูดชั้น · lm = พูดจุดสังเกต
+-->
+<html
+  lang="th"
+  data-composition-variables='[
+    {"id":"kicker","type":"string","label":"ป้ายเล็กบนสุด","default":"พิกัดตู้ DivisionX"},
+    {"id":"q1","type":"string","label":"คำถามบรรทัด 1","default":"ตู้การ์ด"},
+    {"id":"q2","type":"string","label":"คำถามบรรทัด 2 (สีทอง)","default":"อยู่ตรงไหน?"},
+    {"id":"sub","type":"string","label":"บรรทัดเล็ก","default":"12 ตู้ ใน 11 ห้าง"},
+    {"id":"count","type":"number","label":"จำนวนตู้ทั้งหมด","default":12,"min":0,"max":99,"step":1},
+    {"id":"pins","type":"string","label":"หมุด x,y,จำนวนตู้;…","default":"545,447,1;673,376,1;311,492,1;339,479,1;748,131,1;441,240,1;344,116,1;401,586,2;839,359,1;62,307,1"},
+    {"id":"offmap","type":"string","label":"สาขานอกแผนที่","default":"ชลบุรี"},
+    {"id":"fx","type":"number","label":"หมุดที่ซูม X","default":545,"min":0,"max":960,"step":0.1},
+    {"id":"fy","type":"number","label":"หมุดที่ซูม Y","default":447,"min":0,"max":700,"step":0.1},
+    {"id":"mall","type":"string","label":"ชื่อห้าง","default":"ไอคอนสยาม"},
+    {"id":"mfs","type":"number","label":"ขนาดชื่อห้าง","default":104,"min":50,"max":110,"step":1},
+    {"id":"floor","type":"string","label":"ชั้น (เลข/G)","default":"6"},
+    {"id":"landmark","type":"string","label":"จุดสังเกต","default":"หน้าร้าน Karun Thai Tea"},
+    {"id":"lfs","type":"number","label":"ขนาดจุดสังเกต","default":50,"min":30,"max":56,"step":1},
+    {"id":"zm","type":"number","label":"เริ่มซูม (วิ)","default":3.2,"min":0,"max":60,"step":0.01},
+    {"id":"nm","type":"number","label":"พูดชื่อห้าง (วิ)","default":3.8,"min":0,"max":60,"step":0.01},
+    {"id":"fl","type":"number","label":"พูดชั้น (วิ)","default":5.6,"min":0,"max":60,"step":0.01},
+    {"id":"lm","type":"number","label":"พูดจุดสังเกต (วิ)","default":7.2,"min":0,"max":60,"step":0.01},
+    {"id":"dur","type":"number","label":"ความยาวฉาก (วิ)","default":9.5,"min":1,"max":60,"step":0.01}
+  ]'
+>
+  <head>
+    <meta charset="UTF-8" />
+  </head>
+  <body>
+    <template>
+      <style>
+        @font-face { font-family: "Kanit"; src: url("assets/fonts/Kanit-Black.ttf"); font-weight: 900; }
+        @font-face { font-family: "Kanit"; src: url("assets/fonts/Kanit-ExtraBold.ttf"); font-weight: 800; }
+        @font-face { font-family: "Kanit"; src: url("assets/fonts/Kanit-SemiBold.ttf"); font-weight: 600; }
+        #root { position: absolute; inset: 0; overflow: hidden; font-family: "Kanit", sans-serif; color: #ffffff; }
+        #map-head { position: absolute; left: 0; right: 0; top: 186px; z-index: 6; }
+        #map-kicker-row { display: flex; justify-content: center; }
+        #map-kicker {
+          display: block; padding: 8px 34px 12px; border-radius: 999px; background: #1b8dff;
+          box-shadow: 0 0 34px rgba(89, 210, 255, 0.8); font-weight: 800; font-size: 40px; line-height: 1.2; white-space: nowrap; will-change: transform;
+        }
+        .map-q {
+          display: block; text-align: center; font-weight: 900; line-height: 1.12;
+          -webkit-text-stroke: 14px #03102a; paint-order: stroke fill;
+          text-shadow: 0 10px 0 #03102a, 0 0 40px rgba(27, 141, 255, 0.55); will-change: transform, opacity;
+        }
+        #map-q1 { margin-top: 14px; font-size: 104px; }
+        #map-q2 { font-size: 124px; color: #ffc24a; }
+        #map-sub { display: block; margin-top: 6px; text-align: center; font-weight: 600; font-size: 36px; line-height: 1.3; color: #9fc4e8; }
+        /* ── แผ่นแผนที่ 960×700 ที่ (60, 620) */
+        #map-panel {
+          position: absolute; left: 60px; top: 620px; width: 960px; height: 700px; border-radius: 36px; overflow: hidden; z-index: 2;
+          background: radial-gradient(ellipse 80% 70% at 55% 45%, #0b2f63 0%, #061b3a 60%, #041126 100%);
+          border: 4px solid rgba(89, 210, 255, 0.45); box-shadow: 0 0 50px rgba(27, 141, 255, 0.35), 0 24px 60px rgba(0, 0, 0, 0.5);
+          will-change: transform, opacity;
+        }
+        #map-cam { position: absolute; left: 0; top: 0; width: 960px; height: 700px; transform-origin: 0 0; will-change: transform; }
+        #map-grid {
+          position: absolute; inset: 0;
+          background-image: linear-gradient(rgba(89, 210, 255, 0.09) 2px, transparent 2px), linear-gradient(90deg, rgba(89, 210, 255, 0.09) 2px, transparent 2px);
+          background-size: 80px 80px;
+        }
+        #map-svg { position: absolute; left: 0; top: 0; width: 960px; height: 700px; overflow: visible; }
+        #map-river-glow { fill: none; stroke: rgba(27, 141, 255, 0.45); stroke-width: 30; stroke-linejoin: round; stroke-linecap: round; filter: blur(6px); }
+        #map-river { fill: none; stroke: #59d2ff; stroke-width: 9; stroke-linejoin: round; stroke-linecap: round; }
+        #map-river-label { position: absolute; left: 600px; top: 170px; font-weight: 600; font-size: 26px; color: rgba(159, 196, 232, 0.8); transform-origin: 0 0; white-space: nowrap; }
+        #map-city { position: absolute; left: 600px; top: 470px; font-weight: 800; font-size: 34px; letter-spacing: 0.08em; color: rgba(159, 196, 232, 0.45); white-space: nowrap; }
+        .map-pin { position: absolute; width: 0; height: 0; will-change: transform, opacity; }
+        .map-pin-dot {
+          position: absolute; left: -17px; top: -17px; width: 34px; height: 34px; border-radius: 50%;
+          background: #1b8dff; border: 6px solid #e8f7ff; box-shadow: 0 0 22px #59d2ff, 0 0 44px rgba(27, 141, 255, 0.7);
+        }
+        .map-pin-ring { position: absolute; left: -17px; top: -17px; width: 34px; height: 34px; border-radius: 50%; border: 4px solid #59d2ff; opacity: 0; }
+        .map-pin-n {
+          position: absolute; left: 12px; top: -40px; min-width: 34px; height: 34px; padding: 0 8px; border-radius: 17px;
+          background: #ffc24a; color: #03102a; font-weight: 900; font-size: 24px; line-height: 34px; text-align: center;
+        }
+        #map-focus { position: absolute; width: 0; height: 0; z-index: 3; opacity: 0; will-change: transform, opacity; }
+        #map-focus-pin { position: absolute; left: -36px; top: -88px; width: 72px; height: 92px; overflow: visible; filter: drop-shadow(0 0 16px #ffc24a); }
+        .map-focus-ring { position: absolute; left: -40px; top: -40px; width: 80px; height: 80px; border-radius: 50%; border: 6px solid #ffc24a; opacity: 0; }
+        #map-off { position: absolute; right: 22px; bottom: 22px; display: flex; align-items: center; gap: 10px; opacity: 0; will-change: transform, opacity; }
+        #map-off-pill { display: block; padding: 6px 22px 10px; border-radius: 999px; background: rgba(27, 141, 255, 0.92); font-weight: 800; font-size: 30px; line-height: 1.2; white-space: nowrap; }
+        #map-off-arrow { display: block; width: 46px; height: 46px; }
+        #map-count {
+          position: absolute; right: 22px; top: 22px; padding: 10px 26px 14px; border-radius: 24px; background: rgba(3, 16, 42, 0.88);
+          border: 3px solid rgba(89, 210, 255, 0.6); text-align: center; opacity: 0; will-change: transform, opacity;
+        }
+        #map-count-n { display: block; font-weight: 900; font-size: 86px; line-height: 1; color: #ffc24a; }
+        #map-count-l { display: block; font-weight: 600; font-size: 28px; line-height: 1.2; color: #9fc4e8; }
+        /* ── หลังซูม: ชื่อห้าง · จอลิฟต์ · จุดสังเกต */
+        #map-mall { position: absolute; left: 60px; right: 60px; top: 650px; z-index: 4; text-align: center; opacity: 0; will-change: transform, opacity; }
+        #map-mall-t {
+          display: block; font-weight: 900; line-height: 1.1; white-space: nowrap; color: #ffffff;
+          -webkit-text-stroke: 12px #03102a; paint-order: stroke fill; text-shadow: 0 8px 0 #03102a, 0 0 36px rgba(27, 141, 255, 0.8);
+        }
+        #map-lift { position: absolute; left: 790px; top: 840px; width: 200px; height: 270px; z-index: 4; opacity: 0; will-change: transform, opacity; }
+        #map-lift-box { position: absolute; inset: 0; border-radius: 26px; background: #020a1a; border: 5px solid #59d2ff; box-shadow: 0 0 36px rgba(27, 141, 255, 0.7); }
+        #map-lift-l { position: absolute; left: 0; right: 0; top: 12px; text-align: center; font-weight: 800; font-size: 34px; line-height: 1.2; color: #9fc4e8; }
+        #map-lift-arrow { position: absolute; left: 76px; top: 62px; width: 48px; height: 36px; }
+        #map-lift-win { position: absolute; left: 14px; right: 14px; top: 104px; height: 150px; overflow: hidden; }
+        #map-reel { position: absolute; left: 0; right: 0; top: 0; will-change: transform; }
+        .map-floor { display: block; height: 150px; text-align: center; font-weight: 900; font-size: 128px; line-height: 150px; color: #ffc24a; text-shadow: 0 0 24px rgba(255, 194, 74, 0.8); }
+        #map-lm { position: absolute; left: 70px; right: 70px; top: 1176px; z-index: 4; display: flex; justify-content: center; opacity: 0; will-change: transform, opacity; }
+        #map-lm-pill {
+          display: flex; align-items: center; gap: 16px; max-width: 920px; padding: 12px 34px 16px 22px; border-radius: 34px;
+          background: #ffc24a; color: #03102a; box-shadow: 0 0 36px rgba(255, 194, 74, 0.85);
+        }
+        #map-lm-ico { flex: 0 0 44px; width: 44px; height: 56px; }
+        #map-lm-t { display: block; font-weight: 900; line-height: 1.15; }
+        #map-sub:empty, #map-kicker:empty, #map-off-pill:empty, #map-lm-t:empty, #map-mall-t:empty { display: none; }
+      </style>
+
+      <div id="root" data-composition-id="fmt-map" data-width="1080" data-height="1920">
+        <div id="map-panel">
+          <div id="map-cam">
+            <div id="map-grid"></div>
+            <svg id="map-svg" viewBox="0 0 960 700" aria-hidden="true" data-layout-ignore>
+              <path id="map-river-glow" d="M 565.3 -43.9 L 558.9 -11.0 L 526.9 39.5 L 518.4 98.9 L 520.5 158.2 L 544.0 208.7 L 567.5 252.6 L 558.9 292.2 L 544.0 322.9 L 529.1 355.9 L 512.0 391.1 L 526.9 417.4 L 554.7 443.8 L 561.1 472.3 L 573.9 505.3 L 588.8 531.7 L 629.3 527.3 L 661.3 494.3 L 699.7 505.3 L 714.7 544.8 L 682.7 582.2 L 640.0 593.2 L 614.4 615.1 L 661.3 659.1 L 725.3 725.0" />
+              <path id="map-river" d="M 565.3 -43.9 L 558.9 -11.0 L 526.9 39.5 L 518.4 98.9 L 520.5 158.2 L 544.0 208.7 L 567.5 252.6 L 558.9 292.2 L 544.0 322.9 L 529.1 355.9 L 512.0 391.1 L 526.9 417.4 L 554.7 443.8 L 561.1 472.3 L 573.9 505.3 L 588.8 531.7 L 629.3 527.3 L 661.3 494.3 L 699.7 505.3 L 714.7 544.8 L 682.7 582.2 L 640.0 593.2 L 614.4 615.1 L 661.3 659.1 L 725.3 725.0" />
+            </svg>
+            <div id="map-river-label" aria-hidden="true" data-layout-ignore>แม่น้ำเจ้าพระยา</div>
+            <div id="map-city" aria-hidden="true" data-layout-ignore>BANGKOK</div>
+            <div id="map-pins"></div>
+            <div id="map-focus">
+              <div class="map-focus-ring" id="map-fr1"></div>
+              <div class="map-focus-ring" id="map-fr2"></div>
+              <svg id="map-focus-pin" viewBox="0 0 72 92" aria-hidden="true" data-layout-ignore><path d="M36 90 C36 90 6 54 6 34 A30 30 0 0 1 66 34 C66 54 36 90 36 90 Z" fill="#ffc24a" stroke="#03102a" stroke-width="5" /><circle cx="36" cy="34" r="12" fill="#03102a" /></svg>
+            </div>
+          </div>
+          <div id="map-count"><span id="map-count-n">0</span><span id="map-count-l">ตู้ทั้งหมด</span></div>
+          <div id="map-off"><span id="map-off-pill" data-var-text="offmap">ชลบุรี</span><svg id="map-off-arrow" viewBox="0 0 46 46" aria-hidden="true" data-layout-ignore><path d="M8 8 L38 38 M38 14 L38 38 L14 38" fill="none" stroke="#59d2ff" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" /></svg></div>
+        </div>
+        <div id="map-mall"><span id="map-mall-t" data-var-text="mall" style="font-size: calc(var(--mfs) * 1px)">ไอคอนสยาม</span></div>
+        <div id="map-lift">
+          <div id="map-lift-box"></div>
+          <div id="map-lift-l">ชั้น</div>
+          <svg id="map-lift-arrow" viewBox="0 0 48 36" aria-hidden="true" data-layout-ignore><path d="M24 4 L44 32 L4 32 Z" fill="#59d2ff" /></svg>
+          <div id="map-lift-win"><div id="map-reel"></div></div>
+        </div>
+        <div id="map-lm"><div id="map-lm-pill">
+          <svg id="map-lm-ico" viewBox="0 0 72 92" aria-hidden="true" data-layout-ignore><path d="M36 90 C36 90 6 54 6 34 A30 30 0 0 1 66 34 C66 54 36 90 36 90 Z" fill="#03102a" /><circle cx="36" cy="34" r="12" fill="#ffc24a" /></svg>
+          <span id="map-lm-t" data-var-text="landmark" style="font-size: calc(var(--lfs) * 1px)">หน้าร้าน Karun Thai Tea</span></div></div>
+        <div id="map-head">
+          <div id="map-kicker-row"><div id="map-kicker" data-var-text="kicker">พิกัดตู้ DivisionX</div></div>
+          <div class="map-q" id="map-q1" data-var-text="q1">ตู้การ์ด</div>
+          <div class="map-q" id="map-q2" data-var-text="q2">อยู่ตรงไหน?</div>
+          <div id="map-sub" data-var-text="sub">12 ตู้ ใน 11 ห้าง</div>
+        </div>
+      </div>
+
+      <script>
+        (function () {
+          const v = (window.__hyperframes && window.__hyperframes.getVariables && window.__hyperframes.getVariables()) || {};
+          const num = (x, d) => (x != null && x !== "" && isFinite(Number(x)) ? Number(x) : d);
+          const DUR = Math.max(1, num(v.dur, 9.5));
+          const ZM = num(v.zm, 3.2), NM = Math.max(ZM + 0.2, num(v.nm, ZM + 0.6));
+          const FL = Math.max(NM + 0.5, num(v.fl, NM + 1.6)), LM = Math.max(FL + 0.6, num(v.lm, FL + 1.6));
+          const COUNT = Math.round(num(v.count, 12));
+          const FX = num(v.fx, 545), FY = num(v.fy, 447), Z = 2.3;
+          const tl = gsap.timeline({ paused: true });
+
+          // ── หมุดทุกสาขา (สร้างครั้งเดียวตอนประกอบ — ตำแหน่งจากตัวแปร ไม่สุ่ม)
+          const pinsEl = document.getElementById("map-pins");
+          const pins = String(v.pins || "").split(";").map((s) => s.split(",").map(Number)).filter((p) => p.length >= 2 && isFinite(p[0]) && isFinite(p[1]));
+          const pinEls = pins.map(([x, y, n], i) => {
+            const el = document.createElement("div");
+            el.className = "map-pin";
+            el.id = "map-pin-" + i;
+            el.style.left = x + "px";
+            el.style.top = y + "px";
+            el.innerHTML = '<div class="map-pin-ring"></div><div class="map-pin-dot"></div>' + (n > 1 ? '<div class="map-pin-n" data-layout-allow-occlusion>' + n + "</div>" : "");
+            pinsEl.appendChild(el);
+            return el;
+          });
+
+          // ── 1. หัวเรื่อง + แผนที่ขึ้น + แม่น้ำลาก
+          tl.fromTo("#map-kicker", { scale: 0.2, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.4, ease: "back.out(2.2)" }, 0.05);
+          tl.fromTo("#map-q1", { scale: 1.8, opacity: 0, filter: "blur(16px)" }, { scale: 1, opacity: 1, filter: "blur(0px)", duration: 0.36, ease: "power4.out" }, 0.12);
+          tl.fromTo("#map-q2", { scale: 2.1, opacity: 0, filter: "blur(18px)" }, { scale: 1, opacity: 1, filter: "blur(0px)", duration: 0.42, ease: "power4.out" }, 0.3);
+          tl.fromTo("#map-sub", { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.35, ease: "power2.out" }, 0.6);
+          tl.fromTo("#map-panel", { y: 260, opacity: 0, rotationX: 28, transformPerspective: 1400 }, { y: 0, opacity: 1, rotationX: 0, duration: 0.6, ease: "power3.out", transformPerspective: 1400 }, 0.15);
+          ["#map-river", "#map-river-glow"].forEach((sel) => {
+            const p = document.querySelector(sel);
+            const L = p.getTotalLength();
+            p.style.strokeDasharray = L;
+            tl.fromTo(p, { strokeDashoffset: L }, { strokeDashoffset: 0, duration: 1.0, ease: "power2.inOut" }, 0.45);
+          });
+          tl.fromTo(["#map-river-label", "#map-city"], { opacity: 0 }, { opacity: 1, duration: 0.4, ease: "power1.out" }, 1.1);
+
+          // หมุดหล่นทีละอัน (ตามลำดับรายการ) + ตัวนับตู้วิ่งตาม
+          const P0 = 0.8, P1 = Math.max(P0 + 0.6, Math.min(ZM - 0.5, P0 + 0.16 * pinEls.length));
+          const step = pinEls.length > 1 ? (P1 - P0) / (pinEls.length - 1) : 0;
+          pinEls.forEach((el, i) => {
+            const t = P0 + i * step;
+            tl.fromTo(el, { y: -90, opacity: 0 }, { y: 0, opacity: 1, duration: 0.32, ease: "bounce.out" }, t);
+            tl.fromTo(el.querySelector(".map-pin-ring"), { scale: 1, opacity: 0.9 }, { scale: 3.2, opacity: 0, duration: 0.6, ease: "power2.out", immediateRender: false }, t + 0.25);
+          });
+          tl.fromTo("#map-count", { scale: 0.3, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.35, ease: "back.out(2)" }, P0 - 0.1);
+          const cnt = document.getElementById("map-count-n"), cd = { n: 0 };
+          tl.fromTo(cd, { n: 0 }, { n: COUNT, duration: Math.max(0.3, P1 - P0 + 0.3), ease: "none", onUpdate: () => { cnt.textContent = String(Math.round(cd.n)); } }, P0);
+          if (String(v.offmap || "").trim()) {
+            tl.fromTo("#map-off", { x: 60, opacity: 0 }, { x: 0, opacity: 1, duration: 0.35, ease: "back.out(2)" }, P1);
+          }
+
+          // ── 2. ซูมเข้าห้างที่เลือก: กล้องพาหมุดไปกลางแผ่น · หมุดอื่นหรี่ · หมุดทองโผล่ + ชื่อห้างกระแทก
+          tl.to("#map-cam", { scale: Z, x: 480 - FX * Z, y: 330 - FY * Z, duration: 0.8, ease: "power3.inOut" }, ZM);
+          tl.to(pinEls, { opacity: 0.25, duration: 0.3, ease: "power1.out" }, ZM);
+          tl.to(["#map-count", "#map-off", "#map-river-label", "#map-city"], { opacity: 0, duration: 0.25, ease: "power1.out" }, ZM);
+          const foc = document.getElementById("map-focus");
+          foc.style.left = FX + "px";
+          foc.style.top = FY + "px";
+          // หมุดทองต้านสเกลกล้อง (ไม่ให้ใหญ่ตามซูม 2.3 เท่า)
+          tl.fromTo("#map-focus", { scale: 0.2 / Z, opacity: 0, y: -60 / Z }, { scale: 1 / Z * 1.6, opacity: 1, y: 0, duration: 0.45, ease: "back.out(2.4)" }, ZM + 0.6);
+          ["#map-fr1", "#map-fr2"].forEach((sel, k) => {
+            const cyc = 1.1, s = ZM + 0.9 + k * 0.55;
+            tl.fromTo(sel, { scale: 0.6, opacity: 0.9 }, { scale: 3.2, opacity: 0, duration: cyc, ease: "power2.out", repeat: Math.max(0, Math.floor((DUR - s) / cyc) - 1), immediateRender: false }, s);
+          });
+          tl.fromTo("#map-mall", { scale: 2.2, opacity: 0, filter: "blur(14px)" }, { scale: 1, opacity: 1, filter: "blur(0px)", duration: 0.4, ease: "power4.out" }, NM);
+          tl.fromTo("#map-q2", { scale: 1 }, { scale: 1.06, duration: 0.1, ease: "power2.out", immediateRender: false }, NM);
+          tl.to("#map-q2", { scale: 1, duration: 0.3, ease: "power3.out" }, NM + 0.1);
+
+          // ── 3. จอลิฟต์: ชั้นวิ่งจาก G ขึ้นไปถึงชั้นจริง (ชั้นอื่นในรีลเป็นแค่ตัวนับ ไม่ใช่ข้อมูลห้าง)
+          const floorRaw = String(v.floor || "").trim().toUpperCase();
+          const fn = /^\d+$/.test(floorRaw) ? Math.min(30, parseInt(floorRaw, 10)) : null;
+          const labels = fn == null ? [floorRaw || "G"] : ["G"].concat(Array.from({ length: Math.max(1, fn) }, (_, i) => String(i + 1)));
+          const reel = document.getElementById("map-reel");
+          labels.forEach((t) => {
+            const s = document.createElement("span");
+            s.className = "map-floor";
+            s.setAttribute("data-layout-allow-occlusion", "");
+            s.setAttribute("data-layout-allow-overflow", "");
+            s.textContent = t;
+            reel.appendChild(s);
+          });
+          tl.fromTo("#map-lift", { x: 160, opacity: 0 }, { x: 0, opacity: 1, duration: 0.35, ease: "power3.out" }, FL - 0.3);
+          tl.fromTo("#map-reel", { y: 0 }, { y: -150 * (labels.length - 1), duration: Math.min(1.1, 0.25 + 0.12 * labels.length), ease: "power2.inOut" }, FL - 0.05);
+          const ARR = FL - 0.05, ARR_END = ARR + Math.min(1.1, 0.25 + 0.12 * labels.length);
+          tl.fromTo("#map-lift-arrow", { opacity: 1 }, { opacity: 0.2, duration: 0.15, ease: "none", yoyo: true, repeat: Math.max(1, Math.floor((ARR_END - ARR) / 0.15) - 1), immediateRender: false }, ARR);
+          tl.to("#map-lift-arrow", { opacity: 1, duration: 0.1 }, ARR_END);
+          tl.fromTo("#map-lift-box", { boxShadow: "0 0 36px rgba(27,141,255,0.7)" }, { boxShadow: "0 0 70px rgba(255,194,74,0.95)", duration: 0.2, ease: "power2.out", immediateRender: false }, ARR_END);
+
+          // ── 4. จุดสังเกต
+          tl.fromTo("#map-lm", { y: 60, opacity: 0, scale: 0.8 }, { y: 0, opacity: 1, scale: 1, duration: 0.42, ease: "back.out(2)" }, LM);
+          tl.fromTo("#map-lm-ico", { y: -30 }, { y: 0, duration: 0.5, ease: "bounce.out" }, LM + 0.1);
+
+          window.__timelines["fmt-map"] = tl;
+        })();
+      </script>
+    </template>
+  </body>
+</html>

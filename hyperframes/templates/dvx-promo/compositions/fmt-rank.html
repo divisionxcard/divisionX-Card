@@ -1,0 +1,375 @@
+<!doctype html>
+<!--
+  fmt-rank — "กระดานอันดับที่ค้างบนจอแล้วเติมทีละช่อง" (รูปแบบทั้งคลิป ไม่ใช่ฉากต่อบรรทัด)
+
+  ทำไมรูปแบบนี้ (ผลสำรวจตลาด 16 ต.ค. 2026):
+    คลิปจัดอันดับที่ "กระดานว่างค้างบนจอตั้งแต่วินาทีแรก แล้วเติมทีละช่อง" ทำวิวหลักล้าน
+    (RankDoo 10.7M · ร้านการ์ดอากิบะ 2.49M) ขณะที่ข้อมูลชุดเดียวกันแบบตัววิ่งนิ่ง ๆ ได้ 1.2K (Card Rush)
+    → ตัวที่ทำงานคือ "ช่องว่างที่ค้างอยู่" (open loop) ไม่ใช่ความสวย
+    ร้านการ์ดไทยยังไม่มีใครใช้ยอดขายจริง — เรามีข้อมูลจากตู้ทุกสาขา
+
+  จังหวะ (ทุกเวลาเป็นวินาทีภายในฉาก · hf_render.py คำนวณจากเสียงจริง):
+    บรรทัดแรก = คำถาม → หัวเรื่องกระแทก + กระดานว่าง 5 ช่องไหลเข้า
+    บรรทัดถัดไปทีละอันดับ 5 → 1:  lnN = เริ่มพูด "อันดับ…"  (ป้ายเลขเด้ง)
+                                   atN = เริ่มพูดชื่อชุด    (ซองพุ่งขึ้นกลางจอ → บินเข้าช่อง → ช่องสว่าง)
+    อันดับ 1 ได้ฉากใหญ่กว่า: ทอง · มงกุฎ · กระดานสั่น
+
+  ข้อเท็จจริง: แสดง "อันดับ" เท่านั้น ไม่โชว์ตัวเลขยอดขาย (ต้องให้เจ้าของตัดสินก่อน) · บรรทัดเล็กบอกช่วงข้อมูลจริง
+  ฉากนี้โปร่ง — พื้นหลังกรมท่า/โลโก้มุมอยู่ที่ index.html
+-->
+<html
+  lang="th"
+  data-composition-variables='[
+    {"id":"kicker","type":"string","label":"ป้ายเล็กบนสุด","default":"TOP 5 · ยอดขายจริง"},
+    {"id":"q1","type":"string","label":"คำถามบรรทัด 1","default":"ซองไหน"},
+    {"id":"q2","type":"string","label":"คำถามบรรทัด 2 (สีทอง)","default":"ขายดีที่สุด?"},
+    {"id":"sub","type":"string","label":"ที่มาข้อมูล","default":"ยอดขายจริงจากตู้ DivisionX ทุกสาขา · 9–15 ต.ค. 69"},
+    {"id":"img1","type":"string","label":"รูปอันดับ 1","default":"assets/packs/pkm-ninja.webp"},
+    {"id":"img2","type":"string","label":"รูปอันดับ 2","default":"assets/pack.webp"},
+    {"id":"img3","type":"string","label":"รูปอันดับ 3","default":"assets/packs/pkm-dream-ex.webp"},
+    {"id":"img4","type":"string","label":"รูปอันดับ 4","default":"assets/packs/pkm-ghost.webp"},
+    {"id":"img5","type":"string","label":"รูปอันดับ 5","default":"assets/packs/op-13.webp"},
+    {"id":"name1","type":"string","label":"ชื่ออันดับ 1","default":"Pokémon Ninja"},
+    {"id":"name2","type":"string","label":"ชื่ออันดับ 2","default":"OP-17"},
+    {"id":"name3","type":"string","label":"ชื่ออันดับ 3","default":"Pokémon MEGA Dream ex"},
+    {"id":"name4","type":"string","label":"ชื่ออันดับ 4","default":"Pokémon Abyss Eye"},
+    {"id":"name5","type":"string","label":"ชื่ออันดับ 5","default":"OP-13"},
+    {"id":"tag1","type":"string","label":"ค่ายอันดับ 1","default":"Pokémon"},
+    {"id":"tag2","type":"string","label":"ค่ายอันดับ 2","default":"One Piece"},
+    {"id":"tag3","type":"string","label":"ค่ายอันดับ 3","default":"Pokémon"},
+    {"id":"tag4","type":"string","label":"ค่ายอันดับ 4","default":"Pokémon"},
+    {"id":"tag5","type":"string","label":"ค่ายอันดับ 5","default":"One Piece"},
+    {"id":"fs1","type":"number","label":"ขนาดชื่อ 1 (px)","default":58,"min":30,"max":64,"step":1},
+    {"id":"fs2","type":"number","label":"ขนาดชื่อ 2 (px)","default":64,"min":30,"max":64,"step":1},
+    {"id":"fs3","type":"number","label":"ขนาดชื่อ 3 (px)","default":44,"min":30,"max":64,"step":1},
+    {"id":"fs4","type":"number","label":"ขนาดชื่อ 4 (px)","default":50,"min":30,"max":64,"step":1},
+    {"id":"fs5","type":"number","label":"ขนาดชื่อ 5 (px)","default":64,"min":30,"max":64,"step":1},
+    {"id":"ln5","type":"number","label":"เริ่มพูดอันดับ 5 (วิ)","default":2.6,"min":0,"max":60,"step":0.01},
+    {"id":"at5","type":"number","label":"เวลาชื่ออันดับ 5 (วิ)","default":3.1,"min":0,"max":60,"step":0.01},
+    {"id":"ln4","type":"number","label":"เริ่มพูดอันดับ 4 (วิ)","default":4.2,"min":0,"max":60,"step":0.01},
+    {"id":"at4","type":"number","label":"เวลาชื่ออันดับ 4 (วิ)","default":4.7,"min":0,"max":60,"step":0.01},
+    {"id":"ln3","type":"number","label":"เริ่มพูดอันดับ 3 (วิ)","default":5.8,"min":0,"max":60,"step":0.01},
+    {"id":"at3","type":"number","label":"เวลาชื่ออันดับ 3 (วิ)","default":6.3,"min":0,"max":60,"step":0.01},
+    {"id":"ln2","type":"number","label":"เริ่มพูดอันดับ 2 (วิ)","default":7.4,"min":0,"max":60,"step":0.01},
+    {"id":"at2","type":"number","label":"เวลาชื่ออันดับ 2 (วิ)","default":7.9,"min":0,"max":60,"step":0.01},
+    {"id":"ln1","type":"number","label":"เริ่มพูดอันดับ 1 (วิ)","default":9.0,"min":0,"max":60,"step":0.01},
+    {"id":"at1","type":"number","label":"เวลาชื่ออันดับ 1 (วิ)","default":9.9,"min":0,"max":60,"step":0.01},
+    {"id":"dur","type":"number","label":"ความยาวฉาก (วิ)","default":12,"min":1,"max":60,"step":0.01}
+  ]'
+>
+  <head>
+    <meta charset="UTF-8" />
+  </head>
+  <body>
+    <template>
+      <style>
+        @font-face { font-family: "Kanit"; src: url("assets/fonts/Kanit-Black.ttf"); font-weight: 900; }
+        @font-face { font-family: "Kanit"; src: url("assets/fonts/Kanit-ExtraBold.ttf"); font-weight: 800; }
+        @font-face { font-family: "Kanit"; src: url("assets/fonts/Kanit-SemiBold.ttf"); font-weight: 600; }
+        #root {
+          position: absolute;
+          inset: 0;
+          overflow: hidden;
+          font-family: "Kanit", sans-serif;
+          color: #ffffff;
+        }
+        /* ── หัวเรื่อง (ค้างตลอดฉาก = คำถามที่ยังไม่ได้คำตอบ) */
+        #rank-head { position: absolute; left: 0; right: 0; top: 186px; z-index: 6; }
+        #rank-kicker-row { display: flex; justify-content: center; }
+        #rank-kicker {
+          display: block;
+          padding: 8px 34px 12px;
+          border-radius: 999px;
+          background: #1b8dff;
+          box-shadow: 0 0 34px rgba(89, 210, 255, 0.8);
+          font-weight: 800;
+          font-size: 40px;
+          line-height: 1.2;
+          letter-spacing: 0.02em;
+          white-space: nowrap;
+          will-change: transform;
+        }
+        .rank-q {
+          display: block;
+          text-align: center;
+          font-weight: 900;
+          line-height: 1.12;
+          -webkit-text-stroke: 14px #03102a;
+          paint-order: stroke fill;
+          text-shadow: 0 10px 0 #03102a, 0 0 40px rgba(27, 141, 255, 0.55);
+          will-change: transform, opacity;
+        }
+        #rank-q1 { margin-top: 14px; font-size: 104px; color: #ffffff; }
+        #rank-q2 { font-size: 128px; color: #ffc24a; }
+        #rank-sub {
+          display: block;
+          margin-top: 6px;
+          text-align: center;
+          font-weight: 600;
+          font-size: 32px;
+          line-height: 1.3;
+          color: #9fc4e8;
+        }
+        /* ── กระดาน: บนสุด = อันดับ 1 · เติมจากล่างขึ้นบน */
+        #rank-world { position: absolute; inset: 0; will-change: transform; }
+        #rank-board { position: absolute; left: 70px; top: 660px; width: 940px; height: 646px; z-index: 1; }
+        .rank-row { position: absolute; left: 0; width: 940px; height: 118px; will-change: transform, opacity; }
+        .rank-badge {
+          position: absolute;
+          left: 0;
+          top: 0;
+          width: 118px;
+          height: 118px;
+          border-radius: 26px;
+          background: linear-gradient(160deg, #e9f4ff 0%, #9fb7cf 48%, #ffffff 70%, #6f8aa6 100%);
+          box-shadow: 0 0 24px rgba(89, 210, 255, 0.45), inset 0 0 0 4px rgba(3, 16, 42, 0.35);
+          font-weight: 900;
+          font-size: 86px;
+          line-height: 118px;
+          text-align: center;
+          color: #03102a;
+          will-change: transform;
+        }
+        #rank-r1 .rank-badge {
+          background: linear-gradient(160deg, #fff4c9 0%, #ffc24a 45%, #fff1b8 68%, #c98a12 100%);
+          box-shadow: 0 0 34px rgba(255, 194, 74, 0.7), inset 0 0 0 4px rgba(3, 16, 42, 0.3);
+        }
+        .rank-slot {
+          position: absolute;
+          left: 136px;
+          top: 0;
+          width: 804px;
+          height: 118px;
+          border-radius: 26px;
+          border: 4px solid rgba(89, 210, 255, 0.3);
+          background: rgba(6, 27, 58, 0.9);
+        }
+        .rank-lit {
+          position: absolute;
+          inset: -4px;
+          border-radius: 26px;
+          border: 4px solid #59d2ff;
+          box-shadow: 0 0 34px rgba(27, 141, 255, 0.85), inset 0 0 26px rgba(27, 141, 255, 0.45);
+          opacity: 0;
+        }
+        #rank-r1 .rank-lit {
+          border-color: #ffc24a;
+          box-shadow: 0 0 44px rgba(255, 194, 74, 0.9), inset 0 0 30px rgba(255, 194, 74, 0.45);
+        }
+        .rank-mystery {
+          position: absolute;
+          left: 0;
+          right: 0;
+          top: 0;
+          height: 110px;
+          text-align: center;
+          font-weight: 900;
+          font-size: 76px;
+          line-height: 110px;
+          color: #59d2ff;
+          will-change: transform, opacity;
+        }
+        .rank-text { position: absolute; left: 128px; top: 8px; width: 650px; height: 100px; will-change: transform, clip-path; }
+        .rank-name { display: block; font-weight: 800; line-height: 1.05; white-space: nowrap; color: #ffffff; }
+        .rank-tag { display: block; margin-top: 2px; font-weight: 600; font-size: 28px; line-height: 1.2; color: #59d2ff; white-space: nowrap; }
+        #rank-r1 .rank-tag { color: #ffc24a; }
+        .rank-crown { position: absolute; left: 14px; top: -64px; width: 90px; height: 70px; opacity: 0; will-change: transform, opacity; }
+        /* ── ตัวเผยกลางจอ: ม่านมืด + ซองใหญ่ (1 รูปต่ออันดับ — เปลี่ยน src ระหว่างเรนเดอร์ไม่ได้) */
+        /* ม่านเต็มจอแบบขอบนุ่ม (เดิมเป็นกล่อง เห็นขอบสี่เหลี่ยมชัด) — หัวเรื่องอยู่นอก world จึงไม่โดนม่าน */
+        #rank-dim { position: absolute; inset: 0; z-index: 2; background: radial-gradient(ellipse 75% 42% at 50% 50%, rgba(3, 16, 42, 0.86) 0%, rgba(3, 16, 42, 0.78) 55%, rgba(3, 16, 42, 0) 100%); opacity: 0; }
+        .rank-stage { position: absolute; left: 240px; top: 600px; width: 600px; height: 600px; z-index: 3; will-change: transform, opacity; }
+        .rank-stage img { position: absolute; inset: 0; width: 600px; height: 600px; object-fit: contain; filter: drop-shadow(0 26px 50px rgba(0, 0, 0, 0.6)); }
+        .rank-ring {
+          position: absolute;
+          left: 300px;
+          top: 300px;
+          width: 520px;
+          height: 520px;
+          margin: -260px 0 0 -260px;
+          border-radius: 50%;
+          border: 10px solid #59d2ff;
+          box-shadow: 0 0 60px #1b8dff, inset 0 0 40px #1b8dff;
+          opacity: 0;
+        }
+        .rank-ring.gold { border-color: #ffc24a; box-shadow: 0 0 70px #ffc24a, inset 0 0 40px #ff9d2a; }
+        .rank-sparks { position: absolute; left: 540px; top: 900px; width: 0; height: 0; z-index: 4; }
+        .rank-spark { position: absolute; left: 0; top: 0; border-radius: 50%; opacity: 0; will-change: transform, opacity; }
+        .rank-name:empty, .rank-tag:empty, #rank-sub:empty, #rank-kicker:empty { display: none; }
+      </style>
+
+      <div id="root" data-composition-id="fmt-rank" data-width="1080" data-height="1920">
+        <div id="rank-world">
+          <div id="rank-board">
+            <div class="rank-row" id="rank-r1" style="top: 0px">
+              <svg class="rank-crown" id="rank-crown" viewBox="0 0 90 70" aria-hidden="true" data-layout-ignore><path d="M6 62 L12 18 L32 40 L45 6 L58 40 L78 18 L84 62 Z" fill="#ffc24a" stroke="#03102a" stroke-width="5" stroke-linejoin="round" /></svg>
+              <div class="rank-badge" data-layout-allow-occlusion id="rank-b1">1</div>
+              <div class="rank-slot"><div class="rank-lit" id="rank-l1"></div><div class="rank-mystery" id="rank-m1" aria-hidden="true">?</div>
+                <div class="rank-text" id="rank-t1"><span class="rank-name" id="rank-n1" data-var-text="name1" style="font-size: calc(var(--fs1) * 1px)">Pokémon Ninja</span><span class="rank-tag" data-var-text="tag1">Pokémon</span></div></div>
+            </div>
+            <div class="rank-row" id="rank-r2" style="top: 132px">
+              <div class="rank-badge" data-layout-allow-occlusion id="rank-b2">2</div>
+              <div class="rank-slot"><div class="rank-lit" id="rank-l2"></div><div class="rank-mystery" id="rank-m2" aria-hidden="true">?</div>
+                <div class="rank-text" id="rank-t2"><span class="rank-name" id="rank-n2" data-var-text="name2" style="font-size: calc(var(--fs2) * 1px)">OP-17</span><span class="rank-tag" data-var-text="tag2">One Piece</span></div></div>
+            </div>
+            <div class="rank-row" id="rank-r3" style="top: 264px">
+              <div class="rank-badge" data-layout-allow-occlusion id="rank-b3">3</div>
+              <div class="rank-slot"><div class="rank-lit" id="rank-l3"></div><div class="rank-mystery" id="rank-m3" aria-hidden="true">?</div>
+                <div class="rank-text" id="rank-t3"><span class="rank-name" id="rank-n3" data-var-text="name3" style="font-size: calc(var(--fs3) * 1px)">Pokémon MEGA Dream ex</span><span class="rank-tag" data-var-text="tag3">Pokémon</span></div></div>
+            </div>
+            <div class="rank-row" id="rank-r4" style="top: 396px">
+              <div class="rank-badge" data-layout-allow-occlusion id="rank-b4">4</div>
+              <div class="rank-slot"><div class="rank-lit" id="rank-l4"></div><div class="rank-mystery" id="rank-m4" aria-hidden="true">?</div>
+                <div class="rank-text" id="rank-t4"><span class="rank-name" id="rank-n4" data-var-text="name4" style="font-size: calc(var(--fs4) * 1px)">Pokémon Abyss Eye</span><span class="rank-tag" data-var-text="tag4">Pokémon</span></div></div>
+            </div>
+            <div class="rank-row" id="rank-r5" style="top: 528px">
+              <div class="rank-badge" data-layout-allow-occlusion id="rank-b5">5</div>
+              <div class="rank-slot"><div class="rank-lit" id="rank-l5"></div><div class="rank-mystery" id="rank-m5" aria-hidden="true">?</div>
+                <div class="rank-text" id="rank-t5"><span class="rank-name" id="rank-n5" data-var-text="name5" style="font-size: calc(var(--fs5) * 1px)">OP-13</span><span class="rank-tag" data-var-text="tag5">One Piece</span></div></div>
+            </div>
+          </div>
+          <div id="rank-dim"></div>
+          <div class="rank-stage" id="rank-s1"><div class="rank-ring gold" id="rank-g1"></div><img id="rank-i1" data-var-src="img1" src="assets/packs/pkm-ninja.webp" alt="" /></div>
+          <div class="rank-stage" id="rank-s2"><div class="rank-ring" id="rank-g2"></div><img id="rank-i2" data-var-src="img2" src="assets/pack.webp" alt="" /></div>
+          <div class="rank-stage" id="rank-s3"><div class="rank-ring" id="rank-g3"></div><img id="rank-i3" data-var-src="img3" src="assets/packs/pkm-dream-ex.webp" alt="" /></div>
+          <div class="rank-stage" id="rank-s4"><div class="rank-ring" id="rank-g4"></div><img id="rank-i4" data-var-src="img4" src="assets/packs/pkm-ghost.webp" alt="" /></div>
+          <div class="rank-stage" id="rank-s5"><div class="rank-ring" id="rank-g5"></div><img id="rank-i5" data-var-src="img5" src="assets/packs/op-13.webp" alt="" /></div>
+          <div class="rank-sparks" id="rank-p1"></div>
+          <div class="rank-sparks" id="rank-p2"></div>
+          <div class="rank-sparks" id="rank-p3"></div>
+          <div class="rank-sparks" id="rank-p4"></div>
+          <div class="rank-sparks" id="rank-p5"></div>
+        </div>
+        <div id="rank-head">
+          <div id="rank-kicker-row"><div id="rank-kicker" data-var-text="kicker">TOP 5 · ยอดขายจริง</div></div>
+          <div class="rank-q" id="rank-q1" data-var-text="q1">ซองไหน</div>
+          <div class="rank-q" id="rank-q2" data-var-text="q2">ขายดีที่สุด?</div>
+          <div id="rank-sub" data-var-text="sub">ยอดขายจริงจากตู้ DivisionX ทุกสาขา · 9–15 ต.ค. 69</div>
+        </div>
+      </div>
+
+      <script>
+        (function () {
+          const v = (window.__hyperframes && window.__hyperframes.getVariables && window.__hyperframes.getVariables()) || {};
+          const num = (x, d) => (x != null && x !== "" && isFinite(Number(x)) ? Number(x) : d);
+          const DUR = Math.max(1, num(v.dur, 12));
+          const tl = gsap.timeline({ paused: true });
+          const prand = (n) => {
+            const x = Math.sin(n * 127.1 + 311.7) * 43758.5453;
+            return x - Math.floor(x);
+          };
+
+          // ── ค่าคงที่ของเลย์เอาต์ (คำนวณครั้งเดียว ไม่วัด DOM ระหว่างเรนเดอร์)
+          const BOARD_TOP = 660, ROW_STEP = 132, ROW_H = 118;
+          const STAGE_CX = 540, STAGE_CY = 900, STAGE = 600;
+          const THUMB = 100, THUMB_CX = 70 + 136 + 14 + THUMB / 2;
+          const rowCY = (r) => BOARD_TOP + (r - 1) * ROW_STEP + ROW_H / 2;
+
+          // ── 1. หัวเรื่องกระแทก (kinetic-beat-slam) + กระดานว่างไหลเข้า (waterfall-entry)
+          tl.fromTo("#rank-kicker", { scale: 0.2, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.4, ease: "back.out(2.2)" }, 0.05);
+          tl.fromTo("#rank-q1", { scale: 1.8, opacity: 0, filter: "blur(16px)" }, { scale: 1, opacity: 1, filter: "blur(0px)", duration: 0.36, ease: "power4.out" }, 0.12);
+          tl.fromTo("#rank-q2", { scale: 2.1, opacity: 0, filter: "blur(18px)" }, { scale: 1, opacity: 1, filter: "blur(0px)", duration: 0.42, ease: "power4.out" }, 0.3);
+          tl.fromTo("#rank-sub", { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.35, ease: "power2.out" }, 0.6);
+          for (let r = 5; r >= 1; r--) {
+            tl.fromTo("#rank-r" + r, { opacity: 0, x: r % 2 ? -140 : 140 }, { opacity: 1, x: 0, duration: 0.34, ease: "power3.out" }, 0.55 + (5 - r) * 0.08);
+          }
+          // เวลาของแต่ละอันดับ (คำนวณก่อน — ? ต้องหยุดหายใจก่อนช่องนั้นถูกเติม ไม่งั้นทับกันแล้ว ? โผล่กลับ)
+          // อันดับ 1 ค้างกลางจอนานกว่า (HOLD) แล้วบินเข้าช่องเหมือนอันดับอื่น — จบด้วยกระดานเต็มที่อ่านได้ทุกช่อง
+          // (ลองให้ค้างใหญ่เป็นตัวเอกแล้ว ซองบังชื่ออันดับ 2–5 จนอ่านไม่ออก) · hf_render ยืดฉากนี้เข้าบรรทัดปิดราว 0.9 วิ
+          // K ย่อจังหวะอันดับ 1 เมื่อเหลือเวลาหลังพูดชื่อน้อย (ต้องการ ~2 วิ: ค้าง 0.8 + บิน 0.38 + ดูกระดานเต็ม 0.8)
+          const T = {};
+          for (let r = 5; r >= 1; r--) {
+            const LN = num(v["ln" + r], 2.6 + (5 - r) * 1.6);
+            const AT = Math.max(LN + 0.15, num(v["at" + r], LN + 0.5));
+            const K = r === 1 ? Math.max(0.5, Math.min(1, (DUR - AT) / 1.98)) : 1;
+            const HOLD = r === 1 ? 0.8 * K : 0.55;
+            T[r] = { LN, AT, K, HOLD, LAND: AT + HOLD + 0.36 };
+          }
+          // เครื่องหมาย ? หายใจระหว่างรอ (finite · จบก่อนช่องถูกเติม)
+          for (let r = 1; r <= 5; r++) {
+            const s = 1.0 + r * 0.11, cyc = 0.6;
+            const reps = Math.max(0, Math.floor((T[r].LAND - 0.15 - s) / cyc) - 1);
+            tl.fromTo("#rank-m" + r, { opacity: 0.6 }, { opacity: 1, duration: cyc, ease: "sine.inOut", yoyo: true, repeat: reps, immediateRender: false }, s);
+          }
+          // คำถามสีทองเต้นเบา ๆ จนกว่าจะเฉลยอันดับ 1 (open loop)
+          tl.fromTo("#rank-q2", { scale: 1 }, { scale: 1.05, duration: 0.7, ease: "sine.inOut", yoyo: true, repeat: Math.max(0, Math.floor((T[1].AT - 1.0) / 0.7) - 1), immediateRender: false }, 1.0);
+
+          // ── 2. เผยทีละอันดับ 5 → 1
+          const palette = ["#59d2ff", "#1b8dff", "#ffffff", "#ffc24a"];
+          const gold = ["#ffc24a", "#fff1b8", "#ffffff", "#ff9d2a"];
+          function burst(r, at, big) {
+            const field = document.getElementById("rank-p" + r);
+            const cols = big ? gold : palette;
+            const N = big ? 26 : 16;
+            const parts = [];
+            for (let i = 0; i < N; i++) {
+              const el = document.createElement("div");
+              el.className = "rank-spark";
+              const size = 9 + prand(r * 97 + i * 3 + 1) * (big ? 16 : 11);
+              el.style.width = size + "px";
+              el.style.height = size + "px";
+              el.style.background = cols[i % cols.length];
+              el.style.boxShadow = "0 0 16px " + cols[i % cols.length];
+              field.appendChild(el);
+              const ang = prand(r * 31 + i * 5 + 2) * Math.PI * 2;
+              const sp = (big ? 700 : 520) + prand(r * 13 + i * 7 + 3) * 560;
+              parts.push({ el, vx: Math.cos(ang) * sp, vy: Math.sin(ang) * sp });
+            }
+            const FL = 0.7, d = { T: 0 };
+            tl.fromTo(d, { T: 0 }, {
+              T: 1, duration: FL, ease: "none", immediateRender: false,
+              onUpdate: () => {
+                const t = d.T * FL, fade = Math.min(1, (1 - d.T) / 0.35);
+                parts.forEach((p) => {
+                  p.el.style.transform = "translate(" + p.vx * t + "px," + (p.vy * t + 260 * t * t) + "px)";
+                  p.el.style.opacity = String(d.T === 0 ? 0 : fade);
+                });
+              },
+            }, at);
+          }
+
+          for (let r = 5; r >= 1; r--) {
+            const big = r === 1;
+            const { LN, AT, K, HOLD, LAND } = T[r];
+            const st = "#rank-s" + r;
+            // ป้ายเลขเด้งตอนเริ่มพูด "อันดับ…"
+            tl.fromTo("#rank-b" + r, { scale: 1 }, { scale: 1.28, duration: 0.14, ease: "power2.out", immediateRender: false }, LN);
+            tl.to("#rank-b" + r, { scale: 1, duration: 0.5, ease: "elastic.out(1, 0.45)" }, LN + 0.14);
+            // ม่านมืด + ซองพุ่งขึ้นกลางจอตอนพูดชื่อ
+            tl.fromTo("#rank-dim", { opacity: 0 }, { opacity: 1, duration: 0.14, ease: "power1.out", immediateRender: false }, AT - 0.14);
+            tl.fromTo(st, { scale: 0.25, rotation: -16, y: 160, opacity: 0, filter: "blur(16px)" },
+              { scale: big ? 1.12 : 1, rotation: -4, y: 0, opacity: 1, filter: "blur(0px)", duration: 0.3, ease: "back.out(1.7)" }, AT - 0.1);
+            tl.fromTo("#rank-g" + r, { scale: 0.3, opacity: 0.95 }, { scale: big ? 2.6 : 2.1, opacity: 0, duration: 0.65, ease: "power2.out", immediateRender: false }, AT + 0.12);
+            burst(r, AT + 0.12, big);
+            if (big) {
+              // อันดับ 1: กระดานสั่นตอนชน (seeded — เหมือนกันทุกครั้งที่เรนเดอร์)
+              for (let k = 0; k < 6; k++) {
+                tl.to("#rank-world", { x: (prand(k * 9 + 4) - 0.5) * 26, y: (prand(k * 9 + 7) - 0.5) * 22, duration: 0.035, ease: "none" }, AT + 0.12 + k * 0.035);
+              }
+              tl.to("#rank-world", { x: 0, y: 0, duration: 0.12, ease: "power2.out" }, AT + 0.33);
+            }
+            // บินเข้าช่อง (ขนาด/ตำแหน่งคำนวณจากค่าคงที่ — รูปซองใหญ่กับรูปในช่องเป็นรูปเดียวกัน)
+            const dx = THUMB_CX - STAGE_CX, dy = rowCY(r) - STAGE_CY;
+            tl.to(st, { x: dx, y: dy, scale: THUMB / STAGE, rotation: 0, duration: 0.38, ease: "power3.inOut" }, AT + HOLD);
+            tl.to("#rank-dim", { opacity: 0, duration: 0.3, ease: "power2.out" }, AT + HOLD + 0.05);
+            // ช่องสว่าง + ชื่อกวาดเข้า + ? หาย
+            tl.to("#rank-m" + r, { opacity: 0, scale: 0.4, duration: 0.12, ease: "power2.in" }, LAND - 0.1);
+            tl.fromTo("#rank-l" + r, { opacity: 0 }, { opacity: 1, duration: 0.08, ease: "none", immediateRender: false }, LAND);
+            tl.fromTo("#rank-t" + r, { clipPath: "inset(0% 100% 0% 0%)", x: 30 }, { clipPath: "inset(0% 0% 0% 0%)", x: 0, duration: 0.36, ease: "power3.out" }, LAND + 0.02);
+            tl.fromTo("#rank-r" + r, { scale: 1 }, { scale: 1.04, duration: 0.09, ease: "power2.out", immediateRender: false }, LAND);
+            tl.to("#rank-r" + r, { scale: 1, duration: 0.35, ease: "power3.out" }, LAND + 0.09);
+            if (big) {
+              tl.fromTo("#rank-crown", { y: -120, opacity: 0, rotation: -25 }, { y: 0, opacity: 1, rotation: -12, duration: 0.42 * K, ease: "bounce.out" }, LAND + 0.05);
+              // กระดานครบ: คลื่นแสงไล่จากอันดับ 1 ลงล่าง (เฉลยของคำถามที่ค้างมาทั้งคลิป)
+              for (let q = 2; q <= 5; q++) {
+                tl.fromTo("#rank-r" + q, { scale: 1 }, { scale: 1.035, duration: 0.1, ease: "power2.out", immediateRender: false }, LAND + 0.18 + (q - 2) * 0.07);
+                tl.to("#rank-r" + q, { scale: 1, duration: 0.3, ease: "power3.out" }, LAND + 0.28 + (q - 2) * 0.07);
+              }
+            }
+          }
+
+          window.__timelines["fmt-rank"] = tl;
+        })();
+      </script>
+    </template>
+  </body>
+</html>
