@@ -3,7 +3,7 @@ type: worklog
 date: 2026-10-13
 tags: [hermes, model, review, cost, infra]
 commits: [f892160]
-status: ✅ Hermes กลับมาทำงาน 14 ต.ค. 16:41 ด้วย gpt-5.4-mini (โปรเจกต์ OpenAI "Hermes" แยก) · ตัวตรวจรัน 2 รอบ 19 ชิ้น ไทยล้วน · เฝ้าคิว+ตัดเครื่องมือลดโทเคน 3.7 เท่า · 🟡 รอเจ้าของติ๊กโปรเจกต์ Hermes ในหน้า Sharing เพื่อใช้โควตาฟรี
+status: ✅ Hermes กลับมาทำงาน 14 ต.ค. 16:41 ด้วย gpt-5.4-mini (โปรเจกต์ OpenAI "Hermes" แยก) · ตัวตรวจรัน 2 รอบ 19 ชิ้น ไทยล้วน · เฝ้าคิว+ตัดเครื่องมือลดโทเคน 3.7 เท่า · ✅ เปิด data sharing โปรเจกต์ Hermes แล้ว — ยอดเงินเป็น $0 ตั้งแต่ 15 ต.ค. (ยืนยัน 16 ต.ค.)
 ---
 
 # โมเดลฟรีของ Hermes ตาย — สืบสาเหตุ ทดสอบตัวแทน และทางฟรีที่เหลือ
@@ -69,7 +69,9 @@ status: ✅ Hermes กลับมาทำงาน 14 ต.ค. 16:41 ด้ว
 
 - [x] เช็คหน้า OpenAI Sharing — **บัญชีเข้าข่าย** (14 ต.ค.): กลุ่ม mini (gpt-5.4-mini/nano, gpt-5-mini/nano…) ฟรี 2.5 ล้าน token/วัน · กลุ่มใหญ่ (gpt-5.4…) 250k/วัน
 - [x] ลงมือ 14 ต.ค. (เจ้าของ: "จัดการได้เลย") — ดูหัวข้อถัดไป
-- [ ] เจ้าของติ๊กโปรเจกต์ **Hermes** ใต้ *Share inputs and outputs → Enabled for selected projects* แล้ว Save — ก่อนหน้านั้นคิดเงินปกติ ($0.75/ล้าน input · cache 90% ขึ้นไป)
+- [x] เจ้าของติ๊กโปรเจกต์ **Hermes** ใต้ *Share inputs and outputs → Enabled for selected projects* แล้ว Save — ก่อนหน้านั้นคิดเงินปกติ ($0.75/ล้าน input · cache 90% ขึ้นไป)
+  · **ยืนยัน 16 ต.ค. จาก Admin API** (`/organization/costs` กรองโปรเจกต์ Hermes): 14 ต.ค. เสีย $0.149 (672k token) · 15 ต.ค. $0.00 (31k token) · 16 ต.ค. $0.00 (64k token)
+  — มีการใช้งานจริงแต่ยอดเป็นศูนย์ = โควตาฟรีทำงานแล้ว · API ไม่มีจุดอ่านค่าการแชร์ตรง ๆ (`/projects/{id}/data_sharing` 404) ต้องดูจากยอดเงินแทน
 
 เกี่ยวข้อง: [[2026-10-12-review-notes-foreign-script]] · [[2026-10-10-brand-hashtag-and-op17-audit]]
 
