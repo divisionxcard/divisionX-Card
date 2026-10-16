@@ -158,7 +158,7 @@ export default async function BranchesPage() {
         <footer className="bx-foot">
           <div className="bx-contact">
             <a className="bx-chip" href="https://lin.ee/9cMKVRm" target="_blank" rel="noopener noreferrer"><span className="bx-line">LINE</span> @divisionxcard</a>
-            <span className="bx-chip">📞 <a href="tel:0863863219">086-386-3219</a></span>
+            <span className="bx-chip">📞 <a href="tel:0930737930">093-073-7930</a></span>
           </div>
           <div className="bx-count">DivisionX Card · ตู้กดการ์ดเกมอัตโนมัติ</div>
         </footer>

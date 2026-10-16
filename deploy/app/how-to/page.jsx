@@ -125,7 +125,7 @@ export default async function HowToPage() {
 
         <footer className="ht-foot">
           <a className="ht-chip" href="https://lin.ee/9cMKVRm" target="_blank" rel="noopener noreferrer"><span className="ht-line">LINE</span> @divisionxcard</a>
-          <span className="ht-chip">📞 <a href="tel:0863863219">086-386-3219</a></span>
+          <span className="ht-chip">📞 <a href="tel:0930737930">093-073-7930</a></span>
         </footer>
       </div>
     </main>
