@@ -2,7 +2,7 @@
 type: worklog
 date: 2026-10-16
 tags: [video, hyperframes, research, marketing, formats]
-commits: [529d9fc]
+commits: [529d9fc, 6c98c20]
 status: 🟡 รูปแบบคลิปใหม่ 4 แบบ (อันดับ · เลือกข้าง · ทายชุด · พิกัดตู้) สร้างจากข้อมูลจริง · เรนเดอร์ทดสอบผ่านในเครื่อง · รอเจ้าของดู/เลือก
 ---
 
