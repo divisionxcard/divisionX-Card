@@ -20,6 +20,8 @@
 <html
   lang="th"
   data-composition-variables='[
+    {"id":"qs1","type":"number","label":"ขนาดหัวเรื่องบรรทัด 1 (px)","default":104,"min":48,"max":104,"step":1},
+    {"id":"qs2","type":"number","label":"ขนาดหัวเรื่องบรรทัด 2 (px)","default":128,"min":48,"max":128,"step":1},
     {"id":"kicker","type":"string","label":"ป้ายเล็กบนสุด","default":"TOP 5 · ยอดขายจริง"},
     {"id":"q1","type":"string","label":"คำถามบรรทัด 1","default":"ซองไหน"},
     {"id":"q2","type":"string","label":"คำถามบรรทัด 2 (สีทอง)","default":"ขายดีที่สุด?"},
@@ -100,7 +102,7 @@
           will-change: transform, opacity;
         }
         #rank-q1 { margin-top: 14px; font-size: 104px; color: #ffffff; }
-        #rank-q2 { font-size: 128px; color: #ffc24a; }
+        #rank-q2 { font-size: 128px; color: var(--hot, #ffc24a); }
         #rank-sub {
           display: block;
           margin-top: 6px;
@@ -239,10 +241,10 @@
           <div class="rank-sparks" id="rank-p4"></div>
           <div class="rank-sparks" id="rank-p5"></div>
         </div>
-        <div id="rank-head">
-          <div id="rank-kicker-row"><div id="rank-kicker" data-var-text="kicker">TOP 5 · ยอดขายจริง</div></div>
-          <div class="rank-q" id="rank-q1" data-var-text="q1">ซองไหน</div>
-          <div class="rank-q" id="rank-q2" data-var-text="q2">ขายดีที่สุด?</div>
+        <div id="rank-head" class="dvx-head">
+          <div id="rank-kicker-row"><div id="rank-kicker" class="dvx-kick" data-var-text="kicker">TOP 5 · ยอดขายจริง</div></div>
+          <div class="rank-q dvx-q dvx-q1" id="rank-q1" data-var-text="q1" style="font-size: calc(var(--qs1, 104) * 1px)">ซองไหน</div>
+          <div class="rank-q dvx-q dvx-q2" id="rank-q2" data-var-text="q2" style="font-size: calc(var(--qs2, 128) * 1px)">ขายดีที่สุด?</div>
           <div id="rank-sub" data-var-text="sub">ยอดขายจริงจากตู้ DivisionX ทุกสาขา · 9–15 ต.ค. 69</div>
         </div>
       </div>

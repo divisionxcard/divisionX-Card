@@ -54,6 +54,13 @@ ID_PREFIX = {"hook": "hook-", "pack": "pack-", "machine": "mach-", "cta": "cta-"
 # ฉาก "รูปแบบ" (fmt-*) คลุมหลายบรรทัดของสคริปต์ด้วย "span" แล้วเดินตามเวลาของแต่ละบรรทัดเอง
 # (ของค้างบนจอที่ค่อย ๆ เติม = สิ่งที่คลิปวิวหลักล้านมีเหมือนกัน · ดู hf_formats.py)
 FONT_DIR = TEMPLATE / "assets" / "fonts"
+# ชุดหน้าตา (look) — ระบบจับคู่ให้ต่างกันทุกคลิป (เจ้าของ 16 ต.ค.: "อยากให้ระบบออกแบบได้อิสระ ไม่จำเจ")
+# ทุกค่าอยู่ในโทนแบรนด์ (ฟ้านีออน + สายฟ้า + โครเมียม บนกรมท่า) — ต่างกันที่ลาย/จังหวะ/สีเน้น ไม่ใช่เปลี่ยนแบรนด์
+# ความหมายของแต่ละค่า: หัวไฟล์ hyperframes/templates/dvx-promo/scaffold/host.template.html
+LOOK_SPACE = {"bg": ("grid", "dots", "rays", "speed"), "cut": ("bolt", "flash", "glitch", "wipe"),
+              "ts": ("stroke", "chrome", "neon"), "hot": ("gold", "cyan", "orange")}
+HOT = {"gold": "#ffc24a", "cyan": "#59d2ff", "orange": "#ff9d2a"}
+QBASE = {"rank": (104, 128), "versus": (104, 128), "quiz": (104, 118), "map": (104, 124)}   # ขนาดหัวเรื่องปกติ (px)
 EXTEND = {"rank": 0.9, "versus": 0.9, "quiz": 1.2, "map": 1.0}   # วินาทีที่ฉากรูปแบบค้างเข้าบรรทัดถัดไป (write_project)
 MACHINE_PHOTOS = {"machine:hero": "machine-hero.jpg", "machine:scene": "machine-scene.jpg"}
 
@@ -285,6 +292,15 @@ def _instance_file(proj, kind, n):
     return cid
 
 
+def resolve_look(raw, seed):
+    """plan["look"] → ค่าครบทุกช่อง · ช่องที่ไม่ระบุ/ไม่รู้จัก = สุ่มแบบมี seed (งานเดิมเรนเดอร์ซ้ำได้หน้าตาเดิม)
+    ตัวเลือกแบบเลี่ยงของที่เพิ่งใช้อยู่ที่ hf_director.choose_look — ที่นี่เป็นแค่ทางสำรองตอนไม่มีใครเลือกให้"""
+    import random
+    raw = raw if isinstance(raw, dict) else {}
+    rng = random.Random(f"look:{seed}")
+    return {k: (raw.get(k) if raw.get(k) in opts else rng.choice(opts)) for k, opts in LOOK_SPACE.items()}
+
+
 def fit_px(text, weight=800, max_w=640, base=64, low=34):
     """ขนาดตัวอักษรที่ใหญ่สุดที่ข้อความยาวบรรทัดเดียวไม่เกิน max_w — วัดด้วยฟอนต์ Kanit ตัวจริง (PIL)
     วัดฝั่ง Python ตอนประกอบโปรเจกต์ แทนการวัดใน Chrome ระหว่างเรนเดอร์ (ฟอนต์อาจยังโหลดไม่เสร็จ)"""
@@ -378,14 +394,15 @@ def _versus_vals(sc, lines, chunks, words, lo, hi, onsets=None):
                      f"fs{c}": fit_px(name, 800, 420, 64, 30)})
     for c in range(len(items) + 1, 5):                 # ช่องที่ไม่ใช้: ไม่ปล่อยค่าตัวอย่างโผล่
         vals.update({f"img{c}": items[0]["img"], f"name{c}": "", f"tag{c}": ""})
-    vals.update({"rounds": R, "shownum": bool(sc.get("shownum")), "_reveals": []})
+    # ไม่ส่งสัดส่วน/ตัวเลขยอดขายเข้าฉากเลย — เจ้าของเลือกไม่โชว์ (16 ต.ค.) · ฉากรู้แค่ "ใครชนะ"
+    vals.update({"rounds": R, "_reveals": []})
     for k, rd in enumerate(rounds, 1):
         s_in, _ = lines[2 * k - 1]
         s_rv, e_rv = lines[2 * k]
         win = int(rd["win"])
         wname = items[win - 1].get("name") or ""
         t = phrase_time(wname, chunks, words, s_rv, e_rv)
-        vals.update({f"win{k}": win, f"sh{k}": round(float(rd["shL"]), 3),
+        vals.update({f"win{k}": win,
                      f"in{k}": round(s_in - lo, 3),
                      f"rv{k}": round(max(s_rv + 0.2, snap(t if t is not None else s_rv + 0.5, onsets)) - lo, 3)})
         if wname:
@@ -462,8 +479,11 @@ def _caption_html(text, hot, brand):
     return t
 
 
-def write_project(proj, scenes, timing, chunks, words, total, voice_rel):
+def write_project(proj, scenes, timing, chunks, words, total, voice_rel, look=None):
     """เขียน index.html ลงโฟลเดอร์โปรเจกต์ (ต้องมี compositions/ + assets/ จากเทมเพลตอยู่แล้ว)"""
+    look = look or resolve_look(None, proj.parent.name)
+    # ชุดหน้าตาลงที่ slot: คลาสหัวเรื่อง + สีเน้น — ฉากย่อยอยู่ใน DOM เดียวกับ index.html จึงรับ CSS/ตัวแปรต่อ
+    slot_look = f'class="scene-slot ts-{look["ts"]}" style="--hot: {HOT[look["hot"]]}"'
     n = len(scenes)
     spans = [max(1, int(sc.get("span") or 1)) for sc in scenes]
     first = [sum(spans[:i]) for i in range(n)]                # บรรทัดแรกของแต่ละฉาก
@@ -528,10 +548,14 @@ def write_project(proj, scenes, timing, chunks, words, total, voice_rel):
         elif kind == "map":
             vals.update(_map_vals(sc, _line_spans(timing, first[i], spans[i], lo, hi), chunks, words, lo, hi, onsets))
             hot.update(w for w in (sc.get("mall"), f"ชั้น {sc.get('floor')}" if sc.get("floor") else None) if w)
+        if kind in QBASE:                            # หัวเรื่องจากคลังสำนวนยาวไม่เท่ากัน → ย่อให้พอดีจอ (วัดด้วย Kanit จริง)
+            b1, b2 = QBASE[kind]
+            vals["qs1"] = fit_px(vals.get("q1") or "", 900, 940, b1, 56)
+            vals["qs2"] = fit_px(vals.get("q2") or "", 900, 940, b2, 60)
         reveals += [(sec, lo + ls, lo + ra) for sec, ls, ra in vals.pop("_reveals", [])]
         vv = html.escape(json.dumps(vals, ensure_ascii=False), quote=True)
         slots.append(
-            f'      <div id="slot-{i}" class="scene-slot" data-composition-id="{cid}" '
+            f'      <div id="slot-{i}" {slot_look} data-composition-id="{cid}" '
             f'data-composition-src="compositions/{cid}.html" data-start="{lo}" '
             f'data-duration="{round(hi - lo, 3)}" data-track-index="1" data-width="1080" '
             f'data-height="1920" data-variable-values="{vv}"></div>')
@@ -559,11 +583,15 @@ def write_project(proj, scenes, timing, chunks, words, total, voice_rel):
              f'data-track-index="9" data-volume="1"></audio>')
     host = (TEMPLATE / "scaffold" / "host.template.html").read_text(encoding="utf-8")
     cta_start = next((starts[i] for i, sc in enumerate(scenes) if sc["type"] == "cta"), duration)
+    hot_css = HOT[look["hot"]]
+    _log("3/4", "ชุดหน้าตา: พื้นหลัง {bg} · ฉากเปลี่ยน {cut} · หัวเรื่อง {ts} · สีเน้น {hot}".format(**look))
     out = (host.replace("{{DURATION}}", str(duration))
+               .replace("{{BG}}", look["bg"])
+               .replace("{{CUT}}", look["cut"])
                .replace("{{CUTS}}", json.dumps(starts))
                .replace("{{LOGO_UNTIL}}", str(round(cta_start, 3)))
                .replace("{{SCENES}}", "\n".join(slots))
-               .replace("{{CAPTIONS_SLOT}}", f'      <div id="captions-slot" data-composition-id="captions" '
+               .replace("{{CAPTIONS_SLOT}}", f'      <div id="captions-slot" style="--hot: {hot_css}" data-composition-id="captions" '
                         f'data-composition-src="compositions/captions.html" data-start="0" '
                         f'data-duration="{duration}" data-track-index="7" data-track-kind="captions" data-width="1080" data-height="1920"></div>')
                .replace("{{AUDIO}}", audio))
@@ -614,7 +642,11 @@ def build_video(plan, out_mp4=None, check=True):
             or default.get(sc["type"])
         sc["img"] = resolve_image(spec, proj, f"scene-{i}")
     shutil.copyfile(wav, proj / "assets" / "voice.wav")
-    duration = write_project(proj, scenes, timing, chunks, words, total, "assets/voice.wav")
+    # ชุดหน้าตา: แผนระบุมา (hf_director เลือกแบบเลี่ยงของที่เพิ่งใช้) หรือสุ่มตาม project · เก็บค่าจริงกลับลงแผน
+    look = resolve_look(plan.get("look"), project)
+    plan["look"] = look
+    (work / "look.json").write_text(json.dumps(look), encoding="utf-8")
+    duration = write_project(proj, scenes, timing, chunks, words, total, "assets/voice.wav", look)
 
     if check:
         code, log = _npx(["lint", "."], proj, timeout=600)

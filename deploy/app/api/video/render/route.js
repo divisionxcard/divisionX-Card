@@ -55,6 +55,8 @@ const MAX_SCRIPT_CHARS = 4000
 const VOICES = ["Aoede", "Kore", "Puck", "Charon"]
 const STYLES = ["brand", "plain", "punch"]
 const ENGINES = ["classic", "hyperframes"]
+// รูปแบบที่ผู้กำกับอัตโนมัติทำได้ — ต้องตรงกับ FORMATS ใน agents/video/hf_director.py (+ auto = ให้ระบบเลือกเอง)
+const AUTO_FORMATS = ["auto", "rank", "versus", "quiz", "map"]
 
 // งานที่ค้างนานกว่านี้ถือว่า runner ตายไปแล้ว ไม่ใช่ "ยังทำอยู่"
 // workflow ตั้ง timeout-minutes: 45 ไว้ งานที่ยังมีชีวิตจึงเกิน 45 นาทีไม่ได้เลย
@@ -80,6 +82,32 @@ function validatePlan(raw) {
   if (!project) return { error: "ต้องระบุ project" }
   if (!PROJECT_RE.test(project)) {
     return { error: "project ใช้ได้แค่ a-z 0-9 - _ (พิมพ์เล็ก) ยาวไม่เกิน 64 ตัว ห้ามมี / หรือ .." }
+  }
+
+  // ── โหมด "ให้ระบบออกแบบ" (16 ต.ค. 2026) — ส่งมาแค่รูปแบบ ไม่มีสคริปต์ ──
+  //   ผู้กำกับอัตโนมัติ (agents/video/hf_director.py) เขียนสคริปต์+ฉาก+หน้าตาจากข้อมูลจริงบน runner
+  //   แล้วเขียนแผนเต็มกลับลงแถวนี้ (publish.save_plan) หน้าเว็บอ่านสคริปต์ที่ระบบเขียนได้ทีหลัง
+  if (raw.format !== undefined && raw.format !== null && raw.format !== "") {
+    const s = (v) => (typeof v === "string" && v.trim() ? v.trim() : null)
+    const format = s(raw.format)
+    if (!AUTO_FORMATS.includes(format)) {
+      return { error: `ไม่รู้จักรูปแบบ "${format}" — ใช้ได้: ${AUTO_FORMATS.join(", ")}` }
+    }
+    const machine = s(raw.machine)
+    if (machine && !/^[a-z0-9]{2,20}$/.test(machine)) return { error: "machine ไม่ถูกรูปแบบ" }
+    const sku = s(raw.sku)
+    if (sku && !/^[A-Za-z0-9][A-Za-z0-9 ._-]{0,39}$/.test(sku)) return { error: "sku ไม่ถูกรูปแบบ" }
+    const voice = s(raw.voice)
+    if (voice && voice !== "auto" && !VOICES.includes(voice)) {
+      return { error: `ไม่รู้จักเสียง "${voice}" — ใช้ได้: auto, ${VOICES.join(", ")}` }
+    }
+    return {
+      plan: {
+        project, engine: "hyperframes", format,
+        ...(machine ? { machine } : {}), ...(sku ? { sku } : {}),
+        ...(voice && voice !== "auto" ? { voice } : {}),
+      },
+    }
   }
 
   if (typeof raw.script !== "string" || !raw.script.trim()) {

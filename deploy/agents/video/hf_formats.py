@@ -100,27 +100,129 @@ def top_sellers(days=7, n=5, machine=None):
     return [(skus[sid], c) for sid, c in ranked], (d0, d1)
 
 
-def rank_plan(days=7, machine=None, voice="Puck"):
+# ── คลังสำนวน (เจ้าของ 16 ต.ค.: "อยากให้ระบบออกแบบได้อิสระ ไม่จำเจ") ─────────────────────────────
+# ทุกบรรทัดมีหลายแบบ · hf_director เลือกแบบเลี่ยงสำนวนที่คลิปล่าสุดเพิ่งใช้ (บันทึกใน plan["copy"])
+# กติกาเดียวกันทุกแบบ: พูดแค่ข้อเท็จจริงที่มีในข้อมูล · ไม่อ้างของหายาก/เหลือน้อย/มีของที่ตู้ · ไม่มีตัวเลขยอดขาย
+# q1/q2 (หัวเรื่องบนจอ) ยาวได้ — hf_render ย่อขนาดตัวอักษรให้พอดีจอเอง (qs1/qs2)
+COPY = {
+    "rank": {
+        "hook": [("ซองไหนขายดีที่สุด ใน{where} {when}?", "ซองไหน", "ขายดีที่สุด?"),
+                 ("5 ซองที่ลูกค้า{where} เลือกมากที่สุด {when}", "5 ซองที่", "คนเลือกมากสุด!"),
+                 ("ทายก่อนดู! ซองไหนขายดีสุดใน{where} {when}?", "ทายก่อนดู!", "ซองไหนขายดีสุด?"),
+                 ("อยากรู้ไหม {when} ลูกค้า{where} เลือกซองไหนมากที่สุด?", "อยากรู้ไหม", "ซองไหนมาแรง?")],
+        "line": ["อันดับ{n} {say}", "ที่{n} {say}", "อันดับ{n} ได้แก่ {say}"],
+        "final": ["และอันดับหนึ่ง… {say}!", "ส่วนอันดับหนึ่งของ{when_s}คือ… {say}!", "อันดับหนึ่งตกเป็นของ… {say}!"],
+        "kicker": ["TOP 5 · ยอดขายจริง", "อันดับขายดี · ข้อมูลจริง", "TOP 5 {when_k}"],
+        "cta": ["อยากได้ชุดไหน เช็กหน้าตู้ใกล้บ้านก่อนไปนะ", "ชุดที่คุณชอบติดอันดับไหม? คอมเมนต์บอกกันหน่อย",
+                "เช็กหน้าตู้ใกล้บ้านก่อนไปนะ แล้วมาลุ้นกัน"],
+        "voice_style": ["อ่านแบบพิธีกรนับอันดับ ตื่นเต้นขึ้นเรื่อย ๆ จังหวะเร็ว เน้นชื่อชุด",
+                        "อ่านแบบผู้ประกาศข่าวกีฬา มั่นใจ จังหวะกระชับ เน้นอันดับกับชื่อชุด",
+                        "อ่านแบบยูทูบเบอร์สายการ์ด เป็นกันเอง สนุก ชวนลุ้น เว้นจังหวะก่อนอันดับหนึ่ง"],
+    },
+    "versus": {
+        "hook": [("ถ้าให้เลือกหนึ่งซอง คุณเลือกอันไหน?", "คุณเลือก", "ซองไหน?"),
+                 ("เลือกได้ซองเดียว คุณเอาซองไหน?", "เลือกได้", "ซองเดียว!"),
+                 ("ทายซิ ลูกค้าตู้เราซื้อซองไหนมากกว่า?", "ทายซิ!", "ใครขายดีกว่า?"),
+                 ("ศึกซองการ์ด! ซองไหนจะชนะ?", "ศึกซองการ์ด!", "ซองไหนชนะ?")],
+        "first": ["{a} หรือ {b}?", "{a} ปะทะ {b}!", "ยกแรก {a} กับ {b}"],
+        "win": ["ลูกค้าตู้เราซื้อ {w} มากกว่า!", "{w} ขายดีกว่า!", "คำตอบคือ {w}!"],
+        "next": ["แล้ว {a} เจอ {b} ล่ะ?", "ต่อไป {b} ขอท้าชิง!", "{a} ปะทะ {b} ต่อเลย!"],
+        "keep": ["{w} ยังขายดีกว่า!", "{w} ชนะอีกแล้ว!", "{w} ยังครองแชมป์!"],
+        "upset": ["รอบนี้ลูกค้าซื้อ {w} มากกว่า!", "พลิกล็อก! {w} ขายดีกว่า!", "คราวนี้ {w} ชนะ!"],
+        "kicker": ["เลือกข้าง!", "ศึกซองการ์ด", "ใครขายดีกว่า?"],
+        "final": ["แชมป์ตู้เรา!", "แชมป์{when_k}!", "ผู้ชนะ!"],
+        "cta": ["คุณเดาถูกไหม? เช็กหน้าตู้ใกล้บ้านก่อนไปนะ", "คอมเมนต์บอกหน่อย คุณเลือกซองไหน",
+                "ทีมไหนกันบ้าง? คอมเมนต์มาเลย"],
+        "voice_style": ["อ่านแบบพิธีกรเกมโชว์ ชวนลุ้น เว้นจังหวะก่อนบอกผู้ชนะ จังหวะเร็ว",
+                        "อ่านแบบนักพากย์กีฬา ตื่นเต้น เร้าใจ ยิ่งรอบหลังยิ่งเร้า",
+                        "อ่านแบบเพื่อนชวนเล่นเกม สนุก เป็นกันเอง ขำนิด ๆ"],
+    },
+    "quiz": {
+        "hook": [("ทายซิ! ซองนี้ชุดอะไร?", "ทายซิ!", "ซองนี้ชุดอะไร?"),
+                 ("ดูแค่ลาย รู้ไหมว่าซองไหน?", "ดูแค่ลาย", "รู้ไหมซองไหน?"),
+                 ("สายการ์ดตัวจริง ต้องทายถูก!", "สายการ์ดตัวจริง", "ต้องทายถูก!"),
+                 ("ซูมขนาดนี้ ยังทายถูกไหม?", "ซูมขนาดนี้", "ทายถูกไหม?")],
+        # บรรทัดนับต้องจบด้วย "สาม… สอง… หนึ่ง…" เสมอ (hf_render จับเวลาเลขจากช่วงเงียบหลังคำไทยคำสุดท้าย)
+        "count": ["รู้แล้วพิมพ์ในคอมเมนต์เลย… สาม… สอง… หนึ่ง…", "คิดออกยัง? สาม… สอง… หนึ่ง…",
+                  "พร้อมไหม? สาม… สอง… หนึ่ง…"],
+        "reveal": ["เฉลย! {say}", "คำตอบคือ… {say}!", "ใช่แล้ว! {say}"],
+        "prompt": ["พิมพ์คำตอบในคอมเมนต์!", "ตอบในคอมเมนต์!", "ทายในคอมเมนต์เลย!"],
+        "kicker": ["QUIZ · ทายชุด", "ทายซองจากลาย", "เกมทายซอง"],
+        "cta": ["ทายถูกไหม? เช็กหน้าตู้ใกล้บ้านก่อนไปนะ", "ทายถูกกี่คน? คอมเมนต์บอกกันหน่อย",
+                "อยากให้ทายชุดไหนต่อ? คอมเมนต์มาเลย"],
+        "voice_style": ["อ่านแบบพิธีกรเกมทายปัญหา สนุก ชวนลุ้น นับถอยหลังช้า ๆ ชัด ๆ แล้วเฉลยเสียงดัง",
+                        "อ่านแบบเพื่อนท้าเล่นเกม กวน ๆ ขี้เล่น นับถอยหลังชัด ๆ",
+                        "อ่านแบบพิธีกรรายการโทรทัศน์ ตื่นเต้น เร้าใจ นับถอยหลังช้า ๆ"],
+    },
+    "map": {
+        "q": [("ตู้การ์ด", "อยู่ตรงไหน?"), ("ตู้ DivisionX", "อยู่ไหนบ้าง?"), ("ตามหา", "ตู้การ์ด!")],
+        "intro": ["ตู้การ์ด DivisionX มี {n} ตู้ ใน {m} ห้าง", "รู้ไหม? ตู้การ์ด DivisionX มีถึง {n} ตู้แล้ว",
+                  "ตามหาตู้การ์ดอยู่ใช่ไหม? เรามี {n} ตู้ ใน {m} ห้าง"],
+        "go": ["วันนี้พาไปที่ {mall}", "สาขานี้คือ {mall}", "ไปกันที่ {mall}"],
+        # บรรทัดชั้นห้ามขึ้นต้น "ตู้อยู่" — บรรทัดถัดไป (จุดสังเกต) ขึ้นต้นแบบนั้นอยู่แล้ว ฟังซ้ำ
+        "up": ["ขึ้นไปชั้น {f}", "ไปที่ชั้น {f}", "ขึ้นมาที่ชั้น {f}"],
+        "ground": ["อยู่ที่ชั้น {f}", "ไปที่ชั้น {f}"],
+        "lm": ["ตู้อยู่{lm}", "ตู้ตั้งอยู่{lm}"],
+        "photo": ["หน้าตาตู้สาขานี้ เป็นแบบนี้เลย", "ตู้ของสาขานี้ หน้าตาแบบนี้", "เห็นตู้นี้แล้ว แวะได้เลย"],
+        "kicker": ["พิกัดตู้ DivisionX", "ตามหาตู้การ์ด", "สาขาใกล้คุณ"],
+        "cta": ["ดูพิกัดครบทุกสาขา ได้ที่เว็บเราเลย", "สาขาอื่นดูได้ที่เว็บเรา", "ดูทุกสาขาได้ที่ลิงก์บนจอเลย"],
+        "voice_style": ["อ่านแบบไกด์พาเที่ยว สดใส เป็นกันเอง จังหวะเร็ว เน้นชื่อห้างกับเลขชั้น",
+                        "อ่านแบบเพื่อนพาไปเดินห้าง สบาย ๆ ยิ้มแย้ม",
+                        "อ่านแบบผู้ประกาศ ชัดเจน กระชับ เน้นชื่อห้าง ชั้น และจุดสังเกต"],
+    },
+}
+
+
+def _chooser(pick):
+    """pick(คีย์, จำนวนแบบ) → เลขแบบ · ไม่ส่งมา = แบบแรกเสมอ (สำนวนเดิมก่อนมีคลัง)
+    คืน (choose, used) — choose(รูปแบบ, คีย์, **ค่าเติม) คืนข้อความที่เติมแล้ว · used = {คีย์: เลขแบบ} ลงแผน"""
+    used = {}
+
+    def choose(fmt, key, **fill):
+        opts = COPY[fmt][key]
+        i = pick(f"{fmt}.{key}", len(opts)) if pick else 0
+        i = i if isinstance(i, int) and 0 <= i < len(opts) else 0
+        used[key] = i
+        v = opts[i]
+        return tuple(x.format(**fill) for x in v) if isinstance(v, tuple) else v.format(**fill)
+
+    return choose, used
+
+
+def _when(days):
+    """คำบอกช่วงเวลา · "สัปดาห์" แทน "7 วัน" — ตัวเลขในประโยคโดนตัดแยกท่อนซับ ("…DivisionX 7" / "วันที่ผ่านมา?")"""
+    if days == 7:
+        return {"when": "สัปดาห์ที่ผ่านมา", "when_s": "สัปดาห์", "when_k": "ประจำสัปดาห์"}
+    return {"when": f"{days} วันที่ผ่านมา", "when_s": f"{days} วันนี้", "when_k": f" {days} วัน"}
+
+
+def rank_plan(days=7, machine=None, voice="Puck", pick=None):
     """กระดานอันดับขายดี 5 ช่อง · 7 บรรทัด (คำถาม · อันดับ 5→1 · ปิด)"""
     top, (d0, d1) = top_sellers(days, 5, machine)
     if len(top) < 5:
         raise ValueError(f"ยอดขาย {days} วันมีแค่ {len(top)} ชุด — ต้องครบ 5")
-    where = "ตู้นี้" if machine else "ตู้ DivisionX"
-    # "สัปดาห์" แทน "7 วัน" — ตัวเลขในประโยคโดนตัดแยกท่อนซับ ("…DivisionX 7" / "วันที่ผ่านมา?")
-    when = "สัปดาห์ที่ผ่านมา" if days == 7 else f"{days} วันที่ผ่านมา"
-    items, lines = [], [f"ซองไหนขายดีที่สุด ใน{where} {when}?"]
-    for r, (sku, _count) in enumerate(top, 1):
+    mall = next((b["mall"] for b in branches() if b["machine_id"] == machine), None) if machine else None
+    where = f"ตู้สาขา{mall}" if mall else ("ตู้นี้" if machine else "ตู้ DivisionX")
+    fill = dict(_when(days), where=where)
+    choose, used = _chooser(pick)
+    hook, q1, q2 = choose("rank", "hook", **fill)
+    items = []
+    for sku, _count in top:
         name, brand, say = display(sku)
         items.append({"sku": sku["sku_id"], "name": name, "tag": brand, "say": say})
+    choose("rank", "line", n="", say="")                 # เลือกรูปประโยคครั้งเดียว ทุกอันดับพูดแบบเดียวกัน
+    line = COPY["rank"]["line"][used["line"]]
+    lines = [hook]
     for r in range(5, 0, -1):
         say = items[r - 1]["say"]
-        lines.append(f"และอันดับหนึ่ง… {say}!" if r == 1 else f"อันดับ{TH_RANK[r]} {say}")
-    lines.append("อยากได้ชุดไหน เช็กหน้าตู้ใกล้บ้านก่อนไปนะ")
-    scene = {"type": "rank", "span": 6, "kicker": "TOP 5 · ยอดขายจริง", "q1": "ซองไหน", "q2": "ขายดีที่สุด?",
+        lines.append(choose("rank", "final", say=say, **fill) if r == 1 else line.format(n=TH_RANK[r], say=say))
+    lines.append(choose("rank", "cta"))
+    scene = {"type": "rank", "span": 6, "kicker": choose("rank", "kicker", **fill), "q1": q1, "q2": q2,
              "sub": f"ยอดขายจริงจาก{where}{'' if machine else ' ทุกสาขา'} · {thai_range(d0, d1)}",
              "items": [{k: it[k] for k in ("sku", "name", "tag")} for it in items]}
-    return {"project": f"rank-{d1:%Y%m%d}", "engine": "hyperframes", "voice": voice,
-            "voice_style": "อ่านแบบพิธีกรนับอันดับ ตื่นเต้นขึ้นเรื่อย ๆ จังหวะเร็ว เน้นชื่อชุด",
+    style = choose("rank", "voice_style")
+    return {"project": f"rank-{d1:%Y%m%d}" + (f"-{machine}" if machine else ""), "engine": "hyperframes",
+            "format": "rank", "voice": voice, "voice_style": style, "copy": used,
             "script": "\n".join(lines), "scenes": [scene, cta_for(machine)]}
 
 
@@ -129,18 +231,41 @@ def _op_number(sku_id):
     return int(m.group(1)) if m else -1
 
 
-def versus_plan(days=7, machine=None, voice="Puck", picks=None):
-    """เลือกข้าง 3 รอบ ผู้ชนะอยู่ต่อ · เฉลยจากยอดขายจริง
-    ผู้เข้าแข่งปริยาย: OP ชุดใหม่สุด · OP ชุดก่อนหน้า · Pokémon ขายดีสุด · Dragon Ball ขายดีสุด (ต้องมียอดขาย)"""
+VERSUS_THEMES = ("newest", "top", "brands", "op")
+
+
+def versus_plan(days=7, machine=None, voice="Puck", picks=None, pick=None, theme=None):
+    """เลือกข้าง 3 รอบ ผู้ชนะอยู่ต่อ · เฉลยจากยอดขายจริง (บอกแค่ใครขายดีกว่า ไม่มีตัวเลข)
+    theme = ชุดผู้เข้าแข่ง (สลับกันไม่ให้คู่ซ้ำทุกสัปดาห์):
+      newest  OP ชุดใหม่สุด · OP ชุดก่อนหน้า · Pokémon ขายดีสุด · Dragon Ball ขายดีสุด (ค่าปกติ)
+      top     4 ชุดขายดีสุด สลับลำดับเข้าสนามแบบมี seed (ผลแพ้ชนะยังมาจากยอดจริง)
+      brands  ตัวท็อปของแต่ละค่าย
+      op      One Piece ล้วน 4 ชุดที่ขายดี"""
     count, skus, (d0, d1) = sales_counts(days, machine)
-    sold = {sid: c for sid, c in count.items() if c > 0 and (skus[sid].get("image_url") or skus[sid].get("image_url_box"))}
+    sold = {sid: c for sid, c in count.items()
+            if c > 0 and (skus[sid].get("image_url") or skus[sid].get("image_url_box"))}
+
+    def best(fr):
+        return max((s for s in sold if skus[s].get("franchise") == fr), key=lambda s: sold[s], default=None)
+
+    by_sales = sorted(sold, key=lambda s: (-sold[s], s))
+    theme = theme if theme in VERSUS_THEMES else "newest"
     if picks:
         ids = [p for p in picks if p in sold]
+    elif theme == "top":
+        pool, ids = by_sales[:4], []
+        for k in range(len(pool)):
+            i = pick(f"versus.order.{k}", len(pool)) if pick else 0
+            ids.append(pool.pop(min(max(i, 0), len(pool) - 1)))
+    elif theme == "brands":
+        frs = sorted({skus[s].get("franchise") for s in sold}, key=lambda fr: -sold[best(fr)])
+        ids = [best(fr) for fr in frs][:4]
+    elif theme == "op":
+        ids = [s for s in by_sales if skus[s].get("franchise") == "OP"][:4]
     else:
         ops = sorted((s for s in sold if _op_number(s) > 0), key=_op_number, reverse=True)
-        best = lambda fr: max((s for s in sold if skus[s].get("franchise") == fr), key=lambda s: sold[s], default=None)
-        ids = [x for x in ops[:2] + [best("PKM"), best("DB")] if x]
-    ids = list(dict.fromkeys(ids))[:4]
+        ids = ops[:2] + [best("PKM"), best("DB")]
+    ids = list(dict.fromkeys(x for x in ids if x))[:4]
     if len(ids) < 2:
         raise ValueError("ผู้เข้าแข่งที่มียอดขายไม่พอ (ต้องอย่างน้อย 2)")
     items = []
@@ -154,31 +279,37 @@ def versus_plan(days=7, machine=None, voice="Puck", picks=None):
         a, b = (1, 2) if k == 1 else (champ, k + 1)
         champ = a if sold[ids[a - 1]] >= sold[ids[b - 1]] else b
         wins.append(champ)
-    side, pairs = versus_sides(R, wins)
-    rounds, lines = [], ["ถ้าให้เลือกหนึ่งซอง คุณเลือกอันไหน?"]
+    _side, pairs = versus_sides(R, wins)
+    fill = _when(days)
+    choose, used = _chooser(pick)
+    hook, q1, q2 = choose("versus", "hook")
+    for key in ("first", "win", "next", "keep", "upset"):
+        choose("versus", key, a="", b="", w="")          # เลือกรูปประโยคครั้งเดียว ทุกรอบพูดสไตล์เดียวกัน
+    # รอบ 2-3 หมุนแบบไปทีละช่อง — รอบแรกใช้ "ยังขายดีกว่า!" ซ้ำสองรอบติดกันในคลิปเดียว ฟังเป็นเทป
+    def tpl(key, k):
+        opts = COPY["versus"][key]
+        return opts[(used[key] + max(0, k - 2)) % len(opts)]
+    rounds, lines = [], [hook]
     for k, (a, b) in enumerate(pairs, 1):
         w = wins[k - 1]
-        left = a if side[a] == "L" else b
-        right = b if left == a else a
-        shL = sold[ids[left - 1]] / (sold[ids[left - 1]] + sold[ids[right - 1]])
-        rounds.append({"win": w, "shL": round(shL, 3)})
+        rounds.append({"win": w})        # ไม่เก็บสัดส่วน/ตัวเลขยอดขายลงแผน (เจ้าของเลือกไม่โชว์ · 16 ต.ค.)
         sa, sb, sw = items[a - 1]["say"], items[b - 1]["say"], items[w - 1]["say"]
         if k == 1:
-            lines += [f"{sa} หรือ {sb}?", f"ลูกค้าตู้เราซื้อ {sw} มากกว่า!"]
-        elif w == a:
-            lines += [f"แล้ว {sa} เจอ {sb} ล่ะ?", f"{sw} ยังขายดีกว่า!"]
+            lines += [tpl("first", k).format(a=sa, b=sb), tpl("win", k).format(w=sw)]
         else:
-            lines += [f"แล้ว {sa} กับ {sb} ล่ะ?", f"รอบนี้ลูกค้าซื้อ {sw} มากกว่า!"]
-    lines.append("คุณเดาถูกไหม? เช็กหน้าตู้ใกล้บ้านก่อนไปนะ")
-    scene = {"type": "versus", "span": 1 + 2 * R, "kicker": "เลือกข้าง!", "q1": "คุณเลือก", "q2": "ซองไหน?",
-             "sub": f"เฉลยจากยอดขายจริงตู้ DivisionX · {thai_range(d0, d1)}", "final": "แชมป์ตู้เรา!",
+            lines += [tpl("next", k).format(a=sa, b=sb), tpl("keep" if w == a else "upset", k).format(w=sw)]
+    lines.append(choose("versus", "cta"))
+    scene = {"type": "versus", "span": 1 + 2 * R, "kicker": choose("versus", "kicker"), "q1": q1, "q2": q2,
+             "sub": f"เฉลยจากยอดขายจริงตู้ DivisionX · {thai_range(d0, d1)}",
+             "final": choose("versus", "final", **fill),
              "items": [{k: it[k] for k in ("sku", "name", "tag")} for it in items], "rounds": rounds}
-    return {"project": f"versus-{d1:%Y%m%d}", "engine": "hyperframes", "voice": voice,
-            "voice_style": "อ่านแบบพิธีกรเกมโชว์ ชวนลุ้น เว้นจังหวะก่อนบอกผู้ชนะ จังหวะเร็ว",
+    style = choose("versus", "voice_style")
+    return {"project": f"versus-{d1:%Y%m%d}" + (f"-{theme}" if theme != "newest" else ""), "engine": "hyperframes",
+            "format": "versus", "theme": theme, "voice": voice, "voice_style": style, "copy": used,
             "script": "\n".join(lines), "scenes": [scene, cta_for(machine)]}
 
 
-def quiz_plan(sku=None, voice="Puck", days=7, machine=None):
+def quiz_plan(sku=None, voice="Puck", days=7, machine=None, pick=None):
     """ทายชุดจากลายซอง · ปริยาย = One Piece ที่ขายดีสุดในช่วงนั้น (คนดูส่วนใหญ่เล่น OP)"""
     count, skus, _ = sales_counts(days, machine)
     if not sku:
@@ -188,15 +319,18 @@ def quiz_plan(sku=None, voice="Puck", days=7, machine=None):
     if not row or not row.get("image_url"):
         raise ValueError(f"SKU {sku} ไม่มีรูปซอง")
     name, brand, say = display(row)
-    lines = ["ทายซิ! ซองนี้ชุดอะไร?",
-             "รู้แล้วพิมพ์ในคอมเมนต์เลย… สาม… สอง… หนึ่ง…",
-             f"เฉลย! {say}",
-             "ทายถูกไหม? เช็กหน้าตู้ใกล้บ้านก่อนไปนะ"]
-    scene = {"type": "quiz", "span": 3, "sku": sku, "kicker": "QUIZ · ทายชุด", "q1": "ทายซิ!", "q2": "ซองนี้ชุดอะไร?",
-             "sub": f"ใบ้ให้: ซอง {brand}", "prompt": "พิมพ์คำตอบในคอมเมนต์!", "name": name,
+    # เฉลยต้องบอกชื่อเต็ม — ค่ายอื่นนอก OP/DB ชื่อบนจอไม่มีชื่อค่าย ("Series 02" อย่างเดียวไม่รู้ว่าเรื่องอะไร)
+    if brand.lower() not in name.lower() and not re.match(r"^(OP|EB|PRB|FB)-", name):
+        name = say
+    choose, used = _chooser(pick)
+    hook, q1, q2 = choose("quiz", "hook")
+    lines = [hook, choose("quiz", "count"), choose("quiz", "reveal", say=say), choose("quiz", "cta")]
+    scene = {"type": "quiz", "span": 3, "sku": sku, "kicker": choose("quiz", "kicker"), "q1": q1, "q2": q2,
+             "sub": f"ใบ้ให้: ซอง {brand}", "prompt": choose("quiz", "prompt"), "name": name,
              "tag": f"{brand} Card Game" if brand in ("One Piece", "Pokémon") else brand}
+    style = choose("quiz", "voice_style")
     return {"project": f"quiz-{re.sub(r'[^a-z0-9]+', '-', sku.lower()).strip('-')}", "engine": "hyperframes",
-            "voice": voice, "voice_style": "อ่านแบบพิธีกรเกมทายปัญหา สนุก ชวนลุ้น นับถอยหลังช้า ๆ ชัด ๆ แล้วเฉลยเสียงดัง",
+            "format": "quiz", "sku": sku, "voice": voice, "voice_style": style, "copy": used,
             "script": "\n".join(lines), "scenes": [scene, cta_for(machine)]}
 
 
@@ -247,8 +381,8 @@ def branches():
     return sorted(out, key=lambda r: (r["order"], r["machine_id"]))
 
 
-def map_plan(machine=None, voice="Puck", **_):
-    """พิกัดตู้: หมุดทุกสาขา → ซูมห้างของตู้ที่เลือก → ชั้น → จุดสังเกต (ข้อมูลจาก machines.config.branch)"""
+def map_plan(machine=None, voice="Puck", pick=None, **_):
+    """พิกัดตู้: หมุดทุกสาขา → ซูมห้างของตู้ที่เลือก → ชั้น → จุดสังเกต → รูปตู้จริง (ข้อมูลจาก machines.config.branch)"""
     rows = branches()
     if not rows:
         raise ValueError("ไม่มีตู้ที่เปิดอยู่")
@@ -271,23 +405,29 @@ def map_plan(machine=None, voice="Puck", **_):
         raise ValueError(f"ห้าง {focus['mall']} ไม่มีพิกัดในแผนที่ (เพิ่มใน MALLS)")
     floor = re.sub(r"^ชั้น\s*", "", focus["floor"]).strip()
     n_mach, n_mall = len(rows), len(by_mall)
-    go = "อยู่ที่" if floor.upper() in ("G", "1", "") else "ขึ้นไป"
     photo = branch_photo(focus["machine_id"])
-    lines = [f"ตู้การ์ด DivisionX มี {n_mach} ตู้ ใน {n_mall} ห้าง",
-             f"วันนี้พาไปที่ {focus['mall']}",
-             f"{go}ชั้น {floor}" if floor else "ตามมาเลย",
-             f"ตู้อยู่{focus['landmark']}" if focus["landmark"] else f"ตู้อยู่ที่{focus['mall']}"]
+    choose, used = _chooser(pick)
+    q1, q2 = choose("map", "q")
+    if floor:
+        floor_line = choose("map", "ground" if floor.upper() in ("G", "1") else "up", f=floor)
+    else:
+        floor_line = "ตามมาเลย"
+    lines = [choose("map", "intro", n=n_mach, m=n_mall), choose("map", "go", mall=focus["mall"]), floor_line,
+             choose("map", "lm", lm=focus["landmark"]) if focus["landmark"] else f"ตู้อยู่ที่{focus['mall']}"]
     if photo:
-        lines.append("หน้าตาตู้สาขานี้ เป็นแบบนี้เลย")
-    lines.append("ดูพิกัดครบทุกสาขา ได้ที่เว็บเราเลย")
-    scene = {"type": "map", "span": 5 if photo else 4, "kicker": "พิกัดตู้ DivisionX", "q1": "ตู้การ์ด",
-             "q2": "อยู่ตรงไหน?", "sub": f"{n_mach} ตู้ ใน {n_mall} ห้าง", "count": n_mach, "pins": ";".join(pins),
+        lines.append(choose("map", "photo"))
+    lines.append(choose("map", "cta"))
+    plabel = ""
+    if photo:
+        plabel = (f"{focus['mall']} · ชั้น {floor}" if len(by_mall[focus["mall"]]) > 1 and floor
+                  else f"ตู้สาขา{focus['mall']}")
+    scene = {"type": "map", "span": 5 if photo else 4, "kicker": choose("map", "kicker"), "q1": q1, "q2": q2,
+             "sub": f"{n_mach} ตู้ ใน {n_mall} ห้าง", "count": n_mach, "pins": ";".join(pins),
              "offmap": " · ".join(off), "fx": fxy[0], "fy": fxy[1], "mall": focus["mall"], "floor": floor,
-             "landmark": focus["landmark"], "photo": photo or "", "plabel": (f"{focus['mall']} · ชั้น {floor}" if len(by_mall[focus["mall"]]) > 1 and floor
-                        else f"ตู้สาขา{focus['mall']}")
-             if photo else ""}
-    return {"project": f"map-{focus['machine_id']}", "engine": "hyperframes", "voice": voice,
-            "voice_style": "อ่านแบบไกด์พาเที่ยว สดใส เป็นกันเอง จังหวะเร็ว เน้นชื่อห้างกับเลขชั้น",
+             "landmark": focus["landmark"], "photo": photo or "", "plabel": plabel}
+    style = choose("map", "voice_style")
+    return {"project": f"map-{focus['machine_id']}", "engine": "hyperframes", "format": "map",
+            "machine": focus["machine_id"], "voice": voice, "voice_style": style, "copy": used,
             "script": "\n".join(lines),
             "scenes": [scene, dict(cta_for(focus["machine_id"]), linkcap="ดูพิกัดทุกสาขา", link=BRANCHES_URL)]}
 

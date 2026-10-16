@@ -205,8 +205,9 @@ def claim_job(job_id):
     plan = row.get("plan")
     if not isinstance(plan, dict):
         raise RuntimeError(f"คอลัมน์ plan ของงาน {job_id} ไม่ใช่ JSON object — เรนเดอร์ต่อไม่ได้")
-    if not plan.get("script"):
+    if not plan.get("script") and not plan.get("format"):
         # ปล่อยไปก็ตายที่ build_video อยู่ดี แต่ตายตรงนี้ได้ข้อความที่บอกสาเหตุจริง
+        # (งาน "ให้ระบบออกแบบ" ส่งมาแค่ format ไม่มีสคริปต์ — ผู้กำกับเขียนให้ใน main())
         raise RuntimeError(f"plan ของงาน {job_id} ไม่มีคีย์ script — ฝั่งที่สร้างงานส่งมาไม่ครบ")
 
     # คอลัมน์ project เป็นตัวจริงเสมอ เพราะมันคือชื่อโฟลเดอร์งานและชื่อไฟล์ใน storage
@@ -219,6 +220,16 @@ def claim_job(job_id):
         plan["project"] = row["project"]
     plan.setdefault("project", "clip")
     return plan
+
+
+def save_plan(job_id, plan):
+    """เขียนแผนที่ผู้กำกับเขียนเสร็จกลับลงแถวงาน — หน้าเว็บจะได้โชว์สคริปต์/หน้าตาที่ระบบเลือก
+    และประวัติรอบหน้าจะรู้ว่าคลิปนี้ใช้อะไรไปแล้ว (เลี่ยงซ้ำ) · ห้ามแก้ project (CHECK ผูกกับคอลัมน์ project)
+    ล้มได้ไม่เป็นไร — เป็นงานรอง คลิปยังเรนเดอร์ต่อได้"""
+    try:
+        sb("PATCH", f"video_jobs?id=eq.{_q(job_id)}", {"plan": plan})
+    except Exception as e:
+        print(f"::warning::บันทึกแผนที่ผู้กำกับเขียนกลับลงงาน {job_id} ไม่สำเร็จ: {str(e)[:200]}")
 
 
 def finish_job(job_id, video_url, duration_seconds):
@@ -319,6 +330,20 @@ def main():
         #      ลงคอลัมน์ error — ถ้า import ไว้ข้างบน มันจะตายก่อนถึงบรรทัดแรกของ main()
         #      คือตายแบบที่ไม่มีใครบันทึกอะไรไว้เลย
         from .make_video import build_video
+
+        # ── ผู้กำกับอัตโนมัติ (16 ต.ค. 2026 · เจ้าของ: "อยากให้ระบบออกแบบได้อิสระ ไม่จำเจ") ──
+        #   งาน "ให้ระบบออกแบบ" มาแค่ {format, machine?, sku?} → เขียนสคริปต์+ฉาก+หน้าตาจากข้อมูลจริงตรงนี้
+        #   งาน HyperFrames ที่มีสคริปต์มาแล้วแต่ไม่ได้ระบุหน้าตา → เลือกหน้าตาที่ไม่ซ้ำคลิปล่าสุดให้
+        #   seed = job id → เรนเดอร์งานเดิมซ้ำได้แผนเดิม
+        if not plan.get("script") and plan.get("format"):
+            from .hf_director import direct, history
+            plan = direct(plan, seed=job_id, project=plan["project"], hist=history(exclude_id=job_id))
+            print(f"[publish] ผู้กำกับเลือก {plan.get('format')} · เสียง {plan.get('voice')} · หน้าตา {plan.get('look')}")
+            save_plan(job_id, plan)
+        elif (plan.get("engine") or "").lower() == "hyperframes" and not isinstance(plan.get("look"), dict):
+            from .hf_director import Director, history
+            plan["look"] = Director(job_id, history(exclude_id=job_id)).look()
+            save_plan(job_id, plan)
 
         t0 = time.time()
         mp4, duration = build_video(plan, skip_align=a.no_align)

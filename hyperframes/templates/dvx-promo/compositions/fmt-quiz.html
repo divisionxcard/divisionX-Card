@@ -16,6 +16,8 @@
 <html
   lang="th"
   data-composition-variables='[
+    {"id":"qs1","type":"number","label":"ขนาดหัวเรื่องบรรทัด 1 (px)","default":104,"min":48,"max":104,"step":1},
+    {"id":"qs2","type":"number","label":"ขนาดหัวเรื่องบรรทัด 2 (px)","default":118,"min":48,"max":118,"step":1},
     {"id":"kicker","type":"string","label":"ป้ายเล็กบนสุด","default":"QUIZ · ทายชุด"},
     {"id":"q1","type":"string","label":"คำถามบรรทัด 1","default":"ทายซิ!"},
     {"id":"q2","type":"string","label":"คำถามบรรทัด 2 (สีทอง)","default":"ซองนี้ชุดอะไร?"},
@@ -57,7 +59,7 @@
           text-shadow: 0 10px 0 #03102a, 0 0 40px rgba(27, 141, 255, 0.55); will-change: transform, opacity;
         }
         #quiz-q1 { margin-top: 14px; font-size: 104px; }
-        #quiz-q2 { font-size: 118px; color: #ffc24a; }
+        #quiz-q2 { font-size: 118px; color: var(--hot, #ffc24a); }
         #quiz-sub { display: block; margin-top: 6px; text-align: center; font-weight: 600; font-size: 36px; line-height: 1.3; color: #9fc4e8; }
         /* ── เลนส์: วงกลม 700 กึ่งกลาง (540, 950) */
         #quiz-lens { position: absolute; left: 190px; top: 600px; width: 700px; height: 700px; z-index: 2; will-change: transform, opacity; }
@@ -135,10 +137,10 @@
           <div class="quiz-num" id="quiz-n1">1</div>
         </div>
         <div id="quiz-flash"></div>
-        <div id="quiz-head">
-          <div id="quiz-kicker-row"><div id="quiz-kicker" data-var-text="kicker">QUIZ · ทายชุด</div></div>
-          <div class="quiz-q" id="quiz-q1" data-var-text="q1">ทายซิ!</div>
-          <div class="quiz-q" id="quiz-q2" data-var-text="q2">ซองนี้ชุดอะไร?</div>
+        <div id="quiz-head" class="dvx-head">
+          <div id="quiz-kicker-row"><div id="quiz-kicker" class="dvx-kick" data-var-text="kicker">QUIZ · ทายชุด</div></div>
+          <div class="quiz-q dvx-q dvx-q1" id="quiz-q1" data-var-text="q1" style="font-size: calc(var(--qs1, 104) * 1px)">ทายซิ!</div>
+          <div class="quiz-q dvx-q dvx-q2" id="quiz-q2" data-var-text="q2" style="font-size: calc(var(--qs2, 118) * 1px)">ซองนี้ชุดอะไร?</div>
           <div id="quiz-sub" data-var-text="sub">ใบ้ให้: ซอง One Piece</div>
         </div>
       </div>

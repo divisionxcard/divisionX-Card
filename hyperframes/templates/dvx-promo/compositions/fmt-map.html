@@ -15,6 +15,8 @@
 <html
   lang="th"
   data-composition-variables='[
+    {"id":"qs1","type":"number","label":"ขนาดหัวเรื่องบรรทัด 1 (px)","default":104,"min":48,"max":104,"step":1},
+    {"id":"qs2","type":"number","label":"ขนาดหัวเรื่องบรรทัด 2 (px)","default":124,"min":48,"max":124,"step":1},
     {"id":"kicker","type":"string","label":"ป้ายเล็กบนสุด","default":"พิกัดตู้ DivisionX"},
     {"id":"q1","type":"string","label":"คำถามบรรทัด 1","default":"ตู้การ์ด"},
     {"id":"q2","type":"string","label":"คำถามบรรทัด 2 (สีทอง)","default":"อยู่ตรงไหน?"},
@@ -62,7 +64,7 @@
           text-shadow: 0 10px 0 #03102a, 0 0 40px rgba(27, 141, 255, 0.55); will-change: transform, opacity;
         }
         #map-q1 { margin-top: 14px; font-size: 104px; }
-        #map-q2 { font-size: 124px; color: #ffc24a; }
+        #map-q2 { font-size: 124px; color: var(--hot, #ffc24a); }
         #map-sub { display: block; margin-top: 6px; text-align: center; font-weight: 600; font-size: 36px; line-height: 1.3; color: #9fc4e8; }
         /* ── แผ่นแผนที่ 960×700 ที่ (60, 620) */
         #map-panel {
@@ -179,10 +181,10 @@
           <div id="map-pgloss" aria-hidden="true" data-layout-ignore></div>
           <div id="map-plabel"><span id="map-plabel-pill" data-var-text="plabel" style="font-size: calc(var(--pfs) * 1px)">ตู้สาขาไอคอนสยาม</span></div>
         </div>
-        <div id="map-head">
-          <div id="map-kicker-row"><div id="map-kicker" data-var-text="kicker">พิกัดตู้ DivisionX</div></div>
-          <div class="map-q" id="map-q1" data-var-text="q1">ตู้การ์ด</div>
-          <div class="map-q" id="map-q2" data-var-text="q2">อยู่ตรงไหน?</div>
+        <div id="map-head" class="dvx-head">
+          <div id="map-kicker-row"><div id="map-kicker" class="dvx-kick" data-var-text="kicker">พิกัดตู้ DivisionX</div></div>
+          <div class="map-q dvx-q dvx-q1" id="map-q1" data-var-text="q1" style="font-size: calc(var(--qs1, 104) * 1px)">ตู้การ์ด</div>
+          <div class="map-q dvx-q dvx-q2" id="map-q2" data-var-text="q2" style="font-size: calc(var(--qs2, 124) * 1px)">อยู่ตรงไหน?</div>
           <div id="map-sub" data-var-text="sub">12 ตู้ ใน 11 ห้าง</div>
         </div>
       </div>

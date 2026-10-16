@@ -4,11 +4,18 @@
   ห้ามเปิดไฟล์นี้ตรง ๆ ใน Studio (มีตัวยึด {{...}}) — เปิด index.html (ตัวอย่างที่สร้างจากแผนเดโม) แทน
 
   ชั้นภาพ (ล่าง → บน):
-    พื้นกรมท่า + แสงเรือง + ตาราง + ตัวหนังสือจาง (ตลอดคลิป)
+    พื้นกรมท่า + แสงเรือง + ลายพื้นหลัง (ตามชุดหน้าตา) + ตัวหนังสือจาง (ตลอดคลิป)
     ฉาก (sub-composition) ตามเวลาที่ whisper จับจากเสียงจริง
-    สายฟ้า + แสงวาบตรงรอยต่อฉาก
+    ฉากเปลี่ยนตรงรอยต่อ (ตามชุดหน้าตา)
     โลโก้มุมขวาบน · ซับไทย (Chromium วาด — สระ/วรรณยุกต์ถูกเสมอ)
   เสียง: เสียงพากย์ Gemini จากโรงงานเดิม (ไม่มีเพลง จนกว่าจะมีเพลงที่มีใบอนุญาตในคลัง music.py)
+
+  ชุดหน้าตา (look · 16 ต.ค. 2026 — เจ้าของ: "อยากให้ระบบออกแบบได้อิสระ ไม่จำเจ"):
+    {{BG}}   ลายพื้นหลัง   grid ตาราง · dots จุดฮาล์ฟโทน · rays ลำแสงหมุน · speed เส้นสปีดแบบมังงะ
+    {{CUT}}  ฉากเปลี่ยน     bolt สายฟ้า · flash แสงวาบ+วงคลื่น · glitch แถบสัญญาณกระตุก · wipe แถบนีออนกวาด
+    ts-*     หัวเรื่อง       stroke ขอบหนา (เดิม) · chrome โครเมียม · neon นีออน — คลาสอยู่ที่ slot ของแต่ละฉาก
+    --hot    สีเน้น         ตั้งที่ slot (คำถามบรรทัด 2 + คำเด็ดในซับ) — ฉากย่อยอยู่ใน DOM เดียวกัน CSS/ตัวแปรจึงไหลถึง
+  ทุกแบบยังอยู่ในโทนแบรนด์ (ฟ้านีออน + สายฟ้า + โครเมียม บนกรมท่า) — ต่างกันที่ลาย/จังหวะ ไม่ใช่เปลี่ยนแบรนด์
 -->
 <html lang="th" data-resolution="portrait">
   <head>
@@ -25,11 +32,29 @@
       .bg-glow { position: absolute; border-radius: 50%; will-change: transform, opacity; }
       #bg-glow-a { left: -260px; top: -200px; width: 1100px; height: 1100px; background: radial-gradient(circle, rgba(27, 141, 255, 0.42), rgba(3, 16, 42, 0) 68%); }
       #bg-glow-b { left: 260px; top: 980px; width: 1200px; height: 1200px; background: radial-gradient(circle, rgba(89, 210, 255, 0.3), rgba(3, 16, 42, 0) 66%); }
+      /* ── ลายพื้นหลัง: มีครบทุกแบบใน DOM แสดงแบบเดียวตาม data-bg (display ตั้งใน CSS ไม่ได้ tween) */
+      .bgv { position: absolute; display: none; pointer-events: none; will-change: transform, opacity; }
+      #bg[data-bg="grid"] .bgv-grid, #bg[data-bg="dots"] .bgv-dots, #bg[data-bg="rays"] .bgv-rays, #bg[data-bg="speed"] .bgv-speed { display: block; }
       #bg-grid {
-        position: absolute; inset: -120px;
+        inset: -120px;
         background-image: linear-gradient(rgba(89, 210, 255, 0.13) 2px, transparent 2px), linear-gradient(90deg, rgba(89, 210, 255, 0.13) 2px, transparent 2px);
         background-size: 120px 120px;
-        will-change: transform;
+      }
+      #bg-dots {
+        inset: -80px;
+        background-image: radial-gradient(circle, rgba(89, 210, 255, 0.26) 3.2px, transparent 3.8px);
+        background-size: 44px 44px;
+        -webkit-mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.95), rgba(0, 0, 0, 0.35) 55%, rgba(0, 0, 0, 0.9));
+      }
+      #bg-rays {
+        left: -760px; top: -560px; width: 2600px; height: 2600px;
+        background: repeating-conic-gradient(from 0deg, rgba(89, 210, 255, 0.13) 0deg 6deg, rgba(3, 16, 42, 0) 6deg 17deg);
+        -webkit-mask-image: radial-gradient(circle, rgba(0, 0, 0, 1) 0%, rgba(0, 0, 0, 0.55) 32%, rgba(0, 0, 0, 0) 62%);
+      }
+      #bg-speed {
+        left: -760px; top: -380px; width: 2600px; height: 2600px;
+        background: repeating-conic-gradient(from 0deg, rgba(232, 247, 255, 0.17) 0deg 0.9deg, rgba(3, 16, 42, 0) 0.9deg 5.2deg);
+        -webkit-mask-image: radial-gradient(circle, rgba(0, 0, 0, 0) 17%, rgba(0, 0, 0, 0.85) 42%, rgba(0, 0, 0, 1) 60%);
       }
       #bg-ghost {
         position: absolute; left: -40px; top: 700px; width: 2400px;
@@ -39,24 +64,49 @@
       /* ตัวหนังสือจางเป็นของตกแต่ง — วางเป็น ::before ไม่ให้นับเป็นข้อความที่ต้องอ่านออก (contrast audit) */
       #bg-ghost::before { content: "DIVISION X · CARD · DIVISION X · CARD"; }
       .scene-slot { position: absolute; inset: 0; }
+      /* ── ฉากเปลี่ยน */
       #fx-flash { position: absolute; inset: 0; background: radial-gradient(circle at 50% 40%, rgba(235, 248, 255, 0.95), rgba(89, 210, 255, 0.55) 45%, rgba(27, 141, 255, 0) 80%); opacity: 0; pointer-events: none; }
       #fx-bolts { position: absolute; inset: 0; width: 1080px; height: 1920px; overflow: visible; pointer-events: none; }
       .bolt { fill: none; stroke: #e8f7ff; stroke-width: 12; stroke-linejoin: round; stroke-linecap: round; filter: drop-shadow(0 0 18px #59d2ff) drop-shadow(0 0 40px #1b8dff); opacity: 0; }
+      #fx-ring { position: absolute; left: 540px; top: 860px; width: 600px; height: 600px; margin: -300px 0 0 -300px; border-radius: 50%; border: 16px solid #e8f7ff; box-shadow: 0 0 60px #59d2ff, inset 0 0 50px #1b8dff; opacity: 0; pointer-events: none; }
+      .fx-g { position: absolute; left: -40px; width: 1160px; opacity: 0; pointer-events: none; mix-blend-mode: screen; }
+      #fx-wipe { position: absolute; left: -300px; top: 360px; width: 1680px; height: 1200px; opacity: 0; pointer-events: none;
+        background: linear-gradient(90deg, rgba(27, 141, 255, 0) 0%, rgba(27, 141, 255, 0.85) 30%, rgba(232, 247, 255, 0.98) 50%, rgba(89, 210, 255, 0.85) 70%, rgba(27, 141, 255, 0) 100%);
+        filter: drop-shadow(0 0 40px #59d2ff); }
       #corner-logo { position: absolute; right: 44px; top: 54px; width: 150px; height: 128px; object-fit: contain; opacity: 0.92; filter: drop-shadow(0 0 14px rgba(27, 141, 255, 0.6)); }
+
+      /* ── หัวเรื่องของฉากรูปแบบ (.dvx-q1/.dvx-q2 ในฉากย่อย) — คลาส ts-* อยู่ที่ slot · stroke = ค่าเดิมในฉาก ไม่ต้องมีกฎ
+         ⚠️ ห้ามใส่ filter บน .dvx-q — ฉากย่อย tween filter (blur ตอนกระแทกเข้า) ทับกันแล้วแสงหาย · ใส่ที่ .dvx-head แทน */
+      .ts-chrome .dvx-q {
+        color: transparent !important; -webkit-text-stroke: 0 !important; text-shadow: none !important;
+        background: linear-gradient(180deg, #ffffff 0%, #e3eef9 38%, #7f9bb8 56%, #f4f9ff 78%, #ffffff 100%);
+        -webkit-background-clip: text; background-clip: text;
+      }
+      .ts-chrome .dvx-q2 { background: linear-gradient(180deg, #ffffff 0%, var(--hot, #ffc24a) 40%, color-mix(in srgb, var(--hot, #ffc24a) 55%, #2a1a00) 58%, var(--hot, #ffc24a) 80%, #ffffff 100%); -webkit-background-clip: text; background-clip: text; }
+      .ts-chrome .dvx-head { filter: drop-shadow(0 7px 0 #03102a) drop-shadow(0 0 22px rgba(27, 141, 255, 0.6)); }
+      .ts-neon .dvx-q { -webkit-text-stroke: 0 !important; color: #f2fbff !important; text-shadow: 0 0 10px #59d2ff, 0 0 28px #1b8dff, 0 0 60px rgba(27, 141, 255, 0.85) !important; }
+      .ts-neon .dvx-q2 { color: var(--hot, #ffc24a) !important; text-shadow: 0 0 10px var(--hot, #ffc24a), 0 0 30px var(--hot, #ffc24a), 0 0 64px rgba(255, 255, 255, 0.35) !important; }
+      .ts-neon .dvx-kick { background: rgba(3, 16, 42, 0.9) !important; border: 3px solid #59d2ff; }
     </style>
   </head>
   <body>
     <div data-hf-id="hf-4607" id="root" data-composition-id="main" data-start="0" data-duration="{{DURATION}}" data-width="1080" data-height="1920">
-      <div data-hf-id="hf-2xc0" id="bg">
+      <div data-hf-id="hf-2xc0" id="bg" data-bg="{{BG}}">
         <div data-hf-id="hf-bl0m" class="bg-glow" id="bg-glow-a"></div>
         <div data-hf-id="hf-7mwl" class="bg-glow" id="bg-glow-b"></div>
-        <div data-hf-id="hf-r3kh" id="bg-grid"></div>
+        <div data-hf-id="hf-r3kh" id="bg-grid" class="bgv bgv-grid"></div>
+        <div id="bg-dots" class="bgv bgv-dots" aria-hidden="true" data-layout-ignore></div>
+        <div id="bg-rays" class="bgv bgv-rays" aria-hidden="true" data-layout-ignore></div>
+        <div id="bg-speed" class="bgv bgv-speed" aria-hidden="true" data-layout-ignore></div>
         <div data-hf-id="hf-5sl0" id="bg-ghost" aria-hidden="true" data-layout-ignore></div>
       </div>
 
 {{SCENES}}
 
       <div data-hf-id="hf-jtoa" id="fx-flash"></div>
+      <div id="fx-ring" aria-hidden="true" data-layout-ignore></div>
+      <div id="fx-glitch" aria-hidden="true" data-layout-ignore></div>
+      <div id="fx-wipe" aria-hidden="true" data-layout-ignore></div>
       <svg data-hf-id="hf-p0kn" id="fx-bolts" viewBox="0 0 1080 1920">
         <path data-hf-id="hf-ughk" class="bolt" id="bolt-a" d="M 760 -20 L 610 420 L 700 450 L 520 900 L 620 930 L 380 1500" />
         <path data-hf-id="hf-8a1e" class="bolt" id="bolt-b" d="M 160 -20 L 300 300 L 230 330 L 380 700" />
@@ -73,16 +123,28 @@
       (function () {
         const DUR = {{DURATION}};
         const CUTS = {{CUTS}};
+        const BG = "{{BG}}", CUT = "{{CUT}}";
         const tl = gsap.timeline({ paused: true });
+        const prand = (n) => {
+          const x = Math.sin(n * 127.1 + 311.7) * 43758.5453;
+          return x - Math.floor(x);
+        };
 
         // ── พื้นหลังมีชีวิตตลอดคลิป (ambient) — นับรอบแบบ floor ไม่ให้เกินความยาวคลิป
         const rep = (cycle) => Math.max(0, Math.floor(DUR / cycle) - 1);
         tl.fromTo("#bg-glow-a", { scale: 0.9, opacity: 0.75 }, { scale: 1.12, opacity: 1, duration: 2.2, ease: "sine.inOut", yoyo: true, repeat: rep(2.2) }, 0);
         tl.fromTo("#bg-glow-b", { scale: 1.1, x: 0 }, { scale: 0.92, x: -120, duration: 2.8, ease: "sine.inOut", yoyo: true, repeat: rep(2.8) }, 0);
-        tl.fromTo("#bg-grid", { y: 0 }, { y: 120, duration: DUR, ease: "none" }, 0);
         tl.fromTo("#bg-ghost", { x: 0 }, { x: -900, duration: DUR, ease: "none" }, 0);
+        if (BG === "grid") tl.fromTo("#bg-grid", { y: 0 }, { y: 120, duration: DUR, ease: "none" }, 0);
+        if (BG === "dots") tl.fromTo("#bg-dots", { x: 0, y: 0 }, { x: -44, y: 88, duration: DUR, ease: "none" }, 0);
+        if (BG === "rays") tl.fromTo("#bg-rays", { rotation: 0 }, { rotation: 24, duration: DUR, ease: "none" }, 0);
+        if (BG === "speed") {
+          // เส้นสปีดกระตุกเป็นจังหวะ (stepped) แบบหน้าการ์ตูน — หมุนทีละนิดทุก 0.12 วิ
+          const n = Math.max(1, Math.floor(DUR / 0.12));
+          for (let i = 0; i < n; i++) tl.set("#bg-speed", { rotation: (prand(i + 3) - 0.5) * 6, scale: 1 + prand(i + 9) * 0.04 }, i * 0.12);
+        }
 
-        // ── สายฟ้าฟาด + แสงวาบตรงรอยต่อฉาก (รวมจังหวะเปิดที่ 0)
+        // ── ฉากเปลี่ยนตรงรอยต่อฉาก (รวมจังหวะเปิดที่ 0)
         const bolts = ["#bolt-a", "#bolt-b"];
         bolts.forEach((sel) => {
           const p = document.querySelector(sel);
@@ -90,16 +152,48 @@
           p.style.strokeDasharray = L;
           p.style.strokeDashoffset = L;
         });
+        // แถบกลิตช์ (สร้างครั้งเดียว ตำแหน่ง seeded)
+        const gl = document.getElementById("fx-glitch");
+        const G = [];
+        if (CUT === "glitch") {
+          const cols = ["rgba(89,210,255,0.85)", "rgba(232,247,255,0.9)", "rgba(27,141,255,0.8)", "rgba(255,194,74,0.7)"];
+          for (let i = 0; i < 7; i++) {
+            const el = document.createElement("div");
+            el.className = "fx-g";
+            el.style.top = Math.round(160 + prand(i * 7 + 1) * 1500) + "px";
+            el.style.height = Math.round(18 + prand(i * 7 + 2) * 70) + "px";
+            el.style.background = cols[i % cols.length];
+            gl.appendChild(el);
+            G.push(el);
+          }
+        }
         CUTS.forEach((t, i) => {
           const at = Math.max(0, t - 0.06);
-          tl.fromTo("#fx-flash", { opacity: 0 }, { opacity: i === 0 ? 0.9 : 0.75, duration: 0.05, ease: "none", immediateRender: i === 0 }, at);
-          tl.to("#fx-flash", { opacity: 0, duration: 0.28, ease: "power2.out" }, at + 0.05);
-          const sel = bolts[i % 2];
-          const L = document.querySelector(sel).getTotalLength();
-          tl.fromTo(sel, { strokeDashoffset: L, opacity: 1 }, { strokeDashoffset: 0, duration: 0.12, ease: "power2.in", immediateRender: false }, at);
-          tl.to(sel, { opacity: 0, duration: 0.22, ease: "power1.out" }, at + 0.14);
+          const first = i === 0;
+          // แสงวาบมีทุกแบบ (เบาลงเมื่อมีตัวเปลี่ยนฉากอื่นทำงานหลัก)
+          const peak = CUT === "flash" ? 1 : CUT === "bolt" ? (first ? 0.9 : 0.75) : 0.45;
+          tl.fromTo("#fx-flash", { opacity: 0 }, { opacity: peak, duration: 0.05, ease: "none", immediateRender: first }, at);
+          tl.to("#fx-flash", { opacity: 0, duration: CUT === "flash" ? 0.4 : 0.28, ease: "power2.out" }, at + 0.05);
+          if (CUT === "bolt") {
+            const sel = bolts[i % 2];
+            const L = document.querySelector(sel).getTotalLength();
+            tl.fromTo(sel, { strokeDashoffset: L, opacity: 1 }, { strokeDashoffset: 0, duration: 0.12, ease: "power2.in", immediateRender: false }, at);
+            tl.to(sel, { opacity: 0, duration: 0.22, ease: "power1.out" }, at + 0.14);
+          } else if (CUT === "flash") {
+            tl.fromTo("#fx-ring", { scale: 0.2, opacity: 1 }, { scale: 2.6, opacity: 0, duration: 0.55, ease: "power2.out", immediateRender: false }, at + 0.02);
+          } else if (CUT === "glitch") {
+            // 4 จังหวะกระตุก ~0.24 วิ — แถบเลื่อนซ้าย/ขวาแบบสุ่มคงที่ แล้วหาย
+            for (let s = 0; s < 4; s++) {
+              G.forEach((el, k) => {
+                tl.set(el, { x: (prand(i * 31 + s * 7 + k) - 0.5) * 220, opacity: prand(i * 13 + s * 5 + k) > 0.35 ? 1 : 0 }, at + s * 0.06);
+              });
+            }
+            tl.set(G, { opacity: 0 }, at + 0.26);
+          } else if (CUT === "wipe") {
+            tl.fromTo("#fx-wipe", { x: -1900, rotation: -18, opacity: 1 }, { x: 1900, rotation: -18, opacity: 1, duration: 0.42, ease: "power2.inOut", immediateRender: false }, at - 0.18);
+            tl.set("#fx-wipe", { opacity: 0 }, at + 0.25);
+          }
         });
-
 
         window.__timelines["main"] = tl;
       })();

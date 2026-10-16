@@ -53,6 +53,23 @@ const ENGINES = [
   { id: "hyperframes", label: "เคลื่อนไหว (HyperFrames)", desc: "ฉากขยับจริง · พาดหัว = ป้ายใต้ซองฉากแรก" },
 ]
 
+// โหมด "ให้ระบบออกแบบ" (16 ต.ค. 2026 · เจ้าของ: "อยากให้ระบบออกแบบได้อิสระ ไม่จำเจ")
+// ตรงกับ AUTO_FORMATS ใน app/api/video/render/route.js และ FORMATS ใน agents/video/hf_director.py
+// ผู้กำกับบนเครื่องเรนเดอร์เขียนสคริปต์+ฉาก+หน้าตาจากข้อมูลจริงเอง · เลี่ยงรูปแบบ/หน้าตา/สำนวนที่คลิปล่าสุดเพิ่งใช้
+const AUTO_FORMATS = [
+  { id: "auto",   label: "ให้ระบบเลือก",  desc: "สลับรูปแบบให้เอง ไม่ซ้ำคลิปล่าสุด" },
+  { id: "rank",   label: "อันดับขายดี",   desc: "กระดาน 5 ช่อง · ยอดขายจริง (โชว์แค่อันดับ)" },
+  { id: "versus", label: "เลือกข้าง",     desc: "ผู้ชนะอยู่ต่อ 3 รอบ · เฉลยจากยอดขายจริง" },
+  { id: "quiz",   label: "ทายชุด",        desc: "ซูมลายบนซอง นับ 3-2-1 แล้วเฉลย" },
+  { id: "map",    label: "พิกัดตู้",       desc: "แผนที่ → ห้าง → ชั้น → จุดสังเกต → รูปตู้จริง" },
+]
+const LOOK_TH = {
+  bg: { grid: "ตาราง", dots: "จุดฮาล์ฟโทน", rays: "ลำแสง", speed: "เส้นสปีด" },
+  cut: { bolt: "สายฟ้า", flash: "แสงวาบ", glitch: "กลิตช์", wipe: "แถบนีออนกวาด" },
+  ts: { stroke: "ขอบหนา", chrome: "โครเมียม", neon: "นีออน" },
+  hot: { gold: "ทอง", cyan: "ฟ้า", orange: "ส้ม" },
+}
+
 // อัตราอ่านโดยประมาณของ Gemini TTS กับข้อความไทย (~11 อักขระ/วินาที)
 // วัดคร่าว ๆ จากคลิปที่ทำจริง ไม่ใช่ค่าคงที่ของระบบ — ความยาวจริงรู้หลังทำเสียงเสร็จ
 const CHARS_PER_SEC = 11
@@ -230,6 +247,14 @@ export default function VideoStudio() {
   const [engine, setEngine] = useState("classic")
   const [skus, setSkus] = useState([])
   const [skuErr, setSkuErr] = useState("")
+
+  // ── โหมด "ให้ระบบออกแบบ" ──
+  const [mode, setMode] = useState("auto")       // auto = ระบบเขียนเองจากข้อมูลจริง · manual = เขียนสคริปต์เอง
+  const [fmt, setFmt] = useState("auto")
+  const [autoMachine, setAutoMachine] = useState("")
+  const [autoSku, setAutoSku] = useState("")
+  const [autoVoice, setAutoVoice] = useState("auto")
+  const [branches, setBranches] = useState([])   // บัญชีการตลาดอ่านตาราง machines ไม่ได้ (RLS) = ให้ระบบเลือกสาขาอย่างเดียว
 
   // ── ขั้น 03 เรนเดอร์ ──
   const [step, setStep] = useState(1)
@@ -470,6 +495,44 @@ export default function VideoStudio() {
     return () => clearInterval(t)
   }, [running])
 
+  useEffect(() => {
+    if (authState !== "ok") return
+    supabase.from("machines").select("machine_id, config").eq("status", "active")
+      .then(({ data }) => {
+        if (!alive.current || !data) return
+        setBranches(data
+          .map(m => ({ id: m.machine_id, b: m.config?.branch }))
+          .filter(x => x.b?.display_name && x.b?.public !== false)
+          .sort((a, b) => (a.b.order ?? 99) - (b.b.order ?? 99))
+          .map(x => ({ id: x.id, label: `${x.b.display_name}${x.b.floor ? ` · ${x.b.floor}` : ""}` })))
+      })
+  }, [authState])
+
+  async function submitAuto() {
+    if (sending) return
+    setSending(true); setErr(null)
+    try {
+      const d = new Date(), p = (n) => String(n).padStart(2, "0")
+      const name = `auto-${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}`
+      const plan = {
+        project: name, format: fmt,
+        ...(fmt === "map" && autoMachine ? { machine: autoMachine } : {}),
+        ...(fmt === "quiz" && autoSku ? { sku: autoSku } : {}),
+        voice: autoVoice,
+      }
+      const r = await api("render", { method: "POST", body: JSON.stringify({ plan }) })
+      const n = normJob(r)
+      if (!n?.id) throw new Error("เซิร์ฟเวอร์ไม่ได้ส่งเลขงานกลับมา — ติดตามสถานะไม่ได้")
+      setJob({ ...n, project: n.project || name }); setSince(Date.now())
+      loadJobs()
+    } catch (e) {
+      setErr({ msg: e.message, hint: e.hint })
+      if (e.job?.id) { setJob(normJob(e.job)); setSince(null) }
+    } finally {
+      setSending(false)
+    }
+  }
+
   async function submit() {
     if (sending || blockers.length) return
     setSending(true); setErr(null)
@@ -544,6 +607,71 @@ export default function VideoStudio() {
         </div>
       )}
 
+      {/* ── เลือกโหมด ── */}
+      <div className="vs-mode">
+        <button className={`vs-mode-b ${mode === "auto" ? "vs-mode-on" : ""}`} onClick={() => setMode("auto")}>
+          <Sparkles size={14} /> ให้ระบบออกแบบ
+        </button>
+        <button className={`vs-mode-b ${mode === "manual" ? "vs-mode-on" : ""}`} onClick={() => setMode("manual")}>
+          <Type size={14} /> เขียนสคริปต์เอง
+        </button>
+      </div>
+
+      {mode === "auto" && (
+        <section className="dx-card vs-card">
+          <h2 className="vs-h"><Sparkles size={16} /> ให้ระบบออกแบบจากข้อมูลจริง</h2>
+          <p className="vs-dim vs-lead">
+            ระบบเขียนสคริปต์ เลือกฉาก หน้าตา และสำนวนเองจากยอดขาย/สาขา/รูปซองจริง ·
+            เลี่ยงรูปแบบ หน้าตา และสำนวนที่คลิปล่าสุดเพิ่งใช้ · ไม่โชว์ตัวเลขยอดขาย
+          </p>
+          <div className="vs-fmts">
+            {AUTO_FORMATS.map(f => (
+              <button key={f.id} className={`vs-fmt ${fmt === f.id ? "vs-fmt-on" : ""}`} onClick={() => setFmt(f.id)}>
+                <b>{f.label}</b>
+                <span>{f.desc}</span>
+              </button>
+            ))}
+          </div>
+          <div className="vs-two">
+            {fmt === "map" && (
+              <label className="vs-field">
+                <span>สาขา</span>
+                <select className="dx-input" value={autoMachine} onChange={e => setAutoMachine(e.target.value)}>
+                  <option value="">ให้ระบบเลือก (ไม่ซ้ำสาขาที่เพิ่งทำ)</option>
+                  {branches.map(b => <option key={b.id} value={b.id}>{b.label}</option>)}
+                </select>
+              </label>
+            )}
+            {fmt === "quiz" && (
+              <label className="vs-field">
+                <span>ชุดที่ให้ทาย</span>
+                <select className="dx-input" value={autoSku} onChange={e => setAutoSku(e.target.value)}>
+                  <option value="">ให้ระบบเลือก (ชุดขายดี ไม่ซ้ำที่เพิ่งทาย)</option>
+                  {skus.filter(k => k.image_url).map(k => <option key={k.sku_id} value={k.sku_id}>{k.sku_id}</option>)}
+                </select>
+              </label>
+            )}
+            <label className="vs-field">
+              <span><Mic size={13} /> เสียงพากย์</span>
+              <select className="dx-input" value={autoVoice} onChange={e => setAutoVoice(e.target.value)}>
+                <option value="auto">ให้ระบบเลือก (สลับเสียงให้)</option>
+                {VOICES.map(v => <option key={v.id} value={v.id}>{v.label} — {v.desc}</option>)}
+              </select>
+            </label>
+          </div>
+          <div className="vs-actions">
+            <button className="dx-btn dx-btn-primary" disabled={sending} onClick={submitAuto}>
+              {sending
+                ? <><Loader2 size={14} className="vs-spin" /> กำลังส่ง…</>
+                : <><Sparkles size={14} /> ให้ระบบออกแบบและเรนเดอร์</>}
+            </button>
+            <span className="vs-dim vs-fine">ใช้เวลา ~5 นาที · สคริปต์ที่ระบบเขียนจะขึ้นใต้คลิปเมื่อเสร็จ · ปิดหน้านี้ไปก่อนได้</span>
+          </div>
+          {job && <JobPanel job={job} waited={waited} />}
+        </section>
+      )}
+
+      {mode === "manual" && <>
       {/* ── สามขั้นบนสุด ── */}
       <div className="vs-steps">
         <StepTab n="01" label="สคริปต์"     icon={Type}      active={step === 1} done={scenes.length > 0} onClick={() => setStep(1)} />
@@ -734,6 +862,8 @@ export default function VideoStudio() {
         </section>
       )}
 
+      </>}
+
       {/* ── งานเก่า ── */}
       <section className="dx-card vs-card">
         <h2 className="vs-h"><Clock size={16} /> งานที่ผ่านมา</h2>
@@ -745,7 +875,7 @@ export default function VideoStudio() {
             <div className="vs-jobs">
               {jobs.map(j => (
                 <button key={j.id} className={`vs-job ${job?.id === j.id ? "vs-job-on" : ""}`}
-                  onClick={() => { setJob(j); setSince(null); setStep(3) }}>
+                  onClick={() => { setJob(j); setSince(null); setStep(3); setMode(j.project?.startsWith("auto-") ? "auto" : "manual") }}>
                   <span className={`vs-st ${STATUS[j.status]?.cls}`}>{STATUS[j.status]?.label}</span>
                   <span className="vs-job-name dx-mono">{j.project || j.id}</span>
                   <span className="vs-dim vs-fine">{thaiAgo(j.created_at || j.inserted_at)}</span>
@@ -873,6 +1003,19 @@ function JobPanel({ job, waited }) {
         <p className="vs-note">{job.error || "เรนเดอร์ล้มเหลว — ดู log บนเครื่องเรนเดอร์"}</p>
       )}
 
+      {/* งานที่ระบบออกแบบ: ผู้กำกับเขียนแผนกลับลงแถวงาน (publish.save_plan) — โชว์ให้ตรวจก่อนโพสต์ */}
+      {job.plan?.format && job.plan?.script && (
+        <div className="vs-auto-plan">
+          <div className="vs-auto-chips">
+            <span className="vs-chip">{AUTO_FORMATS.find(f => f.id === job.plan.format)?.label || job.plan.format}</span>
+            {job.plan.voice && <span className="vs-chip">เสียง {job.plan.voice}</span>}
+            {job.plan.look && Object.entries(LOOK_TH).map(([k, m]) =>
+              job.plan.look[k] ? <span key={k} className="vs-chip vs-chip-dim">{m[job.plan.look[k]] || job.plan.look[k]}</span> : null)}
+          </div>
+          <pre className="vs-auto-script">{job.plan.script}</pre>
+        </div>
+      )}
+
       {job.status === "done" && job.video_url && (
         <>
           {/* 9:16 — จำกัดความกว้างไว้ ไม่งั้นบนจอคอมคลิปแนวตั้งจะสูงล้นจอจนต้องเลื่อนหาปุ่มเล่น */}
@@ -948,6 +1091,27 @@ const CSS = `
 .vs-dim{color:var(--dx-text-muted);}
 .vs-fine{font-size:11.5px;line-height:1.7;}
 .vs-mt{margin-top:12px;}
+
+/* ── โหมด ── */
+.vs-mode{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.vs-mode-b{display:flex;align-items:center;justify-content:center;gap:7px;padding:11px 12px;border-radius:12px;cursor:pointer;
+  background:var(--dx-bg-card);border:1px solid var(--dx-border);color:var(--dx-text-2);font-family:var(--dx-font);font-size:13px;transition:all .18s;}
+.vs-mode-b:hover{border-color:var(--dx-border-strong);color:var(--dx-text);}
+.vs-mode-on{border-color:var(--dx-cyan);color:var(--dx-cyan-bright);
+  background:linear-gradient(180deg,rgba(0,229,255,.10) 0%,rgba(0,212,255,.03) 100%);box-shadow:0 0 0 1px rgba(0,212,255,.2),0 0 18px -6px var(--dx-glow);}
+.vs-fmts{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;}
+.vs-fmt{display:flex;flex-direction:column;gap:3px;text-align:left;padding:10px 12px;border-radius:11px;cursor:pointer;
+  background:var(--dx-bg-input);border:1px solid var(--dx-border);color:var(--dx-text);font-family:var(--dx-font);transition:all .18s;}
+.vs-fmt b{font-size:13px;font-weight:600;}
+.vs-fmt span{font-size:11px;line-height:1.5;color:var(--dx-text-muted);}
+.vs-fmt:hover{border-color:var(--dx-border-strong);}
+.vs-fmt-on{border-color:var(--dx-cyan);background:rgba(0,212,255,.08);}
+.vs-fmt-on b{color:var(--dx-cyan-bright);}
+.vs-auto-plan{margin-top:12px;padding:11px 12px;border-radius:11px;background:var(--dx-bg-input);border:1px solid var(--dx-border);}
+.vs-auto-chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;}
+.vs-chip{font-size:11px;padding:3px 9px;border-radius:999px;background:rgba(0,212,255,.12);border:1px solid rgba(0,212,255,.35);color:var(--dx-cyan-soft);}
+.vs-chip-dim{background:transparent;border-color:var(--dx-border-strong);color:var(--dx-text-2);}
+.vs-auto-script{margin:0;white-space:pre-wrap;font-family:var(--dx-font);font-size:12.5px;line-height:1.8;color:var(--dx-text);}
 
 /* ── สามขั้นบนสุด ── */
 .vs-steps{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
