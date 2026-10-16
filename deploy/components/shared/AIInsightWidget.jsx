@@ -2,6 +2,7 @@
 // ดึงข้อมูลผ่าน /api/wiki-insights (อ่าน .md files ที่ agent สร้าง)
 import { useState, useEffect } from "react"
 import { TrendingDown, TrendingUp, AlertCircle, Sparkles, Loader2, ChevronRight } from "lucide-react"
+import { supabase } from "../../lib/supabase"
 
 export default function AIInsightWidget({ limit = 3 }) {
   const [data, setData] = useState(null)
@@ -11,8 +12,12 @@ export default function AIInsightWidget({ limit = 3 }) {
 
   useEffect(() => {
     let active = true
-    fetch(`/api/wiki-insights?limit=${limit}`)
-      .then(r => r.ok ? r.json() : Promise.reject(r.statusText))
+    // route นี้ต้องล็อกอินเป็นพนักงานแล้ว (เดิมเปิดให้คนนอกอ่านรายรับ/กำไรได้) — ส่ง token สดทุกครั้ง
+    supabase.auth.getSession()
+      .then(({ data }) => fetch(`/api/wiki-insights?limit=${limit}`, {
+        headers: data?.session?.access_token ? { Authorization: `Bearer ${data.session.access_token}` } : {},
+      }))
+      .then(r => r.ok ? r.json() : Promise.reject(r.status === 401 || r.status === 403 ? "ไม่มีสิทธิ์ดูข้อมูลนี้" : r.statusText))
       .then(d => { if (active) setData(d) })
       .catch(e => { if (active) setError(String(e)) })
       .finally(() => { if (active) setLoading(false) })

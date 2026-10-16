@@ -60,7 +60,13 @@ export async function POST(req) {
   //
   //    ทำที่นี่ไม่ใช่ใน poster_render.py เพราะตัวเดาค่ายเป็น JS อยู่แล้ว
   //    ถ้าไปเขียนซ้ำฝั่ง Python จะกลายเป็นสองสำเนาที่แก้ไม่พร้อมกัน
-  let sku = body.sku ? String(body.sku) : null
+  // ⚠️ sku ถูกส่งต่อเป็น input ของ workflow — ต้องเป็นรูปแบบรหัส SKU จริงเท่านั้น
+  //    (ตรวจความปลอดภัย 16 ต.ค. 2026: เดิมส่งข้อความอะไรก็ได้ แล้ว poster-render.yml เอาไปต่อสตริงคำสั่ง
+  //     + eval บน runner ที่ถือ service key = บัญชีการตลาดรันคำสั่งเองได้) · workflow กันซ้ำอีกชั้น
+  let sku = body.sku ? String(body.sku).trim() : null
+  if (sku && !/^[A-Za-z0-9][A-Za-z0-9 ._-]{0,39}$/.test(sku)) {
+    return NextResponse.json({ error: "sku มีอักขระที่ไม่รองรับ (ใช้ได้แค่ A-Z 0-9 เว้นวรรค . _ -)" }, { status: 400 })
+  }
   if (!sku) {
     try {
       const { data: c } = await db.from("marketing_content")

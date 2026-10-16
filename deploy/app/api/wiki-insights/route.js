@@ -8,6 +8,11 @@
 import { NextResponse } from "next/server"
 import fs from "node:fs/promises"
 import path from "node:path"
+import { requireStaff } from "../../../lib/apiAuth"
+
+// ⚠️ ข้อมูลในนี้คือรายรับ 30 วัน ค่าธรรมเนียม กำไรสุทธิรายชุด — เดิมไม่มีด่านเลย ใครรู้ URL ก็อ่านได้
+//    (ตรวจความปลอดภัย 16 ต.ค. 2026: เรียกแบบไม่ล็อกอินได้ 200 พร้อมรายรับจริง) → พนักงานเท่านั้น
+const MAX_LIMIT = 50
 
 // ── Config ──────────────────────────────────────────────────────────
 // Wiki อยู่ที่ root ของ repo (ไม่ใช่ใน deploy/)
@@ -75,8 +80,11 @@ function extractOverview(body) {
 
 // ── GET handler ─────────────────────────────────────────────────────
 export async function GET(request) {
+  const gate = await requireStaff(request)
+  if (gate.error) return gate.error
   const { searchParams } = new URL(request.url)
-  const limit = parseInt(searchParams.get("limit") || "5", 10)
+  const n = parseInt(searchParams.get("limit") || "5", 10)
+  const limit = Number.isFinite(n) ? Math.min(Math.max(n, 1), MAX_LIMIT) : 5
 
   // โหลด SKU profiles ทั้งหมด
   const skus = await readWikiDir("skus")

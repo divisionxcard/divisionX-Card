@@ -34,7 +34,8 @@ async function dispatch(workflow) {
 
 export async function POST(req) {
   // verify Telegram secret token (กัน endpoint โดนยิงมั่ว)
-  if (SECRET && req.headers.get("x-telegram-bot-api-secret-token") !== SECRET) {
+  // ⚠️ ปฏิเสธเสมอเมื่อไม่ได้ตั้ง secret (fail closed) — เดิม "ไม่ได้ตั้ง = ไม่ตรวจ"
+  if (!SECRET || req.headers.get("x-telegram-bot-api-secret-token") !== SECRET) {
     return NextResponse.json({ ok: false }, { status: 401 })
   }
 

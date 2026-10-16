@@ -30,6 +30,10 @@ on:
         required: false
         type: string
 
+# สิทธิ์ของ GITHUB_TOKEN ในงานนี้: อ่านโค้ดอย่างเดียว (งานนี้ไม่ push อะไรกลับ)
+permissions:
+  contents: read
+
 jobs:
   render:
     runs-on: ubuntu-latest
@@ -76,15 +80,26 @@ jobs:
 
       - name: Render poster
         if: ${{ github.event.inputs.template != 'top5' }}
+        # ⚠️ รับค่าผ่าน env + ตรวจรูปแบบก่อนใช้ ห้ามแทน ${{ inputs }} ลงในคำสั่งตรง ๆ แล้ว eval
+        #    (ตรวจความปลอดภัย 16 ต.ค. 2026: เดิม sku ที่ส่งมาจากหน้าเว็บถูกต่อเป็นสตริงคำสั่งแล้ว eval
+        #     บนเครื่องที่ถือ SUPABASE_SERVICE_KEY — ใส่ ' ; คำสั่ง ; ' แทน sku ก็รันคำสั่งเองได้)
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          CONTENT_ID: ${{ github.event.inputs.content_id }}
+          SKU: ${{ github.event.inputs.sku }}
         run: |
-          ARGS="--id ${{ github.event.inputs.content_id }}"
-          if [ -n "${{ github.event.inputs.sku }}" ]; then
-            ARGS="$ARGS --sku '${{ github.event.inputs.sku }}'"
+          case "$CONTENT_ID" in
+            ''|*[!0-9]*) echo "::error::content_id ต้องเป็นตัวเลข"; exit 1 ;;
+          esac
+          ARGS=(--id "$CONTENT_ID")
+          if [ -n "$SKU" ]; then
+            if ! printf '%s' "$SKU" | grep -Eq '^[A-Za-z0-9][A-Za-z0-9 ._-]{0,39}$'; then
+              echo "::error::sku มีอักขระที่ไม่รองรับ"; exit 1
+            fi
+            ARGS+=(--sku "$SKU")
           fi
-          eval python deploy/agents/poster_render.py $ARGS
+          python deploy/agents/poster_render.py "${ARGS[@]}"
 
       # เก็บไฟล์ไว้ให้ดาวน์โหลดดูได้ด้วย เผื่อภาพออกมาเพี้ยนจะได้ตรวจย้อนหลัง
       # โดยไม่ต้องไปรื้อ Storage

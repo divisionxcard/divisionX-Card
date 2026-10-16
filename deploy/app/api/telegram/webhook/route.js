@@ -18,7 +18,8 @@ function svc() {
 export async function POST(req) {
   // ── Verify Telegram secret token ──
   const secret = req.headers.get("x-telegram-bot-api-secret-token")
-  if (WEBHOOK_SECRET && secret !== WEBHOOK_SECRET) {
+  // ⚠️ ปฏิเสธเสมอเมื่อไม่ได้ตั้ง secret (fail closed) — เดิม "ไม่ได้ตั้ง = ไม่ตรวจ" ลืมตั้ง env ทีเดียว endpoint เปิดโล่ง
+  if (!WEBHOOK_SECRET || secret !== WEBHOOK_SECRET) {
     return NextResponse.json({ ok: false, error: "bad secret" }, { status: 401 })
   }
 

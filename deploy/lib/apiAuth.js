@@ -55,6 +55,21 @@ export async function requireAdmin(req) {
   return gate
 }
 
+// ข้อมูลธุรกิจ (ยอดขาย รายรับ ต้นทุน กำไร สต็อก) — พนักงานเท่านั้น: admin หรือ user
+//
+// ⚠️ requireUser อย่างเดียวไม่พอสำหรับข้อมูลพวกนี้ — มันปล่อย "ทุกบัญชีที่ล็อกอินได้" รวมถึง
+//    บัญชีการตลาด และบัญชีที่ไม่มีแถว profiles เลย (เช่นคนนอกที่สมัครเองตอนเปิด signup ทิ้งไว้)
+//    ตรวจความปลอดภัย 16 ต.ค. 2026: /api/wiki-insights ไม่มีด่านเลย คนนอกอ่านรายรับ/กำไรได้
+export async function requireStaff(req) {
+  const gate = await requireUser(req)
+  if (gate.error) return gate
+  const role = gate.profile?.role
+  if (role !== "admin" && role !== "user") {
+    return { error: NextResponse.json({ error: "forbidden" }, { status: 403 }) }
+  }
+  return gate
+}
+
 // งานการตลาด/วิดีโอ — admin หรือ marketing
 //
 // ⚠️ ใช้กับ route ของ /api/marketing/* และ /api/video/* เท่านั้น

@@ -34,13 +34,19 @@ export async function GET(request) {
       return new NextResponse("Image not found", { status: 404 })
     }
 
-    const contentType = res.headers.get("content-type") || "image/png"
+    // ส่งต่อเฉพาะรูปบิตแมป — ไม่ส่ง SVG/HTML ของต้นทางออกไปบนโดเมนเรา (เซสชันล็อกอินอยู่ใน localStorage ของโดเมนนี้)
+    const contentType = (res.headers.get("content-type") || "image/png").split(";")[0].trim().toLowerCase()
+    if (!/^image\/(png|jpe?g|webp|gif|avif)$/.test(contentType)) {
+      return new NextResponse("Unsupported image type", { status: 415 })
+    }
     const buffer = await res.arrayBuffer()
 
     return new NextResponse(buffer, {
       headers: {
         "Content-Type": contentType,
         "Cache-Control": "public, max-age=86400, s-maxage=604800",
+        "X-Content-Type-Options": "nosniff",
+        "Content-Security-Policy": "default-src 'none'; img-src 'self'; style-src 'unsafe-inline'",
       },
     })
   } catch {
