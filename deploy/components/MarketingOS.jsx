@@ -13,7 +13,7 @@ import {
   Wallet, Package, Receipt, TrendingUp, Trophy, MessageSquare, Lock,
   Lightbulb, Newspaper, Youtube, BarChart3, ExternalLink, Sparkles, Music2, Plus,
   Image as ImageIcon, Send, Copy, Maximize2, Calendar as CalendarIcon, Download,
-  Globe, BadgeCheck, LogOut,
+  Globe, BadgeCheck, LogOut, Film,
 } from "lucide-react"
 import {
   ResponsiveContainer, ComposedChart, Bar, Line, XAxis, YAxis,
@@ -759,7 +759,7 @@ export default function MarketingOS() {
   }
 
   return (
-    <Shell onRefresh={loadAll} loading={loading} onLogout={signOutAndGoHome}
+    <Shell onRefresh={loadAll} loading={loading} onLogout={signOutAndGoHome} videoLink
       credit={credit} onSaveCredit={saveCredit}
       nav={<NavRail view={view} setView={setView} counts={navCounts}
         onNew={() => { setView("ideas"); setTimeout(() => pasteRef.current?.focus(), 0) }} />}>
@@ -2081,22 +2081,31 @@ function CreditBadge({ credit, onSave }) {
 }
 
 // onLogout ส่งมาเฉพาะตอนล็อกอินอยู่ — บัญชีการตลาดออกจากระบบได้ที่นี่ที่เดียว ("/" พาเขากลับมาหน้านี้เสมอ)
-export function Shell({ children, nav, onRefresh, loading, credit, onSaveCredit, onLogout }) {
+// videoLink = ปุ่มไปโรงงานวิดีโอ — เฉพาะตอนเข้าได้แล้ว (/video รับ admin + marketing เหมือนหน้านี้)
+export function Shell({ children, nav, onRefresh, loading, credit, onSaveCredit, onLogout, videoLink }) {
   return (
     <main className="min-h-screen bg-gray-50">
       <header className="bg-white border-b border-gray-100 sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-4 py-3 flex items-center gap-3">
+        {/* มือถือ: ปุ่มไอคอนล้วน + ช่องไฟแคบลง — มีปุ่มวิดีโอ/ออกจากระบบเพิ่มแล้วหัวกว้าง 402px ล้นจอ 360–390 */}
+        <div className="max-w-7xl mx-auto px-4 py-3 flex items-center gap-2 sm:gap-3">
           <Megaphone size={20} className="text-blue-600" />
           <div className="flex-1">
             <h1 className="font-bold text-gray-800 leading-tight">Marketing OS</h1>
             <p className="hidden sm:block text-xs text-gray-400">DivisionX Card · การตลาดออนไลน์</p>
           </div>
+          {videoLink && (
+            <a href="/video" title="โรงงานวิดีโอ — สั่งทำคลิปสั้น 9:16" aria-label="โรงงานวิดีโอ"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-50 text-blue-700 text-sm font-medium
+                         hover:bg-blue-100 transition-colors whitespace-nowrap">
+              <Film size={14} /> <span className="hidden sm:inline">โรงงานวิดีโอ</span>
+            </a>
+          )}
           <a href="/" className="text-xs text-gray-500 hover:text-gray-700">← กลับหน้าหลัก</a>
           {credit !== undefined && <CreditBadge credit={credit} onSave={onSaveCredit} />}
           {onRefresh && (
-            <button onClick={onRefresh} disabled={loading}
+            <button onClick={onRefresh} disabled={loading} title="รีเฟรช" aria-label="รีเฟรช"
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-100 text-gray-700 text-sm disabled:opacity-50">
-              <RefreshCw size={14} className={loading ? "animate-spin" : ""} /> รีเฟรช
+              <RefreshCw size={14} className={loading ? "animate-spin" : ""} /> <span className="hidden sm:inline">รีเฟรช</span>
             </button>
           )}
           {onLogout && (
