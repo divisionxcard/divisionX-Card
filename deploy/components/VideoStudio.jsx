@@ -1004,7 +1004,7 @@ function JobPanel({ job, waited }) {
       )}
 
       {/* งานที่ระบบออกแบบ: ผู้กำกับเขียนแผนกลับลงแถวงาน (publish.save_plan) — โชว์ให้ตรวจก่อนโพสต์ */}
-      {job.plan?.format && job.plan?.script && (
+      {job.plan?.director && job.plan?.script && (
         <div className="vs-auto-plan">
           <div className="vs-auto-chips">
             <span className="vs-chip">{AUTO_FORMATS.find(f => f.id === job.plan.format)?.label || job.plan.format}</span>

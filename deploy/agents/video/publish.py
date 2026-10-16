@@ -335,7 +335,9 @@ def main():
         #   งาน "ให้ระบบออกแบบ" มาแค่ {format, machine?, sku?} → เขียนสคริปต์+ฉาก+หน้าตาจากข้อมูลจริงตรงนี้
         #   งาน HyperFrames ที่มีสคริปต์มาแล้วแต่ไม่ได้ระบุหน้าตา → เลือกหน้าตาที่ไม่ซ้ำคลิปล่าสุดให้
         #   seed = job id → เรนเดอร์งานเดิมซ้ำได้แผนเดิม
-        if not plan.get("script") and plan.get("format"):
+        # แผนจากหน้าเว็บมีข้อความแทนที่ในช่อง script (CHECK ของตารางบังคับไม่ว่าง) — ตัดสินจากคีย์ director
+        # ไม่ใช่จาก "ไม่มีสคริปต์": แผนที่ผู้กำกับเขียนแล้วจะมีคีย์ director เสมอ (เรนเดอร์ซ้ำไม่เขียนใหม่)
+        if plan.get("format") and not plan.get("director"):
             from .hf_director import direct, history
             plan = direct(plan, seed=job_id, project=plan["project"], hist=history(exclude_id=job_id))
             print(f"[publish] ผู้กำกับเลือก {plan.get('format')} · เสียง {plan.get('voice')} · หน้าตา {plan.get('look')}")

@@ -57,6 +57,7 @@ const STYLES = ["brand", "plain", "punch"]
 const ENGINES = ["classic", "hyperframes"]
 // รูปแบบที่ผู้กำกับอัตโนมัติทำได้ — ต้องตรงกับ FORMATS ใน agents/video/hf_director.py (+ auto = ให้ระบบเลือกเอง)
 const AUTO_FORMATS = ["auto", "rank", "versus", "quiz", "map"]
+const AUTO_SCRIPT_PLACEHOLDER = "[ให้ระบบออกแบบ — ผู้กำกับเขียนสคริปต์จริงตอนเรนเดอร์]"
 
 // งานที่ค้างนานกว่านี้ถือว่า runner ตายไปแล้ว ไม่ใช่ "ยังทำอยู่"
 // workflow ตั้ง timeout-minutes: 45 ไว้ งานที่ยังมีชีวิตจึงเกิน 45 นาทีไม่ได้เลย
@@ -104,6 +105,10 @@ function validatePlan(raw) {
     return {
       plan: {
         project, engine: "hyperframes", format,
+        // ⚠️ ตาราง video_jobs มี CHECK บังคับ plan.script ไม่ว่าง (migration 075 · video_jobs_plan_script_check)
+        //    → ใส่ข้อความแทนที่ไว้ · publish.py ให้ผู้กำกับเขียนทับเมื่อแผนยังไม่มีคีย์ director
+        //    (ทดสอบจริง 16 ต.ค.: insert แผนไม่มี script โดน 23514 ทั้งแถว)
+        script: AUTO_SCRIPT_PLACEHOLDER,
         ...(machine ? { machine } : {}), ...(sku ? { sku } : {}),
         ...(voice && voice !== "auto" ? { voice } : {}),
       },
