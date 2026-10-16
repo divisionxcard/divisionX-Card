@@ -1,5 +1,5 @@
 "use client"
-import { useState, useEffect, useCallback, Fragment } from "react"
+import { useState, useEffect, useCallback, useRef, Fragment } from "react"
 import {
   BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid,
   Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell
@@ -22,7 +22,7 @@ import {
   deleteStockOut as dbDeleteStockOut, deleteStockOutByClaim as dbDeleteStockOutByClaim,
   getMachines, getSalesByMachine,
   getSkus, addSku as dbAddSku, deactivateSku as dbDeactivateSku, updateSkuAvgCost,
-  signInWithUsername as authSignIn, signOut as authSignOut, getProfile, resetPasswordByUsername, updatePassword,
+  signInWithUsername as authSignIn, signOut as authSignOut, signOutAndGoHome, getProfile, resetPasswordByUsername, updatePassword,
   getMachineStock,
   getClaims, addClaim as dbAddClaim, updateClaim as dbUpdateClaim, deleteClaim as dbDeleteClaim, deleteStockTransfersByClaim as dbDeleteStockTransfersByClaim,
   logLoginEvent,
@@ -90,11 +90,14 @@ function LoadingScreen() {
 // ⚠️ ตั้งใจ "ไม่" เขียนว่าไม่มีสิทธิ์หรือถูกปฏิเสธ — บัญชีนี้ไม่ได้ทำอะไรผิด
 //    หน้านี้แค่ไม่ใช่ที่ทำงานของเขา · พาไปที่ที่ใช่เลยดีกว่าให้กดหาเอง
 // ⚠️ และไม่บอกด้วยว่าหน้านี้มีอะไรอยู่ — ไม่มีประโยชน์กับเขา และไม่ควรบอกอยู่แล้ว
-function MarketingOnlyScreen({ profile }) {
+// ⚠️ ต้องมีทางออกจากระบบเสมอ — เดิมไม่มี: เบราว์เซอร์ที่เคยเข้าบัญชีการตลาดถูกพากลับ /marketing ทุกครั้ง
+//    และ /marketing · /video ก็ไม่มีปุ่มออก → เจ้าของเข้าบัญชีแอดมินจากเครื่องนั้นไม่ได้เลย (16 ต.ค. 2026)
+function MarketingOnlyScreen({ profile, onLogout }) {
+  const timer = useRef(null)
   useEffect(() => {
     // พาไปเองใน 2 วินาที เผื่อคนกดลิงก์เก่าหรือพิมพ์ URL มา จะได้ไม่ต้องทำอะไร
-    const t = setTimeout(() => { window.location.href = "/marketing" }, 2000)
-    return () => clearTimeout(t)
+    timer.current = setTimeout(() => { window.location.href = "/marketing" }, 2000)
+    return () => clearTimeout(timer.current)
   }, [])
   const name = profile?.display_name || profile?.username || ""
   return (
@@ -117,6 +120,11 @@ function MarketingOnlyScreen({ profile }) {
             โรงงานวิดีโอ
           </a>
         </div>
+        {/* หยุดตัวพาไปก่อน — ไม่งั้นถ้าออกจากระบบช้ากว่า 2 วินาที จะเด้งไป /marketing กลางทาง */}
+        <button onClick={() => { clearTimeout(timer.current); onLogout() }}
+          className="mt-5 inline-flex items-center gap-1.5 text-xs text-gray-400 hover:text-red-500 transition-colors">
+          <LogOut size={12}/> ออกจากระบบ / เข้าบัญชีอื่น
+        </button>
       </div>
     </div>
   )
@@ -763,7 +771,7 @@ export default function DivisionXApp() {
   // บัญชีการตลาดไม่มีอะไรให้ดูในหน้านี้ — พาไปหน้าที่เขาใช้จริงเลย
   // ⚠️ ต้องเช็คก่อน `loading` ไม่งั้นจะค้างที่จอโหลดตลอดกาล เพราะ RLS ปิดไม่ให้
   //    บัญชีนี้อ่านตารางธุรกิจ loadAll จึงล้มทุกครั้ง (ดู migration 076)
-  if (isMarketingOnly) return <MarketingOnlyScreen profile={profile}/>
+  if (isMarketingOnly) return <MarketingOnlyScreen profile={profile} onLogout={signOutAndGoHome}/>
   if (loading)     return <LoadingScreen/>
   if (dataError)   return <ErrorScreen msg={dataError} onRetry={loadAll}/>
 

@@ -23,9 +23,9 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react"
 import {
   Film, Type, Image as ImageIcon, Send, AlertTriangle, X, Lock, Download,
-  RefreshCw, Loader2, Check, Clock, Sparkles, Mic,
+  RefreshCw, Loader2, Check, Clock, Sparkles, Mic, LogOut,
 } from "lucide-react"
-import { supabase, getSkus, getProfile } from "../lib/supabase"
+import { supabase, getSkus, getProfile, signOutAndGoHome } from "../lib/supabase"
 
 // ── ตัวเลือกที่ต้องตรงกับฝั่ง python ────────────────────────────────────
 // คำอธิบายลอกมาจาก VOICES ใน agents/video/voice.py — เสียงพวกนี้ทดสอบกับไทยแล้ว
@@ -576,12 +576,13 @@ export default function VideoStudio() {
         <Lock size={30} />
         <p className="vs-gate-t">ต้องเข้าสู่ระบบก่อน</p>
         <p className="vs-dim">หน้านี้สั่งงานเครื่องเรนเดอร์ภายใน</p>
-        <a href="/" className="dx-btn dx-btn-primary">ไปหน้าเข้าสู่ระบบ</a>
+        {/* ปุ่ม ไม่ใช่ลิงก์ — 401 จาก API มาถึงจอนี้ได้ทั้งที่เซสชันในเครื่องยังค้าง ลิงก์ไป "/" เฉย ๆ บัญชีการตลาดวนกลับมา */}
+        <button className="dx-btn dx-btn-primary" onClick={() => signOutAndGoHome()}>ไปหน้าเข้าสู่ระบบ</button>
       </div>
     </Frame>
   )
   if (authState === "forbidden") return (
-    <Frame>
+    <Frame onLogout={signOutAndGoHome}>
       <div className="dx-card vs-gate">
         <Lock size={30} color="var(--dx-danger)" />
         <p className="vs-gate-t">เฉพาะผู้ดูแลระบบ (admin)</p>
@@ -595,7 +596,7 @@ export default function VideoStudio() {
   const waited = running && startedAt ? (Date.now() - startedAt) / 1000 : null
 
   return (
-    <Frame onRefresh={loadJobs}>
+    <Frame onRefresh={loadJobs} onLogout={signOutAndGoHome}>
       {err && (
         <div className="vs-err">
           <AlertTriangle size={16} />
@@ -1041,7 +1042,8 @@ function JobPanel({ job, waited }) {
 // เปลือกหน้า — หัวเรื่อง + พื้นหลัง + CSS ทั้งหมดของหน้านี้
 // ใช้ dx-* จาก globals.css เป็นหลัก (หน้านี้ถือว่า migrate เป็น dark theme แล้ว)
 // ที่เหลือเป็นคลาสขึ้นต้น vs- กันชนกับหน้าอื่น — ท่าเดียวกับ app/products/page.jsx
-function Frame({ children, onRefresh }) {
+// onLogout ส่งมาเฉพาะตอนล็อกอินอยู่ — บัญชีการตลาดไม่มีแถบเมนูของแอปหลัก ต้องออกจากระบบจากหน้านี้ได้
+function Frame({ children, onRefresh, onLogout }) {
   return (
     <main className="vs-page">
       <style dangerouslySetInnerHTML={{ __html: CSS }} />
@@ -1062,6 +1064,11 @@ function Frame({ children, onRefresh }) {
           {onRefresh && (
             <button className="dx-btn dx-btn-ghost" onClick={onRefresh}>
               <RefreshCw size={14} /> <span className="vs-hide-sm">รีเฟรช</span>
+            </button>
+          )}
+          {onLogout && (
+            <button className="dx-btn dx-btn-ghost" onClick={onLogout} title="ออกจากระบบ / เข้าบัญชีอื่น" aria-label="ออกจากระบบ">
+              <LogOut size={14} /> <span className="vs-hide-sm">ออกจากระบบ</span>
             </button>
           )}
         </div>
@@ -1214,6 +1221,8 @@ const CSS = `
   .vs-step{padding:9px;gap:7px;font-size:12px;}
   .vs-step-n{width:22px;height:22px;font-size:10px;}
   .vs-hide-sm{display:none;}
+  /* หัวหน้ามีลิงก์ 2 + ปุ่ม 2 — คำโปรยใต้ชื่อถูกบีบเหลือคำละบรรทัด หัวสูงเกือบ 1/3 จอ */
+  .vs-top-t p{display:none;}
   .vs-sum-row{flex-direction:column;gap:2px;}
   .vs-sum-row > span:first-child{width:auto;font-size:11px;}
   .vs-video{max-width:100%;}

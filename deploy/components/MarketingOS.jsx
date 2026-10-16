@@ -13,13 +13,13 @@ import {
   Wallet, Package, Receipt, TrendingUp, Trophy, MessageSquare, Lock,
   Lightbulb, Newspaper, Youtube, BarChart3, ExternalLink, Sparkles, Music2, Plus,
   Image as ImageIcon, Send, Copy, Maximize2, Calendar as CalendarIcon, Download,
-  Globe, BadgeCheck,
+  Globe, BadgeCheck, LogOut,
 } from "lucide-react"
 import {
   ResponsiveContainer, ComposedChart, Bar, Line, XAxis, YAxis,
   CartesianGrid, Tooltip, ReferenceDot,
 } from "recharts"
-import { supabase } from "../lib/supabase"
+import { supabase, signOutAndGoHome } from "../lib/supabase"
 import KpiCard from "./shared/KpiCard"
 import PostCalendar from "./marketing/PostCalendar"
 import { ensureBrandTag } from "../lib/brandTag"
@@ -732,14 +732,17 @@ export default function MarketingOS() {
         <Lock className="mx-auto text-gray-400 mb-3" size={32} />
         <p className="font-semibold text-gray-800 mb-1">ต้องเข้าสู่ระบบก่อน</p>
         <p className="text-sm text-gray-500 mb-4">หน้านี้แสดงข้อมูลการตลาดภายใน</p>
-        <a href="/" className="inline-block px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium">
+        {/* ปุ่ม ไม่ใช่ลิงก์ — มาถึงจอนี้ได้ทั้งที่เซสชันในเครื่องยังค้าง (API ตอบ 401: ถูกเพิกถอน/หมดอายุ)
+            ลิงก์ไป "/" เฉย ๆ จะเจอเซสชันเดิม บัญชีการตลาดถูกพากลับมาหน้านี้วนไม่จบ */}
+        <button onClick={() => signOutAndGoHome()}
+          className="inline-block px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium">
           ไปหน้าเข้าสู่ระบบ
-        </a>
+        </button>
       </div>
     </Shell>
   )
   if (authState === "forbidden") return (
-    <Shell>
+    <Shell onLogout={signOutAndGoHome}>
       <div className="bg-white rounded-2xl border border-gray-100 p-8 text-center">
         <Lock className="mx-auto text-red-400 mb-3" size={32} />
         <p className="font-semibold text-gray-800">เฉพาะผู้ดูแลระบบ (admin)</p>
@@ -756,7 +759,7 @@ export default function MarketingOS() {
   }
 
   return (
-    <Shell onRefresh={loadAll} loading={loading}
+    <Shell onRefresh={loadAll} loading={loading} onLogout={signOutAndGoHome}
       credit={credit} onSaveCredit={saveCredit}
       nav={<NavRail view={view} setView={setView} counts={navCounts}
         onNew={() => { setView("ideas"); setTimeout(() => pasteRef.current?.focus(), 0) }} />}>
@@ -2077,7 +2080,8 @@ function CreditBadge({ credit, onSave }) {
   )
 }
 
-export function Shell({ children, nav, onRefresh, loading, credit, onSaveCredit }) {
+// onLogout ส่งมาเฉพาะตอนล็อกอินอยู่ — บัญชีการตลาดออกจากระบบได้ที่นี่ที่เดียว ("/" พาเขากลับมาหน้านี้เสมอ)
+export function Shell({ children, nav, onRefresh, loading, credit, onSaveCredit, onLogout }) {
   return (
     <main className="min-h-screen bg-gray-50">
       <header className="bg-white border-b border-gray-100 sticky top-0 z-10">
@@ -2085,7 +2089,7 @@ export function Shell({ children, nav, onRefresh, loading, credit, onSaveCredit 
           <Megaphone size={20} className="text-blue-600" />
           <div className="flex-1">
             <h1 className="font-bold text-gray-800 leading-tight">Marketing OS</h1>
-            <p className="text-xs text-gray-400">DivisionX Card · การตลาดออนไลน์</p>
+            <p className="hidden sm:block text-xs text-gray-400">DivisionX Card · การตลาดออนไลน์</p>
           </div>
           <a href="/" className="text-xs text-gray-500 hover:text-gray-700">← กลับหน้าหลัก</a>
           {credit !== undefined && <CreditBadge credit={credit} onSave={onSaveCredit} />}
@@ -2093,6 +2097,12 @@ export function Shell({ children, nav, onRefresh, loading, credit, onSaveCredit 
             <button onClick={onRefresh} disabled={loading}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-100 text-gray-700 text-sm disabled:opacity-50">
               <RefreshCw size={14} className={loading ? "animate-spin" : ""} /> รีเฟรช
+            </button>
+          )}
+          {onLogout && (
+            <button onClick={onLogout} title="ออกจากระบบ / เข้าบัญชีอื่น" aria-label="ออกจากระบบ"
+              className="flex items-center gap-1 text-xs text-gray-500 hover:text-red-500 transition-colors whitespace-nowrap">
+              <LogOut size={14} /> <span className="hidden sm:inline">ออกจากระบบ</span>
             </button>
           )}
         </div>

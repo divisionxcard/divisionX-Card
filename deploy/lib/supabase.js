@@ -37,6 +37,30 @@ export async function signOut() {
   if (error) throw error
 }
 
+// ออกจากระบบแล้วพากลับหน้าเข้าสู่ระบบ — สำหรับหน้าที่แยก route (/marketing · /video) ซึ่งไม่มีแถบเมนูของแอปหลัก
+// เดิมไม่มีปุ่มออกเลย: บัญชีการตลาดเข้า "/" ก็ถูกพาไป /marketing → เบราว์เซอร์ที่เคยเข้าบัญชีนี้
+// วนอยู่อย่างนั้นถาวร เข้าบัญชีแอดมินไม่ได้ (เจ้าของเจอ 16 ต.ค. 2026)
+//
+// scope "local" = จบเฉพาะเครื่องนี้ (ค่าปริยายของ supabase คือ global = เด้งบัญชีนี้ออกจากทุกเครื่อง
+//   → เจ้าของกด "เข้าบัญชีอื่น" บนเครื่องร่วม แล้วมือถือของพนักงานหลุดตามไปด้วย)
+// ⚠️ auth-js ล้างเซสชันในเครื่องเฉพาะตอน /logout สำเร็จหรือได้ 401/403/404 — เน็ตหลุด/Auth ล่ม (5xx) เซสชันยังอยู่
+//    แล้ว "/" ก็พากลับ /marketing เหมือนเดิม → ล้มเมื่อไหร่ลบเองตรงนี้ (เรียก signOut ซ้ำไม่ช่วย มันยิง /logout ตัวเดิม)
+//    · ออฟไลน์ + โทเคนหมดอายุ signOut ลองต่ออายุอยู่ ~30 วิ ก่อนตอบ → รอแค่ 5 วิ
+export async function signOutAndGoHome() {
+  let failed = false
+  try {
+    const timeout = new Promise((ok) => setTimeout(() => ok({ error: new Error("timeout") }), 5000))
+    failed = !!(await Promise.race([supabase.auth.signOut({ scope: "local" }), timeout])).error
+  } catch { failed = true }
+  if (failed) {
+    try {
+      const key = supabase.auth.storageKey   // "sb-<project-ref>-auth-token"
+      for (const k of [key, `${key}-code-verifier`, `${key}-user`]) window.localStorage.removeItem(k)
+    } catch { /* storage ถูกบล็อก — หน้าแรกจะเช็กเซสชันเองอีกรอบ */ }
+  }
+  window.location.href = "/"
+}
+
 export async function resetPassword(email) {
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
     redirectTo: `${typeof window !== "undefined" ? window.location.origin : ""}/`,
