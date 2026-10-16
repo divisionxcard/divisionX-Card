@@ -2,7 +2,7 @@
 type: worklog
 date: 2026-10-16
 tags: [video, hyperframes, cta, director, content]
-commits: []
+commits: [afd2c65]
 status: ✅ ฉากปิด 6 แบบ หมุนตามรูปแบบคลิป ไม่ซ้ำคลิปก่อนหน้า · เสียงกับจอข้อความเดียวกัน · ข้อมูลจริงพร้อมวันที่
 ---
 
@@ -86,3 +86,5 @@ status: ✅ ฉากปิด 6 แบบ หมุนตามรูปแบ�
 ## ให้เจ้าของยืนยัน
 
 - แบบ line พูดว่า "ข่าวเติมของหน้าตู้ เราแจ้งทางไลน์" — ตรงกับแผน broadcast เช้า/เย็นใน `marketing_reminders.json` ถ้าไม่ได้ส่งจริงให้บอก จะปิดแบบนี้
+
+เกี่ยวข้อง: [[2026-10-16-hyperframes]] · [[2026-10-16-video-formats-research]] · [[2026-10-16-video-design-freedom]] · [[2026-10-16-phone-number-change]] · [[2026-10-16-public-stock-page]]
