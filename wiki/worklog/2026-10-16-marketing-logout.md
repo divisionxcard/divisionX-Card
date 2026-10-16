@@ -2,7 +2,7 @@
 type: worklog
 date: 2026-10-16
 tags: [auth, users, marketing, web, support]
-commits: [f23683c]
+commits: [f23683c, 752c105]
 status: ✅ เพิ่มปุ่มออกจากระบบให้บัญชีการตลาด (หน้า "/" · /marketing · /video) — เดิมไม่มีทางออกเลย
 ---
 
