@@ -249,16 +249,69 @@ def karaoke_steps(chunk, words=None, min_step=0.12):
     return [s for s in merged if s["end"] > s["start"]]
 
 
+_NUM = re.compile(r"^#?\d[\d.,:/-]*%?$")
+# หน่วย/ลักษณนามหลังเลข ("12 ตู้" · "14 วันที่ผ่านมา") — เลขแบบนี้นับคำข้างหลัง
+_UNIT = ("ตู้", "ห้าง", "สาขา", "ซอง", "กล่อง", "วัน", "สัปดาห์", "เดือน", "ปี", "ชั่วโมง", "นาที", "บาท", "แบบ",
+         "ชุด", "ใบ", "ชิ้น", "คน", "รอบ", "อันดับ", "เกม", "ค่าย", "ลาย", "ตัว", "เท่า", "ช่อง")
+# คำเชื่อมไม่ควรค้างท้ายท่อน ("…ใน" | "11 ห้าง")
+_NO_END = {"ใน", "ที่", "ของ", "กับ", "และ", "หรือ", "แต่", "จาก", "ตรง", "ให้", "ว่า", "เพื่อ", "โดย", "ถึง", "คือ", "เป็น"}
+
+
+def _glued(words, i):
+    """ห้ามตัดหน้าคำที่ i — เลขต้องติดคำของมัน"""
+    a, b = words[i - 1], words[i]
+    nxt = words[i + 1] if i + 1 < len(words) else ""
+    if _NUM.match(a) and b.startswith(_UNIT):                  # "12" | "ตู้"
+        return True
+    return bool(_NUM.match(b)) and not nxt.startswith(_UNIT)   # "พระราม" | "2" · "อันดับ" | "1" — เลขของคำข้างหน้า
+
+
+def _break_cost(a, b):
+    """โทษของจุดตัดที่ยอมได้แต่ไม่สวย (a = คำท้ายท่อน · b = คำแรกท่อนถัดไป)"""
+    if a[:1].isascii() and a[:1].isalpha() and b[:1].isascii() and b[:1].isalpha():
+        return 600                                             # "Pokémon" | "Ninja" — ชื่อชุด/ร้านภาษาอังกฤษ
+    if a in _NO_END:
+        return 300
+    return 0
+
+
 def _chunk(text, limit):
+    """ซอยบรรทัดเป็นท่อนซับ — ท่อนยาวใกล้ ๆ กัน และไม่ตัดกลางวลี
+
+    เดิมเติมทีละคำจนเต็ม → "เรามี 12 ตู้ ใน 11" | "ห้าง" · "…พระราม" | "2 เลือก…" (เลขหลุดจากคำของมัน)
+    ตอนนี้: เลขติดคำของมันก่อน (_glued) แล้วเลือกจุดตัดทั้งบรรทัดพร้อมกัน (DP) — ท่อนละไม่เกิน limit · ท่อนน้อย ·
+    ยาวเท่า ๆ กัน · เลี่ยงจุดตัดที่มีโทษ → "เรามี 12 ตู้" | "ใน 11 ห้าง"
+    ก้อนเดียวที่ยาวเกิน limit ได้ท่อนของตัวเอง — ซับตัดขึ้นบรรทัดใหม่เองที่ 940px (ดีกว่าเลขลอยเดี่ยวบนจอ)
+    """
     if len(text) <= limit:
         return [text]
-    words, cur, out = text.split(" "), "", []
-    for w in words:
-        if cur and len(cur) + 1 + len(w) > limit:
-            out.append(cur)
-            cur = w
+    words = [w for w in text.split(" ") if w]
+    if not words:
+        return [text]
+    units, heads, tails = [words[0]], [words[0]], [words[0]]
+    for i in range(1, len(words)):
+        if _glued(words, i):
+            units[-1] += " " + words[i]
+            tails[-1] = words[i]
         else:
-            cur = f"{cur} {w}".strip()
-    if cur:
-        out.append(cur)
-    return out or [text]
+            units.append(words[i])
+            heads.append(words[i])
+            tails.append(words[i])
+    n = len(units)
+    best = [(0.0, 0)] + [(float("inf"), 0)] * n     # best[j] = (โทษรวมของ units[:j], จุดตัดก่อนหน้า)
+    for j in range(1, n + 1):
+        for i in range(j - 1, -1, -1):
+            piece = " ".join(units[i:j])
+            if len(piece) > limit and j - i > 1:
+                break
+            cost = best[i][0] + 60 + (limit - min(len(piece), limit)) ** 2
+            if i:
+                cost += _break_cost(tails[i - 1], heads[i])
+            if cost < best[j][0]:
+                best[j] = (cost, i)
+    out, j = [], n
+    while j > 0:
+        i = best[j][1]
+        out.append(" ".join(units[i:j]))
+        j = i
+    return out[::-1]

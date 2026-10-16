@@ -63,16 +63,29 @@
       }
       /* ตัวหนังสือจางเป็นของตกแต่ง — วางเป็น ::before ไม่ให้นับเป็นข้อความที่ต้องอ่านออก (contrast audit) */
       #bg-ghost::before { content: "DIVISION X · CARD · DIVISION X · CARD"; }
-      .scene-slot { position: absolute; inset: 0; }
+      /* ── ชั้นซ้อน: ฉาก (1) < เอฟเฟกต์ตัดฉาก (20) < โลโก้ (30) < ซับ (40)
+         ฉากรูปแบบใช้ z-index 2–8 ข้างใน — ถ้าช่องฉากไม่แยกชั้น ชิ้นพวกนั้นลอยข้ามขึ้นมาทับทุกอย่าง
+         (เจอในคลิปพิกัดตู้บน Actions: พื้นเบลอของการ์ดรูปตู้ z 5 บังซับ+โลโก้ทั้งช่วง ~4 วิ และบังแถบกวาดขาเข้า) */
+      .scene-slot { position: absolute; inset: 0; z-index: 1; }
+      #fx-flash, #fx-ring, #fx-glitch, #fx-wipe, #fx-cover, #fx-bolts { z-index: 20; }
+      #fx-glitch { position: absolute; inset: 0; pointer-events: none; }
+      #corner-logo { z-index: 30; }
+      #captions-slot { position: absolute; inset: 0; z-index: 40; pointer-events: none; }
       /* ── ฉากเปลี่ยน */
       #fx-flash { position: absolute; inset: 0; background: radial-gradient(circle at 50% 40%, rgba(235, 248, 255, 0.95), rgba(89, 210, 255, 0.55) 45%, rgba(27, 141, 255, 0) 80%); opacity: 0; pointer-events: none; }
       #fx-bolts { position: absolute; inset: 0; width: 1080px; height: 1920px; overflow: visible; pointer-events: none; }
       .bolt { fill: none; stroke: #e8f7ff; stroke-width: 12; stroke-linejoin: round; stroke-linecap: round; filter: drop-shadow(0 0 18px #59d2ff) drop-shadow(0 0 40px #1b8dff); opacity: 0; }
       #fx-ring { position: absolute; left: 540px; top: 860px; width: 600px; height: 600px; margin: -300px 0 0 -300px; border-radius: 50%; border: 16px solid #e8f7ff; box-shadow: 0 0 60px #59d2ff, inset 0 0 50px #1b8dff; opacity: 0; pointer-events: none; }
       .fx-g { position: absolute; left: -40px; width: 1160px; opacity: 0; pointer-events: none; mix-blend-mode: screen; }
-      #fx-wipe { position: absolute; left: -300px; top: 360px; width: 1680px; height: 1200px; opacity: 0; pointer-events: none;
-        background: linear-gradient(90deg, rgba(27, 141, 255, 0) 0%, rgba(27, 141, 255, 0.85) 30%, rgba(232, 247, 255, 0.98) 50%, rgba(89, 210, 255, 0.85) 70%, rgba(27, 141, 255, 0) 100%);
-        filter: drop-shadow(0 0 40px #59d2ff); }
+      /* แถบกวาด: เปิดคลิป = แสงกวาดโปร่ง (#fx-wipe) · รอยตัดฉาก = แถบทึบปิดเต็มจอตรงวินาทีที่ฉากสลับ แล้วเผยฉากใหม่ (#fx-cover)
+         สูงเกินจอทั้งคู่ — เอียงแล้วขอบบน/ล่างห้ามโผล่ในเฟรม (เดิมสูง 1200 เห็นเป็นกล่องลอย) */
+      #fx-wipe { position: absolute; left: 0; top: -700px; width: 1400px; height: 3320px; opacity: 0; pointer-events: none;
+        background: linear-gradient(90deg, rgba(27, 141, 255, 0) 0%, rgba(27, 141, 255, 0.55) 32%, rgba(232, 247, 255, 0.9) 50%, rgba(89, 210, 255, 0.55) 68%, rgba(27, 141, 255, 0) 100%); }
+      #fx-cover { position: absolute; left: 0; top: -700px; width: 2200px; height: 3320px; opacity: 0; pointer-events: none;
+        background:
+          repeating-linear-gradient(90deg, rgba(89, 210, 255, 0.07) 0 5px, rgba(89, 210, 255, 0) 5px 64px),
+          linear-gradient(90deg, rgba(89, 210, 255, 0) 0, rgba(232, 247, 255, 0.95) 40px, #59d2ff 70px, #1b8dff 96px, #0a2a6b 170px, #061a45 50%,
+            #0a2a6b calc(100% - 170px), #1b8dff calc(100% - 96px), #59d2ff calc(100% - 70px), rgba(232, 247, 255, 0.95) calc(100% - 40px), rgba(89, 210, 255, 0) 100%); }
       #corner-logo { position: absolute; right: 44px; top: 54px; width: 150px; height: 128px; object-fit: contain; opacity: 0.92; filter: drop-shadow(0 0 14px rgba(27, 141, 255, 0.6)); }
 
       /* ── หัวเรื่องของฉากรูปแบบ (.dvx-q1/.dvx-q2 ในฉากย่อย) — คลาส ts-* อยู่ที่ slot · stroke = ค่าเดิมในฉาก ไม่ต้องมีกฎ
@@ -107,6 +120,7 @@
       <div id="fx-ring" aria-hidden="true" data-layout-ignore></div>
       <div id="fx-glitch" aria-hidden="true" data-layout-ignore></div>
       <div id="fx-wipe" aria-hidden="true" data-layout-ignore></div>
+      <div id="fx-cover" aria-hidden="true" data-layout-ignore></div>
       <svg data-hf-id="hf-p0kn" id="fx-bolts" viewBox="0 0 1080 1920">
         <path data-hf-id="hf-ughk" class="bolt" id="bolt-a" d="M 760 -20 L 610 420 L 700 450 L 520 900 L 620 930 L 380 1500" />
         <path data-hf-id="hf-8a1e" class="bolt" id="bolt-b" d="M 160 -20 L 300 300 L 230 330 L 380 700" />
@@ -189,9 +203,15 @@
               });
             }
             tl.set(G, { opacity: 0 }, at + 0.26);
+          } else if (CUT === "wipe" && first) {
+            // เปิดคลิป: แสงกวาดโปร่ง เริ่มหลังเฟรมแรก (ภาพปก/ตัวอย่างเล่นอัตโนมัติต้องเห็นฉากจริง ไม่ใช่แถบ)
+            tl.fromTo("#fx-wipe", { x: -1620, rotation: -12, opacity: 1 }, { x: 1300, rotation: -12, opacity: 1, duration: 0.6, ease: "power1.inOut", immediateRender: false }, 0.05);
+            tl.set("#fx-wipe", { opacity: 0 }, 0.66);
           } else if (CUT === "wipe") {
-            tl.fromTo("#fx-wipe", { x: -1900, rotation: -18, opacity: 1 }, { x: 1900, rotation: -18, opacity: 1, duration: 0.42, ease: "power2.inOut", immediateRender: false }, at - 0.18);
-            tl.set("#fx-wipe", { opacity: 0 }, at + 0.25);
+            // รอยตัด: แถบทึบวิ่งเส้นตรง 0.5 วิ — กลางทาง (= วินาทีที่ฉากสลับ t) ปิดเต็มจอ ~2.5 เฟรม แล้วเผยฉากใหม่
+            // เดิมแถบโปร่งกวาด 0.42 วิแบบเร่ง-ผ่อน ผ่านจอจริงแค่ ~2 เฟรมและไม่บังรอยตัด — คลิปบน Actions เห็นแค่กะพริบ
+            tl.fromTo("#fx-cover", { x: -2440, rotation: -12, opacity: 1 }, { x: 1320, rotation: -12, opacity: 1, duration: 0.5, ease: "none", immediateRender: false }, t - 0.25);
+            tl.set("#fx-cover", { opacity: 0 }, t + 0.26);
           }
         });
 

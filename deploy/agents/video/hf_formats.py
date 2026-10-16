@@ -193,7 +193,7 @@ def _when(days):
     """คำบอกช่วงเวลา · "สัปดาห์" แทน "7 วัน" — ตัวเลขในประโยคโดนตัดแยกท่อนซับ ("…DivisionX 7" / "วันที่ผ่านมา?")"""
     if days == 7:
         return {"when": "สัปดาห์ที่ผ่านมา", "when_s": "สัปดาห์", "when_k": "ประจำสัปดาห์"}
-    return {"when": f"{days} วันที่ผ่านมา", "when_s": f"{days} วันนี้", "when_k": f" {days} วัน"}
+    return {"when": f"{days} วันที่ผ่านมา", "when_s": f" {days} วันนี้", "when_k": f" {days} วัน"}   # "ของ 14 วันนี้" ไม่ใช่ "ของ14"
 
 
 def rank_plan(days=7, machine=None, voice="Puck", pick=None):
