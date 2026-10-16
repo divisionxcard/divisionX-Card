@@ -2,7 +2,7 @@
 type: worklog
 date: 2026-10-16
 tags: [security, web, supabase, rls, github-actions]
-commits: []
+commits: [abef00a]
 status: ✅ แก้ในโค้ดแล้ว 6 จุด (ข้อมูลรายรับเปิดโล่ง · ช่องรันคำสั่งใน poster workflow · header · webhook · image proxy) · 🟡 รอเจ้าของ: ปิด signup · รัน migration 081 · ตัดสินเรื่อง repo สาธารณะ
 ---
 
