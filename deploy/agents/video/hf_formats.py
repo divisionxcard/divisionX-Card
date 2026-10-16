@@ -121,7 +121,7 @@ def rank_plan(days=7, machine=None, voice="Puck"):
              "items": [{k: it[k] for k in ("sku", "name", "tag")} for it in items]}
     return {"project": f"rank-{d1:%Y%m%d}", "engine": "hyperframes", "voice": voice,
             "voice_style": "อ่านแบบพิธีกรนับอันดับ ตื่นเต้นขึ้นเรื่อย ๆ จังหวะเร็ว เน้นชื่อชุด",
-            "script": "\n".join(lines), "scenes": [scene, dict(CTA)]}
+            "script": "\n".join(lines), "scenes": [scene, cta_for(machine)]}
 
 
 def _op_number(sku_id):
@@ -175,7 +175,7 @@ def versus_plan(days=7, machine=None, voice="Puck", picks=None):
              "items": [{k: it[k] for k in ("sku", "name", "tag")} for it in items], "rounds": rounds}
     return {"project": f"versus-{d1:%Y%m%d}", "engine": "hyperframes", "voice": voice,
             "voice_style": "อ่านแบบพิธีกรเกมโชว์ ชวนลุ้น เว้นจังหวะก่อนบอกผู้ชนะ จังหวะเร็ว",
-            "script": "\n".join(lines), "scenes": [scene, dict(CTA)]}
+            "script": "\n".join(lines), "scenes": [scene, cta_for(machine)]}
 
 
 def quiz_plan(sku=None, voice="Puck", days=7, machine=None):
@@ -197,7 +197,7 @@ def quiz_plan(sku=None, voice="Puck", days=7, machine=None):
              "tag": f"{brand} Card Game" if brand in ("One Piece", "Pokémon") else brand}
     return {"project": f"quiz-{re.sub(r'[^a-z0-9]+', '-', sku.lower()).strip('-')}", "engine": "hyperframes",
             "voice": voice, "voice_style": "อ่านแบบพิธีกรเกมทายปัญหา สนุก ชวนลุ้น นับถอยหลังช้า ๆ ชัด ๆ แล้วเฉลยเสียงดัง",
-            "script": "\n".join(lines), "scenes": [scene, dict(CTA)]}
+            "script": "\n".join(lines), "scenes": [scene, cta_for(machine)]}
 
 
 # พิกัดห้าง "โดยประมาณ" (ละติจูด, ลองจิจูด) — ใช้วางหมุดบนแผนที่กราฟิกเท่านั้น ไม่ใช่การนำทาง
@@ -215,6 +215,21 @@ LATSPAN = (LON1 - LON0) * 0.97106 / (MAP_W / MAP_H)                       # cos(
 def _map_xy(lat, lon):
     x, y = (lon - LON0) / (LON1 - LON0) * MAP_W, (LAT1 - lat) / LATSPAN * MAP_H
     return (round(x, 1), round(y, 1)) if 20 <= x <= MAP_W - 20 and 20 <= y <= MAP_H - 20 else None
+
+
+BRANCH_DIR = config.REPO / "hyperframes" / "templates" / "dvx-promo" / "assets" / "branches"
+
+
+def branch_photo(machine_id):
+    """รูปตู้จริงของสาขา (เตรียมด้วย branch_photos.py) → path ในโปรเจกต์ หรือ None
+    ตู้มี 3 แบรนด์ (VMS · WorldWide · Vendos) หน้าตาไม่เหมือนกัน — ห้ามใช้รูปตู้สาขาอื่นแทน"""
+    return f"assets/branches/{machine_id}.jpg" if machine_id and (BRANCH_DIR / f"{machine_id}.jpg").exists() else None
+
+
+def cta_for(machine=None):
+    """ฉากปิด: คลิปเฉพาะสาขาใช้รูปตู้ของสาขานั้น · คลิปรวมทุกสาขาใช้รูปตู้ทั่วไปเดิม"""
+    photo = branch_photo(machine)
+    return {"type": "cta", "img": photo} if photo else dict(CTA)
 
 
 def branches():
@@ -254,18 +269,23 @@ def map_plan(machine=None, voice="Puck", **_):
     floor = re.sub(r"^ชั้น\s*", "", focus["floor"]).strip()
     n_mach, n_mall = len(rows), len(by_mall)
     go = "อยู่ที่" if floor.upper() in ("G", "1", "") else "ขึ้นไป"
+    photo = branch_photo(focus["machine_id"])
     lines = [f"ตู้การ์ด DivisionX มี {n_mach} ตู้ ใน {n_mall} ห้าง",
              f"วันนี้พาไปที่ {focus['mall']}",
              f"{go}ชั้น {floor}" if floor else "ตามมาเลย",
-             f"ตู้อยู่{focus['landmark']}" if focus["landmark"] else f"ตู้อยู่ที่{focus['mall']}",
-             "แวะมาได้เลย เช็กหน้าตู้ก่อนไปนะ"]
-    scene = {"type": "map", "span": 4, "kicker": "พิกัดตู้ DivisionX", "q1": "ตู้การ์ด", "q2": "อยู่ตรงไหน?",
-             "sub": f"{n_mach} ตู้ ใน {n_mall} ห้าง", "count": n_mach, "pins": ";".join(pins),
+             f"ตู้อยู่{focus['landmark']}" if focus["landmark"] else f"ตู้อยู่ที่{focus['mall']}"]
+    if photo:
+        lines.append("หน้าตาตู้สาขานี้ เป็นแบบนี้เลย")
+    lines.append("แวะมาได้เลย เช็กหน้าตู้ก่อนไปนะ")
+    scene = {"type": "map", "span": 5 if photo else 4, "kicker": "พิกัดตู้ DivisionX", "q1": "ตู้การ์ด",
+             "q2": "อยู่ตรงไหน?", "sub": f"{n_mach} ตู้ ใน {n_mall} ห้าง", "count": n_mach, "pins": ";".join(pins),
              "offmap": " · ".join(off), "fx": fxy[0], "fy": fxy[1], "mall": focus["mall"], "floor": floor,
-             "landmark": focus["landmark"]}
+             "landmark": focus["landmark"], "photo": photo or "", "plabel": (f"{focus['mall']} · ชั้น {floor}" if len(by_mall[focus["mall"]]) > 1 and floor
+                        else f"ตู้สาขา{focus['mall']}")
+             if photo else ""}
     return {"project": f"map-{focus['machine_id']}", "engine": "hyperframes", "voice": voice,
             "voice_style": "อ่านแบบไกด์พาเที่ยว สดใส เป็นกันเอง จังหวะเร็ว เน้นชื่อห้างกับเลขชั้น",
-            "script": "\n".join(lines), "scenes": [scene, dict(CTA)]}
+            "script": "\n".join(lines), "scenes": [scene, cta_for(focus["machine_id"])]}
 
 
 FORMATS = {"rank": rank_plan, "versus": versus_plan, "quiz": quiz_plan, "map": map_plan}

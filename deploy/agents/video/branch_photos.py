@@ -1,0 +1,78 @@
+"""เตรียมรูปตู้รายสาขาสำหรับคลิป — ครอปให้เห็นตัวตู้ + ปรับแสงเล็กน้อย + ย่อไฟล์
+
+ทำไมมีไฟล์นี้ (16 ต.ค. 2026):
+    ตู้แต่ละสาขาหน้าตาไม่เหมือนกัน (คนละยี่ห้อ/ขนาด/จอ/ลาย) — ใช้รูปตู้ทั่วไปรูปเดียวในคลิปของทุกสาขา = ชวนเข้าใจผิด
+    เจ้าของส่งรูปมาที่ image/รูปตู้แต่ละสาขา/ (โฟลเดอร์ image/ ไม่ขึ้น git) แล้วบอกว่า "บางมุมยังไม่ค่อยสวย"
+    → ครอปให้ตู้เต็มกรอบ (ตัดพื้น/เพดาน/คนเดินผ่าน) · ปรับคอนทราสต์/สีนิดเดียว — ไม่แต่งของในตู้ ไม่ลบอะไรออกจากตัวตู้
+    ในคลิปวางเป็น "การ์ดรูป" ขอบเรืองแสง บนพื้นหลังเบลอจากรูปเดียวกัน (fmt-map) มุมรก ๆ รอบตู้จึงไม่เด่น
+
+ผลลัพธ์: hyperframes/templates/dvx-promo/assets/branches/<machine_id>.jpg (สัดส่วน ~3:4 สูง 1440) + branches.json (คุณภาพ/หมายเหตุ)
+    quality "weak" = ใช้ได้แต่ควรถ่ายใหม่ — hf_formats ยังใช้ได้ (ดีกว่ารูปตู้ผิดสาขา) แต่รายงานให้เจ้าของรู้
+
+รัน (จาก deploy/):  ../.venv-image/Scripts/python.exe -m agents.video.branch_photos
+"""
+import json
+import pathlib
+import sys
+
+from . import config
+
+SRC = config.REPO / "image" / "รูปตู้แต่ละสาขา"
+OUT = config.REPO / "hyperframes" / "templates" / "dvx-promo" / "assets" / "branches"
+
+# ชื่อไฟล์ที่เจ้าของตั้ง → machine_id · crop = (ซ้าย, บน, ขวา, ล่าง) เป็น % ของรูป (กำหนดจากการดูรูปทีละรูปบนกริด 10%)
+PHOTOS = {
+    "chukes03": ("สาขาเซนทรัลพระราม9.jpg", (0, 0, 100, 96), "good", ""),
+    "chukes02": ("สาขาเซนทรัลพระราม2_.png", (0, 6, 100, 92), "good", "รูปต้นฉบับเล็ก (499px) — คมน้อยกว่าสาขาอื่น"),
+    "wwv06": ("สาขาเซนทรัลพระราม2 ชั้นG.jpg", (3, 24, 85, 84), "good", "ครอปคนบนบันไดเลื่อนออก"),
+    "wwv01": ("สาขาเซนทรัลรามอินทรา.jpg", (0, 24, 96, 92), "good", ""),
+    "chukes04": ("สาขาเซนทรัลชลบุรี.png", (2, 4, 98, 88), "good", "รูปต้นฉบับเล็ก (463px)"),
+    "wwv07": ("สาขาเซนทรัลเวสต์วิล_.png", (2, 14, 98, 94), "good", "รูปต้นฉบับเล็ก (504px)"),
+    "chukes01": ("สาขาเดอะมอลล์บางแค.jpg", (4, 25, 95, 93), "good", ""),
+    "wwv05": ("สาขาซีคอนบางแค.jpg", (5, 27, 92, 88), "good", ""),
+    "pf01": ("สาขาไอคอนสยาม.jpg", (5, 26, 82, 82), "ok", "ตู้เล็กในเฟรม — ครอปเข้าแล้ว ภาพนุ่มกว่าสาขาอื่น"),
+    "wwv03": ("สาขาเซนทรัลศาลายา.png", (18, 16, 100, 92), "weak", "กระจกสะท้อนแสงจนดูเหมือนตู้ว่าง — ควรถ่ายใหม่หน้าตรง"),
+    "wwv04": ("สาขาเซนทรัลเวสต์เกส.png", (0, 5, 100, 95), "weak", "ถ่ายชิดและเอียงมาก กระจกสะท้อนแสงจนเห็นของน้อย — ควรถ่ายใหม่"),
+    # wwv08 เดอะมอลล์บางกะปิ — ยังไม่มีรูป
+}
+H_OUT = 1440
+
+
+def prep(mid, name, crop, quality=86):
+    from PIL import Image, ImageEnhance, ImageFilter, ImageOps
+    im = ImageOps.exif_transpose(Image.open(SRC / name)).convert("RGB")
+    w, h = im.size
+    l, t, r, b = crop
+    im = im.crop((round(w * l / 100), round(h * t / 100), round(w * r / 100), round(h * b / 100)))
+    scale = H_OUT / im.height
+    im = im.resize((round(im.width * scale), H_OUT), Image.LANCZOS)
+    if scale > 1.4:                                    # ต้นฉบับเล็ก ขยายแล้วนุ่ม → เพิ่มความคมเบา ๆ
+        im = im.filter(ImageFilter.UnsharpMask(radius=2.2, percent=70, threshold=2))
+    im = ImageEnhance.Contrast(im).enhance(1.07)
+    im = ImageEnhance.Color(im).enhance(1.08)
+    OUT.mkdir(parents=True, exist_ok=True)
+    dst = OUT / f"{mid}.jpg"
+    im.save(dst, quality=quality, optimize=True, progressive=True)
+    return dst, im.size
+
+
+def main():
+    for s in (sys.stdout, sys.stderr):
+        try:
+            s.reconfigure(encoding="utf-8")
+        except Exception:
+            pass
+    meta = {}
+    for mid, (name, crop, quality, note) in PHOTOS.items():
+        if not (SRC / name).exists():
+            print(f"⚠️ {mid}: ไม่พบ {name}")
+            continue
+        dst, size = prep(mid, name, crop)
+        meta[mid] = {"src": name, "crop": list(crop), "quality": quality, "note": note, "size": list(size)}
+        print(f"{mid:9s} {quality:5s} {size[0]}x{size[1]} {dst.stat().st_size // 1024} KB · {name}")
+    (OUT / "branches.json").write_text(json.dumps(meta, ensure_ascii=False, indent=2), encoding="utf-8")
+    print(f"→ {OUT}")
+
+
+if __name__ == "__main__":
+    main()

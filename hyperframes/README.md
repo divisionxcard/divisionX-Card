@@ -61,6 +61,10 @@ cd deploy
 ../.venv-image/Scripts/python.exe -m agents.video.hf_formats map --machine pf01 --render
 ```
 
+**รูปตู้รายสาขา** (`assets/branches/<machine_id>.jpg`): ตู้มี 3 แบรนด์ (VMS · WorldWide · Vendos) หน้าตาไม่เหมือนกัน — ใช้รูปของสาขานั้นเท่านั้น
+ต้นฉบับจากเจ้าของอยู่ `image/รูปตู้แต่ละสาขา/` (ไม่ขึ้น git) → `../.venv-image/Scripts/python.exe -m agents.video.branch_photos` ครอป/ปรับแสง
+(กรอบครอปต่อรูปอยู่ใน `PHOTOS` ของไฟล์นั้น · ได้รูปใหม่ให้แก้ชื่อไฟล์/กรอบแล้วรันซ้ำ) · คลิปพิกัดตู้โชว์เป็นการ์ดรูป · คลิปเฉพาะสาขาใช้เป็นฉากปิด
+
 ซับห้ามเฉลยก่อนภาพ: ท่อนซับที่มีคำตอบในบรรทัดเฉลยจะรอขึ้นพร้อมภาพเฉลย (`_reveals` ใน hf_render) ·
 จังหวะเฉลยขยับไปพยางค์แรกจริงจากช่วงเงียบในไฟล์เสียง (`speech_onsets`) เพราะ whisper ให้เวลาคำสั้น ๆ คลาด
 

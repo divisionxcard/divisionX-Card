@@ -427,11 +427,17 @@ def _quiz_vals(sc, lines, chunks, words, lo, hi, proj, onsets=None):
 
 
 def _map_vals(sc, lines, chunks, words, lo, hi, onsets=None):
-    """พิกัดตู้: บรรทัด 0 = หมุดทุกสาขา · 1 = "วันนี้พาไปที่ <ห้าง>" · 2 = ชั้น · 3 = จุดสังเกต"""
-    if len(lines) != 4:
-        raise ValueError(f"ฉาก map ต้องมี 4 บรรทัด (ได้ {len(lines)})")
+    """พิกัดตู้: บรรทัด 0 = หมุดทุกสาขา · 1 = "วันนี้พาไปที่ <ห้าง>" · 2 = ชั้น · 3 = จุดสังเกต
+    · 4 (ถ้ามีรูปตู้สาขานี้) = "หน้าตาตู้…" → การ์ดรูปตู้จริง"""
+    photo = sc.get("photo") or ""
+    if len(lines) != (5 if photo else 4):
+        raise ValueError(f"ฉาก map ต้องมี {5 if photo else 4} บรรทัด (ได้ {len(lines)})")
     mall, landmark = sc.get("mall") or "", sc.get("landmark") or ""
-    vals = {k: sc.get(k) or "" for k in ("kicker", "q1", "q2", "sub", "pins", "offmap", "floor")}
+    vals = {k: sc.get(k) or "" for k in ("kicker", "q1", "q2", "sub", "pins", "offmap", "floor", "plabel")}
+    vals["photo"] = photo
+    vals["ph"] = round(snap(lines[4][0], onsets, 0.25) - lo, 3) if photo else 999
+    # ป้ายบนการ์ดรูปตู้: การ์ดกว้าง 554 − ขอบ/ช่องว่างในป้าย ≈ 460 (ชื่อยาวอย่าง "…พระราม 2 · ชั้น G" ล้นขอบที่ 38px)
+    vals["pfs"] = fit_px(vals["plabel"], 800, 460, 38, 22)
     vals.update({"mall": mall, "landmark": landmark, "count": int(sc.get("count") or 0),
                  "fx": float(sc["fx"]), "fy": float(sc["fy"]),
                  "mfs": fit_px(mall, 900, 900, 104, 56), "lfs": fit_px(landmark, 900, 780, 50, 30)})

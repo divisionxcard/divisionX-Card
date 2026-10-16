@@ -33,7 +33,11 @@
     {"id":"nm","type":"number","label":"พูดชื่อห้าง (วิ)","default":3.8,"min":0,"max":60,"step":0.01},
     {"id":"fl","type":"number","label":"พูดชั้น (วิ)","default":5.6,"min":0,"max":60,"step":0.01},
     {"id":"lm","type":"number","label":"พูดจุดสังเกต (วิ)","default":7.2,"min":0,"max":60,"step":0.01},
-    {"id":"dur","type":"number","label":"ความยาวฉาก (วิ)","default":9.5,"min":1,"max":60,"step":0.01}
+    {"id":"photo","type":"string","label":"รูปตู้สาขานี้ (ว่าง = ไม่แสดง)","default":"assets/branches/pf01.jpg"},
+    {"id":"plabel","type":"string","label":"ป้ายบนรูปตู้","default":"ตู้สาขาไอคอนสยาม"},
+    {"id":"pfs","type":"number","label":"ขนาดป้ายบนรูปตู้","default":38,"min":22,"max":40,"step":1},
+    {"id":"ph","type":"number","label":"เวลาโชว์รูปตู้ (วิ)","default":8.6,"min":0,"max":60,"step":0.01},
+    {"id":"dur","type":"number","label":"ความยาวฉาก (วิ)","default":11,"min":1,"max":60,"step":0.01}
   ]'
 >
   <head>
@@ -46,7 +50,7 @@
         @font-face { font-family: "Kanit"; src: url("assets/fonts/Kanit-ExtraBold.ttf"); font-weight: 800; }
         @font-face { font-family: "Kanit"; src: url("assets/fonts/Kanit-SemiBold.ttf"); font-weight: 600; }
         #root { position: absolute; inset: 0; overflow: hidden; font-family: "Kanit", sans-serif; color: #ffffff; }
-        #map-head { position: absolute; left: 0; right: 0; top: 186px; z-index: 6; }
+        #map-head { position: absolute; left: 0; right: 0; top: 186px; z-index: 8; }
         #map-kicker-row { display: flex; justify-content: center; }
         #map-kicker {
           display: block; padding: 8px 34px 12px; border-radius: 999px; background: #1b8dff;
@@ -120,7 +124,23 @@
         }
         #map-lm-ico { flex: 0 0 44px; width: 44px; height: 56px; }
         #map-lm-t { display: block; font-weight: 900; line-height: 1.15; }
-        #map-sub:empty, #map-kicker:empty, #map-off-pill:empty, #map-lm-t:empty, #map-mall-t:empty { display: none; }
+        /* ── การ์ดรูปตู้จริงของสาขานี้ (ตู้ 3 แบรนด์หน้าตาไม่เหมือนกัน — ต้องเป็นรูปของสาขานั้นเท่านั้น)
+           พื้นหลังเบลอจากรูปเดียวกัน → มุมรก ๆ รอบตู้ไม่เด่น · การ์ดสัดส่วน 0.77 ตรงกับรูปที่ branch_photos.py ครอปไว้ */
+        #map-pbg { position: absolute; inset: 0; z-index: 5; overflow: hidden; opacity: 0; will-change: opacity; }
+        #map-pbg img { position: absolute; left: -80px; top: -80px; width: 1240px; height: 2080px; object-fit: cover; filter: blur(30px) brightness(0.42) saturate(1.25); }
+        #map-pcard {
+          position: absolute; left: 263px; top: 596px; width: 554px; height: 720px; z-index: 6; border-radius: 34px; overflow: hidden;
+          border: 6px solid #59d2ff; box-shadow: 0 0 60px rgba(27, 141, 255, 0.85), 0 30px 70px rgba(0, 0, 0, 0.6); opacity: 0;
+          will-change: transform, opacity;
+        }
+        #map-pimg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transform-origin: 50% 45%; will-change: transform; }
+        #map-pgloss { position: absolute; top: -20%; left: 0; width: 30%; height: 140%; mix-blend-mode: screen; background: linear-gradient(90deg, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0)); will-change: transform; }
+        #map-plabel { position: absolute; left: 0; right: 0; bottom: 22px; display: flex; justify-content: center; opacity: 0; will-change: transform, opacity; }
+        #map-plabel-pill {
+          display: block; padding: 6px 30px 10px; border-radius: 999px; background: rgba(3, 16, 42, 0.9); border: 3px solid #ffc24a;
+          font-weight: 800; line-height: 1.2; color: #ffffff; white-space: nowrap; box-shadow: 0 0 26px rgba(255, 194, 74, 0.6);
+        }
+        #map-sub:empty, #map-kicker:empty, #map-off-pill:empty, #map-lm-t:empty, #map-mall-t:empty, #map-plabel-pill:empty { display: none; }
       </style>
 
       <div id="root" data-composition-id="fmt-map" data-width="1080" data-height="1920">
@@ -153,6 +173,12 @@
         <div id="map-lm"><div id="map-lm-pill">
           <svg id="map-lm-ico" viewBox="0 0 72 92" aria-hidden="true" data-layout-ignore><path d="M36 90 C36 90 6 54 6 34 A30 30 0 0 1 66 34 C66 54 36 90 36 90 Z" fill="#03102a" /><circle cx="36" cy="34" r="12" fill="#ffc24a" /></svg>
           <span id="map-lm-t" data-var-text="landmark" style="font-size: calc(var(--lfs) * 1px)">หน้าร้าน Karun Thai Tea</span></div></div>
+        <div id="map-pbg"><img data-var-src="photo" src="assets/branches/pf01.jpg" alt="" /></div>
+        <div id="map-pcard">
+          <img id="map-pimg" data-var-src="photo" src="assets/branches/pf01.jpg" alt="" />
+          <div id="map-pgloss" aria-hidden="true" data-layout-ignore></div>
+          <div id="map-plabel"><span id="map-plabel-pill" data-var-text="plabel" style="font-size: calc(var(--pfs) * 1px)">ตู้สาขาไอคอนสยาม</span></div>
+        </div>
         <div id="map-head">
           <div id="map-kicker-row"><div id="map-kicker" data-var-text="kicker">พิกัดตู้ DivisionX</div></div>
           <div class="map-q" id="map-q1" data-var-text="q1">ตู้การ์ด</div>
@@ -255,6 +281,19 @@
           // ── 4. จุดสังเกต
           tl.fromTo("#map-lm", { y: 60, opacity: 0, scale: 0.8 }, { y: 0, opacity: 1, scale: 1, duration: 0.42, ease: "back.out(2)" }, LM);
           tl.fromTo("#map-lm-ico", { y: -30 }, { y: 0, duration: 0.5, ease: "bounce.out" }, LM + 0.1);
+
+          // ── 5. การ์ดรูปตู้จริงของสาขา (เฉพาะเมื่อมีรูป · ph = เริ่มพูดบรรทัด "หน้าตาตู้…")
+          const PH = num(v.ph, 999);
+          if (String(v.photo || "").trim() && PH < DUR - 0.5) {
+            // แผนที่/ชื่อห้าง/จอลิฟต์/จุดสังเกตจางออกก่อน (ไม่ปล่อยค้างใต้พื้นหลังเบลอ — ตัวตรวจนับเป็นข้อความถูกบัง)
+            tl.to(["#map-panel", "#map-mall", "#map-lift", "#map-lm"], { opacity: 0, duration: 0.3, ease: "power2.in" }, PH - 0.2);
+            tl.fromTo("#map-pbg", { opacity: 0 }, { opacity: 1, duration: 0.4, ease: "power2.out" }, PH - 0.15);
+            tl.fromTo("#map-pcard", { y: 260, rotationX: 32, scale: 0.86, opacity: 0, transformPerspective: 1400 },
+              { y: 0, rotationX: 0, scale: 1, opacity: 1, duration: 0.55, ease: "power3.out", transformPerspective: 1400 }, PH - 0.1);
+            tl.fromTo("#map-pimg", { scale: 1.0 }, { scale: 1.1, duration: Math.max(0.5, DUR - PH), ease: "sine.inOut" }, PH - 0.1);
+            tl.fromTo("#map-pgloss", { xPercent: -130, rotation: 16 }, { xPercent: 380, rotation: 16, duration: 0.8, ease: "power2.inOut" }, PH + 0.55);
+            tl.fromTo("#map-plabel", { scale: 0.3, opacity: 0, y: 20 }, { scale: 1, opacity: 1, y: 0, duration: 0.4, ease: "back.out(2.2)" }, PH + 0.4);
+          }
 
           window.__timelines["fmt-map"] = tl;
         })();
