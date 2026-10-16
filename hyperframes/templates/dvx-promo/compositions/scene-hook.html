@@ -1,0 +1,267 @@
+<!doctype html>
+<!--
+  scene-hook — ฉากเปิด: ซองพุ่งชนจอ + คลื่นกระแทก + ประกายไฟ + ชื่อชุดกระแทก + ป้ายเล็ก
+  ท่า: motion-blur-streak (ซองพุ่ง) · particle-burst (ประกายตอนชน) · kinetic-beat-slam (ชื่อชุด)
+       · spring-pop-entrance (ป้าย) · gloss sweep (แสงวาบบนซอง เฉพาะรูปซอง ไม่เลยขอบ)
+  เวลาในฉาก (วินาทีภายในฉาก): ชน 0.55 · ชื่อชุด 0.72 · ป้าย 1.05 · แสงวาบ 1.35 · หลังจากนั้นซองลอยเบา ๆ
+  ฉากนี้โปร่ง — พื้นหลังกรมท่า/สายฟ้าอยู่ที่ index.html
+-->
+<html
+  lang="th"
+  data-composition-variables='[
+    {"id":"img","type":"string","label":"รูปซอง (พื้นโปร่ง)","default":"assets/pack.webp"},
+    {"id":"gl","type":"number","label":"ขอบซ้ายของซองในรูป (%)","default":27.4,"min":0,"max":100,"step":0.1},
+    {"id":"gt","type":"number","label":"ขอบบนของซองในรูป (%)","default":5,"min":0,"max":100,"step":0.1},
+    {"id":"gw","type":"number","label":"ความกว้างซองในรูป (%)","default":45.1,"min":0,"max":100,"step":0.1},
+    {"id":"gh","type":"number","label":"ความสูงซองในรูป (%)","default":90,"min":0,"max":100,"step":0.1},
+    {"id":"title","type":"string","label":"ชื่อชุด","default":"OP-17"},
+    {"id":"kicker","type":"string","label":"ป้ายเล็กใต้ซอง","default":"มาถึงตู้แล้ว"}
+  ]'
+>
+  <head>
+    <meta charset="UTF-8" />
+  </head>
+  <body>
+    <template>
+      <style>
+        @font-face { font-family: "Kanit"; src: url("assets/fonts/Kanit-Black.ttf"); font-weight: 900; }
+        @font-face { font-family: "Kanit"; src: url("assets/fonts/Kanit-ExtraBold.ttf"); font-weight: 800; }
+        #root {
+          position: absolute;
+          inset: 0;
+          overflow: hidden;
+          font-family: "Kanit", sans-serif;
+          color: #f2f8ff;
+        }
+        #hook-title {
+          position: absolute;
+          left: 0;
+          right: 0;
+          top: 150px;
+          text-align: center;
+          font-weight: 900;
+          font-size: 250px;
+          line-height: 1;
+          letter-spacing: -0.02em;
+          background: linear-gradient(180deg, #ffffff 0%, #dbe8f5 45%, #8fa8c2 62%, #f4f9ff 100%);
+          -webkit-background-clip: text;
+          background-clip: text;
+          color: transparent;
+          filter: drop-shadow(0 0 28px rgba(27, 141, 255, 0.75));
+          will-change: transform;
+        }
+        #hook-stage {
+          position: absolute;
+          left: 110px;
+          top: 360px;
+          width: 860px;
+          height: 860px;
+        }
+        #hook-pack-wrap {
+          position: absolute;
+          inset: 0;
+          will-change: transform;
+        }
+        #hook-pack {
+          position: absolute;
+          inset: 0;
+          width: 860px;
+          height: 860px;
+          object-fit: contain;
+          filter: drop-shadow(0 30px 60px rgba(0, 0, 0, 0.55));
+        }
+        #hook-gloss {
+          position: absolute;
+          left: calc(var(--gl) * 1%);
+          top: calc(var(--gt) * 1%);
+          width: calc(var(--gw) * 1%);
+          height: calc(var(--gh) * 1%);
+          overflow: hidden;
+          border-radius: 22px;
+          mix-blend-mode: screen;
+          pointer-events: none;
+        }
+        #hook-gloss-band {
+          position: absolute;
+          top: -20%;
+          left: 0;
+          width: 34%;
+          height: 140%;
+          background: linear-gradient(90deg, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.7) 50%, rgba(255, 255, 255, 0) 100%);
+          will-change: transform;
+        }
+        #hook-ring {
+          position: absolute;
+          left: 430px;
+          top: 430px;
+          width: 480px;
+          height: 480px;
+          margin: -240px 0 0 -240px;
+          border-radius: 50%;
+          border: 10px solid #59d2ff;
+          box-shadow: 0 0 60px #1b8dff, inset 0 0 40px #1b8dff;
+          opacity: 0;
+        }
+        #hook-sparks {
+          position: absolute;
+          left: 430px;
+          top: 450px;
+          width: 0;
+          height: 0;
+        }
+        .hook-spark {
+          position: absolute;
+          left: 0;
+          top: 0;
+          border-radius: 50%;
+          opacity: 0;
+          will-change: transform, opacity;
+        }
+        #hook-kicker {
+          position: absolute;
+          left: 0;
+          right: 0;
+          top: 1150px;
+          display: flex;
+          justify-content: center;
+        }
+        #hook-kicker-pill {
+          display: block;
+          padding: 14px 54px 20px;
+          border-radius: 999px;
+          border: 4px solid #59d2ff;
+          background: rgba(6, 27, 58, 0.88);
+          box-shadow: 0 0 36px rgba(27, 141, 255, 0.7);
+          font-weight: 800;
+          font-size: 76px;
+          line-height: 1.15;
+          color: #ffffff;
+          white-space: nowrap;
+          will-change: transform;
+        }
+        /* ข้อความว่าง = ไม่แสดงกรอบเปล่า (แผนไม่ได้ให้ข้อความมา ก็ไม่แต่งเอง) */
+        #hook-title:empty,
+        #hook-kicker-pill:empty { display: none; }
+      </style>
+
+      <div data-hf-id="hf-9s5r" id="root" data-composition-id="scene-hook" data-width="1080" data-height="1920">
+        <div data-hf-id="hf-69g4" id="hook-title" data-var-text="title" data-layout-allow-occlusion>OP-17</div>
+        <div data-hf-id="hf-be7t" id="hook-stage">
+          <div data-hf-id="hf-tra3" id="hook-ring"></div>
+          <div data-hf-id="hf-uiif" id="hook-sparks"></div>
+          <div data-hf-id="hf-g97r" id="hook-pack-wrap">
+            <img data-hf-id="hf-ws3d" id="hook-pack" data-var-src="img" src="assets/pack.webp" alt="" />
+            <div data-hf-id="hf-bhbv" id="hook-gloss" aria-hidden="true" data-layout-ignore><div data-hf-id="hf-39nz" id="hook-gloss-band"></div></div>
+          </div>
+        </div>
+        <div data-hf-id="hf-yj2q" id="hook-kicker"><div data-hf-id="hf-vggd" id="hook-kicker-pill" data-var-text="kicker">มาถึงตู้แล้ว</div></div>
+      </div>
+
+      <script>
+        (function () {
+          const tl = gsap.timeline({ paused: true });
+          const prand = (n) => {
+            const x = Math.sin(n * 127.1 + 311.7) * 43758.5453;
+            return x - Math.floor(x);
+          };
+
+          // ── ซองพุ่งชน (motion-blur-streak): ตกจากบนพร้อมเบลอ เอียง แล้วล็อกเอียงเล็กน้อย
+          const HIT = 0.42;
+          tl.fromTo(
+            "#hook-pack-wrap",
+            { y: -1500, rotation: -24, scale: 1.25, filter: "blur(22px)" },
+            { y: 0, rotation: -5, scale: 1, filter: "blur(0px)", duration: HIT - 0.02, ease: "expo.in" },
+            0.02,
+          );
+          // เด้งรับแรงกระแทกครั้งเดียว (ไม่ใช่เด้งการ์ตูน)
+          tl.fromTo("#hook-stage", { scale: 1 }, { scale: 0.94, duration: 0.07, ease: "power2.out" }, HIT);
+          tl.to("#hook-stage", { scale: 1, duration: 0.45, ease: "power3.out" }, HIT + 0.07);
+
+          // ── คลื่นกระแทกตอนชน
+          tl.fromTo(
+            "#hook-ring",
+            { scale: 0.25, opacity: 0.95 },
+            { scale: 2.3, opacity: 0, duration: 0.7, ease: "power2.out", immediateRender: false },
+            HIT,
+          );
+
+          // ── ประกายไฟ (particle-burst · dot burst รอบซอง) — ตำแหน่งเป็นฟังก์ชันของเวลาล้วน
+          const field = document.getElementById("hook-sparks");
+          const palette = ["#59d2ff", "#1b8dff", "#ffffff", "#ffc24a"];
+          const N = 18;
+          const parts = [];
+          for (let i = 0; i < N; i++) {
+            const el = document.createElement("div");
+            el.className = "hook-spark";
+            const size = 9 + prand(i * 3 + 1) * 12;
+            el.style.width = size + "px";
+            el.style.height = size + "px";
+            el.style.background = palette[i % palette.length];
+            el.style.boxShadow = "0 0 18px " + palette[i % palette.length];
+            field.appendChild(el);
+            const angle = prand(i * 5 + 2) * Math.PI * 2;
+            const speed = 520 + prand(i * 7 + 3) * 620;
+            parts.push({ el, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed });
+          }
+          const FLIGHT = 0.75;
+          const drive = { T: 0 };
+          tl.fromTo(
+            drive,
+            { T: 0 },
+            {
+              T: 1,
+              duration: FLIGHT,
+              ease: "none",
+              onUpdate: () => {
+                const t = drive.T * FLIGHT;
+                const fade = Math.min(1, (1 - drive.T) / 0.35);
+                parts.forEach((p) => {
+                  const x = p.vx * t;
+                  const y = p.vy * t + 0.5 * 500 * t * t;
+                  p.el.style.transform = "translate(" + x + "px," + y + "px)";
+                  p.el.style.opacity = String(drive.T === 0 ? 0 : fade);
+                });
+              },
+            },
+            HIT,
+          );
+
+          // ── ชื่อชุดกระแทก (kinetic-beat-slam: scale + blur slam)
+          tl.fromTo(
+            "#hook-title",
+            { scale: 1.7, opacity: 0, filter: "blur(18px) drop-shadow(0 0 28px rgba(27,141,255,0.75))" },
+            { scale: 1, opacity: 1, filter: "blur(0px) drop-shadow(0 0 28px rgba(27,141,255,0.75))", duration: 0.42, ease: "power4.out" },
+            HIT + 0.17,
+          );
+
+          // ── ป้ายเล็ก (spring-pop-entrance · firm settle)
+          tl.fromTo(
+            "#hook-kicker-pill",
+            { scale: 0, opacity: 0, y: 24 },
+            { scale: 1, opacity: 1, y: 0, duration: 0.45, ease: "expo.out" },
+            HIT + 0.5,
+          );
+
+          // ── แสงวาบวิ่งผ่านซองครั้งเดียว
+          tl.fromTo("#hook-gloss-band", { xPercent: -120, rotation: 18 }, { xPercent: 320, rotation: 18, duration: 0.75, ease: "power2.inOut" }, HIT + 0.8);
+
+          // ── หลังจากนั้นซองลอย/เอียงเบา ๆ (finite — ไม่เกินความยาวฉากสูงสุด ~8 วิ)
+          tl.fromTo(
+            "#hook-pack-wrap",
+            { y: 0 },
+            { y: -22, duration: 1.1, ease: "sine.inOut", yoyo: true, repeat: 5, immediateRender: false },
+            HIT + 0.6,
+          );
+          tl.fromTo(
+            "#hook-title",
+            { y: 0 },
+            { y: 10, duration: 1.4, ease: "sine.inOut", yoyo: true, repeat: 4, immediateRender: false },
+            HIT + 0.7,
+          );
+
+          window.__timelines["scene-hook"] = tl;
+        })();
+      </script>
+    </template>
+  </body>
+</html>

@@ -1,0 +1,158 @@
+<!doctype html>
+<!--
+  scene-machine — รูปตู้จริงเต็มจอ กล้องดันเข้าหากระจก (Ken Burns) + ขั้นตอน 3 ขั้นโผล่ตรงคำที่พูด
+  ท่า: Ken Burns push (hyperframes-keyframes) · waterfall-entry (ชิปขั้นตอน) · svg-path-draw (เส้นเชื่อม)
+       · spring-pop (วงเลข) — ชิปแต่ละอันเข้าตรงเวลาคำ (at1..at3 จาก whisper)
+-->
+<html
+  lang="th"
+  data-composition-variables='[
+    {"id":"img","type":"string","label":"รูปตู้","default":"assets/machine-hero.jpg"},
+    {"id":"step1","type":"string","label":"ขั้นที่ 1","default":"เลือกช่อง"},
+    {"id":"step2","type":"string","label":"ขั้นที่ 2","default":"กดซื้อ"},
+    {"id":"step3","type":"string","label":"ขั้นที่ 3","default":"เปิดดวง"},
+    {"id":"at1","type":"number","label":"เวลาขั้นที่ 1 (วิ)","default":1.1,"min":0,"max":10,"step":0.01},
+    {"id":"at2","type":"number","label":"เวลาขั้นที่ 2 (วิ)","default":1.7,"min":0,"max":10,"step":0.01},
+    {"id":"at3","type":"number","label":"เวลาขั้นที่ 3 (วิ)","default":2.5,"min":0,"max":10,"step":0.01}
+  ]'
+>
+  <head>
+    <meta charset="UTF-8" />
+  </head>
+  <body>
+    <template>
+      <style>
+        @font-face { font-family: "Kanit"; src: url("assets/fonts/Kanit-Black.ttf"); font-weight: 900; }
+        @font-face { font-family: "Kanit"; src: url("assets/fonts/Kanit-ExtraBold.ttf"); font-weight: 800; }
+        #root {
+          position: absolute;
+          inset: 0;
+          overflow: hidden;
+          font-family: "Kanit", sans-serif;
+          color: #ffffff;
+          background: #03102a;
+        }
+        #mach-cam {
+          position: absolute;
+          inset: 0;
+          transform-origin: 46% 34%;
+          will-change: transform;
+        }
+        #mach-img {
+          position: absolute;
+          inset: 0;
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+        }
+        #mach-shade {
+          position: absolute;
+          inset: 0;
+          background: radial-gradient(ellipse 90% 70% at 62% 36%, rgba(3, 16, 42, 0) 0%, rgba(3, 16, 42, 0.35) 55%, rgba(3, 16, 42, 0.86) 100%);
+        }
+        #mach-steps {
+          position: absolute;
+          left: 64px;
+          top: 520px;
+          width: 620px;
+          display: flex;
+          flex-direction: column;
+          gap: 46px;
+        }
+        .mach-step {
+          display: flex;
+          align-items: center;
+          gap: 26px;
+          padding: 18px 40px 24px 22px;
+          border-radius: 26px;
+          border: 4px solid #59d2ff;
+          background: rgba(3, 16, 42, 0.86);
+          box-shadow: 0 0 40px rgba(27, 141, 255, 0.55);
+          opacity: 0;
+          will-change: transform, opacity;
+        }
+        .mach-num {
+          display: block;
+          flex: 0 0 96px;
+          width: 96px;
+          height: 96px;
+          border-radius: 50%;
+          background: #1b8dff;
+          box-shadow: 0 0 30px #59d2ff;
+          font-weight: 900;
+          font-size: 64px;
+          line-height: 96px;
+          text-align: center;
+          color: #ffffff;
+          will-change: transform;
+        }
+        .mach-label {
+          font-weight: 800;
+          font-size: 74px;
+          line-height: 1.2;
+          white-space: nowrap;
+        }
+        #mach-line {
+          position: absolute;
+          left: 64px;
+          top: 520px;
+          width: 140px;
+          height: 600px;
+          overflow: visible;
+        }
+      </style>
+
+      <div data-hf-id="hf-sc9p" id="root" data-composition-id="scene-machine" data-width="1080" data-height="1920">
+        <div data-hf-id="hf-cdvk" id="mach-cam">
+          <img data-hf-id="hf-7odn" id="mach-img" data-var-src="img" src="assets/machine-hero.jpg" alt="" />
+        </div>
+        <div data-hf-id="hf-zlki" id="mach-shade"></div>
+        <svg data-hf-id="hf-swry" id="mach-line" viewBox="0 0 140 600">
+          <path data-hf-id="hf-hpub" id="mach-path" d="M 70 70 L 70 530" stroke="#59d2ff" stroke-width="8" stroke-linecap="round" fill="none" />
+        </svg>
+        <div data-hf-id="hf-wd9k" id="mach-steps">
+          <div data-hf-id="hf-s4jo" class="mach-step" id="mach-s1"><span data-hf-id="hf-1rgc" class="mach-num">1</span><span data-hf-id="hf-9235" class="mach-label" data-var-text="step1">เลือกช่อง</span></div>
+          <div data-hf-id="hf-0sfj" class="mach-step" id="mach-s2"><span data-hf-id="hf-0kj9" class="mach-num">2</span><span data-hf-id="hf-kg69" class="mach-label" data-var-text="step2">กดซื้อ</span></div>
+          <div data-hf-id="hf-wubi" class="mach-step" id="mach-s3"><span data-hf-id="hf-0yua" class="mach-num">3</span><span data-hf-id="hf-ms7i" class="mach-label" data-var-text="step3">เปิดดวง</span></div>
+        </div>
+      </div>
+
+      <script>
+        (function () {
+          const v = (window.__hyperframes && window.__hyperframes.getVariables && window.__hyperframes.getVariables()) || {};
+          const num = (x, d) => (x != null && isFinite(Number(x)) ? Number(x) : d);
+          const A1 = Math.max(0.2, num(v.at1, 1.1));
+          const A2 = Math.max(A1 + 0.3, num(v.at2, 1.7));
+          const A3 = Math.max(A2 + 0.3, num(v.at3, 2.5));
+          const tl = gsap.timeline({ paused: true });
+
+          // ── Ken Burns: ดันเข้าหากระจกตู้พร้อมแพนเล็กน้อย (ไม่ใช่ภาพนิ่ง)
+          tl.fromTo("#mach-cam", { scale: 1.06, x: 30, y: 10 }, { scale: 1.32, x: -40, y: 70, duration: 6.5, ease: "sine.inOut" }, 0);
+
+          // ── เส้นเชื่อมลากลงตามขั้นตอน (svg-path-draw)
+          const path = document.getElementById("mach-path");
+          const L = 460;
+          path.style.strokeDasharray = L;
+          tl.fromTo(path, { strokeDashoffset: L }, { strokeDashoffset: L * 0.5, duration: A2 - A1, ease: "power2.inOut" }, A1 + 0.1);
+          tl.to(path, { strokeDashoffset: 0, duration: A3 - A2, ease: "power2.inOut" }, A2 + 0.1);
+
+          // ── ชิปแต่ละขั้น: โผล่ทันที (binary opacity) + พุ่งขึ้นจากล่าง (waterfall-entry) ตรงคำที่พูด
+          const steps = [
+            ["#mach-s1", A1, 80],
+            ["#mach-s2", A2, 60],
+            ["#mach-s3", A3, 70],
+          ];
+          steps.forEach(([sel, at, dy], i) => {
+            tl.set(sel, { opacity: 1, y: dy, x: -40 }, at - 0.08);
+            tl.to(sel, { y: 0, x: 0, duration: 0.24, ease: "power4.out" }, at - 0.08);
+            tl.fromTo(sel + " .mach-num", { scale: 0.2 }, { scale: 1, duration: 0.35, ease: "expo.out" }, at - 0.04);
+            // ชิปที่เพิ่งพูดสว่างขึ้น ชิปก่อนหน้าหรี่ลงนิด
+            if (i > 0) tl.to(steps[i - 1][0], { opacity: 0.6, duration: 0.2, ease: "power1.out" }, at);
+          });
+
+          window.__timelines["scene-machine"] = tl;
+        })();
+      </script>
+    </template>
+  </body>
+</html>

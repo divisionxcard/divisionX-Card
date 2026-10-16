@@ -1,0 +1,159 @@
+<!doctype html>
+<!--
+  scene-cta — ปิดท้าย: รูปตู้อีกมุมดึงโฟกัสจากเบลอเป็นชัด + ถอยกล้อง · โลโก้ลงพร้อมวงแสง · ข้อความชวน · แท็กเพจ
+  ท่า: depth-of-field-blur (rack focus) · logo-sting (โลโก้ลง + วงแสงหนึ่งวง แล้วนิ่ง) · kinetic-beat-slam (ข้อความ)
+       · spring-pop-entrance (แท็ก) · เส้นใต้แสงวิ่ง
+-->
+<html
+  lang="th"
+  data-composition-variables='[
+    {"id":"img","type":"string","label":"รูปตู้ฉากปิด","default":"assets/machine-scene.jpg"},
+    {"id":"logo","type":"string","label":"โลโก้ (ขาว พื้นโปร่ง)","default":"assets/brand/logo-white.png"},
+    {"id":"title","type":"string","label":"ข้อความชวน","default":"เช็กหน้าตู้ก่อนไป"},
+    {"id":"tag","type":"string","label":"แท็กเพจ","default":"#DivisionXCard"}
+  ]'
+>
+  <head>
+    <meta charset="UTF-8" />
+  </head>
+  <body>
+    <template>
+      <style>
+        @font-face { font-family: "Kanit"; src: url("assets/fonts/Kanit-Black.ttf"); font-weight: 900; }
+        @font-face { font-family: "Kanit"; src: url("assets/fonts/Kanit-ExtraBold.ttf"); font-weight: 800; }
+        #root {
+          position: absolute;
+          inset: 0;
+          overflow: hidden;
+          font-family: "Kanit", sans-serif;
+          color: #ffffff;
+          background: #03102a;
+        }
+        #cta-cam {
+          position: absolute;
+          inset: 0;
+          will-change: transform, filter;
+        }
+        #cta-img {
+          position: absolute;
+          inset: 0;
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+        }
+        #cta-shade {
+          position: absolute;
+          inset: 0;
+          background: radial-gradient(ellipse 85% 60% at 50% 34%, rgba(3, 16, 42, 0.5) 0%, rgba(3, 16, 42, 0.62) 55%, rgba(3, 16, 42, 0.85) 100%);
+        }
+        #cta-ring {
+          position: absolute;
+          left: 540px;
+          top: 470px;
+          width: 420px;
+          height: 420px;
+          margin: -210px 0 0 -210px;
+          border-radius: 50%;
+          border: 8px solid #59d2ff;
+          box-shadow: 0 0 60px #1b8dff;
+          opacity: 0;
+        }
+        #cta-logo {
+          position: absolute;
+          left: 340px;
+          top: 300px;
+          width: 400px;
+          height: 341px;
+          object-fit: contain;
+          filter: drop-shadow(0 0 30px rgba(27, 141, 255, 0.85));
+          will-change: transform, opacity;
+        }
+        #cta-title {
+          position: absolute;
+          left: 60px;
+          right: 60px;
+          top: 720px;
+          text-align: center;
+          font-weight: 900;
+          font-size: 118px;
+          line-height: 1.15;
+          background: linear-gradient(180deg, #ffffff 0%, #dbe8f5 48%, #9fb6cc 64%, #ffffff 100%);
+          -webkit-background-clip: text;
+          background-clip: text;
+          color: transparent;
+          filter: drop-shadow(0 0 22px rgba(27, 141, 255, 0.8));
+          will-change: transform, opacity;
+        }
+        #cta-rule {
+          position: absolute;
+          left: 240px;
+          top: 895px;
+          width: 600px;
+          height: 8px;
+          border-radius: 4px;
+          background: #59d2ff;
+          box-shadow: 0 0 24px #1b8dff;
+          transform-origin: 0% 50%;
+        }
+        #cta-tag-row {
+          position: absolute;
+          left: 0;
+          right: 0;
+          top: 960px;
+          display: flex;
+          justify-content: center;
+        }
+        #cta-tag {
+          display: block;
+          padding: 10px 44px 16px;
+          border-radius: 999px;
+          background: #1b8dff;
+          box-shadow: 0 0 40px rgba(27, 141, 255, 0.85);
+          font-weight: 800;
+          font-size: 64px;
+          line-height: 1.15;
+          color: #ffffff;
+          white-space: nowrap;
+          will-change: transform;
+        }
+        #cta-tag:empty { display: none; }
+      </style>
+
+      <div data-hf-id="hf-z9hi" id="root" data-composition-id="scene-cta" data-width="1080" data-height="1920">
+        <div data-hf-id="hf-bzz7" id="cta-cam"><img data-hf-id="hf-p438" id="cta-img" data-var-src="img" src="assets/machine-scene.jpg" alt="" /></div>
+        <div data-hf-id="hf-6byx" id="cta-shade"></div>
+        <div data-hf-id="hf-b7dk" id="cta-ring"></div>
+        <img data-hf-id="hf-rf0p" id="cta-logo" data-var-src="logo" src="assets/brand/logo-white.png" alt="" />
+        <div data-hf-id="hf-m2ht" id="cta-title" data-var-text="title">เช็กหน้าตู้ก่อนไป</div>
+        <div data-hf-id="hf-834s" id="cta-rule"></div>
+        <div data-hf-id="hf-fggx" id="cta-tag-row"><div data-hf-id="hf-s99b" id="cta-tag" data-var-text="tag">#DivisionXCard</div></div>
+      </div>
+
+      <script>
+        (function () {
+          const tl = gsap.timeline({ paused: true });
+
+          // ── ถอยกล้อง + ดึงโฟกัส (rack focus จากเบลอเป็นชัด)
+          tl.fromTo("#cta-cam", { scale: 1.3, filter: "blur(14px)" }, { scale: 1.06, filter: "blur(0px)", duration: 1.4, ease: "power3.out" }, 0);
+          tl.to("#cta-cam", { scale: 1.0, duration: 5, ease: "sine.out" }, 1.4);
+
+          // ── โลโก้ลง (logo-sting): ลงสเกลเดียว + วงแสงหนึ่งวง แล้วนิ่ง
+          tl.fromTo("#cta-logo", { scale: 1.6, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.5, ease: "power4.out" }, 0.2);
+          tl.fromTo("#cta-ring", { scale: 0.4, opacity: 0.95 }, { scale: 2.1, opacity: 0, duration: 0.8, ease: "power2.out", immediateRender: false }, 0.62);
+
+          // ── ข้อความชวนกระแทก แล้วเส้นใต้วิ่ง
+          tl.fromTo("#cta-title", { y: 70, opacity: 0, scale: 0.92 }, { y: 0, opacity: 1, scale: 1, duration: 0.5, ease: "circ.out" }, 0.75);
+          tl.fromTo("#cta-rule", { scaleX: 0 }, { scaleX: 1, duration: 0.45, ease: "expo.out" }, 1.1);
+
+          // ── แท็กเพจ (spring-pop-entrance)
+          tl.fromTo("#cta-tag", { scale: 0, opacity: 0, y: 20 }, { scale: 1, opacity: 1, y: 0, duration: 0.45, ease: "power3.out" }, 1.35);
+
+          // ── ช่วงค้าง: โลโก้หายใจเบา ๆ (finite)
+          tl.fromTo("#cta-logo", { y: 0 }, { y: -12, duration: 1.2, ease: "sine.inOut", yoyo: true, repeat: 3, immediateRender: false }, 1.9);
+
+          window.__timelines["scene-cta"] = tl;
+        })();
+      </script>
+    </template>
+  </body>
+</html>

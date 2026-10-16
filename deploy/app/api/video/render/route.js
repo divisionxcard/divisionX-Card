@@ -54,6 +54,7 @@ const MAX_SCRIPT_CHARS = 4000
 //                   เงียบ ๆ** คลิปออกมาคนละหน้าตากับที่สั่ง แต่ระบบรายงานว่า done เรียบร้อย
 const VOICES = ["Aoede", "Kore", "Puck", "Charon"]
 const STYLES = ["brand", "plain", "punch"]
+const ENGINES = ["classic", "hyperframes"]
 
 // งานที่ค้างนานกว่านี้ถือว่า runner ตายไปแล้ว ไม่ใช่ "ยังทำอยู่"
 // workflow ตั้ง timeout-minutes: 45 ไว้ งานที่ยังมีชีวิตจึงเกิน 45 นาทีไม่ได้เลย
@@ -145,6 +146,15 @@ function validatePlan(raw) {
     xfade = n
   }
 
+  // engine — เครื่องประกอบภาพ (16 ต.ค. 2026)
+  //   classic      = ทางเดิม รูปนิ่ง + ซูม + ffmpeg (make_video.py)
+  //   hyperframes  = ฉากเคลื่อนไหว HTML/GSAP เรนเดอร์ด้วย Chrome (agents/video/hf_render.py)
+  //                  เลือกชนิดฉากเองจาก visuals · ไม่รับ scenes จากเว็บ (ฝั่ง Python คุมข้อความไม่ให้เกินสคริปต์)
+  const engine = str(raw.engine) || "classic"
+  if (!ENGINES.includes(engine)) {
+    return { error: `ไม่รู้จักเครื่องประกอบภาพ "${engine}" — ใช้ได้: ${ENGINES.join(", ")}` }
+  }
+
   return {
     plan: {
       project,
@@ -155,6 +165,7 @@ function validatePlan(raw) {
       style,
       music: null,          // คงคีย์ไว้ให้ครบ contract แม้จะยังใส่ค่าไม่ได้ (ดูเหตุผลข้างบน)
       xfade,
+      ...(engine === "hyperframes" ? { engine } : {}),   // classic = ไม่ใส่คีย์ ให้แผนเดิมหน้าตาเหมือนเดิมทุกตัวอักษร
     },
   }
 }

@@ -50,6 +50,7 @@ jobs:
       SUPABASE_SERVICE_ROLE_KEY:  ${{ secrets.SUPABASE_SERVICE_KEY }}
       GEMINI_API_KEY:             ${{ secrets.GEMINI_API_KEY }}
       JOB_ID:                     ${{ inputs.job_id }}
+      ENGINE:                     classic   # Preflight เขียนทับจาก plan.engine ผ่าน $GITHUB_ENV
 
     steps:
       - name: Checkout code
@@ -118,6 +119,11 @@ jobs:
             fail "แผนอ้างไฟล์เพลง $MUSIC ซึ่งไม่มีอยู่ในรีโป — บน runner มีแค่ไฟล์ที่ commit ไว้เท่านั้น"
           fi
 
+          # เครื่องประกอบภาพ — hyperframes ต้องมี Node 22 + CLI ของ HyperFrames (ขั้นข้างล่าง)
+          ENGINE=$(jq -r '.[0].plan.engine // "classic"' "$JOB_JSON")
+          echo "ENGINE=$ENGINE" >> "$GITHUB_ENV"
+          echo "engine: $ENGINE"
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -165,6 +171,25 @@ jobs:
       #   agents/ ไม่มี __init__.py (เป็น namespace package) จึงต้องให้ deploy อยู่ใน
       #   sys.path ซึ่ง python -m ใส่ cwd ให้เอง — และโมดูลใน video/ ใช้ relative import
       #   (from . import config) รันแบบชี้ path ตรง ๆ ไม่ได้
+      # ── HyperFrames (plan.engine = "hyperframes") ──
+      # CLI ต้องใช้ Node 22+ แต่อิมเมจ ubuntu มากับ Node 20 · ลงทุกงานเพราะเร็ว (~5 วิ) และ Preflight
+      # อาจข้ามตัวเองไปตอนอ่านแผนไม่ได้ (ENGINE ว่าง) — ไม่อยากให้งาน hyperframes ไปตายเพราะ Node เก่า
+      # Chrome ใช้ตัวที่มากับอิมเมจ (HyperFrames หาเองเหมือนบนเครื่องเจ้าของ · doctor ยืนยันได้)
+      - name: Set up Node 22 (HyperFrames)
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      # อุ่น npx cache ล่วงหน้า + พิมพ์ผลตรวจเครื่องลง log (ไม่ล้มงานถ้าตัวเสริมบางตัวไม่มี)
+      # รุ่น CLI อ่านจาก package.json ของเทมเพลต — แก้รุ่นที่เดียว ไม่ต้องตามแก้ไฟล์นี้
+      - name: Warm HyperFrames CLI
+        if: env.ENGINE == 'hyperframes'
+        working-directory: hyperframes/templates/dvx-promo
+        run: |
+          V=$(node -p "require('./package.json').scripts.render.match(/hyperframes@([\d.]+)/)[1]")
+          echo "hyperframes@$V"
+          npx --yes "hyperframes@$V" doctor || true
+
       - name: Render video
         working-directory: deploy
         env:

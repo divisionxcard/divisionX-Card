@@ -1,0 +1,5 @@
+# HyperFrames — ของที่สร้างใหม่ได้ทุกครั้ง ไม่ต้องเข้า git
+templates/*/renders/
+templates/*/.hyperframes/
+templates/*/.thumbnails/
+node_modules/

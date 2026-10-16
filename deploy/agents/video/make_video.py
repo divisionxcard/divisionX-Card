@@ -83,6 +83,12 @@ def _auto_transition(i):
 
 
 def build_video(plan, out_mp4=None, skip_align=False):
+    # ภาพเคลื่อนไหวแบบ HyperFrames (HTML + GSAP เรนเดอร์ด้วย Chrome) — ใช้เสียง/เวลา/ซับชุดเดียวกับทางเดิม
+    # แต่ฉากไม่ใช่รูปนิ่งซูม · ดู hf_render.py และ hyperframes/templates/dvx-promo/
+    if (plan.get("engine") or "").lower() == "hyperframes":
+        from . import hf_render
+        return hf_render.build_video(plan, out_mp4)
+
     project = plan.get("project") or "clip"
     work = config.work_dir(project)
     out_mp4 = pathlib.Path(out_mp4 or (work / f"{project}.mp4"))

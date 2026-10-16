@@ -1,0 +1,108 @@
+<!doctype html>
+<!--
+  scaffold/host.template.html — โครงหลักที่ deploy/agents/video/hf_render.py เติมแล้วเขียนเป็น index.html ของแต่ละงาน
+  ห้ามเปิดไฟล์นี้ตรง ๆ ใน Studio (มีตัวยึด {{...}}) — เปิด index.html (ตัวอย่างที่สร้างจากแผนเดโม) แทน
+
+  ชั้นภาพ (ล่าง → บน):
+    พื้นกรมท่า + แสงเรือง + ตาราง + ตัวหนังสือจาง (ตลอดคลิป)
+    ฉาก (sub-composition) ตามเวลาที่ whisper จับจากเสียงจริง
+    สายฟ้า + แสงวาบตรงรอยต่อฉาก
+    โลโก้มุมขวาบน · ซับไทย (Chromium วาด — สระ/วรรณยุกต์ถูกเสมอ)
+  เสียง: เสียงพากย์ Gemini จากโรงงานเดิม (ไม่มีเพลง จนกว่าจะมีเพลงที่มีใบอนุญาตในคลัง music.py)
+-->
+<html lang="th" data-resolution="portrait">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1080, height=1920" />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <style>
+      @font-face { font-family: "Kanit"; src: url("assets/fonts/Kanit-Black.ttf"); font-weight: 900; }
+      @font-face { font-family: "Kanit"; src: url("assets/fonts/Kanit-ExtraBold.ttf"); font-weight: 800; }
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { margin: 0; width: 1080px; height: 1920px; overflow: hidden; background: #03102a; }
+      #root { position: relative; width: 100%; height: 100%; overflow: hidden; font-family: "Kanit", sans-serif; }
+      #bg { position: absolute; inset: 0; background: #03102a; }
+      .bg-glow { position: absolute; border-radius: 50%; will-change: transform, opacity; }
+      #bg-glow-a { left: -260px; top: -200px; width: 1100px; height: 1100px; background: radial-gradient(circle, rgba(27, 141, 255, 0.42), rgba(3, 16, 42, 0) 68%); }
+      #bg-glow-b { left: 260px; top: 980px; width: 1200px; height: 1200px; background: radial-gradient(circle, rgba(89, 210, 255, 0.3), rgba(3, 16, 42, 0) 66%); }
+      #bg-grid {
+        position: absolute; inset: -120px;
+        background-image: linear-gradient(rgba(89, 210, 255, 0.13) 2px, transparent 2px), linear-gradient(90deg, rgba(89, 210, 255, 0.13) 2px, transparent 2px);
+        background-size: 120px 120px;
+        will-change: transform;
+      }
+      #bg-ghost {
+        position: absolute; left: -40px; top: 700px; width: 2400px;
+        font-weight: 900; font-size: 330px; line-height: 1; letter-spacing: 0.04em;
+        color: rgba(89, 210, 255, 0.11); white-space: nowrap; will-change: transform;
+      }
+      /* ตัวหนังสือจางเป็นของตกแต่ง — วางเป็น ::before ไม่ให้นับเป็นข้อความที่ต้องอ่านออก (contrast audit) */
+      #bg-ghost::before { content: "DIVISION X · CARD · DIVISION X · CARD"; }
+      .scene-slot { position: absolute; inset: 0; }
+      #fx-flash { position: absolute; inset: 0; background: radial-gradient(circle at 50% 40%, rgba(235, 248, 255, 0.95), rgba(89, 210, 255, 0.55) 45%, rgba(27, 141, 255, 0) 80%); opacity: 0; pointer-events: none; }
+      #fx-bolts { position: absolute; inset: 0; width: 1080px; height: 1920px; overflow: visible; pointer-events: none; }
+      .bolt { fill: none; stroke: #e8f7ff; stroke-width: 12; stroke-linejoin: round; stroke-linecap: round; filter: drop-shadow(0 0 18px #59d2ff) drop-shadow(0 0 40px #1b8dff); opacity: 0; }
+      #corner-logo { position: absolute; right: 44px; top: 54px; width: 150px; height: 128px; object-fit: contain; opacity: 0.92; filter: drop-shadow(0 0 14px rgba(27, 141, 255, 0.6)); }
+    </style>
+  </head>
+  <body>
+    <div data-hf-id="hf-4607" id="root" data-composition-id="main" data-start="0" data-duration="{{DURATION}}" data-width="1080" data-height="1920">
+      <div data-hf-id="hf-2xc0" id="bg">
+        <div data-hf-id="hf-bl0m" class="bg-glow" id="bg-glow-a"></div>
+        <div data-hf-id="hf-7mwl" class="bg-glow" id="bg-glow-b"></div>
+        <div data-hf-id="hf-r3kh" id="bg-grid"></div>
+        <div data-hf-id="hf-5sl0" id="bg-ghost" aria-hidden="true" data-layout-ignore></div>
+      </div>
+
+{{SCENES}}
+
+      <div data-hf-id="hf-jtoa" id="fx-flash"></div>
+      <svg data-hf-id="hf-p0kn" id="fx-bolts" viewBox="0 0 1080 1920">
+        <path data-hf-id="hf-ughk" class="bolt" id="bolt-a" d="M 760 -20 L 610 420 L 700 450 L 520 900 L 620 930 L 380 1500" />
+        <path data-hf-id="hf-8a1e" class="bolt" id="bolt-b" d="M 160 -20 L 300 300 L 230 330 L 380 700" />
+      </svg>
+
+      <img data-hf-id="hf-ni8i" id="corner-logo" class="clip" data-start="0" data-duration="{{LOGO_UNTIL}}" data-track-index="8" src="assets/brand/logo-white.png" alt="" />
+
+{{CAPTIONS_SLOT}}
+
+{{AUDIO}}
+    </div>
+
+    <script>
+      (function () {
+        const DUR = {{DURATION}};
+        const CUTS = {{CUTS}};
+        const tl = gsap.timeline({ paused: true });
+
+        // ── พื้นหลังมีชีวิตตลอดคลิป (ambient) — นับรอบแบบ floor ไม่ให้เกินความยาวคลิป
+        const rep = (cycle) => Math.max(0, Math.floor(DUR / cycle) - 1);
+        tl.fromTo("#bg-glow-a", { scale: 0.9, opacity: 0.75 }, { scale: 1.12, opacity: 1, duration: 2.2, ease: "sine.inOut", yoyo: true, repeat: rep(2.2) }, 0);
+        tl.fromTo("#bg-glow-b", { scale: 1.1, x: 0 }, { scale: 0.92, x: -120, duration: 2.8, ease: "sine.inOut", yoyo: true, repeat: rep(2.8) }, 0);
+        tl.fromTo("#bg-grid", { y: 0 }, { y: 120, duration: DUR, ease: "none" }, 0);
+        tl.fromTo("#bg-ghost", { x: 0 }, { x: -900, duration: DUR, ease: "none" }, 0);
+
+        // ── สายฟ้าฟาด + แสงวาบตรงรอยต่อฉาก (รวมจังหวะเปิดที่ 0)
+        const bolts = ["#bolt-a", "#bolt-b"];
+        bolts.forEach((sel) => {
+          const p = document.querySelector(sel);
+          const L = p.getTotalLength();
+          p.style.strokeDasharray = L;
+          p.style.strokeDashoffset = L;
+        });
+        CUTS.forEach((t, i) => {
+          const at = Math.max(0, t - 0.06);
+          tl.fromTo("#fx-flash", { opacity: 0 }, { opacity: i === 0 ? 0.9 : 0.75, duration: 0.05, ease: "none", immediateRender: i === 0 }, at);
+          tl.to("#fx-flash", { opacity: 0, duration: 0.28, ease: "power2.out" }, at + 0.05);
+          const sel = bolts[i % 2];
+          const L = document.querySelector(sel).getTotalLength();
+          tl.fromTo(sel, { strokeDashoffset: L, opacity: 1 }, { strokeDashoffset: 0, duration: 0.12, ease: "power2.in", immediateRender: false }, at);
+          tl.to(sel, { opacity: 0, duration: 0.22, ease: "power1.out" }, at + 0.14);
+        });
+
+
+        window.__timelines["main"] = tl;
+      })();
+    </script>
+  </body>
+</html>

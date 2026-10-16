@@ -1,0 +1,224 @@
+<!doctype html>
+<!--
+  scene-pack — ซองหมุนเอียงสามมิติกลางวงแสง + คำเด็ดกระแทกตรงจังหวะที่เสียงพูดคำนั้น
+  ท่า: asr-keyword-glow (คำกระแทกตามเวลาคำจริงจาก whisper) · kinetic-beat-slam (ทางเข้าคนละแบบต่อคำ)
+       · ambient-glow-bloom (วงแสงหลังซอง) · camera push (ซูมเข้าช้า ๆ ทั้งฉาก)
+  ตัวแปร at1/at2 = วินาทีในฉากที่เสียงพูดคำนั้น (Python คำนวณจากเวลารายคำ) — ไม่ส่งมาก็ใช้ค่าปริยาย
+-->
+<html
+  lang="th"
+  data-composition-variables='[
+    {"id":"img","type":"string","label":"รูปซอง (พื้นโปร่ง)","default":"assets/pack.webp"},
+    {"id":"gl","type":"number","label":"ขอบซ้ายของซองในรูป (%)","default":27.4,"min":0,"max":100,"step":0.1},
+    {"id":"gt","type":"number","label":"ขอบบนของซองในรูป (%)","default":5,"min":0,"max":100,"step":0.1},
+    {"id":"gw","type":"number","label":"ความกว้างซองในรูป (%)","default":45.1,"min":0,"max":100,"step":0.1},
+    {"id":"gh","type":"number","label":"ความสูงซองในรูป (%)","default":90,"min":0,"max":100,"step":0.1},
+    {"id":"word1","type":"string","label":"คำเด็ดที่ 1","default":"SEC"},
+    {"id":"word2","type":"string","label":"คำเด็ดที่ 2","default":"LEADER"},
+    {"id":"tag","type":"string","label":"ป้ายมุมซ้ายบน","default":"OP-17 · BOOSTER PACK"},
+    {"id":"at1","type":"number","label":"เวลาคำที่ 1 (วิ)","default":0.95,"min":0,"max":10,"step":0.01},
+    {"id":"at2","type":"number","label":"เวลาคำที่ 2 (วิ)","default":1.5,"min":0,"max":10,"step":0.01}
+  ]'
+>
+  <head>
+    <meta charset="UTF-8" />
+  </head>
+  <body>
+    <template>
+      <style>
+        @font-face { font-family: "Kanit"; src: url("assets/fonts/Kanit-Black.ttf"); font-weight: 900; }
+        @font-face { font-family: "Kanit"; src: url("assets/fonts/Kanit-ExtraBold.ttf"); font-weight: 800; }
+        #root {
+          position: absolute;
+          inset: 0;
+          overflow: hidden;
+          font-family: "Kanit", sans-serif;
+          color: #f2f8ff;
+        }
+        #pack-cam {
+          position: absolute;
+          inset: 0;
+          z-index: 1;
+          perspective: 1600px;
+          will-change: transform;
+        }
+        #pack-halo {
+          position: absolute;
+          left: 540px;
+          top: 760px;
+          width: 900px;
+          height: 900px;
+          margin: -450px 0 0 -450px;
+          border-radius: 50%;
+          background: radial-gradient(circle, rgba(89, 210, 255, 0.55) 0%, rgba(27, 141, 255, 0.28) 38%, rgba(3, 16, 42, 0) 70%);
+          will-change: transform, opacity;
+        }
+        #pack-orbit {
+          position: absolute;
+          left: 540px;
+          top: 760px;
+          width: 760px;
+          height: 760px;
+          margin: -380px 0 0 -380px;
+          border-radius: 50%;
+          border: 4px dashed rgba(89, 210, 255, 0.55);
+          will-change: transform;
+        }
+        #pack-3d {
+          position: absolute;
+          left: 90px;
+          top: 300px;
+          width: 900px;
+          height: 900px;
+          transform-style: preserve-3d;
+          will-change: transform;
+        }
+        #pack-img {
+          position: absolute;
+          inset: 0;
+          width: 900px;
+          height: 900px;
+          object-fit: contain;
+          filter: drop-shadow(0 40px 70px rgba(0, 0, 0, 0.6));
+        }
+        #pack-gloss {
+          position: absolute;
+          left: calc(var(--gl) * 1%);
+          top: calc(var(--gt) * 1%);
+          width: calc(var(--gw) * 1%);
+          height: calc(var(--gh) * 1%);
+          overflow: hidden;
+          border-radius: 22px;
+          mix-blend-mode: screen;
+          pointer-events: none;
+        }
+        #pack-gloss-band {
+          position: absolute;
+          top: -20%;
+          left: 0;
+          width: 34%;
+          height: 140%;
+          background: linear-gradient(90deg, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.7) 50%, rgba(255, 255, 255, 0) 100%);
+          will-change: transform;
+        }
+        .pack-word {
+          position: absolute;
+          font-weight: 900;
+          line-height: 1;
+          color: #ffc24a;
+          -webkit-text-stroke: 6px #2a1400;
+          paint-order: stroke fill;
+          text-shadow: 0 0 34px rgba(255, 170, 40, 0.85), 0 10px 0 #7a3d00;
+          white-space: nowrap;
+          z-index: 5;
+          will-change: transform, opacity;
+        }
+        #pack-w1 {
+          left: 70px;
+          top: 250px;
+          font-size: 230px;
+        }
+        #pack-w2 {
+          right: 60px;
+          top: 1030px;
+          font-size: 170px;
+        }
+        #pack-tag {
+          position: absolute;
+          z-index: 4;
+          left: 70px;
+          top: 150px;
+          font-weight: 800;
+          font-size: 34px;
+          letter-spacing: 0.12em;
+          color: #59d2ff;
+          padding: 8px 22px;
+          border: 3px solid rgba(89, 210, 255, 0.8);
+          border-radius: 10px;
+          background: rgba(3, 16, 42, 0.7);
+          will-change: transform;
+        }
+        #pack-flash {
+          position: absolute;
+          z-index: 3;
+          inset: 0;
+          background: radial-gradient(circle at 50% 45%, rgba(255, 236, 190, 0.55), rgba(255, 236, 190, 0) 60%);
+          opacity: 0;
+        }
+        /* คำเด็ด/ป้ายว่าง = ไม่แสดง (คำเด็ดมาจากคำที่สคริปต์พูดจริงเท่านั้น) */
+        .pack-word:empty,
+        #pack-tag:empty { display: none; }
+      </style>
+
+      <div data-hf-id="hf-4hq5" id="root" data-composition-id="scene-pack" data-width="1080" data-height="1920">
+        <div data-hf-id="hf-tr90" id="pack-cam">
+          <div data-hf-id="hf-6iot" id="pack-halo"></div>
+          <div data-hf-id="hf-89ud" id="pack-orbit"></div>
+          <div data-hf-id="hf-clfq" id="pack-3d">
+            <img data-hf-id="hf-6acp" id="pack-img" data-var-src="img" src="assets/pack.webp" alt="" />
+            <div data-hf-id="hf-g339" id="pack-gloss" aria-hidden="true" data-layout-ignore><div data-hf-id="hf-iq49" id="pack-gloss-band"></div></div>
+          </div>
+        </div>
+        <div data-hf-id="hf-38l7" id="pack-flash"></div>
+        <div data-hf-id="hf-0oc6" id="pack-tag" data-var-text="tag">OP-17 · BOOSTER PACK</div>
+        <div data-hf-id="hf-pw3x" class="pack-word" id="pack-w1" data-var-text="word1" data-layout-allow-occlusion>SEC</div>
+        <div data-hf-id="hf-w5kz" class="pack-word" id="pack-w2" data-var-text="word2" data-layout-allow-occlusion>LEADER</div>
+      </div>
+
+      <script>
+        (function () {
+          const v = (window.__hyperframes && window.__hyperframes.getVariables && window.__hyperframes.getVariables()) || {};
+          const AT1 = Math.max(0.15, Number(v.at1 != null ? v.at1 : 0.95));
+          const AT2 = Math.max(AT1 + 0.35, Number(v.at2 != null ? v.at2 : 1.5));
+          const tl = gsap.timeline({ paused: true });
+
+          // ── กล้องดันเข้าช้า ๆ ทั้งฉาก (camera push)
+          tl.fromTo("#pack-cam", { scale: 1 }, { scale: 1.14, duration: 6, ease: "sine.inOut" }, 0);
+
+          // ── ซองเข้าฉาก: หมุนจากด้านข้างมาหน้าตรง แล้วโยกสามมิติต่อเนื่อง
+          tl.fromTo(
+            "#pack-3d",
+            { rotationY: -70, rotationZ: 8, scale: 0.7, opacity: 0 },
+            { rotationY: -14, rotationZ: -3, scale: 1, opacity: 1, duration: 0.6, ease: "power3.out" },
+            0,
+          );
+          tl.fromTo(
+            "#pack-3d",
+            { rotationY: -14 },
+            { rotationY: 16, duration: 1.6, ease: "sine.inOut", yoyo: true, repeat: 3, immediateRender: false },
+            0.6,
+          );
+          tl.fromTo("#pack-gloss-band", { xPercent: -120, rotation: 18 }, { xPercent: 320, rotation: 18, duration: 0.8, ease: "power2.inOut" }, 0.35);
+
+          // ── วงแสง + วงประหมุน (ambient-glow-bloom)
+          tl.fromTo("#pack-halo", { scale: 0.85, opacity: 0.7 }, { scale: 1.08, opacity: 1, duration: 1.2, ease: "sine.inOut", yoyo: true, repeat: 4 }, 0);
+          tl.fromTo("#pack-orbit", { rotation: 0 }, { rotation: 140, duration: 7, ease: "none" }, 0);
+
+          // ── ป้ายมุม
+          tl.fromTo("#pack-tag", { x: -60, opacity: 0 }, { x: 0, opacity: 1, duration: 0.4, ease: "expo.out" }, 0.15);
+
+          // ── คำเด็ด 1: กระแทกด้วยสเกล+เบลอ (power4.out) ตรงเวลาที่พูด
+          tl.fromTo(
+            "#pack-w1",
+            { scale: 1.9, rotation: -14, opacity: 0, filter: "blur(16px)" },
+            { scale: 1, rotation: -8, opacity: 1, filter: "blur(0px)", duration: 0.4, ease: "power4.out" },
+            AT1 - 0.12,
+          );
+          tl.fromTo("#pack-flash", { opacity: 0 }, { opacity: 1, duration: 0.06, ease: "none", yoyo: true, repeat: 1 }, AT1);
+          // ── คำเด็ด 2: สะบัดเข้าจากขวา (expo.out) — ทางเข้าคนละแบบกับคำแรก
+          tl.fromTo(
+            "#pack-w2",
+            { x: 520, rotation: 14, opacity: 0 },
+            { x: 0, rotation: 6, opacity: 1, duration: 0.38, ease: "expo.out" },
+            AT2 - 0.1,
+          );
+          tl.fromTo("#pack-flash", { opacity: 0 }, { opacity: 1, duration: 0.06, ease: "none", yoyo: true, repeat: 1, immediateRender: false }, AT2);
+          // คำค้างแล้วหายใจเบา ๆ
+          tl.fromTo(".pack-word", { y: 0 }, { y: -10, duration: 0.9, ease: "sine.inOut", yoyo: true, repeat: 5, immediateRender: false }, AT2 + 0.4);
+
+          window.__timelines["scene-pack"] = tl;
+        })();
+      </script>
+    </template>
+  </body>
+</html>

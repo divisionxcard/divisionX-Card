@@ -1,0 +1,60 @@
+<!doctype html>
+<!--
+  scaffold/captions.template.html — ซับไทยทั้งคลิปในฉากย่อยเดียว (hf_render.py เติม {{...}} แล้วเขียนเป็น compositions/captions.html)
+  แยกออกจาก index.html ตามข้อแนะนำ HyperFrames: แทร็กซับแน่น ๆ อยู่ในไฟล์ของมันเอง แก้/เทียบ diff ง่าย
+  ตำแหน่ง: กึ่งกลางล่าง top 1330px — เหนือแถบปุ่มของ TikTok/Reels · ตัวหนา Kanit + ขอบกรมท่า อ่านได้บนรูปทุกแบบ
+  คำเด็ด (.hot) สีทอง · ชื่อแบรนด์/ชุด (.hl) ฟ้านีออน
+-->
+<html lang="th">
+  <head>
+    <meta charset="UTF-8" />
+  </head>
+  <body>
+    <template>
+      <style>
+        @font-face { font-family: "Kanit"; src: url("assets/fonts/Kanit-ExtraBold.ttf"); font-weight: 800; }
+        #root { position: absolute; inset: 0; overflow: hidden; pointer-events: none; font-family: "Kanit", sans-serif; }
+        .cap { position: absolute; left: 70px; right: 70px; top: 1330px; display: flex; justify-content: center; }
+        .cap-text {
+          display: block; max-width: 940px; text-align: center;
+          font-weight: 800; font-size: 74px; line-height: 1.25; color: #ffffff;
+          -webkit-text-stroke: 12px #03102a; paint-order: stroke fill;
+          text-shadow: 0 0 26px rgba(3, 16, 42, 0.9), 0 6px 0 #03102a;
+          will-change: transform, opacity;
+        }
+        .cap-text .hl { color: #59d2ff; }
+        .cap-text .hot { color: #ffc24a; }
+      </style>
+
+      <div data-hf-id="hf-ov84" id="root" data-composition-id="captions" data-width="1080" data-height="1920">
+        <div data-hf-id="hf-pez0" id="cap-1" class="clip cap" data-start="0.0" data-duration="1.447" data-track-index="0"><span data-hf-id="hf-lo9s" class="cap-text"><b data-hf-id="hf-ne61" class="hl">OP-17</b> มาถึงตู้</span></div>
+        <div data-hf-id="hf-zcze" id="cap-2" class="clip cap" data-start="1.447" data-duration="2.193" data-track-index="0"><span data-hf-id="hf-wzvv" class="cap-text"><b data-hf-id="hf-citw" class="hl">DivisionX Card</b> แล้ว</span></div>
+        <div data-hf-id="hf-81s7" id="cap-3" class="clip cap" data-start="3.64" data-duration="1.485" data-track-index="0"><span data-hf-id="hf-a9te" class="cap-text">เปิดซองลุ้น <b data-hf-id="hf-fken" class="hot">SEC</b> กับ</span></div>
+        <div data-hf-id="hf-drkl" id="cap-4" class="clip cap" data-start="5.125" data-duration="0.524" data-track-index="0"><span data-hf-id="hf-rb4d" class="cap-text"><b data-hf-id="hf-w36r" class="hot">Leader</b></span></div>
+        <div data-hf-id="hf-2qny" id="cap-5" class="clip cap" data-start="5.649" data-duration="1.551" data-track-index="0"><span data-hf-id="hf-z2fq" class="cap-text">ตัวตึงได้ทุกวัน</span></div>
+        <div data-hf-id="hf-3cnl" id="cap-6" class="clip cap" data-start="7.2" data-duration="1.194" data-track-index="0"><span data-hf-id="hf-hhmv" class="cap-text">แค่เดินไปที่ตู้</span></div>
+        <div data-hf-id="hf-ldct" id="cap-7" class="clip cap" data-start="8.394" data-duration="1.194" data-track-index="0"><span data-hf-id="hf-jl9w" class="cap-text">เลือกช่อง กดซื้อ</span></div>
+        <div data-hf-id="hf-lpei" id="cap-8" class="clip cap" data-start="9.588" data-duration="2.092" data-track-index="0"><span data-hf-id="hf-rp2o" class="cap-text">แล้วเปิดดวงตรงนั้นเลย</span></div>
+        <div data-hf-id="hf-2diq" id="cap-9" class="clip cap" data-start="11.68" data-duration="1.711" data-track-index="0"><span data-hf-id="hf-1q7n" class="cap-text">ของแต่ละสาขาไม่เท่ากัน</span></div>
+        <div data-hf-id="hf-hjw0" id="cap-10" class="clip cap" data-start="13.391" data-duration="2.1" data-track-index="0"><span data-hf-id="hf-cg2w" class="cap-text">เช็กหน้าตู้ใกล้บ้านก่อนไปนะ</span></div>
+      </div>
+
+      <script>
+        (function () {
+          const tl = gsap.timeline({ paused: true });
+          // ซับแต่ละท่อนเด้งขึ้นตอนเริ่มพูด — ท่อนเป็น clip ของ runtime จึง tween เฉพาะตัวลูก (.cap-text)
+          document.querySelectorAll("#root .cap").forEach((cap) => {
+            const s = Number(cap.getAttribute("data-start"));
+            tl.fromTo(
+              cap.querySelector(".cap-text"),
+              { scale: 0.86, y: 18, opacity: 0 },
+              { scale: 1, y: 0, opacity: 1, duration: 0.16, ease: "power3.out", immediateRender: false },
+              s,
+            );
+          });
+          window.__timelines["captions"] = tl;
+        })();
+      </script>
+    </template>
+  </body>
+</html>

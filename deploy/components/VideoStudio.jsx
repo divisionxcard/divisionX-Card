@@ -44,6 +44,15 @@ const STYLES = [
   { id: "punch", label: "จัดจ้าน", desc: "เหลือง ขอบดำ — เด่นสุด" },
 ]
 
+// เครื่องประกอบภาพ — ตรงกับ ENGINES ใน app/api/video/render/route.js และ make_video.build_video
+//   hyperframes: ฉากเคลื่อนไหวจริง (ซองพุ่ง/คำกระแทกตรงเสียง/ขั้นตอนโผล่ตามคำพูด/สายฟ้าตรงรอยต่อ)
+//                ระบบเลือกชนิดฉากเองจากรูปที่เลือก: บรรทัดแรก+ซอง = ฉากเปิด · ซอง = ฉากซอง ·
+//                รูปตู้ = ฉากตู้ · บรรทัดสุดท้าย = ฉากปิด · ข้อความบนจอมาจากสคริปต์/พาดหัวเท่านั้น
+const ENGINES = [
+  { id: "classic",     label: "แบบเดิม",               desc: "รูปนิ่ง + ซูม · ตั้งเกยภาพได้" },
+  { id: "hyperframes", label: "เคลื่อนไหว (HyperFrames)", desc: "ฉากขยับจริง · พาดหัว = ป้ายใต้ซองฉากแรก" },
+]
+
 // อัตราอ่านโดยประมาณของ Gemini TTS กับข้อความไทย (~11 อักขระ/วินาที)
 // วัดคร่าว ๆ จากคลิปที่ทำจริง ไม่ใช่ค่าคงที่ของระบบ — ความยาวจริงรู้หลังทำเสียงเสร็จ
 const CHARS_PER_SEC = 11
@@ -218,6 +227,7 @@ export default function VideoStudio() {
   const [voice, setVoice] = useState("Aoede")
   const [style, setStyle] = useState("brand")
   const [xfade, setXfade] = useState(0.35)
+  const [engine, setEngine] = useState("classic")
   const [skus, setSkus] = useState([])
   const [skuErr, setSkuErr] = useState("")
 
@@ -473,6 +483,7 @@ export default function VideoStudio() {
         style,
         music: null,               // คลังเพลงยังไม่มี — ส่ง null ไว้ให้คีย์ครบตาม contract
         xfade: Number(xfade),
+        ...(engine === "hyperframes" ? { engine } : {}),
       }
       // ⚠️ ห่อไว้ใน { plan } — route ฝั่งเซิร์ฟเวอร์อ่าน body.plan ไม่ใช่ body ทั้งก้อน
       //    (มันประกอบแผนขึ้นใหม่จากคีย์ที่อยู่ใน contract เท่านั้น ส่งแบน ๆ ไปจะถูกตีกลับ
@@ -661,6 +672,13 @@ export default function VideoStudio() {
           </div>
 
           <label className="vs-field vs-mt">
+            <span><Sparkles size={13} /> เครื่องประกอบภาพ</span>
+            <select className="dx-input" value={engine} onChange={e => setEngine(e.target.value)}>
+              {ENGINES.map(x => <option key={x.id} value={x.id}>{x.label} — {x.desc}</option>)}
+            </select>
+          </label>
+
+          <label className="vs-field vs-mt">
             <span>ระยะเกยภาพ (xfade) · <b className="dx-mono">{Number(xfade).toFixed(2)} วิ</b></span>
             <input type="range" min="0" max="1" step="0.05" value={xfade}
               onChange={e => setXfade(e.target.value)} className="vs-range" />
@@ -687,6 +705,7 @@ export default function VideoStudio() {
             <SumRow k="พาดหัว" v={headline.trim() || "— ไม่มี —"} />
             <SumRow k="เสียง / ซับ"
               v={`${voice} · ${STYLES.find(s => s.id === style)?.label} · เกยภาพ ${Number(xfade).toFixed(2)} วิ`} />
+            <SumRow k="เครื่องประกอบภาพ" v={ENGINES.find(x => x.id === engine)?.label} />
             <SumRow k="ชื่องาน" v={<span className="dx-mono">{project}</span>} />
           </div>
 
