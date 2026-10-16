@@ -513,7 +513,7 @@ def write_project(proj, scenes, timing, chunks, words, total, voice_rel):
                 if t is not None:
                     vals[f"at{j}"] = round(max(0.2, t - lo), 3)
         elif kind == "cta":
-            vals.update({k: sc[k] for k in ("title", "tag") if sc.get(k)})
+            vals.update({k: sc[k] for k in ("title", "tag", "linkcap", "link") if sc.get(k)})
         elif kind == "rank":
             vals.update(_rank_vals(sc, _line_spans(timing, first[i], spans[i], lo, hi), chunks, words, lo, hi, onsets))
             hot.update(it.get("name") for it in sc["items"] if it.get("name"))

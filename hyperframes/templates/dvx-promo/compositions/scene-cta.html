@@ -10,7 +10,9 @@
     {"id":"img","type":"string","label":"รูปตู้ฉากปิด","default":"assets/machine-scene.jpg"},
     {"id":"logo","type":"string","label":"โลโก้ (ขาว พื้นโปร่ง)","default":"assets/brand/logo-white.png"},
     {"id":"title","type":"string","label":"ข้อความชวน","default":"เช็กหน้าตู้ก่อนไป"},
-    {"id":"tag","type":"string","label":"แท็กเพจ","default":"#DivisionXCard"}
+    {"id":"tag","type":"string","label":"แท็กเพจ","default":"#DivisionXCard"},
+    {"id":"linkcap","type":"string","label":"หัวลิงก์ (ว่าง = ไม่แสดง)","default":""},
+    {"id":"link","type":"string","label":"ลิงก์ (ว่าง = ไม่แสดง)","default":""}
   ]'
 >
   <head>
@@ -117,6 +119,13 @@
           will-change: transform;
         }
         #cta-tag:empty { display: none; }
+        /* ลิงก์หน้าเว็บจริงที่เจ้าของให้มา (เช่น /branches — คิวโพสต์ใช้ลิงก์นี้อยู่แล้ว) · ว่าง = ไม่แสดง คลิปเดิมไม่เปลี่ยน */
+        #cta-link { position: absolute; left: 60px; right: 60px; top: 1090px; text-align: center; opacity: 0; will-change: transform, opacity; }
+        #cta-linkcap { display: block; font-weight: 800; font-size: 46px; line-height: 1.2; color: #ffc24a;
+          -webkit-text-stroke: 8px #03102a; paint-order: stroke fill; }
+        #cta-linkurl { display: inline-block; margin-top: 10px; padding: 8px 30px 12px; border-radius: 20px; background: rgba(3, 16, 42, 0.88);
+          border: 3px solid #59d2ff; font-weight: 800; font-size: 40px; line-height: 1.2; color: #ffffff; white-space: nowrap; }
+        #cta-linkcap:empty, #cta-linkurl:empty { display: none; }
       </style>
 
       <div data-hf-id="hf-z9hi" id="root" data-composition-id="scene-cta" data-width="1080" data-height="1920">
@@ -127,6 +136,7 @@
         <div data-hf-id="hf-m2ht" id="cta-title" data-var-text="title">เช็กหน้าตู้ก่อนไป</div>
         <div data-hf-id="hf-834s" id="cta-rule"></div>
         <div data-hf-id="hf-fggx" id="cta-tag-row"><div data-hf-id="hf-s99b" id="cta-tag" data-var-text="tag">#DivisionXCard</div></div>
+        <div id="cta-link"><span id="cta-linkcap" data-var-text="linkcap"></span><span id="cta-linkurl" data-var-text="link"></span></div>
       </div>
 
       <script>
@@ -147,6 +157,12 @@
 
           // ── แท็กเพจ (spring-pop-entrance)
           tl.fromTo("#cta-tag", { scale: 0, opacity: 0, y: 20 }, { scale: 1, opacity: 1, y: 0, duration: 0.45, ease: "power3.out" }, 1.35);
+
+          // ── ลิงก์ (ถ้ามี): ขึ้นหลังแท็ก
+          const vv = (window.__hyperframes && window.__hyperframes.getVariables && window.__hyperframes.getVariables()) || {};
+          if (String(vv.link || "").trim()) {
+            tl.fromTo("#cta-link", { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 0.4, ease: "power3.out" }, 1.6);
+          }
 
           // ── ช่วงค้าง: โลโก้หายใจเบา ๆ (finite)
           tl.fromTo("#cta-logo", { y: 0 }, { y: -12, duration: 1.2, ease: "sine.inOut", yoyo: true, repeat: 3, immediateRender: false }, 1.9);
