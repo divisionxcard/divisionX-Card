@@ -413,7 +413,8 @@ def build_video(plan, out_mp4=None, check=True):
     if code != 0 or not out_mp4.exists():
         raise RuntimeError(f"hyperframes render ล้ม:\n{tail}")
     _log("4/4", f"เรนเดอร์เสร็จ {duration:.1f} วิ ({time.time() - t0:.0f} วิ) → {out_mp4}\n{tail}")
-    return out_mp4, total
+    # ความยาวไฟล์จริง = เสียง + TAIL (ไม่ใช่ total ของเสียง — เดิมบันทึก duration_seconds ขาดไป 0.9 วิ)
+    return out_mp4, duration
 
 
 def write_demo(plan):
