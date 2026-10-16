@@ -19,8 +19,9 @@ deploy/.claude-design-output/
 deploy/dev.log
 
 # --- Binary / media / data dumps ---
-Video/
-image/
+# anchored to root so they don't case-collide with deploy/agents/video, etc.
+/Video/
+/image/
 *.xlsx
 *.zip
 *.png

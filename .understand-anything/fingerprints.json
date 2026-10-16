@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
-  "gitCommitHash": "0c763af42c1690092ac7ee735069602c93f5eab4",
-  "generatedAt": "2026-10-12T17:09:22.917Z",
+  "gitCommitHash": "640b035010da36cfec16db4113f36b16c9736f4c",
+  "generatedAt": "2026-10-16T09:39:07.428Z",
   "files": {
     ".env.example": {
       "filePath": ".env.example",
@@ -25,12 +25,12 @@
     },
     ".github/workflows/idea-collector.yml": {
       "filePath": ".github/workflows/idea-collector.yml",
-      "contentHash": "d63c107f3afec3c45ae24a81828a0dad62c02201490148b96ddf98de6bb6eec4",
+      "contentHash": "b8702daa9967ab451c37c929e91728f2d7990fcc4ab6f0f89fb518f3f3d23746",
       "functions": [],
       "classes": [],
       "imports": [],
       "exports": [],
-      "totalLines": 89,
+      "totalLines": 90,
       "hasStructuralAnalysis": true
     },
     ".github/workflows/marketing-autopost.yml": {
@@ -95,12 +95,12 @@
     },
     ".github/workflows/poster-render.yml": {
       "filePath": ".github/workflows/poster-render.yml",
-      "contentHash": "3650d3fc362ed4289f1bca31c7fa64e4de450c925920205d246812e7c591a21c",
+      "contentHash": "9a2d6e40136a035da553c1579f4ae304a11911a9b60653bd56fb1ac78a33428f",
       "functions": [],
       "classes": [],
       "imports": [],
       "exports": [],
-      "totalLines": 99,
+      "totalLines": 114,
       "hasStructuralAnalysis": true
     },
     ".github/workflows/refill-plan-check.yml": {
@@ -165,12 +165,12 @@
     },
     ".github/workflows/video-render.yml": {
       "filePath": ".github/workflows/video-render.yml",
-      "contentHash": "cc24d83b2b05162cdaae5f8fa52e7e015750dccfb197c707330fdd1fcafb273e",
+      "contentHash": "050387fbacfecb0d873ddb02b8b6d2ae2a859f88bc1b4d071a21eefd55808342",
       "functions": [],
       "classes": [],
       "imports": [],
       "exports": [],
-      "totalLines": 247,
+      "totalLines": 272,
       "hasStructuralAnalysis": true
     },
     ".github/workflows/vms-stock-sync.yml": {
@@ -1587,6 +1587,26 @@
       "totalLines": 63,
       "hasStructuralAnalysis": true
     },
+    "backend/database/migrations/080_marketing_ideas_trend_lanes.sql": {
+      "filePath": "backend/database/migrations/080_marketing_ideas_trend_lanes.sql",
+      "contentHash": "4480d746c7782b82451c0d51b752f3d4bf257a6ac71192e5f0d1b36cbe310b03",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 25,
+      "hasStructuralAnalysis": true
+    },
+    "backend/database/migrations/081_security_hardening.sql": {
+      "filePath": "backend/database/migrations/081_security_hardening.sql",
+      "contentHash": "3f9f9572c44a73b5e1b7f434d612d5747041abfc8b8c728670f8865889d2ba24",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 157,
+      "hasStructuralAnalysis": true
+    },
     "backend/database/migrations/README.md": {
       "filePath": "backend/database/migrations/README.md",
       "contentHash": "451b82e8df66c0cdcefde8fd9c82662973d16daeedea0cf43ff151632da20599",
@@ -2047,7 +2067,7 @@
     },
     "deploy/agents/content_suggester.py": {
       "filePath": "deploy/agents/content_suggester.py",
-      "contentHash": "d6df33069043ba1c6925f8b10c3b2d9a1759da445dc867f5dd3a08e7e6aa09ed",
+      "contentHash": "8d410b54e7dcf5616fe459673e6bb9e1fe8fe8ba5fce7601c0ecfc2279f3aa27",
       "functions": [
         {
           "name": "parse_frontmatter",
@@ -4225,13 +4245,13 @@
     },
     "deploy/agents/poster_render.py": {
       "filePath": "deploy/agents/poster_render.py",
-      "contentHash": "3dbdedaf8848e176aa3ec992267509659bd90569e17f0e6ddc508a8a798586cd",
+      "contentHash": "f673ba599750ea0246d6ecc73e5c8ffc7aca4eb728a86a7c102c8658a5461f34",
       "functions": [
         {
           "name": "load_env_file",
           "params": [],
           "exported": true,
-          "lineCount": 17
+          "lineCount": 19
         },
         {
           "name": "sb",
@@ -4471,7 +4491,7 @@
         "render",
         "main"
       ],
-      "totalLines": 619,
+      "totalLines": 621,
       "hasStructuralAnalysis": true
     },
     "deploy/agents/pull_model.py": {
@@ -5884,6 +5904,374 @@
       "totalLines": 253,
       "hasStructuralAnalysis": true
     },
+    "deploy/agents/trend_sources.py": {
+      "filePath": "deploy/agents/trend_sources.py",
+      "contentHash": "a1fb2c7bbf8a8620f0bd4db6406bea206ca91ca7ac49c772f11dea9e6040c372",
+      "functions": [
+        {
+          "name": "_polite",
+          "params": [
+            "host",
+            "gap"
+          ],
+          "exported": true,
+          "lineCount": 5
+        },
+        {
+          "name": "fetch",
+          "params": [
+            "url",
+            "timeout",
+            "headers",
+            "gap"
+          ],
+          "exported": true,
+          "lineCount": 10
+        },
+        {
+          "name": "_clean",
+          "params": [
+            "s"
+          ],
+          "exported": true,
+          "lineCount": 5
+        },
+        {
+          "name": "parse_long_date",
+          "params": [
+            "s"
+          ],
+          "exported": true,
+          "lineCount": 6
+        },
+        {
+          "name": "parse_period",
+          "params": [
+            "s"
+          ],
+          "exported": true,
+          "lineCount": 18
+        },
+        {
+          "name": "parse_dotted",
+          "params": [
+            "s"
+          ],
+          "exported": true,
+          "lineCount": 4
+        },
+        {
+          "name": "age_days",
+          "params": [
+            "d",
+            "today"
+          ],
+          "exported": true,
+          "lineCount": 2
+        },
+        {
+          "name": "_fresh_bonus",
+          "params": [
+            "age"
+          ],
+          "exported": true,
+          "lineCount": 10
+        },
+        {
+          "name": "_idea",
+          "params": [
+            "**kw"
+          ],
+          "exported": true,
+          "lineCount": 10
+        },
+        {
+          "name": "sku_for_set",
+          "params": [
+            "set_code",
+            "skus"
+          ],
+          "exported": true,
+          "lineCount": 12
+        },
+        {
+          "name": "op_article_url",
+          "params": [
+            "site",
+            "limit"
+          ],
+          "exported": true,
+          "lineCount": 4
+        },
+        {
+          "name": "parse_op_articles",
+          "params": [
+            "text",
+            "site",
+            "today",
+            "max_age"
+          ],
+          "exported": true,
+          "lineCount": 30
+        },
+        {
+          "name": "parse_op_products",
+          "params": [
+            "html",
+            "today",
+            "horizon_days"
+          ],
+          "exported": true,
+          "lineCount": 33
+        },
+        {
+          "name": "parse_op_events",
+          "params": [
+            "html",
+            "today",
+            "horizon_days"
+          ],
+          "exported": true,
+          "lineCount": 29
+        },
+        {
+          "name": "parse_dbs_home",
+          "params": [
+            "html",
+            "today",
+            "max_age"
+          ],
+          "exported": true,
+          "lineCount": 26
+        },
+        {
+          "name": "parse_dbs_products",
+          "params": [
+            "html",
+            "today",
+            "horizon_days"
+          ],
+          "exported": true,
+          "lineCount": 27
+        },
+        {
+          "name": "parse_pkm_th",
+          "params": [
+            "html",
+            "limit"
+          ],
+          "exported": true,
+          "lineCount": 21
+        },
+        {
+          "name": "parse_pkm_jp",
+          "params": [
+            "html",
+            "today",
+            "max_age"
+          ],
+          "exported": true,
+          "lineCount": 28
+        },
+        {
+          "name": "tcgplus_url",
+          "params": [
+            "game_id",
+            "start",
+            "end",
+            "limit"
+          ],
+          "exported": true,
+          "lineCount": 6
+        },
+        {
+          "name": "parse_tcgplus",
+          "params": [
+            "text",
+            "game_id",
+            "today"
+          ],
+          "exported": true,
+          "lineCount": 31
+        },
+        {
+          "name": "collect_official",
+          "params": [
+            "ctx"
+          ],
+          "exported": true,
+          "lineCount": 33
+        },
+        {
+          "name": "feed_entries",
+          "params": [
+            "xml"
+          ],
+          "exported": true,
+          "lineCount": 17
+        },
+        {
+          "name": "_age_from",
+          "params": [
+            "published"
+          ],
+          "exported": true,
+          "lineCount": 15
+        },
+        {
+          "name": "collect_global",
+          "params": [
+            "ctx"
+          ],
+          "exported": true,
+          "lineCount": 49
+        },
+        {
+          "name": "rsc_text",
+          "params": [
+            "html"
+          ],
+          "exported": true,
+          "lineCount": 9
+        },
+        {
+          "name": "_loads_ok",
+          "params": [
+            "p"
+          ],
+          "exported": true,
+          "lineCount": 6
+        },
+        {
+          "name": "grab",
+          "params": [
+            "text",
+            "key",
+            "opener"
+          ],
+          "exported": true,
+          "lineCount": 28
+        },
+        {
+          "name": "parse_market",
+          "params": [
+            "html",
+            "sets",
+            "today",
+            "skus"
+          ],
+          "exported": true,
+          "lineCount": 56
+        },
+        {
+          "name": "collect_price",
+          "params": [
+            "ctx"
+          ],
+          "exported": true,
+          "lineCount": 14
+        },
+        {
+          "name": "youtube_entries",
+          "params": [
+            "xml"
+          ],
+          "exported": true,
+          "lineCount": 16
+        },
+        {
+          "name": "collect_youtube",
+          "params": [
+            "ctx"
+          ],
+          "exported": true,
+          "lineCount": 52
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "json",
+          "specifiers": [
+            "json"
+          ]
+        },
+        {
+          "source": "math",
+          "specifiers": [
+            "math"
+          ]
+        },
+        {
+          "source": "re",
+          "specifiers": [
+            "re"
+          ]
+        },
+        {
+          "source": "time",
+          "specifiers": [
+            "time"
+          ]
+        },
+        {
+          "source": "urllib.parse",
+          "specifiers": [
+            "urllib.parse"
+          ]
+        },
+        {
+          "source": "urllib.request",
+          "specifiers": [
+            "urllib.request"
+          ]
+        },
+        {
+          "source": "datetime",
+          "specifiers": [
+            "date",
+            "datetime",
+            "timedelta",
+            "timezone"
+          ]
+        }
+      ],
+      "exports": [
+        "_polite",
+        "fetch",
+        "_clean",
+        "parse_long_date",
+        "parse_period",
+        "parse_dotted",
+        "age_days",
+        "_fresh_bonus",
+        "_idea",
+        "sku_for_set",
+        "op_article_url",
+        "parse_op_articles",
+        "parse_op_products",
+        "parse_op_events",
+        "parse_dbs_home",
+        "parse_dbs_products",
+        "parse_pkm_th",
+        "parse_pkm_jp",
+        "tcgplus_url",
+        "parse_tcgplus",
+        "collect_official",
+        "feed_entries",
+        "_age_from",
+        "collect_global",
+        "rsc_text",
+        "_loads_ok",
+        "grab",
+        "parse_market",
+        "collect_price",
+        "youtube_entries",
+        "collect_youtube"
+      ],
+      "totalLines": 752,
+      "hasStructuralAnalysis": true
+    },
     "deploy/agents/trigger_workflow.py": {
       "filePath": "deploy/agents/trigger_workflow.py",
       "contentHash": "32d047b4df7752080bb7dbcba66000ff010247c0f597050e09be9f89e6992c28",
@@ -6160,6 +6548,2150 @@
         "main"
       ],
       "totalLines": 278,
+      "hasStructuralAnalysis": true
+    },
+    "deploy/agents/video/__init__.py": {
+      "filePath": "deploy/agents/video/__init__.py",
+      "contentHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 1,
+      "hasStructuralAnalysis": true
+    },
+    "deploy/agents/video/align.py": {
+      "filePath": "deploy/agents/video/align.py",
+      "contentHash": "dde96a1174ccc7c78c378bc2061231eba5c48f4a70f2ffde4a0692aa0987e727",
+      "functions": [
+        {
+          "name": "_load",
+          "params": [
+            "size",
+            "device"
+          ],
+          "exported": true,
+          "lineCount": 22
+        },
+        {
+          "name": "word_times",
+          "params": [
+            "wav_path",
+            "model_size",
+            "device"
+          ],
+          "exported": true,
+          "lineCount": 12
+        },
+        {
+          "name": "map_segments",
+          "params": [
+            "segments",
+            "words",
+            "total_duration"
+          ],
+          "exported": true,
+          "lineCount": 75
+        },
+        {
+          "name": "_even",
+          "params": [
+            "segments",
+            "total"
+          ],
+          "exported": true,
+          "lineCount": 15
+        },
+        {
+          "name": "subtitle_chunks",
+          "params": [
+            "segments",
+            "timing",
+            "max_chars"
+          ],
+          "exported": true,
+          "lineCount": 23
+        },
+        {
+          "name": "karaoke_steps",
+          "params": [
+            "chunk",
+            "words",
+            "min_step"
+          ],
+          "exported": true,
+          "lineCount": 71
+        },
+        {
+          "name": "_glued",
+          "params": [
+            "words",
+            "i"
+          ],
+          "exported": true,
+          "lineCount": 7
+        },
+        {
+          "name": "_break_cost",
+          "params": [
+            "a",
+            "b"
+          ],
+          "exported": true,
+          "lineCount": 7
+        },
+        {
+          "name": "_chunk",
+          "params": [
+            "text",
+            "limit"
+          ],
+          "exported": true,
+          "lineCount": 40
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "re",
+          "specifiers": [
+            "re"
+          ]
+        }
+      ],
+      "exports": [
+        "_load",
+        "word_times",
+        "map_segments",
+        "_even",
+        "subtitle_chunks",
+        "karaoke_steps",
+        "_glued",
+        "_break_cost",
+        "_chunk"
+      ],
+      "totalLines": 318,
+      "hasStructuralAnalysis": true
+    },
+    "deploy/agents/video/branch_photos.py": {
+      "filePath": "deploy/agents/video/branch_photos.py",
+      "contentHash": "42f158a9ccd9f64b5382641a9df6706d06c42da78828e5e0d118970a1566640e",
+      "functions": [
+        {
+          "name": "_rect",
+          "params": [
+            "cx",
+            "cy",
+            "w",
+            "h",
+            "ang"
+          ],
+          "exported": true,
+          "lineCount": 5
+        },
+        {
+          "name": "hide_text",
+          "params": [
+            "im",
+            "boxes"
+          ],
+          "exported": true,
+          "lineCount": 25
+        },
+        {
+          "name": "prep",
+          "params": [
+            "mid",
+            "name",
+            "crop",
+            "quality"
+          ],
+          "exported": true,
+          "lineCount": 18
+        },
+        {
+          "name": "main",
+          "params": [],
+          "exported": true,
+          "lineCount": 16
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "json",
+          "specifiers": [
+            "json"
+          ]
+        },
+        {
+          "source": "math",
+          "specifiers": [
+            "math"
+          ]
+        },
+        {
+          "source": "pathlib",
+          "specifiers": [
+            "pathlib"
+          ]
+        },
+        {
+          "source": "sys",
+          "specifiers": [
+            "sys"
+          ]
+        },
+        {
+          "source": ".",
+          "specifiers": [
+            "config"
+          ]
+        }
+      ],
+      "exports": [
+        "_rect",
+        "hide_text",
+        "prep",
+        "main"
+      ],
+      "totalLines": 136,
+      "hasStructuralAnalysis": true
+    },
+    "deploy/agents/video/compose.py": {
+      "filePath": "deploy/agents/video/compose.py",
+      "contentHash": "eccd1320ac2ec356125a50a601993b3f1a55d493f29e3e69ef3cc4eeb3ab8e6f",
+      "functions": [
+        {
+          "name": "_run",
+          "params": [
+            "args",
+            "desc"
+          ],
+          "exported": true,
+          "lineCount": 7
+        },
+        {
+          "name": "probe_duration",
+          "params": [
+            "path"
+          ],
+          "exported": true,
+          "lineCount": 4
+        },
+        {
+          "name": "_motion_exprs",
+          "params": [
+            "motion",
+            "zoom",
+            "frames",
+            "fps"
+          ],
+          "exported": true,
+          "lineCount": 19
+        },
+        {
+          "name": "render_scene",
+          "params": [
+            "image",
+            "seconds",
+            "out_mp4",
+            "zoom",
+            "fps",
+            "motion"
+          ],
+          "exported": true,
+          "lineCount": 29
+        },
+        {
+          "name": "_pop_y",
+          "params": [
+            "start",
+            "rise"
+          ],
+          "exported": true,
+          "lineCount": 8
+        },
+        {
+          "name": "render_scene_from_clip",
+          "params": [
+            "src",
+            "seconds",
+            "out_mp4",
+            "fps"
+          ],
+          "exported": true,
+          "lineCount": 21
+        },
+        {
+          "name": "build",
+          "params": [
+            "scene_clips",
+            "timing",
+            "subtitles",
+            "voice_wav",
+            "out_mp4",
+            "music",
+            "headline",
+            "headline_seconds",
+            "xfade",
+            "logo",
+            "transitions"
+          ],
+          "exported": true,
+          "lineCount": 135
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "json",
+          "specifiers": [
+            "json"
+          ]
+        },
+        {
+          "source": "pathlib",
+          "specifiers": [
+            "pathlib"
+          ]
+        },
+        {
+          "source": "subprocess",
+          "specifiers": [
+            "subprocess"
+          ]
+        },
+        {
+          "source": ".",
+          "specifiers": [
+            "config"
+          ]
+        }
+      ],
+      "exports": [
+        "_run",
+        "probe_duration",
+        "_motion_exprs",
+        "render_scene",
+        "_pop_y",
+        "render_scene_from_clip",
+        "build"
+      ],
+      "totalLines": 281,
+      "hasStructuralAnalysis": true
+    },
+    "deploy/agents/video/config.py": {
+      "filePath": "deploy/agents/video/config.py",
+      "contentHash": "3556780a6c252f6b25ca8b392663f65cb9ec03168196979b9bf9112576924f92",
+      "functions": [
+        {
+          "name": "env",
+          "params": [
+            "key",
+            "default"
+          ],
+          "exported": true,
+          "lineCount": 12
+        },
+        {
+          "name": "ffmpeg_bin",
+          "params": [
+            "name"
+          ],
+          "exported": true,
+          "lineCount": 19
+        },
+        {
+          "name": "work_dir",
+          "params": [
+            "project"
+          ],
+          "exported": true,
+          "lineCount": 5
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "os",
+          "specifiers": [
+            "os"
+          ]
+        },
+        {
+          "source": "pathlib",
+          "specifiers": [
+            "pathlib"
+          ]
+        },
+        {
+          "source": "shutil",
+          "specifiers": [
+            "shutil"
+          ]
+        }
+      ],
+      "exports": [
+        "env",
+        "ffmpeg_bin",
+        "work_dir"
+      ],
+      "totalLines": 81,
+      "hasStructuralAnalysis": true
+    },
+    "deploy/agents/video/hf_director.py": {
+      "filePath": "deploy/agents/video/hf_director.py",
+      "contentHash": "e6e1cd9f24e433957dd90f960d0f0284f2a830a410f6803b4048c6c0480add9c",
+      "functions": [
+        {
+          "name": "history",
+          "params": [
+            "n",
+            "exclude_id"
+          ],
+          "exported": true,
+          "lineCount": 9
+        },
+        {
+          "name": "_map_ready",
+          "params": [
+            "rows"
+          ],
+          "exported": true,
+          "lineCount": 8
+        },
+        {
+          "name": "direct",
+          "params": [
+            "req",
+            "seed",
+            "project",
+            "hist"
+          ],
+          "exported": true,
+          "lineCount": 59
+        },
+        {
+          "name": "main",
+          "params": [
+            "argv"
+          ],
+          "exported": true,
+          "lineCount": 24
+        }
+      ],
+      "classes": [
+        {
+          "name": "Director",
+          "methods": [
+            "__init__",
+            "choice",
+            "recent",
+            "look",
+            "pick_fn"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 29
+        }
+      ],
+      "imports": [
+        {
+          "source": "argparse",
+          "specifiers": [
+            "argparse"
+          ]
+        },
+        {
+          "source": "datetime",
+          "specifiers": [
+            "dt"
+          ]
+        },
+        {
+          "source": "json",
+          "specifiers": [
+            "json"
+          ]
+        },
+        {
+          "source": "random",
+          "specifiers": [
+            "random"
+          ]
+        },
+        {
+          "source": "sys",
+          "specifiers": [
+            "sys"
+          ]
+        },
+        {
+          "source": ".",
+          "specifiers": [
+            "F"
+          ]
+        },
+        {
+          "source": ".hf_render",
+          "specifiers": [
+            "LOOK_SPACE"
+          ]
+        }
+      ],
+      "exports": [
+        "history",
+        "Director",
+        "_map_ready",
+        "direct",
+        "main"
+      ],
+      "totalLines": 175,
+      "hasStructuralAnalysis": true
+    },
+    "deploy/agents/video/hf_formats.py": {
+      "filePath": "deploy/agents/video/hf_formats.py",
+      "contentHash": "395b72eb1cb475840b4c865e7b64c7d18a9b9e4f9e5a44cd0e923c1b3ec20739",
+      "functions": [
+        {
+          "name": "_rest",
+          "params": [
+            "path"
+          ],
+          "exported": true,
+          "lineCount": 12
+        },
+        {
+          "name": "thai_range",
+          "params": [
+            "d0",
+            "d1"
+          ],
+          "exported": true,
+          "lineCount": 6
+        },
+        {
+          "name": "display",
+          "params": [
+            "sku"
+          ],
+          "exported": true,
+          "lineCount": 13
+        },
+        {
+          "name": "sales_counts",
+          "params": [
+            "days",
+            "machine"
+          ],
+          "exported": true,
+          "lineCount": 17
+        },
+        {
+          "name": "top_sellers",
+          "params": [
+            "days",
+            "n",
+            "machine"
+          ],
+          "exported": true,
+          "lineCount": 5
+        },
+        {
+          "name": "_chooser",
+          "params": [
+            "pick"
+          ],
+          "exported": true,
+          "lineCount": 14
+        },
+        {
+          "name": "_when",
+          "params": [
+            "days"
+          ],
+          "exported": true,
+          "lineCount": 5
+        },
+        {
+          "name": "rank_plan",
+          "params": [
+            "days",
+            "machine",
+            "voice",
+            "pick"
+          ],
+          "exported": true,
+          "lineCount": 28
+        },
+        {
+          "name": "_op_number",
+          "params": [
+            "sku_id"
+          ],
+          "exported": true,
+          "lineCount": 3
+        },
+        {
+          "name": "versus_plan",
+          "params": [
+            "days",
+            "machine",
+            "voice",
+            "picks",
+            "pick",
+            "theme"
+          ],
+          "exported": true,
+          "lineCount": 73
+        },
+        {
+          "name": "quiz_plan",
+          "params": [
+            "sku",
+            "voice",
+            "days",
+            "machine",
+            "pick"
+          ],
+          "exported": true,
+          "lineCount": 23
+        },
+        {
+          "name": "_map_xy",
+          "params": [
+            "lat",
+            "lon"
+          ],
+          "exported": true,
+          "lineCount": 3
+        },
+        {
+          "name": "branch_photo",
+          "params": [
+            "machine_id"
+          ],
+          "exported": true,
+          "lineCount": 4
+        },
+        {
+          "name": "cta_for",
+          "params": [
+            "machine"
+          ],
+          "exported": true,
+          "lineCount": 4
+        },
+        {
+          "name": "branches",
+          "params": [],
+          "exported": true,
+          "lineCount": 10
+        },
+        {
+          "name": "map_plan",
+          "params": [
+            "machine",
+            "voice",
+            "pick",
+            "**_"
+          ],
+          "exported": true,
+          "lineCount": 49
+        },
+        {
+          "name": "main",
+          "params": [
+            "argv"
+          ],
+          "exported": true,
+          "lineCount": 27
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "argparse",
+          "specifiers": [
+            "argparse"
+          ]
+        },
+        {
+          "source": "datetime",
+          "specifiers": [
+            "dt"
+          ]
+        },
+        {
+          "source": "json",
+          "specifiers": [
+            "json"
+          ]
+        },
+        {
+          "source": "pathlib",
+          "specifiers": [
+            "pathlib"
+          ]
+        },
+        {
+          "source": "re",
+          "specifiers": [
+            "re"
+          ]
+        },
+        {
+          "source": "sys",
+          "specifiers": [
+            "sys"
+          ]
+        },
+        {
+          "source": "urllib.parse",
+          "specifiers": [
+            "urllib.parse"
+          ]
+        },
+        {
+          "source": "urllib.request",
+          "specifiers": [
+            "urllib.request"
+          ]
+        },
+        {
+          "source": ".",
+          "specifiers": [
+            "config"
+          ]
+        }
+      ],
+      "exports": [
+        "_rest",
+        "thai_range",
+        "display",
+        "sales_counts",
+        "top_sellers",
+        "_chooser",
+        "_when",
+        "rank_plan",
+        "_op_number",
+        "versus_plan",
+        "quiz_plan",
+        "_map_xy",
+        "branch_photo",
+        "cta_for",
+        "branches",
+        "map_plan",
+        "main"
+      ],
+      "totalLines": 469,
+      "hasStructuralAnalysis": true
+    },
+    "deploy/agents/video/hf_render.py": {
+      "filePath": "deploy/agents/video/hf_render.py",
+      "contentHash": "9e6c89863fe95678da5d4927c995b7e3700db95fdc46273818f957a9e7b0ecf9",
+      "functions": [
+        {
+          "name": "_log",
+          "params": [
+            "step",
+            "msg"
+          ],
+          "exported": true,
+          "lineCount": 2
+        },
+        {
+          "name": "_cli_version",
+          "params": [],
+          "exported": true,
+          "lineCount": 10
+        },
+        {
+          "name": "prepare",
+          "params": [
+            "plan",
+            "work"
+          ],
+          "exported": true,
+          "lineCount": 37
+        },
+        {
+          "name": "_norm",
+          "params": [
+            "s"
+          ],
+          "exported": true,
+          "lineCount": 2
+        },
+        {
+          "name": "phrase_time",
+          "params": [
+            "phrase",
+            "chunks",
+            "words",
+            "lo",
+            "hi"
+          ],
+          "exported": true,
+          "lineCount": 29
+        },
+        {
+          "name": "_sku_image_url",
+          "params": [
+            "sku_id"
+          ],
+          "exported": true,
+          "lineCount": 12
+        },
+        {
+          "name": "resolve_image",
+          "params": [
+            "spec",
+            "proj",
+            "name"
+          ],
+          "exported": true,
+          "lineCount": 24
+        },
+        {
+          "name": "gloss_box",
+          "params": [
+            "img_path",
+            "inset"
+          ],
+          "exported": true,
+          "lineCount": 24
+        },
+        {
+          "name": "_pretty_sku",
+          "params": [
+            "sku"
+          ],
+          "exported": true,
+          "lineCount": 3
+        },
+        {
+          "name": "scenes_from_plan",
+          "params": [
+            "plan",
+            "segs"
+          ],
+          "exported": true,
+          "lineCount": 32
+        },
+        {
+          "name": "auto_scenes",
+          "params": [
+            "n"
+          ],
+          "exported": true,
+          "lineCount": 5
+        },
+        {
+          "name": "_instance_file",
+          "params": [
+            "proj",
+            "kind",
+            "n"
+          ],
+          "exported": true,
+          "lineCount": 12
+        },
+        {
+          "name": "resolve_look",
+          "params": [
+            "raw",
+            "seed"
+          ],
+          "exported": true,
+          "lineCount": 7
+        },
+        {
+          "name": "fit_px",
+          "params": [
+            "text",
+            "weight",
+            "max_w",
+            "base",
+            "low"
+          ],
+          "exported": true,
+          "lineCount": 12
+        },
+        {
+          "name": "speech_onsets",
+          "params": [
+            "wav",
+            "noise",
+            "gap"
+          ],
+          "exported": true,
+          "lineCount": 13
+        },
+        {
+          "name": "snap",
+          "params": [
+            "t",
+            "onsets",
+            "win"
+          ],
+          "exported": true,
+          "lineCount": 4
+        },
+        {
+          "name": "_line_spans",
+          "params": [
+            "timing",
+            "a",
+            "k",
+            "lo",
+            "hi"
+          ],
+          "exported": true,
+          "lineCount": 7
+        },
+        {
+          "name": "_rank_vals",
+          "params": [
+            "sc",
+            "lines",
+            "chunks",
+            "words",
+            "lo",
+            "hi",
+            "onsets"
+          ],
+          "exported": true,
+          "lineCount": 20
+        },
+        {
+          "name": "versus_sides",
+          "params": [
+            "n_rounds",
+            "wins"
+          ],
+          "exported": true,
+          "lineCount": 11
+        },
+        {
+          "name": "_versus_vals",
+          "params": [
+            "sc",
+            "lines",
+            "chunks",
+            "words",
+            "lo",
+            "hi",
+            "onsets"
+          ],
+          "exported": true,
+          "lineCount": 29
+        },
+        {
+          "name": "_quiz_vals",
+          "params": [
+            "sc",
+            "lines",
+            "chunks",
+            "words",
+            "lo",
+            "hi",
+            "proj",
+            "onsets"
+          ],
+          "exported": true,
+          "lineCount": 31
+        },
+        {
+          "name": "_recount_chunks",
+          "params": [
+            "chunks",
+            "recount"
+          ],
+          "exported": true,
+          "lineCount": 28
+        },
+        {
+          "name": "_map_vals",
+          "params": [
+            "sc",
+            "lines",
+            "chunks",
+            "words",
+            "lo",
+            "hi",
+            "onsets"
+          ],
+          "exported": true,
+          "lineCount": 25
+        },
+        {
+          "name": "_caption_html",
+          "params": [
+            "text",
+            "hot",
+            "brand"
+          ],
+          "exported": true,
+          "lineCount": 7
+        },
+        {
+          "name": "write_project",
+          "params": [
+            "proj",
+            "scenes",
+            "timing",
+            "chunks",
+            "words",
+            "total",
+            "voice_rel",
+            "look"
+          ],
+          "exported": true,
+          "lineCount": 122
+        },
+        {
+          "name": "_npx",
+          "params": [
+            "args",
+            "cwd",
+            "timeout"
+          ],
+          "exported": true,
+          "lineCount": 9
+        },
+        {
+          "name": "build_video",
+          "params": [
+            "plan",
+            "out_mp4",
+            "check"
+          ],
+          "exported": true,
+          "lineCount": 53
+        },
+        {
+          "name": "write_demo",
+          "params": [
+            "plan"
+          ],
+          "exported": true,
+          "lineCount": 12
+        },
+        {
+          "name": "main",
+          "params": [],
+          "exported": true,
+          "lineCount": 14
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "argparse",
+          "specifiers": [
+            "argparse"
+          ]
+        },
+        {
+          "source": "html",
+          "specifiers": [
+            "html"
+          ]
+        },
+        {
+          "source": "json",
+          "specifiers": [
+            "json"
+          ]
+        },
+        {
+          "source": "os",
+          "specifiers": [
+            "os"
+          ]
+        },
+        {
+          "source": "pathlib",
+          "specifiers": [
+            "pathlib"
+          ]
+        },
+        {
+          "source": "re",
+          "specifiers": [
+            "re"
+          ]
+        },
+        {
+          "source": "shutil",
+          "specifiers": [
+            "shutil"
+          ]
+        },
+        {
+          "source": "subprocess",
+          "specifiers": [
+            "subprocess"
+          ]
+        },
+        {
+          "source": "sys",
+          "specifiers": [
+            "sys"
+          ]
+        },
+        {
+          "source": "time",
+          "specifiers": [
+            "time"
+          ]
+        },
+        {
+          "source": "urllib.parse",
+          "specifiers": [
+            "urllib.parse"
+          ]
+        },
+        {
+          "source": "urllib.request",
+          "specifiers": [
+            "urllib.request"
+          ]
+        },
+        {
+          "source": ".",
+          "specifiers": [
+            "align",
+            "config",
+            "segments"
+          ]
+        }
+      ],
+      "exports": [
+        "_log",
+        "_cli_version",
+        "prepare",
+        "_norm",
+        "phrase_time",
+        "_sku_image_url",
+        "resolve_image",
+        "gloss_box",
+        "_pretty_sku",
+        "scenes_from_plan",
+        "auto_scenes",
+        "_instance_file",
+        "resolve_look",
+        "fit_px",
+        "speech_onsets",
+        "snap",
+        "_line_spans",
+        "_rank_vals",
+        "versus_sides",
+        "_versus_vals",
+        "_quiz_vals",
+        "_recount_chunks",
+        "_map_vals",
+        "_caption_html",
+        "write_project",
+        "_npx",
+        "build_video",
+        "write_demo",
+        "main"
+      ],
+      "totalLines": 735,
+      "hasStructuralAnalysis": true
+    },
+    "deploy/agents/video/make_video.py": {
+      "filePath": "deploy/agents/video/make_video.py",
+      "contentHash": "8218f50a21e07876211920c7b93b1b8674c5804182b03dd34500b5bbf32e53f1",
+      "functions": [
+        {
+          "name": "_log",
+          "params": [
+            "step",
+            "msg"
+          ],
+          "exported": true,
+          "lineCount": 2
+        },
+        {
+          "name": "_edited_timing",
+          "params": [
+            "raw",
+            "segs",
+            "total"
+          ],
+          "exported": true,
+          "lineCount": 19
+        },
+        {
+          "name": "_auto_motion",
+          "params": [
+            "i",
+            "n",
+            "visual"
+          ],
+          "exported": true,
+          "lineCount": 11
+        },
+        {
+          "name": "_auto_transition",
+          "params": [
+            "i"
+          ],
+          "exported": true,
+          "lineCount": 4
+        },
+        {
+          "name": "build_video",
+          "params": [
+            "plan",
+            "out_mp4",
+            "skip_align"
+          ],
+          "exported": true,
+          "lineCount": 220
+        },
+        {
+          "name": "main",
+          "params": [],
+          "exported": true,
+          "lineCount": 36
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "argparse",
+          "specifiers": [
+            "argparse"
+          ]
+        },
+        {
+          "source": "json",
+          "specifiers": [
+            "json"
+          ]
+        },
+        {
+          "source": "pathlib",
+          "specifiers": [
+            "pathlib"
+          ]
+        },
+        {
+          "source": "sys",
+          "specifiers": [
+            "sys"
+          ]
+        },
+        {
+          "source": "time",
+          "specifiers": [
+            "time"
+          ]
+        },
+        {
+          "source": ".",
+          "specifiers": [
+            "align",
+            "compose",
+            "config",
+            "motion",
+            "segments",
+            "subtitle",
+            "visuals"
+          ]
+        }
+      ],
+      "exports": [
+        "_log",
+        "_edited_timing",
+        "_auto_motion",
+        "_auto_transition",
+        "build_video",
+        "main"
+      ],
+      "totalLines": 347,
+      "hasStructuralAnalysis": true
+    },
+    "deploy/agents/video/motion_templates/intro.html": {
+      "filePath": "deploy/agents/video/motion_templates/intro.html",
+      "contentHash": "0456aca65f9e58f19857f46847e192ae8fb07239008d5df4d5c91f83b557a00a",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 120,
+      "hasStructuralAnalysis": false
+    },
+    "deploy/agents/video/motion_templates/photo.html": {
+      "filePath": "deploy/agents/video/motion_templates/photo.html",
+      "contentHash": "ebd3207faa206107cbbf0ade4a45eb06b8dfefab04d617c2e89b033461262e52",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 38,
+      "hasStructuralAnalysis": false
+    },
+    "deploy/agents/video/motion_templates/showcase.html": {
+      "filePath": "deploy/agents/video/motion_templates/showcase.html",
+      "contentHash": "d60d2c6d8caa85d32969e33a53792110afecbec9f3ca8c4ecf2933869c5d791a",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 167,
+      "hasStructuralAnalysis": false
+    },
+    "deploy/agents/video/motion.py": {
+      "filePath": "deploy/agents/video/motion.py",
+      "contentHash": "91455d4f6a9339f3c5cef06378c67592eca4bc9d284d8b06de6cf74040e4d3ad",
+      "functions": [
+        {
+          "name": "is_tpl",
+          "params": [
+            "spec"
+          ],
+          "exported": true,
+          "lineCount": 2
+        },
+        {
+          "name": "parse",
+          "params": [
+            "spec"
+          ],
+          "exported": true,
+          "lineCount": 6
+        },
+        {
+          "name": "template_path",
+          "params": [
+            "name"
+          ],
+          "exported": true,
+          "lineCount": 6
+        },
+        {
+          "name": "_data_uri",
+          "params": [
+            "path"
+          ],
+          "exported": true,
+          "lineCount": 4
+        },
+        {
+          "name": "_font_uri",
+          "params": [],
+          "exported": true,
+          "lineCount": 3
+        },
+        {
+          "name": "_build_html",
+          "params": [
+            "name",
+            "params",
+            "work"
+          ],
+          "exported": true,
+          "lineCount": 15
+        },
+        {
+          "name": "_cache_key",
+          "params": [
+            "name",
+            "params",
+            "seconds",
+            "fps"
+          ],
+          "exported": true,
+          "lineCount": 4
+        },
+        {
+          "name": "snapshot",
+          "params": [
+            "spec",
+            "work",
+            "out_png",
+            "at"
+          ],
+          "exported": true,
+          "lineCount": 16
+        },
+        {
+          "name": "render_clip",
+          "params": [
+            "spec",
+            "seconds",
+            "out_mp4",
+            "work",
+            "fps"
+          ],
+          "exported": true,
+          "lineCount": 47
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "base64",
+          "specifiers": [
+            "base64"
+          ]
+        },
+        {
+          "source": "hashlib",
+          "specifiers": [
+            "hashlib"
+          ]
+        },
+        {
+          "source": "html",
+          "specifiers": [
+            "_html"
+          ]
+        },
+        {
+          "source": "pathlib",
+          "specifiers": [
+            "pathlib"
+          ]
+        },
+        {
+          "source": "shutil",
+          "specifiers": [
+            "shutil"
+          ]
+        },
+        {
+          "source": "subprocess",
+          "specifiers": [
+            "subprocess"
+          ]
+        },
+        {
+          "source": "urllib.parse",
+          "specifiers": [
+            "urllib.parse"
+          ]
+        },
+        {
+          "source": ".",
+          "specifiers": [
+            "config"
+          ]
+        }
+      ],
+      "exports": [
+        "is_tpl",
+        "parse",
+        "template_path",
+        "_data_uri",
+        "_font_uri",
+        "_build_html",
+        "_cache_key",
+        "snapshot",
+        "render_clip"
+      ],
+      "totalLines": 161,
+      "hasStructuralAnalysis": true
+    },
+    "deploy/agents/video/music.py": {
+      "filePath": "deploy/agents/video/music.py",
+      "contentHash": "9c0e6daeb5b9cf9fc3bb9c902f6bfc535e612ffcbf700ea65663ee323c4f18b5",
+      "functions": [
+        {
+          "name": "_warn",
+          "params": [
+            "tag",
+            "msg"
+          ],
+          "exported": true,
+          "lineCount": 6
+        },
+        {
+          "name": "catalog",
+          "params": [],
+          "exported": true,
+          "lineCount": 22
+        },
+        {
+          "name": "_path_of",
+          "params": [
+            "track"
+          ],
+          "exported": true,
+          "lineCount": 6
+        },
+        {
+          "name": "_has_file",
+          "params": [
+            "track"
+          ],
+          "exported": true,
+          "lineCount": 4
+        },
+        {
+          "name": "_licensed",
+          "params": [
+            "track"
+          ],
+          "exported": true,
+          "lineCount": 2
+        },
+        {
+          "name": "list_tracks",
+          "params": [],
+          "exported": true,
+          "lineCount": 29
+        },
+        {
+          "name": "unlicensed",
+          "params": [],
+          "exported": true,
+          "lineCount": 4
+        },
+        {
+          "name": "missing",
+          "params": [],
+          "exported": true,
+          "lineCount": 3
+        },
+        {
+          "name": "mood_for",
+          "params": [
+            "format_key"
+          ],
+          "exported": true,
+          "lineCount": 9
+        },
+        {
+          "name": "pick_for",
+          "params": [
+            "format_key"
+          ],
+          "exported": true,
+          "lineCount": 38
+        },
+        {
+          "name": "_row",
+          "params": [
+            "t"
+          ],
+          "exported": true,
+          "lineCount": 4
+        },
+        {
+          "name": "main",
+          "params": [],
+          "exported": true,
+          "lineCount": 24
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "json",
+          "specifiers": [
+            "json"
+          ]
+        },
+        {
+          "source": "pathlib",
+          "specifiers": [
+            "pathlib"
+          ]
+        },
+        {
+          "source": "random",
+          "specifiers": [
+            "random"
+          ]
+        },
+        {
+          "source": "sys",
+          "specifiers": [
+            "sys"
+          ]
+        },
+        {
+          "source": ".",
+          "specifiers": [
+            "config"
+          ]
+        }
+      ],
+      "exports": [
+        "_warn",
+        "catalog",
+        "_path_of",
+        "_has_file",
+        "_licensed",
+        "list_tracks",
+        "unlicensed",
+        "missing",
+        "mood_for",
+        "pick_for",
+        "_row",
+        "main"
+      ],
+      "totalLines": 235,
+      "hasStructuralAnalysis": true
+    },
+    "deploy/agents/video/publish.py": {
+      "filePath": "deploy/agents/video/publish.py",
+      "contentHash": "b532749ec0ebb31a7a181d1b9c06a50e14448c84a22f4b951d061e35ca3585e4",
+      "functions": [
+        {
+          "name": "_creds",
+          "params": [],
+          "exported": true,
+          "lineCount": 21
+        },
+        {
+          "name": "sb",
+          "params": [
+            "method",
+            "path",
+            "body",
+            "raw",
+            "ctype",
+            "base",
+            "timeout"
+          ],
+          "exported": true,
+          "lineCount": 34
+        },
+        {
+          "name": "_q",
+          "params": [
+            "value"
+          ],
+          "exported": true,
+          "lineCount": 5
+        },
+        {
+          "name": "_safe_name",
+          "params": [
+            "project"
+          ],
+          "exported": true,
+          "lineCount": 20
+        },
+        {
+          "name": "upload_video",
+          "params": [
+            "mp4_path",
+            "project"
+          ],
+          "exported": true,
+          "lineCount": 27
+        },
+        {
+          "name": "claim_job",
+          "params": [
+            "job_id"
+          ],
+          "exported": true,
+          "lineCount": 45
+        },
+        {
+          "name": "save_plan",
+          "params": [
+            "job_id",
+            "plan"
+          ],
+          "exported": true,
+          "lineCount": 8
+        },
+        {
+          "name": "finish_job",
+          "params": [
+            "job_id",
+            "video_url",
+            "duration_seconds"
+          ],
+          "exported": true,
+          "lineCount": 41
+        },
+        {
+          "name": "fail_job",
+          "params": [
+            "job_id",
+            "message"
+          ],
+          "exported": true,
+          "lineCount": 30
+        },
+        {
+          "name": "main",
+          "params": [],
+          "exported": true,
+          "lineCount": 58
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "argparse",
+          "specifiers": [
+            "argparse"
+          ]
+        },
+        {
+          "source": "hashlib",
+          "specifiers": [
+            "hashlib"
+          ]
+        },
+        {
+          "source": "json",
+          "specifiers": [
+            "json"
+          ]
+        },
+        {
+          "source": "pathlib",
+          "specifiers": [
+            "pathlib"
+          ]
+        },
+        {
+          "source": "re",
+          "specifiers": [
+            "re"
+          ]
+        },
+        {
+          "source": "sys",
+          "specifiers": [
+            "sys"
+          ]
+        },
+        {
+          "source": "time",
+          "specifiers": [
+            "time"
+          ]
+        },
+        {
+          "source": "traceback",
+          "specifiers": [
+            "traceback"
+          ]
+        },
+        {
+          "source": "urllib.error",
+          "specifiers": [
+            "urllib.error"
+          ]
+        },
+        {
+          "source": "urllib.parse",
+          "specifiers": [
+            "urllib.parse"
+          ]
+        },
+        {
+          "source": "urllib.request",
+          "specifiers": [
+            "urllib.request"
+          ]
+        },
+        {
+          "source": ".",
+          "specifiers": [
+            "config"
+          ]
+        }
+      ],
+      "exports": [
+        "_creds",
+        "sb",
+        "_q",
+        "_safe_name",
+        "upload_video",
+        "claim_job",
+        "save_plan",
+        "finish_job",
+        "fail_job",
+        "main"
+      ],
+      "totalLines": 373,
+      "hasStructuralAnalysis": true
+    },
+    "deploy/agents/video/README.md": {
+      "filePath": "deploy/agents/video/README.md",
+      "contentHash": "b9915bb99acafff070acfc3f45f1a16c10a92f634de2f5e7214c656a827d9860",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 190,
+      "hasStructuralAnalysis": true
+    },
+    "deploy/agents/video/segments.py": {
+      "filePath": "deploy/agents/video/segments.py",
+      "contentHash": "41176046685475b84b8bc00ab67e89043235423986a0bdd30a604c18b7894f24",
+      "functions": [
+        {
+          "name": "sanitize",
+          "params": [
+            "line"
+          ],
+          "exported": true,
+          "lineCount": 9
+        },
+        {
+          "name": "split_script",
+          "params": [
+            "text",
+            "max_chars"
+          ],
+          "exported": true,
+          "lineCount": 14
+        },
+        {
+          "name": "_wrap",
+          "params": [
+            "line",
+            "limit"
+          ],
+          "exported": true,
+          "lineCount": 15
+        },
+        {
+          "name": "speech_text",
+          "params": [
+            "segments"
+          ],
+          "exported": true,
+          "lineCount": 8
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "re",
+          "specifiers": [
+            "re"
+          ]
+        },
+        {
+          "source": "unicodedata",
+          "specifiers": [
+            "unicodedata"
+          ]
+        }
+      ],
+      "exports": [
+        "sanitize",
+        "split_script",
+        "_wrap",
+        "speech_text"
+      ],
+      "totalLines": 76,
+      "hasStructuralAnalysis": true
+    },
+    "deploy/agents/video/subtitle.py": {
+      "filePath": "deploy/agents/video/subtitle.py",
+      "contentHash": "9b8bb76e2cda1f36bbcc777b23634f75ebcb784e94e5e8e9c9d97e85075098a2",
+      "functions": [
+        {
+          "name": "_font_uri",
+          "params": [],
+          "exported": true,
+          "lineCount": 3
+        },
+        {
+          "name": "_markup",
+          "params": [
+            "text"
+          ],
+          "exported": true,
+          "lineCount": 4
+        },
+        {
+          "name": "_karaoke_markup",
+          "params": [
+            "text",
+            "upto"
+          ],
+          "exported": true,
+          "lineCount": 25
+        },
+        {
+          "name": "render_many",
+          "params": [
+            "chunks",
+            "out_dir",
+            "style",
+            "size",
+            "bottom",
+            "karaoke"
+          ],
+          "exported": true,
+          "lineCount": 53
+        },
+        {
+          "name": "render_headline",
+          "params": [
+            "text",
+            "out_png",
+            "style",
+            "size",
+            "bottom"
+          ],
+          "exported": true,
+          "lineCount": 11
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "base64",
+          "specifiers": [
+            "base64"
+          ]
+        },
+        {
+          "source": "html",
+          "specifiers": [
+            "_html"
+          ]
+        },
+        {
+          "source": "pathlib",
+          "specifiers": [
+            "pathlib"
+          ]
+        },
+        {
+          "source": "re",
+          "specifiers": [
+            "re"
+          ]
+        },
+        {
+          "source": ".",
+          "specifiers": [
+            "config"
+          ]
+        }
+      ],
+      "exports": [
+        "_font_uri",
+        "_markup",
+        "_karaoke_markup",
+        "render_many",
+        "render_headline"
+      ],
+      "totalLines": 128,
+      "hasStructuralAnalysis": true
+    },
+    "deploy/agents/video/visuals.py": {
+      "filePath": "deploy/agents/video/visuals.py",
+      "contentHash": "d6fac35021e13fe0fc6bbace0301cd69555a3d63afa2e718f8e1dcfa88100cde",
+      "functions": [
+        {
+          "name": "is_video",
+          "params": [
+            "path"
+          ],
+          "exported": true,
+          "lineCount": 2
+        },
+        {
+          "name": "resolve",
+          "params": [
+            "spec",
+            "cache_dir"
+          ],
+          "exported": true,
+          "lineCount": 30
+        },
+        {
+          "name": "_sku_image",
+          "params": [
+            "sku_id",
+            "cache_dir"
+          ],
+          "exported": true,
+          "lineCount": 21
+        },
+        {
+          "name": "_flux",
+          "params": [
+            "prompt",
+            "cache_dir"
+          ],
+          "exported": true,
+          "lineCount": 23
+        },
+        {
+          "name": "_flatten",
+          "params": [
+            "im"
+          ],
+          "exported": true,
+          "lineCount": 18
+        },
+        {
+          "name": "to_frame",
+          "params": [
+            "src",
+            "out_png",
+            "blur_fill"
+          ],
+          "exported": true,
+          "lineCount": 37
+        },
+        {
+          "name": "prepare",
+          "params": [
+            "specs",
+            "work"
+          ],
+          "exported": true,
+          "lineCount": 36
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "io",
+          "specifiers": [
+            "io"
+          ]
+        },
+        {
+          "source": "json",
+          "specifiers": [
+            "json"
+          ]
+        },
+        {
+          "source": "pathlib",
+          "specifiers": [
+            "pathlib"
+          ]
+        },
+        {
+          "source": "urllib.parse",
+          "specifiers": [
+            "urllib.parse"
+          ]
+        },
+        {
+          "source": "urllib.request",
+          "specifiers": [
+            "urllib.request"
+          ]
+        },
+        {
+          "source": ".",
+          "specifiers": [
+            "config"
+          ]
+        }
+      ],
+      "exports": [
+        "is_video",
+        "resolve",
+        "_sku_image",
+        "_flux",
+        "_flatten",
+        "to_frame",
+        "prepare"
+      ],
+      "totalLines": 219,
+      "hasStructuralAnalysis": true
+    },
+    "deploy/agents/video/voice.py": {
+      "filePath": "deploy/agents/video/voice.py",
+      "contentHash": "de5e95e4a8c0999dbcc4c80c7ca556105d69c45c761b6426668361cc20512ebf",
+      "functions": [
+        {
+          "name": "synth",
+          "params": [
+            "text",
+            "out_wav",
+            "voice",
+            "model",
+            "retries",
+            "style"
+          ],
+          "exported": true,
+          "lineCount": 90
+        },
+        {
+          "name": "duration",
+          "params": [
+            "wav_path"
+          ],
+          "exported": true,
+          "lineCount": 3
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "base64",
+          "specifiers": [
+            "base64"
+          ]
+        },
+        {
+          "source": "json",
+          "specifiers": [
+            "json"
+          ]
+        },
+        {
+          "source": "pathlib",
+          "specifiers": [
+            "pathlib"
+          ]
+        },
+        {
+          "source": "time",
+          "specifiers": [
+            "time"
+          ]
+        },
+        {
+          "source": "urllib.error",
+          "specifiers": [
+            "urllib.error"
+          ]
+        },
+        {
+          "source": "urllib.request",
+          "specifiers": [
+            "urllib.request"
+          ]
+        },
+        {
+          "source": "wave",
+          "specifiers": [
+            "wave"
+          ]
+        },
+        {
+          "source": ".",
+          "specifiers": [
+            "config"
+          ]
+        }
+      ],
+      "exports": [
+        "synth",
+        "duration"
+      ],
+      "totalLines": 129,
       "hasStructuralAnalysis": true
     },
     "deploy/agents/weekly_marketing_brief.py": {
@@ -6664,7 +9196,7 @@
     },
     "deploy/app/api/img/route.js": {
       "filePath": "deploy/app/api/img/route.js",
-      "contentHash": "ae8e8c83ce83f6eea9e1a6161599b7ce65a0ac51363fe886b13eff53d84dcaa7",
+      "contentHash": "c9d865d1f0345ab3c34e64718fbbcd8aa7e133fa45fad50b0257c0d40693029d",
       "functions": [
         {
           "name": "GET",
@@ -6672,7 +9204,7 @@
             "request"
           ],
           "exported": true,
-          "lineCount": 41
+          "lineCount": 47
         }
       ],
       "classes": [],
@@ -6687,7 +9219,7 @@
       "exports": [
         "GET"
       ],
-      "totalLines": 50,
+      "totalLines": 56,
       "hasStructuralAnalysis": true
     },
     "deploy/app/api/marketing/ai-credit/route.js": {
@@ -6899,7 +9431,7 @@
     },
     "deploy/app/api/marketing/content/generate/route.js": {
       "filePath": "deploy/app/api/marketing/content/generate/route.js",
-      "contentHash": "f1b9282c652eb8d9d1f27fa8f10b42b4b812421b2c25aba6a5f8be11c175f2d4",
+      "contentHash": "59f248795236e63c217ed1f84b6fd6a69a4368ccbabbdd6b065ce8df1925a9fb",
       "functions": [
         {
           "name": "loadVoice",
@@ -7218,9 +9750,189 @@
       "totalLines": 1011,
       "hasStructuralAnalysis": true
     },
+    "deploy/app/api/marketing/content/image/route.js": {
+      "filePath": "deploy/app/api/marketing/content/image/route.js",
+      "contentHash": "1be5492883166a3ef28fa940f493aee1181bea1bda244e43438a251b5c31fb05",
+      "functions": [
+        {
+          "name": "loadJson",
+          "params": [
+            "name"
+          ],
+          "exported": false,
+          "lineCount": 5
+        },
+        {
+          "name": "fetchRef",
+          "params": [
+            "url"
+          ],
+          "exported": false,
+          "lineCount": 12
+        },
+        {
+          "name": "localRef",
+          "params": [
+            "rel"
+          ],
+          "exported": false,
+          "lineCount": 9
+        },
+        {
+          "name": "norm",
+          "params": [
+            "s"
+          ],
+          "exported": false,
+          "lineCount": 1
+        },
+        {
+          "name": "matchBranch",
+          "params": [
+            "machines",
+            "text"
+          ],
+          "exported": false,
+          "lineCount": 11
+        },
+        {
+          "name": "pickConcept",
+          "params": [
+            "cfg"
+          ],
+          "exported": false,
+          "lineCount": 16
+        },
+        {
+          "name": "buildPrompt",
+          "params": [
+            "style",
+            "concept",
+            "facts",
+            "mode"
+          ],
+          "exported": false,
+          "lineCount": 204
+        },
+        {
+          "name": "askOpenAI",
+          "params": [
+            "style",
+            "prompt",
+            "refs"
+          ],
+          "exported": false,
+          "lineCount": 148
+        },
+        {
+          "name": "askGemini",
+          "params": [
+            "style",
+            "prompt",
+            "refs"
+          ],
+          "exported": false,
+          "lineCount": 32
+        },
+        {
+          "name": "POST",
+          "params": [
+            "req"
+          ],
+          "exported": true,
+          "lineCount": 632
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "@supabase/supabase-js",
+          "specifiers": [
+            "createClient"
+          ]
+        },
+        {
+          "source": "next/server",
+          "specifiers": [
+            "NextResponse"
+          ]
+        },
+        {
+          "source": "fs/promises",
+          "specifiers": [
+            "readFile"
+          ]
+        },
+        {
+          "source": "path",
+          "specifiers": [
+            "path"
+          ]
+        },
+        {
+          "source": "../../../../../lib/apiAuth",
+          "specifiers": [
+            "requireMarketing"
+          ]
+        },
+        {
+          "source": "../../../../../lib/artDirector",
+          "specifiers": [
+            "planVisual",
+            "ideaToPrompt"
+          ]
+        },
+        {
+          "source": "../../../../../lib/franchiseDetect",
+          "specifiers": [
+            "detectFranchise",
+            "FRANCHISE_LABEL"
+          ]
+        },
+        {
+          "source": "../../../../../lib/skuPicker",
+          "specifiers": [
+            "topSkusByFranchise"
+          ]
+        },
+        {
+          "source": "../../../../../lib/headline",
+          "specifiers": [
+            "splitHeadline"
+          ]
+        },
+        {
+          "source": "../../../../../lib/fetchAll",
+          "specifiers": [
+            "fetchAll"
+          ]
+        },
+        {
+          "source": "../../../../../lib/pkmKnowledge",
+          "specifiers": [
+            "loadPkmCards",
+            "findPkmSet",
+            "artworkPkmCards"
+          ]
+        },
+        {
+          "source": "../../../../../lib/logoStamp",
+          "specifiers": [
+            "stampLogo"
+          ]
+        }
+      ],
+      "exports": [
+        "runtime",
+        "maxDuration",
+        "POST"
+      ],
+      "totalLines": 1200,
+      "hasStructuralAnalysis": true
+    },
     "deploy/app/api/marketing/content/poster/route.js": {
       "filePath": "deploy/app/api/marketing/content/poster/route.js",
-      "contentHash": "5dd00e9608f5834a16ca22986a2d1478e523dfa94353da292c52c01f7615f9fa",
+      "contentHash": "f20ae73207b2066cc9063a9adc81aa0ee9d8871fc313bfc73ae19b971110bc8f",
       "functions": [
         {
           "name": "POST",
@@ -7228,7 +9940,7 @@
             "req"
           ],
           "exported": true,
-          "lineCount": 77
+          "lineCount": 83
         },
         {
           "name": "dispatch",
@@ -7301,7 +10013,7 @@
         "maxDuration",
         "POST"
       ],
-      "totalLines": 173,
+      "totalLines": 179,
       "hasStructuralAnalysis": true
     },
     "deploy/app/api/marketing/content/proof/route.js": {
@@ -7483,7 +10195,7 @@
     },
     "deploy/app/api/marketing/content/route.js": {
       "filePath": "deploy/app/api/marketing/content/route.js",
-      "contentHash": "13cd8b312586e45e8166d767e2ad57dac87bd8a759cf5dec51e8a9ed9137b3d2",
+      "contentHash": "44e25dfd833100df1fb1bb1331c237fb441cec7087afb7e38ddb5564a98ecce6",
       "functions": [
         {
           "name": "GET",
@@ -7499,7 +10211,7 @@
             "req"
           ],
           "exported": true,
-          "lineCount": 90
+          "lineCount": 98
         },
         {
           "name": "POST",
@@ -7542,7 +10254,7 @@
         "PATCH",
         "POST"
       ],
-      "totalLines": 186,
+      "totalLines": 194,
       "hasStructuralAnalysis": true
     },
     "deploy/app/api/marketing/content/series/route.js": {
@@ -8213,7 +10925,7 @@
     },
     "deploy/app/api/telegram/mkt-webhook/route.js": {
       "filePath": "deploy/app/api/telegram/mkt-webhook/route.js",
-      "contentHash": "62bff1e63f097a88c032143975778d75dd423c4294c6fd0c89009c92b087851b",
+      "contentHash": "a27af544d16666426ea7a930be3ce4b08d0b0d9a8168c6aa34c1f46db615562e",
       "functions": [
         {
           "name": "tgReply",
@@ -8238,7 +10950,7 @@
             "req"
           ],
           "exported": true,
-          "lineCount": 45
+          "lineCount": 46
         }
       ],
       "classes": [],
@@ -8253,12 +10965,12 @@
       "exports": [
         "POST"
       ],
-      "totalLines": 80,
+      "totalLines": 81,
       "hasStructuralAnalysis": true
     },
     "deploy/app/api/telegram/webhook/route.js": {
       "filePath": "deploy/app/api/telegram/webhook/route.js",
-      "contentHash": "489eb0f0a9c5864bc2acce3ee13ce778829e3312ec86ee82208e78e78d288e60",
+      "contentHash": "626d684d47438fec68995387fcfa183b8154d8657e5bbff6ee61146a34b13837",
       "functions": [
         {
           "name": "svc",
@@ -8272,7 +10984,7 @@
             "req"
           ],
           "exported": true,
-          "lineCount": 186
+          "lineCount": 187
         }
       ],
       "classes": [],
@@ -8300,7 +11012,462 @@
       "exports": [
         "POST"
       ],
-      "totalLines": 204,
+      "totalLines": 205,
+      "hasStructuralAnalysis": true
+    },
+    "deploy/app/api/video/jobs/route.js": {
+      "filePath": "deploy/app/api/video/jobs/route.js",
+      "contentHash": "5240c10b44f271783620dca88cf51101102ef6a5831e08b78f9ccc14829d948b",
+      "functions": [
+        {
+          "name": "GET",
+          "params": [
+            "req"
+          ],
+          "exported": true,
+          "lineCount": 63
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "next/server",
+          "specifiers": [
+            "NextResponse"
+          ]
+        },
+        {
+          "source": "@supabase/supabase-js",
+          "specifiers": [
+            "createClient"
+          ]
+        },
+        {
+          "source": "../../../../lib/apiAuth",
+          "specifiers": [
+            "requireUser"
+          ]
+        }
+      ],
+      "exports": [
+        "GET"
+      ],
+      "totalLines": 107,
+      "hasStructuralAnalysis": true
+    },
+    "deploy/app/api/video/local/_guard.js": {
+      "filePath": "deploy/app/api/video/local/_guard.js",
+      "contentHash": "2e90a453e270b7f979b00986250dea8fe159850b9a102eea6ddf41007b1cdf5b",
+      "functions": [
+        {
+          "name": "localOnly",
+          "params": [],
+          "exported": true,
+          "lineCount": 6
+        },
+        {
+          "name": "projectDir",
+          "params": [
+            "name"
+          ],
+          "exported": true,
+          "lineCount": 4
+        },
+        {
+          "name": "safeFile",
+          "params": [
+            "dir",
+            "file"
+          ],
+          "exported": true,
+          "lineCount": 6
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "next/server",
+          "specifiers": [
+            "NextResponse"
+          ]
+        },
+        {
+          "source": "path",
+          "specifiers": [
+            "path"
+          ]
+        }
+      ],
+      "exports": [
+        "localOnly",
+        "WORK_ROOT",
+        "projectDir",
+        "safeFile"
+      ],
+      "totalLines": 38,
+      "hasStructuralAnalysis": true
+    },
+    "deploy/app/api/video/local/asset/route.js": {
+      "filePath": "deploy/app/api/video/local/asset/route.js",
+      "contentHash": "be626688bfe11b3f7fed9c82919c6c9912f30d66d1f67e62c230077c86937672",
+      "functions": [
+        {
+          "name": "GET",
+          "params": [
+            "req"
+          ],
+          "exported": true,
+          "lineCount": 45
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "fs",
+          "specifiers": [
+            "fs"
+          ]
+        },
+        {
+          "source": "stream",
+          "specifiers": [
+            "Readable"
+          ]
+        },
+        {
+          "source": "../_guard",
+          "specifiers": [
+            "localOnly",
+            "projectDir",
+            "safeFile"
+          ]
+        }
+      ],
+      "exports": [
+        "GET"
+      ],
+      "totalLines": 64,
+      "hasStructuralAnalysis": true
+    },
+    "deploy/app/api/video/local/project/route.js": {
+      "filePath": "deploy/app/api/video/local/project/route.js",
+      "contentHash": "434676b8ecfac6205671d83da1dfeeb20217de0beb23277f28b91ce0d4a17034",
+      "functions": [
+        {
+          "name": "GET",
+          "params": [
+            "req"
+          ],
+          "exported": true,
+          "lineCount": 51
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "next/server",
+          "specifiers": [
+            "NextResponse"
+          ]
+        },
+        {
+          "source": "fs",
+          "specifiers": [
+            "fs"
+          ]
+        },
+        {
+          "source": "path",
+          "specifiers": [
+            "path"
+          ]
+        },
+        {
+          "source": "../_guard",
+          "specifiers": [
+            "localOnly",
+            "projectDir"
+          ]
+        }
+      ],
+      "exports": [
+        "GET"
+      ],
+      "totalLines": 59,
+      "hasStructuralAnalysis": true
+    },
+    "deploy/app/api/video/local/projects/route.js": {
+      "filePath": "deploy/app/api/video/local/projects/route.js",
+      "contentHash": "56374382ca29712d1bffc8cf261e85c02276fe9a79b884cdb71e0f3b0598288b",
+      "functions": [
+        {
+          "name": "GET",
+          "params": [],
+          "exported": true,
+          "lineCount": 36
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "next/server",
+          "specifiers": [
+            "NextResponse"
+          ]
+        },
+        {
+          "source": "fs",
+          "specifiers": [
+            "fs"
+          ]
+        },
+        {
+          "source": "path",
+          "specifiers": [
+            "path"
+          ]
+        },
+        {
+          "source": "../_guard",
+          "specifiers": [
+            "localOnly",
+            "WORK_ROOT"
+          ]
+        }
+      ],
+      "exports": [
+        "GET"
+      ],
+      "totalLines": 44,
+      "hasStructuralAnalysis": true
+    },
+    "deploy/app/api/video/local/render-status/route.js": {
+      "filePath": "deploy/app/api/video/local/render-status/route.js",
+      "contentHash": "ec07098db489aac9614bc69a5c16d3a062ab2d7f0cd4a5e083454c4a7ed2a19f",
+      "functions": [
+        {
+          "name": "pidAlive",
+          "params": [
+            "pid"
+          ],
+          "exported": false,
+          "lineCount": 3
+        },
+        {
+          "name": "GET",
+          "params": [
+            "req"
+          ],
+          "exported": true,
+          "lineCount": 44
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "next/server",
+          "specifiers": [
+            "NextResponse"
+          ]
+        },
+        {
+          "source": "fs",
+          "specifiers": [
+            "fs"
+          ]
+        },
+        {
+          "source": "path",
+          "specifiers": [
+            "path"
+          ]
+        },
+        {
+          "source": "../_guard",
+          "specifiers": [
+            "localOnly",
+            "projectDir"
+          ]
+        }
+      ],
+      "exports": [
+        "GET"
+      ],
+      "totalLines": 56,
+      "hasStructuralAnalysis": true
+    },
+    "deploy/app/api/video/local/render/route.js": {
+      "filePath": "deploy/app/api/video/local/render/route.js",
+      "contentHash": "f57f48dc330c91da3e967b6f135b1623a9defdfc4258cf788d0dfa7290bfcb4c",
+      "functions": [
+        {
+          "name": "pidAlive",
+          "params": [
+            "pid"
+          ],
+          "exported": false,
+          "lineCount": 3
+        },
+        {
+          "name": "POST",
+          "params": [
+            "req"
+          ],
+          "exported": true,
+          "lineCount": 59
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "next/server",
+          "specifiers": [
+            "NextResponse"
+          ]
+        },
+        {
+          "source": "fs",
+          "specifiers": [
+            "fs"
+          ]
+        },
+        {
+          "source": "path",
+          "specifiers": [
+            "path"
+          ]
+        },
+        {
+          "source": "child_process",
+          "specifiers": [
+            "spawn"
+          ]
+        },
+        {
+          "source": "../_guard",
+          "specifiers": [
+            "localOnly",
+            "projectDir"
+          ]
+        }
+      ],
+      "exports": [
+        "POST"
+      ],
+      "totalLines": 79,
+      "hasStructuralAnalysis": true
+    },
+    "deploy/app/api/video/local/upload/route.js": {
+      "filePath": "deploy/app/api/video/local/upload/route.js",
+      "contentHash": "88874be89a55240ed8354454a4666c7a38db8e395a17eb6dfae86cee11bb1a3e",
+      "functions": [
+        {
+          "name": "POST",
+          "params": [
+            "req"
+          ],
+          "exported": true,
+          "lineCount": 27
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "next/server",
+          "specifiers": [
+            "NextResponse"
+          ]
+        },
+        {
+          "source": "fs",
+          "specifiers": [
+            "fs"
+          ]
+        },
+        {
+          "source": "path",
+          "specifiers": [
+            "path"
+          ]
+        },
+        {
+          "source": "../_guard",
+          "specifiers": [
+            "localOnly",
+            "projectDir",
+            "safeFile"
+          ]
+        }
+      ],
+      "exports": [
+        "POST"
+      ],
+      "totalLines": 38,
+      "hasStructuralAnalysis": true
+    },
+    "deploy/app/api/video/render/route.js": {
+      "filePath": "deploy/app/api/video/render/route.js",
+      "contentHash": "fa2a505e8193d7341af2f897b365ce8abf7f90a7f061d1355dfb43537f2cfae3",
+      "functions": [
+        {
+          "name": "validatePlan",
+          "params": [
+            "raw"
+          ],
+          "exported": false,
+          "lineCount": 128
+        },
+        {
+          "name": "badVisual",
+          "params": [
+            "spec"
+          ],
+          "exported": false,
+          "lineCount": 29
+        },
+        {
+          "name": "POST",
+          "params": [
+            "req"
+          ],
+          "exported": true,
+          "lineCount": 142
+        },
+        {
+          "name": "markFailed",
+          "params": [
+            "id",
+            "reason"
+          ],
+          "exported": false,
+          "lineCount": 10
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "next/server",
+          "specifiers": [
+            "NextResponse"
+          ]
+        },
+        {
+          "source": "@supabase/supabase-js",
+          "specifiers": [
+            "createClient"
+          ]
+        },
+        {
+          "source": "../../../../lib/apiAuth",
+          "specifiers": [
+            "requireMarketing"
+          ]
+        }
+      ],
+      "exports": [
+        "POST"
+      ],
+      "totalLines": 398,
       "hasStructuralAnalysis": true
     },
     "deploy/app/api/vms-sync/route.js": {
@@ -8339,7 +11506,7 @@
     },
     "deploy/app/api/wiki-insights/route.js": {
       "filePath": "deploy/app/api/wiki-insights/route.js",
-      "contentHash": "bc33861989f5b3e741debdd4eea742663b443ce129488bae98fa37ff336ad6db",
+      "contentHash": "6a0b7baf4b1f5045d95ca215e62b494756dd927a0c3d3bb093ee6465ad524ae0",
       "functions": [
         {
           "name": "parseFrontmatter",
@@ -8371,7 +11538,7 @@
             "request"
           ],
           "exported": true,
-          "lineCount": 83
+          "lineCount": 86
         }
       ],
       "classes": [],
@@ -8393,6 +11560,12 @@
           "specifiers": [
             "path"
           ]
+        },
+        {
+          "source": "../../../lib/apiAuth",
+          "specifiers": [
+            "requireStaff"
+          ]
         }
       ],
       "exports": [
@@ -8400,7 +11573,7 @@
         "dynamic",
         "GET"
       ],
-      "totalLines": 160,
+      "totalLines": 168,
       "hasStructuralAnalysis": true
     },
     "deploy/app/api/worldwide-stock-sync/route.js": {
@@ -8473,7 +11646,7 @@
     },
     "deploy/app/branches/page.jsx": {
       "filePath": "deploy/app/branches/page.jsx",
-      "contentHash": "a217ad28dd826a9569d1439e13f9b5af70acec81e4eaebca637b3a32cb7e02ca",
+      "contentHash": "823dd478e6fac4d9f155c9fc816c16074bd7ddc91363fab5f4a5a9eea2695f30",
       "functions": [
         {
           "name": "getBranches",
@@ -8601,7 +11774,7 @@
     },
     "deploy/app/how-to/page.jsx": {
       "filePath": "deploy/app/how-to/page.jsx",
-      "contentHash": "4e795fa1c9bf23450879f40217e14d185daa3516a2df0a9518b09f740f43b76c",
+      "contentHash": "b96e9e95024ede1b94cce3d466e0678f9f036b53756a28f9b3acd1b439dac87b",
       "functions": [
         {
           "name": "tips",
@@ -8868,6 +12041,76 @@
         "ProductsPage"
       ],
       "totalLines": 148,
+      "hasStructuralAnalysis": true
+    },
+    "deploy/app/video/editor/page.jsx": {
+      "filePath": "deploy/app/video/editor/page.jsx",
+      "contentHash": "9529581a3fb143f66e5cb18581cf3e6eb56d422360b0f1c4fa3199b8479ba75b",
+      "functions": [
+        {
+          "name": "EditorShell",
+          "params": [],
+          "exported": false,
+          "lineCount": 4
+        },
+        {
+          "name": "VideoEditorPage",
+          "params": [],
+          "exported": true,
+          "lineCount": 12
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "react",
+          "specifiers": [
+            "Suspense"
+          ]
+        },
+        {
+          "source": "next/navigation",
+          "specifiers": [
+            "useSearchParams"
+          ]
+        },
+        {
+          "source": "../../../components/editor/VideoEditor",
+          "specifiers": [
+            "VideoEditor"
+          ]
+        }
+      ],
+      "exports": [
+        "VideoEditorPage"
+      ],
+      "totalLines": 28,
+      "hasStructuralAnalysis": true
+    },
+    "deploy/app/video/page.jsx": {
+      "filePath": "deploy/app/video/page.jsx",
+      "contentHash": "26517bae4432402033a796d9d89e1425438c91d772ef5dddc36b3d8ec24285e4",
+      "functions": [
+        {
+          "name": "VideoPage",
+          "params": [],
+          "exported": true,
+          "lineCount": 3
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "../../components/VideoStudio",
+          "specifiers": [
+            "VideoStudio"
+          ]
+        }
+      ],
+      "exports": [
+        "VideoPage"
+      ],
+      "totalLines": 13,
       "hasStructuralAnalysis": true
     },
     "deploy/components/DivisionXApp.jsx": {
@@ -11481,13 +14724,13 @@
     },
     "deploy/components/shared/AIInsightWidget.jsx": {
       "filePath": "deploy/components/shared/AIInsightWidget.jsx",
-      "contentHash": "0cbfc3fd48256ef484b9805de3f1745bd458f997c2188ac73632a275e2a76c47",
+      "contentHash": "f045212b59f78df34df85eda279c2354b13843c33ba8a5e2d2e09deb97f95c38",
       "functions": [
         {
           "name": "AIInsightWidget",
           "params": [],
           "exported": true,
-          "lineCount": 158
+          "lineCount": 162
         }
       ],
       "classes": [],
@@ -11509,12 +14752,18 @@
             "Loader2",
             "ChevronRight"
           ]
+        },
+        {
+          "source": "../../lib/supabase",
+          "specifiers": [
+            "supabase"
+          ]
         }
       ],
       "exports": [
         "AIInsightWidget"
       ],
-      "totalLines": 171,
+      "totalLines": 176,
       "hasStructuralAnalysis": true
     },
     "deploy/components/shared/constants.js": {
@@ -11916,7 +15165,7 @@
     },
     "deploy/components/VideoStudio.jsx": {
       "filePath": "deploy/components/VideoStudio.jsx",
-      "contentHash": "351148f18c54f2af0503eada5825b34657329c7e117f8bf6a79236072971bb0f",
+      "contentHash": "0a276023881e03bcc5a1571c09f12d20ba536619ee36ef749fc4b8b37d73a0de",
       "functions": [
         {
           "name": "cpLen",
@@ -11987,7 +15236,7 @@
           "name": "VideoStudio",
           "params": [],
           "exported": true,
-          "lineCount": 535
+          "lineCount": 658
         },
         {
           "name": "StepTab",
@@ -12017,7 +15266,7 @@
           "name": "JobPanel",
           "params": [],
           "exported": false,
-          "lineCount": 60
+          "lineCount": 73
         },
         {
           "name": "Frame",
@@ -12069,7 +15318,7 @@
       "exports": [
         "VideoStudio"
       ],
-      "totalLines": 1039,
+      "totalLines": 1222,
       "hasStructuralAnalysis": true
     },
     "deploy/DEPLOY_GUIDE.md": {
@@ -12177,7 +15426,7 @@
     },
     "deploy/lib/apiAuth.js": {
       "filePath": "deploy/lib/apiAuth.js",
-      "contentHash": "2480b779cb7f4b6ebf011b609662d32f8e7a1224f8dc559fae2e6ec590cac648",
+      "contentHash": "537704da0bbdfa82dd2b649d99142727c9bb497edd34ff6d7f4281c17d2b78b5",
       "functions": [
         {
           "name": "bearer",
@@ -12202,6 +15451,14 @@
           ],
           "exported": true,
           "lineCount": 8
+        },
+        {
+          "name": "requireStaff",
+          "params": [
+            "req"
+          ],
+          "exported": true,
+          "lineCount": 9
         },
         {
           "name": "requireMarketing",
@@ -12231,9 +15488,10 @@
         "requireUser",
         "ROLES",
         "requireAdmin",
+        "requireStaff",
         "requireMarketing"
       ],
-      "totalLines": 73,
+      "totalLines": 88,
       "hasStructuralAnalysis": true
     },
     "deploy/lib/artDirector.js": {
@@ -14582,12 +17840,12 @@
     },
     "deploy/next.config.js": {
       "filePath": "deploy/next.config.js",
-      "contentHash": "020a1fb28f7eb78af2831b9fb6b3a8c98a61e75a37cae72de2ef4ff2a69517c9",
+      "contentHash": "d3883cd9aa9a5b0829f5eb9c06b98c5598fc899e735454f4e1d92bed817e6f5e",
       "functions": [],
       "classes": [],
       "imports": [],
       "exports": [],
-      "totalLines": 34,
+      "totalLines": 49,
       "hasStructuralAnalysis": true
     },
     "deploy/package.json": {
@@ -17072,6 +20330,16 @@
       "totalLines": 104,
       "hasStructuralAnalysis": true
     },
+    "deploy/tasks/competitor_watch.json": {
+      "filePath": "deploy/tasks/competitor_watch.json",
+      "contentHash": "a839eb45f1b365a6daf06636be5c7db3cdb13de66d893dcc65cf0ade4dc10be0",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 27,
+      "hasStructuralAnalysis": true
+    },
     "deploy/tasks/concept_css/battle.css": {
       "filePath": "deploy/tasks/concept_css/battle.css",
       "contentHash": "4a549728cfa95a30f74822d131e74c9903d3e3f1a1eb39acdcb8661ea749b24c",
@@ -17174,7 +20442,7 @@
     },
     "deploy/tasks/content_voice.json": {
       "filePath": "deploy/tasks/content_voice.json",
-      "contentHash": "e426183f6fe6d37627e8e417f49a899be96d9fafa44eb2334ed8356a3aff27bd",
+      "contentHash": "9cc44738828378ddc57b5dc02b71a48b4ea407b40eb4569ff4c988feff83c8f9",
       "functions": [],
       "classes": [],
       "imports": [],
@@ -17214,12 +20482,12 @@
     },
     "deploy/tasks/idea_sources.json": {
       "filePath": "deploy/tasks/idea_sources.json",
-      "contentHash": "26b52d59b5563cacb87c5c1154eb701d99bdcdb627539ab4ed9ddc27215bf351",
+      "contentHash": "87d748307c4030808eb2d0f0a544280f49fbfcb9113eb567f5ef3dc5d1d7a2b0",
       "functions": [],
       "classes": [],
       "imports": [],
       "exports": [],
-      "totalLines": 45,
+      "totalLines": 132,
       "hasStructuralAnalysis": true
     },
     "deploy/tasks/image_style.json": {
@@ -17411,6 +20679,296 @@
       "exports": [],
       "totalLines": 4476,
       "hasStructuralAnalysis": true
+    },
+    "hyperframes/README.md": {
+      "filePath": "hyperframes/README.md",
+      "contentHash": "52ca4624b8de16c2751340db5e13a1537d383456ecbe657fc8dfdc8a32d5b309",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 108,
+      "hasStructuralAnalysis": true
+    },
+    "hyperframes/templates/dvx-promo/AGENTS.md": {
+      "filePath": "hyperframes/templates/dvx-promo/AGENTS.md",
+      "contentHash": "1d4f0c8ca2507b94fd7c9df709fff01416adbd51a0f922b9d6ed2f40129147d5",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 110,
+      "hasStructuralAnalysis": true
+    },
+    "hyperframes/templates/dvx-promo/assets/branches/branches.json": {
+      "filePath": "hyperframes/templates/dvx-promo/assets/branches/branches.json",
+      "contentHash": "1bde59e29a7364cf1f0f7296ebb5a5e1f1e1befcfb3bdd87190b938ec2e071de",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 167,
+      "hasStructuralAnalysis": true
+    },
+    "hyperframes/templates/dvx-promo/assets/fonts/OFL-Kanit.txt": {
+      "filePath": "hyperframes/templates/dvx-promo/assets/fonts/OFL-Kanit.txt",
+      "contentHash": "eb998cc5a685b240cdb46a0b5747e70334c8c57bbd7b1f6b044d75719358df67",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 94,
+      "hasStructuralAnalysis": false
+    },
+    "hyperframes/templates/dvx-promo/assets/pack.webp": {
+      "filePath": "hyperframes/templates/dvx-promo/assets/pack.webp",
+      "contentHash": "6769701f453a34e26dfd13137761120eeb3721637841af3a93922908b4859ce1",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 454,
+      "hasStructuralAnalysis": false
+    },
+    "hyperframes/templates/dvx-promo/assets/packs/op-13.webp": {
+      "filePath": "hyperframes/templates/dvx-promo/assets/packs/op-13.webp",
+      "contentHash": "4a10e89b408fd1f87ab309349c57d5eef52883226f88413fd7c29247b47d874d",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 591,
+      "hasStructuralAnalysis": false
+    },
+    "hyperframes/templates/dvx-promo/assets/packs/op-15.webp": {
+      "filePath": "hyperframes/templates/dvx-promo/assets/packs/op-15.webp",
+      "contentHash": "4629c17650e35b71d8318b0def0e7b01cdd338cda3a62d1863fd023ea7fda9a1",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 606,
+      "hasStructuralAnalysis": false
+    },
+    "hyperframes/templates/dvx-promo/assets/packs/op-16.webp": {
+      "filePath": "hyperframes/templates/dvx-promo/assets/packs/op-16.webp",
+      "contentHash": "5e2989d9055dded00c1be2056b58c08bf47bf078749b7cab0b8d0a55cd19caa9",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 526,
+      "hasStructuralAnalysis": false
+    },
+    "hyperframes/templates/dvx-promo/assets/packs/pkm-dream-ex.webp": {
+      "filePath": "hyperframes/templates/dvx-promo/assets/packs/pkm-dream-ex.webp",
+      "contentHash": "8f3bd96c7db049a27ec2d55f54a0d1ed845d05daf63a3d6899f906c532d43864",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 575,
+      "hasStructuralAnalysis": false
+    },
+    "hyperframes/templates/dvx-promo/assets/packs/pkm-ghost.webp": {
+      "filePath": "hyperframes/templates/dvx-promo/assets/packs/pkm-ghost.webp",
+      "contentHash": "65f0331126adc5f4650d9815ef7a37654e622d2156ea3075cfb8f80b9f16896c",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 458,
+      "hasStructuralAnalysis": false
+    },
+    "hyperframes/templates/dvx-promo/assets/packs/pkm-ninja.webp": {
+      "filePath": "hyperframes/templates/dvx-promo/assets/packs/pkm-ninja.webp",
+      "contentHash": "4ebf21c33947f1fa832b7e366ee315b8ee98957b7e50c3a8c6b98c11fc77f694",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 522,
+      "hasStructuralAnalysis": false
+    },
+    "hyperframes/templates/dvx-promo/assets/packs/prb-02.webp": {
+      "filePath": "hyperframes/templates/dvx-promo/assets/packs/prb-02.webp",
+      "contentHash": "4dcf2172f99d3dc614015422a6408c0d21ad2dc3a0a6117774c9691c08cfcad9",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 606,
+      "hasStructuralAnalysis": false
+    },
+    "hyperframes/templates/dvx-promo/assets/voice.wav": {
+      "filePath": "hyperframes/templates/dvx-promo/assets/voice.wav",
+      "contentHash": "77e0534e62fcb245c2db315a5a07167d5bf8c782a29d4e3cedb2cffe22df94f3",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 5134,
+      "hasStructuralAnalysis": false
+    },
+    "hyperframes/templates/dvx-promo/CLAUDE.md": {
+      "filePath": "hyperframes/templates/dvx-promo/CLAUDE.md",
+      "contentHash": "1d4f0c8ca2507b94fd7c9df709fff01416adbd51a0f922b9d6ed2f40129147d5",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 110,
+      "hasStructuralAnalysis": true
+    },
+    "hyperframes/templates/dvx-promo/compositions/captions.html": {
+      "filePath": "hyperframes/templates/dvx-promo/compositions/captions.html",
+      "contentHash": "b655a03ae6ac36001fa727a9b727ee5529ac1a468dddd1bfa298f4f7af90ce52",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 61,
+      "hasStructuralAnalysis": false
+    },
+    "hyperframes/templates/dvx-promo/compositions/fmt-map.html": {
+      "filePath": "hyperframes/templates/dvx-promo/compositions/fmt-map.html",
+      "contentHash": "7f3af12d7ba9ec28487a81b0dbbf1af18efe236d295028284d99cb88d4ae2072",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 306,
+      "hasStructuralAnalysis": false
+    },
+    "hyperframes/templates/dvx-promo/compositions/fmt-quiz.html": {
+      "filePath": "hyperframes/templates/dvx-promo/compositions/fmt-quiz.html",
+      "contentHash": "41fab31c40495b891399061eb205d64d2550eee8d184bc6761110198b59dbc59",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 254,
+      "hasStructuralAnalysis": false
+    },
+    "hyperframes/templates/dvx-promo/compositions/fmt-rank.html": {
+      "filePath": "hyperframes/templates/dvx-promo/compositions/fmt-rank.html",
+      "contentHash": "74780d02484a03aa4bc1b5e17bb48eb202cbcbb9ad0de74ed2a22c12ebb1beb8",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 378,
+      "hasStructuralAnalysis": false
+    },
+    "hyperframes/templates/dvx-promo/compositions/fmt-versus.html": {
+      "filePath": "hyperframes/templates/dvx-promo/compositions/fmt-versus.html",
+      "contentHash": "e379f92ebe71cb164f3ac6e602017491886c63d9392c40884fca98cc48c302c5",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 329,
+      "hasStructuralAnalysis": false
+    },
+    "hyperframes/templates/dvx-promo/compositions/scene-cta.html": {
+      "filePath": "hyperframes/templates/dvx-promo/compositions/scene-cta.html",
+      "contentHash": "8e8c7f466dd39b4d6c942bc40c2c0a1fde3d4d111a5a2ab18ecdf897670ab523",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 176,
+      "hasStructuralAnalysis": false
+    },
+    "hyperframes/templates/dvx-promo/compositions/scene-hook.html": {
+      "filePath": "hyperframes/templates/dvx-promo/compositions/scene-hook.html",
+      "contentHash": "0a6154960c7aa856b47e22d1464525174e1f65d6c227773610d6e3baf771012e",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 268,
+      "hasStructuralAnalysis": false
+    },
+    "hyperframes/templates/dvx-promo/compositions/scene-machine.html": {
+      "filePath": "hyperframes/templates/dvx-promo/compositions/scene-machine.html",
+      "contentHash": "ff3d313e0804978738773674fd97862d5646dd4cecd4671a968983ab06b1f80f",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 159,
+      "hasStructuralAnalysis": false
+    },
+    "hyperframes/templates/dvx-promo/compositions/scene-pack.html": {
+      "filePath": "hyperframes/templates/dvx-promo/compositions/scene-pack.html",
+      "contentHash": "1b33ad7e16ab36b7c53bd493ad9019c0bf12d24d1f7fbca9632553309a85e371",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 225,
+      "hasStructuralAnalysis": false
+    },
+    "hyperframes/templates/dvx-promo/hyperframes.json": {
+      "filePath": "hyperframes/templates/dvx-promo/hyperframes.json",
+      "contentHash": "53dbce1e19aa713cbb12ee0bc4d206143b45ab15e6ffbfcaa8f69572d4d24d50",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 13,
+      "hasStructuralAnalysis": true
+    },
+    "hyperframes/templates/dvx-promo/index.html": {
+      "filePath": "hyperframes/templates/dvx-promo/index.html",
+      "contentHash": "e52f67ef3b8a7c9daf61ecf66e21935095034028a0926a8a2dfda8314cc6f234",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 112,
+      "hasStructuralAnalysis": false
+    },
+    "hyperframes/templates/dvx-promo/meta.json": {
+      "filePath": "hyperframes/templates/dvx-promo/meta.json",
+      "contentHash": "b78b3d56d5a7ad139bae626f430e73b94610f9f2ba56d5daffb785a85fdcf7fa",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 5,
+      "hasStructuralAnalysis": true
+    },
+    "hyperframes/templates/dvx-promo/package.json": {
+      "filePath": "hyperframes/templates/dvx-promo/package.json",
+      "contentHash": "8ebde159e4a54d63673266390c2fc8f8c199ac43bdbaaa9582832bba35934893",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 12,
+      "hasStructuralAnalysis": true
+    },
+    "hyperframes/templates/dvx-promo/scaffold/captions.template.html": {
+      "filePath": "hyperframes/templates/dvx-promo/scaffold/captions.template.html",
+      "contentHash": "e01f12d4e281af5f572b9c168788914f51a38d95c4149a83ee2cbb422b599fe2",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 52,
+      "hasStructuralAnalysis": false
+    },
+    "hyperframes/templates/dvx-promo/scaffold/host.template.html": {
+      "filePath": "hyperframes/templates/dvx-promo/scaffold/host.template.html",
+      "contentHash": "60176b243c9c7bfbe086f3272f28e8d12acf6c07ce71e16560c0c764318e2370",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 223,
+      "hasStructuralAnalysis": false
     },
     "marketing-model/examples.json": {
       "filePath": "marketing-model/examples.json",
@@ -18571,6 +22129,215 @@
       "imports": [],
       "exports": [],
       "totalLines": 94,
+      "hasStructuralAnalysis": true
+    },
+    "scripts/hermes/competitor_radar.py": {
+      "filePath": "scripts/hermes/competitor_radar.py",
+      "contentHash": "5b469ecb652a2a2af537e0db6414e5300658238a866065a702359fff3ae8ff21",
+      "functions": [
+        {
+          "name": "env_value",
+          "params": [
+            "path",
+            "key"
+          ],
+          "exported": true,
+          "lineCount": 14
+        },
+        {
+          "name": "load_state",
+          "params": [],
+          "exported": true,
+          "lineCount": 5
+        },
+        {
+          "name": "save_state",
+          "params": [
+            "state"
+          ],
+          "exported": true,
+          "lineCount": 3
+        },
+        {
+          "name": "tavily",
+          "params": [
+            "key",
+            "target"
+          ],
+          "exported": true,
+          "lineCount": 18
+        },
+        {
+          "name": "posted_date",
+          "params": [
+            "url",
+            "tavily_date"
+          ],
+          "exported": true,
+          "lineCount": 14
+        },
+        {
+          "name": "is_post",
+          "params": [
+            "url"
+          ],
+          "exported": true,
+          "lineCount": 8
+        },
+        {
+          "name": "pick",
+          "params": [
+            "target",
+            "results",
+            "seen",
+            "today",
+            "cfg"
+          ],
+          "exported": true,
+          "lineCount": 20
+        },
+        {
+          "name": "push_idea",
+          "params": [
+            "sb_url",
+            "sb_key",
+            "hit"
+          ],
+          "exported": true,
+          "lineCount": 26
+        },
+        {
+          "name": "main",
+          "params": [],
+          "exported": true,
+          "lineCount": 69
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "json",
+          "specifiers": [
+            "json"
+          ]
+        },
+        {
+          "source": "pathlib",
+          "specifiers": [
+            "pathlib"
+          ]
+        },
+        {
+          "source": "re",
+          "specifiers": [
+            "re"
+          ]
+        },
+        {
+          "source": "sys",
+          "specifiers": [
+            "sys"
+          ]
+        },
+        {
+          "source": "urllib.error",
+          "specifiers": [
+            "urllib.error"
+          ]
+        },
+        {
+          "source": "urllib.parse",
+          "specifiers": [
+            "urllib.parse"
+          ]
+        },
+        {
+          "source": "urllib.request",
+          "specifiers": [
+            "urllib.request"
+          ]
+        },
+        {
+          "source": "datetime",
+          "specifiers": [
+            "datetime",
+            "timedelta",
+            "timezone"
+          ]
+        }
+      ],
+      "exports": [
+        "env_value",
+        "load_state",
+        "save_state",
+        "tavily",
+        "posted_date",
+        "is_post",
+        "pick",
+        "push_idea",
+        "main"
+      ],
+      "totalLines": 251,
+      "hasStructuralAnalysis": true
+    },
+    "scripts/hermes/review_monitor.py": {
+      "filePath": "scripts/hermes/review_monitor.py",
+      "contentHash": "4d14e4daf222846b32b410008ddf29e07e87d42646f06e602b64a3eb5d62b695",
+      "functions": [
+        {
+          "name": "env_value",
+          "params": [
+            "path",
+            "key"
+          ],
+          "exported": true,
+          "lineCount": 14
+        },
+        {
+          "name": "main",
+          "params": [],
+          "exported": true,
+          "lineCount": 29
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "json",
+          "specifiers": [
+            "json"
+          ]
+        },
+        {
+          "source": "pathlib",
+          "specifiers": [
+            "pathlib"
+          ]
+        },
+        {
+          "source": "sys",
+          "specifiers": [
+            "sys"
+          ]
+        },
+        {
+          "source": "urllib.error",
+          "specifiers": [
+            "urllib.error"
+          ]
+        },
+        {
+          "source": "urllib.request",
+          "specifiers": [
+            "urllib.request"
+          ]
+        }
+      ],
+      "exports": [
+        "env_value",
+        "main"
+      ],
+      "totalLines": 81,
       "hasStructuralAnalysis": true
     },
     "scripts/jsxcheck.cjs": {
@@ -20452,7 +24219,7 @@
     },
     "wiki/knowledge-base/05-visual-identity.md": {
       "filePath": "wiki/knowledge-base/05-visual-identity.md",
-      "contentHash": "2d3d95c721f14518536ddc4d8f541f16290f0049e85e6420dce5935c11187530",
+      "contentHash": "d6feb00d450df16fcde434f2410f2bd043b53ed493a3f21410df886b7218c5c8",
       "functions": [],
       "classes": [],
       "imports": [],
@@ -20622,7 +24389,7 @@
     },
     "wiki/marketing/brand-brief.md": {
       "filePath": "wiki/marketing/brand-brief.md",
-      "contentHash": "15dcaa1fbe5cd0fcd26d52357d5f020cba0796b9c42869521c119d85af478b1f",
+      "contentHash": "8c94189e3084e15fd038434a297c4a74087767490baafd4a9c8f32886959db3a",
       "functions": [],
       "classes": [],
       "imports": [],
@@ -20702,7 +24469,7 @@
     },
     "wiki/marketing/fb-page-setup.md": {
       "filePath": "wiki/marketing/fb-page-setup.md",
-      "contentHash": "2c78802b39b329e16aa09b1e5cf9744defa9a07f5e9d9f9a0c9874facfe78f25",
+      "contentHash": "191b2fdf9e0d6b3a5c6fc2ca531d50e4f82b02dff967ced6c8138be3b2bd8e7b",
       "functions": [],
       "classes": [],
       "imports": [],
@@ -22552,12 +26319,12 @@
     },
     "wiki/worklog/2026-10-10-brand-hashtag-and-op17-audit.md": {
       "filePath": "wiki/worklog/2026-10-10-brand-hashtag-and-op17-audit.md",
-      "contentHash": "2e27c98711a851d644ccf1daa37d589fa1a7f014f5b3a42e53eb09efd852ffa5",
+      "contentHash": "8aee7275decb716ae4e777c4a419b5f3a70a451615ecdd1ee08eb34642996fe5",
       "functions": [],
       "classes": [],
       "imports": [],
       "exports": [],
-      "totalLines": 99,
+      "totalLines": 125,
       "hasStructuralAnalysis": true
     },
     "wiki/worklog/2026-10-10-content-review-and-preview-tool.md": {
@@ -22580,6 +26347,106 @@
       "totalLines": 83,
       "hasStructuralAnalysis": true
     },
+    "wiki/worklog/2026-10-10-trend-radar.md": {
+      "filePath": "wiki/worklog/2026-10-10-trend-radar.md",
+      "contentHash": "9d55fbaea2ded5c808983d2ed2ce3dabef088ef8d33756f2d34e43a763b98b6f",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 109,
+      "hasStructuralAnalysis": true
+    },
+    "wiki/worklog/2026-10-12-review-notes-foreign-script.md": {
+      "filePath": "wiki/worklog/2026-10-12-review-notes-foreign-script.md",
+      "contentHash": "497337b1158cd527b5d18ec0d2b47fa601fbf259f14d7ba4660a2e10e06bb807",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 43,
+      "hasStructuralAnalysis": true
+    },
+    "wiki/worklog/2026-10-12-user-aomeiei-login.md": {
+      "filePath": "wiki/worklog/2026-10-12-user-aomeiei-login.md",
+      "contentHash": "6ef8753413715d4fa6ec7aa56775f56a6af2b6d3c022392e18358945993e13ac",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 40,
+      "hasStructuralAnalysis": true
+    },
+    "wiki/worklog/2026-10-13-hermes-nous-free-ended.md": {
+      "filePath": "wiki/worklog/2026-10-13-hermes-nous-free-ended.md",
+      "contentHash": "0f6d05e7bb58844837f6ce74645efe68c2bd106e2ea97fee210c5c7d09297f83",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 95,
+      "hasStructuralAnalysis": true
+    },
+    "wiki/worklog/2026-10-14-heroai-mcp.md": {
+      "filePath": "wiki/worklog/2026-10-14-heroai-mcp.md",
+      "contentHash": "797d5313aa09b197cc3a15e25162a1e57140d7ac9d271dbb9cc9b98734158031",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 84,
+      "hasStructuralAnalysis": true
+    },
+    "wiki/worklog/2026-10-16-hyperframes.md": {
+      "filePath": "wiki/worklog/2026-10-16-hyperframes.md",
+      "contentHash": "27dbfada5e0bccb12cd48b5fa36c6ff12bcbff2a36f6ffa1ca85024dccf70461",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 75,
+      "hasStructuralAnalysis": true
+    },
+    "wiki/worklog/2026-10-16-phone-number-change.md": {
+      "filePath": "wiki/worklog/2026-10-16-phone-number-change.md",
+      "contentHash": "740ff967f5c0430bc4c158f6512030d27e8333852da6505bd55b1a47ea948fcb",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 45,
+      "hasStructuralAnalysis": true
+    },
+    "wiki/worklog/2026-10-16-security-review.md": {
+      "filePath": "wiki/worklog/2026-10-16-security-review.md",
+      "contentHash": "bc51dadca2c8c96a98f157d28000546dd5c4b4239881cbaf6784e3c49b7d67d5",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 50,
+      "hasStructuralAnalysis": true
+    },
+    "wiki/worklog/2026-10-16-video-design-freedom.md": {
+      "filePath": "wiki/worklog/2026-10-16-video-design-freedom.md",
+      "contentHash": "cd1333191d1bbe5c0abdedf91428529703faa388996665f5608877129b10af52",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 83,
+      "hasStructuralAnalysis": true
+    },
+    "wiki/worklog/2026-10-16-video-formats-research.md": {
+      "filePath": "wiki/worklog/2026-10-16-video-formats-research.md",
+      "contentHash": "55bf60679d6e26868f6f438728e7a50e29b36da8056a386ca8c82e6d57713acd",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 128,
+      "hasStructuralAnalysis": true
+    },
     "wiki/worklog/README.md": {
       "filePath": "wiki/worklog/README.md",
       "contentHash": "3fbd80dff9dc21e3694a2efc075dcd4676581228ab3b2a856b1d6fc1b8a86a1d",
@@ -22588,523 +26455,6 @@
       "imports": [],
       "exports": [],
       "totalLines": 46,
-      "hasStructuralAnalysis": true
-    },
-    "deploy/agents/trend_sources.py": {
-      "filePath": "deploy/agents/trend_sources.py",
-      "contentHash": "a1fb2c7bbf8a8620f0bd4db6406bea206ca91ca7ac49c772f11dea9e6040c372",
-      "functions": [
-        {
-          "name": "_polite",
-          "params": [
-            "host",
-            "gap"
-          ],
-          "exported": true,
-          "lineCount": 5
-        },
-        {
-          "name": "fetch",
-          "params": [
-            "url",
-            "timeout",
-            "headers",
-            "gap"
-          ],
-          "exported": true,
-          "lineCount": 10
-        },
-        {
-          "name": "_clean",
-          "params": [
-            "s"
-          ],
-          "exported": true,
-          "lineCount": 5
-        },
-        {
-          "name": "parse_long_date",
-          "params": [
-            "s"
-          ],
-          "exported": true,
-          "lineCount": 6
-        },
-        {
-          "name": "parse_period",
-          "params": [
-            "s"
-          ],
-          "exported": true,
-          "lineCount": 18
-        },
-        {
-          "name": "parse_dotted",
-          "params": [
-            "s"
-          ],
-          "exported": true,
-          "lineCount": 4
-        },
-        {
-          "name": "age_days",
-          "params": [
-            "d",
-            "today"
-          ],
-          "exported": true,
-          "lineCount": 2
-        },
-        {
-          "name": "_fresh_bonus",
-          "params": [
-            "age"
-          ],
-          "exported": true,
-          "lineCount": 10
-        },
-        {
-          "name": "_idea",
-          "params": [
-            "**kw"
-          ],
-          "exported": true,
-          "lineCount": 10
-        },
-        {
-          "name": "sku_for_set",
-          "params": [
-            "set_code",
-            "skus"
-          ],
-          "exported": true,
-          "lineCount": 12
-        },
-        {
-          "name": "op_article_url",
-          "params": [
-            "site",
-            "limit"
-          ],
-          "exported": true,
-          "lineCount": 4
-        },
-        {
-          "name": "parse_op_articles",
-          "params": [
-            "text",
-            "site",
-            "today",
-            "max_age"
-          ],
-          "exported": true,
-          "lineCount": 30
-        },
-        {
-          "name": "parse_op_products",
-          "params": [
-            "html",
-            "today",
-            "horizon_days"
-          ],
-          "exported": true,
-          "lineCount": 33
-        },
-        {
-          "name": "parse_op_events",
-          "params": [
-            "html",
-            "today",
-            "horizon_days"
-          ],
-          "exported": true,
-          "lineCount": 29
-        },
-        {
-          "name": "parse_dbs_home",
-          "params": [
-            "html",
-            "today",
-            "max_age"
-          ],
-          "exported": true,
-          "lineCount": 26
-        },
-        {
-          "name": "parse_dbs_products",
-          "params": [
-            "html",
-            "today",
-            "horizon_days"
-          ],
-          "exported": true,
-          "lineCount": 27
-        },
-        {
-          "name": "parse_pkm_th",
-          "params": [
-            "html",
-            "limit"
-          ],
-          "exported": true,
-          "lineCount": 21
-        },
-        {
-          "name": "parse_pkm_jp",
-          "params": [
-            "html",
-            "today",
-            "max_age"
-          ],
-          "exported": true,
-          "lineCount": 28
-        },
-        {
-          "name": "tcgplus_url",
-          "params": [
-            "game_id",
-            "start",
-            "end",
-            "limit"
-          ],
-          "exported": true,
-          "lineCount": 6
-        },
-        {
-          "name": "parse_tcgplus",
-          "params": [
-            "text",
-            "game_id",
-            "today"
-          ],
-          "exported": true,
-          "lineCount": 31
-        },
-        {
-          "name": "collect_official",
-          "params": [
-            "ctx"
-          ],
-          "exported": true,
-          "lineCount": 33
-        },
-        {
-          "name": "feed_entries",
-          "params": [
-            "xml"
-          ],
-          "exported": true,
-          "lineCount": 17
-        },
-        {
-          "name": "_age_from",
-          "params": [
-            "published"
-          ],
-          "exported": true,
-          "lineCount": 15
-        },
-        {
-          "name": "collect_global",
-          "params": [
-            "ctx"
-          ],
-          "exported": true,
-          "lineCount": 49
-        },
-        {
-          "name": "rsc_text",
-          "params": [
-            "html"
-          ],
-          "exported": true,
-          "lineCount": 9
-        },
-        {
-          "name": "_loads_ok",
-          "params": [
-            "p"
-          ],
-          "exported": true,
-          "lineCount": 6
-        },
-        {
-          "name": "grab",
-          "params": [
-            "text",
-            "key",
-            "opener"
-          ],
-          "exported": true,
-          "lineCount": 28
-        },
-        {
-          "name": "parse_market",
-          "params": [
-            "html",
-            "sets",
-            "today",
-            "skus"
-          ],
-          "exported": true,
-          "lineCount": 56
-        },
-        {
-          "name": "collect_price",
-          "params": [
-            "ctx"
-          ],
-          "exported": true,
-          "lineCount": 14
-        },
-        {
-          "name": "youtube_entries",
-          "params": [
-            "xml"
-          ],
-          "exported": true,
-          "lineCount": 16
-        },
-        {
-          "name": "collect_youtube",
-          "params": [
-            "ctx"
-          ],
-          "exported": true,
-          "lineCount": 52
-        }
-      ],
-      "classes": [],
-      "imports": [
-        {
-          "source": "json",
-          "specifiers": [
-            "json"
-          ]
-        },
-        {
-          "source": "math",
-          "specifiers": [
-            "math"
-          ]
-        },
-        {
-          "source": "re",
-          "specifiers": [
-            "re"
-          ]
-        },
-        {
-          "source": "time",
-          "specifiers": [
-            "time"
-          ]
-        },
-        {
-          "source": "urllib.parse",
-          "specifiers": [
-            "urllib.parse"
-          ]
-        },
-        {
-          "source": "urllib.request",
-          "specifiers": [
-            "urllib.request"
-          ]
-        },
-        {
-          "source": "datetime",
-          "specifiers": [
-            "date",
-            "datetime",
-            "timedelta",
-            "timezone"
-          ]
-        }
-      ],
-      "exports": [
-        "_polite",
-        "fetch",
-        "_clean",
-        "parse_long_date",
-        "parse_period",
-        "parse_dotted",
-        "age_days",
-        "_fresh_bonus",
-        "_idea",
-        "sku_for_set",
-        "op_article_url",
-        "parse_op_articles",
-        "parse_op_products",
-        "parse_op_events",
-        "parse_dbs_home",
-        "parse_dbs_products",
-        "parse_pkm_th",
-        "parse_pkm_jp",
-        "tcgplus_url",
-        "parse_tcgplus",
-        "collect_official",
-        "feed_entries",
-        "_age_from",
-        "collect_global",
-        "rsc_text",
-        "_loads_ok",
-        "grab",
-        "parse_market",
-        "collect_price",
-        "youtube_entries",
-        "collect_youtube"
-      ],
-      "totalLines": 752,
-      "hasStructuralAnalysis": true
-    },
-    "scripts/hermes/competitor_radar.py": {
-      "filePath": "scripts/hermes/competitor_radar.py",
-      "contentHash": "5b469ecb652a2a2af537e0db6414e5300658238a866065a702359fff3ae8ff21",
-      "functions": [
-        {
-          "name": "env_value",
-          "params": [
-            "path",
-            "key"
-          ],
-          "exported": true,
-          "lineCount": 14
-        },
-        {
-          "name": "load_state",
-          "params": [],
-          "exported": true,
-          "lineCount": 5
-        },
-        {
-          "name": "save_state",
-          "params": [
-            "state"
-          ],
-          "exported": true,
-          "lineCount": 3
-        },
-        {
-          "name": "tavily",
-          "params": [
-            "key",
-            "target"
-          ],
-          "exported": true,
-          "lineCount": 18
-        },
-        {
-          "name": "posted_date",
-          "params": [
-            "url",
-            "tavily_date"
-          ],
-          "exported": true,
-          "lineCount": 14
-        },
-        {
-          "name": "is_post",
-          "params": [
-            "url"
-          ],
-          "exported": true,
-          "lineCount": 8
-        },
-        {
-          "name": "pick",
-          "params": [
-            "target",
-            "results",
-            "seen",
-            "today",
-            "cfg"
-          ],
-          "exported": true,
-          "lineCount": 20
-        },
-        {
-          "name": "push_idea",
-          "params": [
-            "sb_url",
-            "sb_key",
-            "hit"
-          ],
-          "exported": true,
-          "lineCount": 26
-        },
-        {
-          "name": "main",
-          "params": [],
-          "exported": true,
-          "lineCount": 69
-        }
-      ],
-      "classes": [],
-      "imports": [
-        {
-          "source": "json",
-          "specifiers": [
-            "json"
-          ]
-        },
-        {
-          "source": "pathlib",
-          "specifiers": [
-            "pathlib"
-          ]
-        },
-        {
-          "source": "re",
-          "specifiers": [
-            "re"
-          ]
-        },
-        {
-          "source": "sys",
-          "specifiers": [
-            "sys"
-          ]
-        },
-        {
-          "source": "urllib.error",
-          "specifiers": [
-            "urllib.error"
-          ]
-        },
-        {
-          "source": "urllib.parse",
-          "specifiers": [
-            "urllib.parse"
-          ]
-        },
-        {
-          "source": "urllib.request",
-          "specifiers": [
-            "urllib.request"
-          ]
-        },
-        {
-          "source": "datetime",
-          "specifiers": [
-            "datetime",
-            "timedelta",
-            "timezone"
-          ]
-        }
-      ],
-      "exports": [
-        "env_value",
-        "load_state",
-        "save_state",
-        "tavily",
-        "posted_date",
-        "is_post",
-        "pick",
-        "push_idea",
-        "main"
-      ],
-      "totalLines": 251,
       "hasStructuralAnalysis": true
     }
   }
