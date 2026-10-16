@@ -440,7 +440,38 @@ def _quiz_vals(sc, lines, chunks, words, lo, hi, proj, onsets=None):
     vals.update({"rv": round(rv - lo, 3), "dur": round(hi - lo, 3)})
     if name:
         vals["_reveals"] = [(name, s2 - lo, vals["rv"])]
+    vals["_count"] = (cd[3], cd[2], cd[1])           # เวลาจริงในคลิป — ซับบรรทัดนับใช้ชุดเดียวกับวง (_recount_chunks)
     return vals
+
+
+def _recount_chunks(chunks, recount):
+    """ซับบรรทัดนับถอยหลัง → "<นำ>" | "สาม…" | "สอง…" | "หนึ่ง…" ตามเวลาเดียวกับวงนับ
+
+    whisper ถอด "สาม สอง หนึ่ง" ไม่ออก บรรทัดนี้จึงจบเร็วผิด (คลิปทดสอบ 16 ต.ค.: ทั้งบรรทัดได้ 0.6 วิ ก่อนเริ่มนับจริง
+    → ซับแวบเดียวแล้วจอว่างตลอด 3·2·1 ทั้งที่วงนับตรงเสียง) · recount = {segment: (เวลา 3, 2, 1)}
+    """
+    out, done = [], set()
+    for c in chunks:
+        seg = c.get("segment")
+        if seg not in recount:
+            out.append(c)
+            continue
+        if seg in done:
+            continue
+        done.add(seg)
+        mine = [x for x in chunks if x.get("segment") == seg]
+        nxt = next((x["start"] for x in chunks[chunks.index(mine[-1]) + 1:]), None)
+        words = " ".join(x["text"] for x in mine).split()
+        k = next((j for j, w in enumerate(words) if w.startswith("สาม")), None)
+        if k is None or len(words) < k + 3:
+            out += mine
+            continue
+        c3, c2, c1 = recount[seg]
+        end1 = c1 + 0.9 if nxt is None else max(c1 + 0.3, min(c1 + 0.9, nxt))
+        parts = [(" ".join(words[:k]), mine[0]["start"], c3), (words[k], c3, c2), (words[k + 1], c2, c1),
+                 (" ".join(words[k + 2:]), c1, end1)]
+        out += [{"text": t, "start": round(s, 3), "end": round(e, 3), "segment": seg} for t, s, e in parts if t and e > s]
+    return out
 
 
 def _map_vals(sc, lines, chunks, words, lo, hi, onsets=None):
@@ -500,6 +531,7 @@ def write_project(proj, scenes, timing, chunks, words, total, voice_rel, look=No
     fmt = any(sc["type"] in EXTEND for sc in scenes)
     onsets = speech_onsets(proj / voice_rel) if fmt else []
     reveals = []                     # (คำตอบ, เริ่มบรรทัดเฉลย, เวลาเฉลย) — เวลาจริงในคลิป · ใช้ตอนวางซับ
+    recount = {}                     # segment ของบรรทัดนับถอยหลัง → (เวลา 3, 2, 1) · ใช้ตอนวางซับ
     count, slots, hot, brand = {}, [], set(), {"DivisionX Card", "DivisionX"}
     for i, sc in enumerate(scenes):
         kind = sc["type"]
@@ -545,6 +577,7 @@ def write_project(proj, scenes, timing, chunks, words, total, voice_rel, look=No
                                    onsets))
             if sc.get("name"):
                 hot.add(sc["name"])
+            recount[timing[first[i] + 1]["index"]] = vals.pop("_count")
         elif kind == "map":
             vals.update(_map_vals(sc, _line_spans(timing, first[i], spans[i], lo, hi), chunks, words, lo, hi, onsets))
             hot.update(w for w in (sc.get("mall"), f"ชั้น {sc.get('floor')}" if sc.get("floor") else None) if w)
@@ -561,6 +594,8 @@ def write_project(proj, scenes, timing, chunks, words, total, voice_rel, look=No
             f'data-height="1920" data-variable-values="{vv}"></div>')
         _log("3/4", f"ฉาก {i + 1} {kind:8s} {lo:6.2f}–{hi:6.2f} วิ · {vals}")
 
+    if recount:
+        chunks = _recount_chunks(chunks, recount)
     caps = []
     for k, c in enumerate(chunks):
         s, e = round(float(c["start"]), 3), round(float(c["end"]), 3)
