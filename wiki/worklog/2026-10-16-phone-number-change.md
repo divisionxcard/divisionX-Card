@@ -2,7 +2,7 @@
 type: worklog
 date: 2026-10-16
 tags: [web, branches, contact, banner]
-commits: [687784e]
+commits: [687784e, a810035]
 status: ✅ เบอร์ร้านบนเว็บเปลี่ยนเป็น 093-073-7930 แล้ว (แบนเนอร์ /branches ทั้ง 2 ขนาด + ท้ายหน้า /branches และ /how-to) · 🟡 สติกเกอร์บนตู้จริง/เพจ Facebook ยังเป็นเบอร์เก่า
 ---
 

@@ -2,7 +2,7 @@
 type: worklog
 date: 2026-10-16
 tags: [video, hyperframes, director, web, variety]
-commits: [2ff0315]
+commits: [2ff0315, 9c38b5a, a810035]
 status: ✅ ผู้กำกับอัตโนมัติ + ชุดหน้าตา + คลังสำนวน + ปุ่ม "ให้ระบบออกแบบ" บน /video · ทดสอบบน GitHub Actions ผ่าน (16 ต.ค.) + แก้ 4 เรื่องที่เจอในคลิปจริง
 ---
 
