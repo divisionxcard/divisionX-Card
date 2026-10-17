@@ -7,13 +7,18 @@
     · เสียงพูดอีกอย่าง จอขึ้นอีกอย่าง ("ทีมไหนกันบ้าง?" กับ "เช็กหน้าตู้ก่อนไป") · โชว์แค่ ~1.5 วิ
     ตอนนี้ 6 แบบ ออกแบบจาก 3 มุม (ชวนคอมเมนต์ · ให้ประโยชน์ · งานภาพ) แล้วกรรมการรวม — ดู worklog 2026-10-16-cta-layouts
       team  เลือกทีม/อันดับ พิมพ์เลขในคอมเมนต์ (versus · rank) · spot  เฉลยจุดซูม รู้ตั้งแต่เลขไหน (quiz)
-      board ล่าสุดซองนี้มีที่สาขาไหน / สาขาอื่นใกล้คุณ · shelf ตู้สาขานี้ล่าสุดมีอะไร · steps กดตู้ 4 ขั้น · line แอดไลน์
+      board ล่าสุดซองนี้มีที่สาขาไหน / สาขาอื่นใกล้คุณ · shelf ตู้สาขานี้ล่าสุดมีอะไร · steps กดตู้ 4 ขั้น
+      line  ติดปัญหาที่ตู้/มีคำถาม ทักไลน์
+    17 ต.ค. เจ้าของตอบ: "ตอนนี้ในไลน์ไม่ได้ใช้บรอดแคสต์ ส่วนใหญ่ในไลน์เป็นการรับแจ้งปัญหาจากลูกค้า"
+      → แบบ line เดิม ("ข่าวเติมของหน้าตู้ เราแจ้งทางไลน์") อ้างสิ่งที่ไม่ได้ทำ เปลี่ยนเป็นช่องทางแจ้งปัญหา (ตรงกับหน้า /how-to)
+      · ป้ายท้ายบอร์ดชี้หน้า /stock (ของในตู้รายสาขา + ปุ่มนำทาง + หาสาขาใกล้ฉัน) แทน /branches — เจ้าของให้ใส่
 
 กติกาเหล็ก
     · หัวเรื่อง/คำถาม/คำชวน/คำโปรยบนจอ ต้องเป็นส่วนหนึ่งของบรรทัดที่พูด (cta_check — ป้ายหมวด/วันที่/ชื่อ/ไทล์/ลิงก์ไม่นับ)
     · ข้อเท็จจริงเท่านั้น — สาขา/ชั้น/จุดสังเกตจาก machines.config.branch · ของในตู้จาก machine_stock เฉพาะซอง (unit=pack)
       ซิงค์ ≤ 30 ชม. พร้อม "สต็อก ณ <วันที่ซิงค์เก่าสุด>" และคำว่า "ล่าสุด" เสมอ · ขั้นตอนซื้อตรงตัวจากหน้า /how-to · LINE @divisionxcard
     · ห้าม: ตัวเลขยอดขาย/% ราคา จำนวนในตู้ หมด/เหลือน้อย/หายาก สัญญาตอนต่อไป เบอร์โทร (รูปตู้กลางมีเบอร์เก่า — ไม่ใช้)
+    · ฉากไลน์ห้ามอ้างข่าว/ของใหม่/แจ้งเตือน/โปรสมาชิก ห้ามสัญญาเวลาตอบ (ทันที/ไว/ภายใน…/ทุกวัน/24 ชม.) และไม่มีตัวเลข (LINE_BANNED)
     · ทุกบรรทัดปิด ≤ 90 ตัวอักษรหลัง sanitize — ยาวกว่านั้น split_script ซอยบรรทัดแล้ว span ของฉากเพี้ยน
 """
 import datetime as dt
@@ -29,6 +34,10 @@ TH_MONTHS_FULL = ["", "มกราคม", "กุมภาพันธ์", "�
 LINE_ID = "@divisionxcard"                 # สะกดตาม brand-brief (โพสต์เก่า 31 โพสต์ตกตัว i — "@Divisonxcard")
 LINE_QR = "assets/brand/line-qr.svg"       # = wiki/marketing/qr-assets/line-qr.svg (ป้ายหน้าตู้) · ถอดได้ https://lin.ee/9cMKVRm
 HOWTO_URL = "division-x-card.vercel.app/how-to"
+# ป้ายท้ายบอร์ด (ทั้งสองโหมด) → หน้าเช็กของในตู้: ของเหลือรายสาขา + ชั้น/จุดสังเกต + ปุ่มนำทาง + หาสาขาใกล้ฉัน
+# (เจ้าของให้ใช้ 17 ต.ค.) · F.BRANCHES_URL ไม่แตะ — คลิปพิกัดกับคิวโพสต์ตั้งใจใช้ /branches
+STOCK_URL = "division-x-card.vercel.app/stock"
+BOARD_FOOT = "เช็กของในตู้ + นำทาง · " + STOCK_URL
 # ลอกตรงตัวจาก deploy/app/how-to/page.jsx STEPS (เจ้าของตรวจหน้านั้นแล้ว) — cta_check เทียบกับไฟล์จริงทุกครั้ง
 HOWTO_STEPS = [("เลือกการ์ด", "แตะหน้าจอ เลื่อนเลือกชุด/การ์ดที่ต้องการ"),
                ("ยืนยันรายการ", "ตรวจสอบรายการให้ครบก่อนชำระเงิน"),
@@ -133,14 +142,15 @@ CTA_COPY = {
              "formats": ["rank", "versus", "quiz", "map"], "short": True},
         ],
     },
+    # ไลน์ = ช่องทางแจ้งปัญหา/ถาม (เจ้าของ 17 ต.ค. — ไม่ได้บรอดแคสต์) · ไม่สัญญาเวลาตอบ · รหัส L1–L3 เดิม (ประวัติหมุนใช้ต่อได้)
     "line": {
         "any": [
-            {"id": "L1", "voice": ["ข่าวเติมของหน้าตู้ เราแจ้งทางไลน์ แอดไลน์ @divisionxcard ไว้เลย"],
-             "q1": "ข่าวเติมของหน้าตู้", "q2": "เราแจ้งทางไลน์", "hint": "แคปหน้าจอ แล้วสแกนในแอป LINE"},
-            {"id": "L2", "voice": ["อยากรู้ตอนตู้เติมของ? เราแจ้งทางไลน์ แคปหน้าจอ แล้วสแกนในแอป LINE ได้เลย"],
-             "q1": "อยากรู้ตอนตู้เติมของ?", "q2": "เราแจ้งทางไลน์", "hint": "แคปหน้าจอ แล้วสแกนในแอป LINE"},
-            {"id": "L3", "voice": ["แอดไลน์ @divisionxcard ไว้เลย ข่าวเติมของหน้าตู้ เราแจ้งทางไลน์"],
-             "q1": "ข่าวเติมของหน้าตู้", "q2": "เราแจ้งทางไลน์", "hint": "แคปหน้าจอ แล้วสแกนในแอป LINE"},
+            {"id": "L1", "voice": ["กดตู้แล้วติดปัญหา? แจ้งเราทางไลน์ @divisionxcard ได้เลย"],
+             "q1": "กดตู้แล้วติดปัญหา?", "q2": "แจ้งเราทางไลน์", "hint": "แคปหน้าจอ แล้วสแกนในแอป LINE"},
+            {"id": "L2", "voice": ["มีคำถาม หรือติดปัญหา? ทักไลน์มาได้เลย แคปหน้าจอ แล้วสแกนในแอป LINE"],
+             "q1": "มีคำถาม หรือติดปัญหา?", "q2": "ทักไลน์มาได้เลย", "hint": "แคปหน้าจอ แล้วสแกนในแอป LINE"},
+            {"id": "L3", "voice": ["แอดไลน์ไว้ก่อนเลย เผื่อติดปัญหาที่ตู้ จะได้ทักมาบอกเรา"],
+             "q1": "แอดไลน์ไว้ก่อนเลย", "q2": "เผื่อติดปัญหาที่ตู้", "hint": "แคปหน้าจอ แล้วสแกนในแอป LINE"},
         ],
     },
 }
@@ -150,6 +160,15 @@ STEPS_LINE = "เลือกการ์ด ยืนยันรายกา�
 SPOKEN_KEYS = ("title", "ask", "callout", "q3", "head", "q1", "q2", "sub", "s1", "s2", "s3", "s4")
 # บรรทัดข้อมูลที่ใช้ชื่อคีย์ซ้ำกับข้อความพูด: ชั้นวาง sub = "ห้าง ชั้น · สต็อก ณ …" (เหมือนวันที่ ไม่ต้องพูด)
 SPOKEN_EXEMPT = {"shelf": ("sub",)}
+# ฉากไลน์ (เจ้าของ 17 ต.ค.: ไลน์ไม่ได้บรอดแคสต์ ส่วนใหญ่รับแจ้งปัญหาจากลูกค้า) — ห้ามอ้างข่าว/ของใหม่/แจ้งเตือน/โปรสมาชิก
+# และห้ามสัญญาเวลาตอบ (ไม่มีใครรับปากไว้) · ไม่มีตัวเลขเลย (ตรวจแยกใน cta_check) · "เติม" เฉย ๆ ไม่ห้าม ("สอบถามเพิ่มเติม" ได้)
+# ทุกตัวเป็น regex (ส่วนใหญ่คือคำตรงตัว) · "ไว" = เร็ว แต่ "ไว้" (แอดไลน์ไว้) ต้องผ่าน → ไว(?!้)
+# selfcheck ใส่ทุกตัวลงในประโยคไลน์ปกติแล้วต้องถูกปัดตกจริง · ตัวที่ไม่ใช่คำตรงตัวต้องมีตัวอย่างใน LINE_BANNED_EXAMPLE
+LINE_BANNED = ("ข่าว", "เติมของ", "รอบเติม", "ของเข้า", "ของใหม่", "ชุดใหม่", "เซ็ตใหม่", "มาใหม่", "อัปเดต", "อัพเดท",
+               "ประกาศ", "แจ้งเตือน", "บรอดแคส", "รู้ก่อน",                      # ข่าว/ของใหม่ (ไลน์ไม่ได้ส่งประกาศ)
+               "โปร", "สมาชิก", "สิทธิ์", "คูปอง",                                 # โปร/สิทธิ์สมาชิก (ไม่มีจริง)
+               "ทันที", "ตลอด", "ชั่วโมง", "เร็ว", "ด่วน", "ภายใน", "ทุกวัน", "ไว(?!้)")   # สัญญาเวลาตอบ
+LINE_BANNED_EXAMPLE = {"ไว(?!้)": "แอดมินตอบไว"}
 
 
 def th_day(d):
@@ -295,6 +314,14 @@ def cta_check(lines, scene, rec=None):
     for w in banned:
         if w in shown:
             errs.append(f"มีคำต้องห้าม '{w}'")
+    if scene.get("layout") == "line":                 # ข้อความที่คนดูได้ยิน/เห็น (ไม่รวมชื่อไฟล์ QR)
+        said = " ".join(lines) + " " + " ".join(str(scene.get(k) or "") for k in ("q1", "q2", "hint", "lineid"))
+        for pat in LINE_BANNED:
+            m = re.search(pat, said)
+            if m:
+                errs.append(f"ฉากไลน์มีคำต้องห้าม '{m.group(0)}' (ไลน์รับแจ้งปัญหา ไม่ได้ประกาศข่าว/โปร · ไม่สัญญาเวลาตอบ)")
+        if re.search(r"\d", said):
+            errs.append("ฉากไลน์ห้ามมีตัวเลข (เวลาตอบ/ราคา/จำนวน)")
     return errs
 
 
@@ -415,7 +442,7 @@ def cta_plan(fmt, plan, layout, mode, rec, ctx, snap):
         tiles, tpx, cols = branch_tiles(rows, focus)
         scene.update({k: _fill(rec.get(k, ""), **kw) for k in ("q1", "q2", "sub", "ask")})
         scene.update({"kicker": f"{len(rows)} ตู้ ใน {len(malls)} ห้าง", "tiles": tiles, "tpx": tpx, "cols": cols,
-                      "url": F.BRANCHES_URL, "foot": "พิกัด + ปุ่มนำทาง · " + F.BRANCHES_URL,
+                      "url": STOCK_URL, "foot": BOARD_FOOT,
                       "qs1": fit_px(scene["q1"], 900, 900, 104, 60), "qs2": fit_px(scene["q2"], 900, 900, 104, 60),
                       "src": SRC["map"]})
         if fmt == "map":                              # พลิกต่อจากการ์ดรูปตู้ของคลิปพิกัด
@@ -435,7 +462,7 @@ def cta_plan(fmt, plan, layout, mode, rec, ctx, snap):
         scene.update({"stamp_l": f"สต็อก ณ {d_short}", "stamp_r": "เช็กหน้าตู้ก่อนไป", "hero_name": hero_name,
                       "hfs": fit_px(hero_name, 900, 600, 44, 28), "head": head,
                       "hpx": fit_px(head, 900, 900, 88, 56), "tiles": tiles, "tpx": tpx, "cols": cols,
-                      "url": F.BRANCHES_URL, "foot": "พิกัด + ปุ่มนำทาง · " + F.BRANCHES_URL, "src": hero["src"]})
+                      "url": STOCK_URL, "foot": BOARD_FOOT, "src": hero["src"]})
         scene["inherit_map"] = {"hero": hero["key"]}
         inherit = []
         meta.update({"stock_asof": str(asof), "hero_sku": hero["sku"], "where": where, "lit": len(lit)})
@@ -516,7 +543,8 @@ def cta_plan(fmt, plan, layout, mode, rec, ctx, snap):
 # ── ตรวจตัวเอง: python -m agents.video.hf_cta --check ─────────────────────────────────────────────────
 
 def selfcheck():
-    """คลังข้อความทุกระเบียน (เติมค่ายาวสุดที่เป็นไปได้) ผ่าน cta_check · ขั้นตอนซื้อตรงกับหน้า /how-to ตัวจริง"""
+    """คลังข้อความทุกระเบียน (เติมค่ายาวสุดที่เป็นไปได้) ผ่าน cta_check · กฎคำต้องห้ามฉากไลน์ปัดตกจริงทุกคำ
+    · ขั้นตอนซื้อตรงกับหน้า /how-to ตัวจริง"""
     errs = []
     longest = {"w_say": "Pokémon MEGA Dream ex", "top_say": "Pokémon MEGA Dream ex", "lead": "อันดับหนึ่ง ",
                "say": "Pokémon MEGA Dream ex", "k_other": 11, "k_out": 11, "m_out": 10, "n": 12, "m": 11,
@@ -532,6 +560,19 @@ def selfcheck():
                     scene.update({k: (v.format(**longest) if isinstance(v, str) else v) for k, v in rec.items()
                                   if k not in ("voice", "voice_all", "voice_some", "id", "formats", "short")})
                     errs += [f"{layout}/{mode}/{rec['id']}/{vk}: {e}" for e in cta_check(lines, scene, rec)]
+    # กฎฉากไลน์: ทุกตัวใน LINE_BANNED ใส่ในประโยคไลน์ปกติแล้วต้องโดนปัดตกจริง · ประโยคปกติ/"ไว้" ต้องผ่าน · ตัวเลขต้องโดน
+    for pat in LINE_BANNED:
+        ex = LINE_BANNED_EXAMPLE.get(pat, pat)
+        hit = re.search(pat, ex)
+        got = cta_check([f"ทักไลน์มาได้เลย {ex}"], {"layout": "line"})
+        if not hit or not any(e.startswith(f"ฉากไลน์มีคำต้องห้าม '{hit.group(0)}'") for e in got):
+            errs.append(f"กฎฉากไลน์หลวม: '{ex}' ไม่ถูกปัดตก")
+    for ok in ("ทักไลน์มาได้เลย", "แอดไลน์ไว้ก่อนเลย", "เก็บ QR ไว้ แล้วทักมาบอกเรา"):
+        got = cta_check([ok], {"layout": "line"})
+        if got:
+            errs.append(f"กฎฉากไลน์แรงเกิน: '{ok}' โดน {got}")
+    if not any("ตัวเลข" in e for e in cta_check(["ทักไลน์มาได้ 24 ชม."], {"layout": "line"})):
+        errs.append("กฎฉากไลน์หลวม: ตัวเลขไม่ถูกปัดตก")
     page = (TEMPLATE.parents[2] / "deploy" / "app" / "how-to" / "page.jsx").read_text(encoding="utf-8")
     for big, small in HOWTO_STEPS:                    # ทั้งชื่อขั้นและคำอธิบายต้องมีอยู่ในหน้าจริงทุกตัวอักษร
         if big not in page or small not in page:
@@ -547,5 +588,6 @@ if __name__ == "__main__":
         except Exception:
             pass
     problems = selfcheck()
-    print("\n".join(problems) if problems else "คลังข้อความฉากปิด: ผ่านทุกระเบียน · ขั้นตอนซื้อตรงกับ /how-to")
+    print("\n".join(problems) if problems else
+          f"คลังข้อความฉากปิด: ผ่านทุกระเบียน · กฎฉากไลน์ปัดตกครบ {len(LINE_BANNED)} คำ + ตัวเลข · ขั้นตอนซื้อตรงกับ /how-to")
     sys.exit(1 if problems else 0)

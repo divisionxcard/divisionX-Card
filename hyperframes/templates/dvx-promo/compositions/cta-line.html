@@ -1,29 +1,36 @@
 <!doctype html>
 <!--
-  cta-line — ฉากปิด "แอดไลน์ · ข่าวเติมของแจ้งทางไลน์" (สเปก cta_spec.json · layout "line" · 16 ต.ค. 2026)
+  cta-line — ฉากปิด "ติดปัญหาที่ตู้ / มีคำถาม → ทักไลน์" (layout "line" · 16 ต.ค. 2026 · เปลี่ยนความหมาย 17 ต.ค.)
 
-  ทำไมแบบนี้: ดูอันดับ/ผู้ชนะจบแล้ว คำถามต่อไปคือ "ตู้เติมของเมื่อไหร่?" — ไลน์ OA @divisionxcard คือช่องทางตรงช่องเดียว
-    ที่แบรนด์ใช้ประกาศเติมของ · ไม่ใช้ข้อมูลสต็อก จึงจริงเสมอทุกรูปแบบคลิป · โปสเตอร์ QR + กระดิ่งดัง ไม่ซ้ำฉากปิดแบบอื่น
-  ไม่มีรูปซองในฉากนี้ (สเปก): ซองข้างคำว่า "ข่าวเติมของ" = ชวนให้คิดว่าซองนั้นใกล้หมด · จึงไม่มี match cut จากซองฉากก่อน
-    (ตัวแปร src ไม่ได้ใช้) — รอยต่อเป็นแสงวาบของ host อย่างเดียว
+  ทำไมแบบนี้: เจ้าของ 17 ต.ค. — "ตอนนี้ในไลน์ไม่ได้ใช้บรอดแคสต์ ส่วนใหญ่ในไลน์เป็นการรับแจ้งปัญหาจากลูกค้า"
+    ฉบับแรก ("ข่าวเติมของหน้าตู้ เราแจ้งทางไลน์" + กระดิ่งดัง + จุดแดงแจ้งเตือน) จึงอ้างสิ่งที่ไม่ได้ทำ
+    → ตอนนี้ไลน์ OA @divisionxcard คือช่องทางติดต่อ: กดตู้แล้วติดปัญหา / มีคำถาม ทักมาได้
+    (ตรงกับกล่อง "มีปัญหา?" ในหน้า /how-to) · ไม่สัญญาเวลาตอบ ไม่อ้างข่าว/เติมของ — hf_cta.cta_check ตรวจ (LINE_BANNED)
+    · ไม่ใช้ข้อมูลสต็อก จึงจริงเสมอทุกรูปแบบคลิป
+  ไอคอน: ฟองแชตฟ้าขอบกรมท่า + จุด 3 จุด "…" = ทักมาคุยกับเรา (กระดิ่ง = แจ้งเตือน/บรอดแคสต์ ซึ่งไม่มีจริง — ถอดออกพร้อมจุดแดง/คลื่นเสียง)
+    จุดผุดครั้งเดียวแล้วนิ่ง — ไม่ไล่เป็นคลื่น (คลื่นคือสัญญาณ "อีกฝั่งกำลังพิมพ์" = เหมือนสัญญาว่ามีคนตอบอยู่ตอนนี้)
+    ฟองผุดจากมุมขวาบนของการ์ด QR (โตจากปลายหาง (772, 574) — หางเริ่มที่ x 770 ห่างวงแสงขอบการ์ด (x 760–764) 5 px)
+    · ตัวฟองอยู่บนการ์ดแต่ไม่แตะ · แสงฟ้าของฟองอยู่ใต้การ์ด (การ์ดขาวทึบบังเองทุกเฟรม)
+    · วัดพิกเซล 17 ต.ค.: พื้นที่ขาวของการ์ด = ตอนซ่อนฟองทุกพิกเซล — รายละเอียดที่ CSS ฟองข้างล่าง
+  ไม่มีรูปซองในฉากนี้ (สเปก): จึงไม่มี match cut จากซองฉากก่อน (ตัวแปร src ไม่ได้ใช้) — รอยต่อเป็นแสงวาบของ host อย่างเดียว
 
   QR: assets/brand/line-qr.svg (ตรวจถอดแล้ว → https://lin.ee/9cMKVRm) · 33 โมดูลรวมขอบเงียบ 4 โมดูล
     วาด 13 px/โมดูล = 429 px บนการ์ดขาว 440 ที่พิกัดเต็มพิกเซล (325, 525) → ขอบโมดูลคม ไม่มีอะไรทับตัวโค้ด
     การ์ดตอนนิ่ง transform เหลือ 2D ศูนย์ (มุมมอง 3D อยู่ที่ตัวห่อ ไม่ใช่การ์ด) · ไม่ใส่ will-change บนการ์ด/รูป
     ครึ่งวินาทีสุดท้ายนิ่งสนิท แคปหน้าจอแล้วสแกนในแอป LINE ได้
 
-  จังหวะ: 0.10 q1 กระแทก · 0.28 q2 · 0.40–0.95 การ์ด QR ลอยขึ้น (ท่าการ์ดรูปตู้ของ fmt-map) · 0.62 กระดิ่งเด้ง
-    · 0.85 กรอบสแกนหดเข้าจาก 1.3 เท่า + เส้นสแกนกวาดครั้งเดียว · 0.95 กระดิ่งดัง 6 จังหวะ + จุดแดงเด้ง
-    · 1.10 ไอดีกวาดเข้า (clip-path) · 1.40 คำแนะนำขึ้น · 1.8 → dur−0.5 กระดิ่งดังทุก 1.5 วิ + กรอบหายใจ (นับรอบจาก dur)
-  สีเขียว LINE เฉพาะชิปเล็ก (ตัวหนังสือกรมท่า — ขาวบนเขียวคอนทราสต์ไม่ถึงเกณฑ์) · ไม่มี UI แชตปลอม
+  จังหวะ: 0.10 q1 กระแทก · 0.28 q2 · 0.40–0.95 การ์ด QR ลอยขึ้น (ท่าการ์ดรูปตู้ของ fmt-map) · 0.62 ฟองแชตผุด
+    · 0.78 จุด 3 จุดผุดทีละจุด (แล้วนิ่ง) · 0.85 กรอบสแกนหดเข้าจาก 1.3 เท่า + เส้นสแกนกวาดครั้งเดียว · 1.10 ไอดีกวาดเข้า (clip-path)
+    · 1.40 คำแนะนำขึ้น · 1.8 → dur−0.5 กรอบหายใจ (นับรอบจาก dur · จบที่ท่าพัก)
+  สีเขียว LINE เฉพาะชิปเล็ก (ตัวหนังสือกรมท่า — ขาวบนเขียวคอนทราสต์ไม่ถึงเกณฑ์) · ไม่มี UI แชตปลอม (ไม่มีข้อความตอบกลับ)
 -->
 <html
   lang="th"
   data-composition-variables='[
     {"id":"variant","type":"string","label":"แบบข้อความ (L1/L2/L3)","default":"L1"},
-    {"id":"q1","type":"string","label":"หัวเรื่องบรรทัด 1","default":"ข่าวเติมของหน้าตู้"},
-    {"id":"q2","type":"string","label":"หัวเรื่องบรรทัด 2 (สีเน้น)","default":"เราแจ้งทางไลน์"},
-    {"id":"qs1","type":"number","label":"ขนาดหัวเรื่องบรรทัด 1 (px)","default":112,"min":48,"max":112,"step":1},
+    {"id":"q1","type":"string","label":"หัวเรื่องบรรทัด 1","default":"กดตู้แล้วติดปัญหา?"},
+    {"id":"q2","type":"string","label":"หัวเรื่องบรรทัด 2 (สีเน้น)","default":"แจ้งเราทางไลน์"},
+    {"id":"qs1","type":"number","label":"ขนาดหัวเรื่องบรรทัด 1 (px)","default":106,"min":48,"max":112,"step":1},
     {"id":"qs2","type":"number","label":"ขนาดหัวเรื่องบรรทัด 2 (px)","default":92,"min":48,"max":92,"step":1},
     {"id":"qr","type":"string","label":"รูป QR ไลน์ (ตรวจแล้ว = lin.ee/9cMKVRm)","default":"assets/brand/line-qr.svg"},
     {"id":"lineid","type":"string","label":"ไอดีไลน์","default":"@divisionxcard"},
@@ -50,7 +57,7 @@
           text-shadow: 0 10px 0 #03102a, 0 0 40px rgba(27, 141, 255, 0.55);
           will-change: transform, opacity;
         }
-        #cta-line-q1 { top: calc((134px - var(--qs1, 112) * 1.12px) / 2); }
+        #cta-line-q1 { top: calc((134px - var(--qs1, 106) * 1.12px) / 2); }
         #cta-line-q2 { top: 138px; color: var(--hot, #ffc24a); }
 
         /* ── กรอบสแกน 500×500 (290–790 · 490–990) */
@@ -74,16 +81,28 @@
           background: linear-gradient(180deg, rgba(89, 210, 255, 0) 0%, rgba(89, 210, 255, 0.34) 78%, rgba(27, 141, 255, 0.95) 94%, rgba(27, 141, 255, 0) 100%);
         }
 
-        /* ── กระดิ่งทอง 120 px ที่ (748, 456) มุมขวาบนของการ์ด · ตัวห่อ = เด้ง/เอียง · ตัวใน = แกว่งรอบหูแขวน */
-        #cta-line-bellwrap { position: absolute; left: 748px; top: 456px; width: 120px; height: 120px; z-index: 5; opacity: 0; filter: drop-shadow(0 0 16px rgba(255, 194, 74, 0.85)); }
-        #cta-line-bell { position: absolute; inset: 0; transform-origin: 50% 6%; }
-        #cta-line-bell svg { position: absolute; inset: 0; width: 120px; height: 120px; overflow: visible; }
-        #cta-line-dot {
-          position: absolute; left: 80px; top: 6px; width: 30px; height: 30px; border-radius: 50%; opacity: 0;
-          background: #ff4d6d; border: 4px solid #03102a; box-shadow: 0 0 14px rgba(255, 77, 109, 0.85);
-        }
-        #cta-line-waves { position: absolute; left: 852px; top: 440px; width: 60px; height: 96px; z-index: 5; overflow: visible; opacity: 0; transform-origin: 0% 60%; }
-        #cta-line-waves path { fill: none; stroke: #ffc24a; stroke-width: 7; stroke-linecap: round; filter: drop-shadow(0 0 8px rgba(255, 194, 74, 0.9)); }
+        /* ── ฟองแชต 132×114 ที่ (754, 466) มุมขวาบนของการ์ด · ตัวฟอง x 760–880 · y 472–550 (ขอบ 5 px ล้นออก 2.5) · ปลายหาง (772, 574)
+              สองชั้น ขยับพร้อมกันด้วยคลาส .cta-line-chat (จุดหมุนที่ปลายหาง):
+                · #cta-line-chatwrap ตัวฟอง+ขอบ+เงากรมท่า (เลื่อนลง 6) อยู่บนการ์ด (z 5) · ท่าพักไม่เอียง → ห่างมุมโค้งการ์ด ≈ 3 px
+                · #cta-line-chatglow แสงฟ้าอย่างเดียว (ฟิลเตอร์ SVG · σ 18 = drop-shadow(0 0 18px) เดิม) อยู่ใต้การ์ด (z 2)
+                  → การ์ดขาวทึบบังแสงเองทุกเฟรม ตามกฎของการ์ด "แสงอยู่นอกการ์ดเท่านั้น" · ไม่มีตัวฟองซ้ำในชั้นนี้ (ตอนจางเข้าเหมือนชั้นเดียว)
+              วัดพิกเซล 17 ต.ค. (เฟรม 5.15 วิ เทียบกับไฟล์เดียวกันที่ซ่อนฟอง · ระยะ = พิกเซลของฟองที่ใกล้การ์ดสุด ไม่นับแสง):
+                · ฉบับก่อน (748, 466) เอียง −4° ชั้นเดียวบนการ์ด → ทับการ์ด 5.4 px: ขอบ+เงากรมท่าลงมุมขอบเงียบ QR (x 747–753 · y 530–545)
+                  และแสงย้อมการ์ดขาวในขอบเงียบ 3,486 px (ใกล้ตัวโค้ดสุด 1.2 โมดูล)
+                · เลื่อน +6 อย่างเดียว ชิดขอบการ์ดพอดี (0 px) · ไม่เอียงอย่างเดียว ยังทับ 2.2 px · ทำทั้งคู่ ห่าง 3.15 px
+                · ทำทั้งคู่แล้วแสงยังย้อมขอบเงียบ 2,772 px (ต่างสูงสุด 41 ระดับ) → ย้ายแสงลงใต้การ์ด
+                  (ลอง clip-path ตายตัวรูปการ์ดแล้ว ตอนการ์ดยังลอยขึ้น 0.66–0.75 วิ แสงแหว่งเป็นรูปมุมการ์ด สูงสุด 44 ระดับ — ชั้นใต้การ์ดไม่เป็น)
+                · ตอนนี้: พื้นที่ขาวของการ์ด = ตอนซ่อนฟองทุกพิกเซล · ขอบลบรอยหยักของการ์ดต่าง ≤ 2 ระดับ (แสงลอดวงแสงขอบที่ทึบ 95%)
+              ต่ำกว่าหัวเรื่อง q2 พอให้สระล่าง+เงาของคำท้ายบรรทัด (เช่น "ตู้" ของ L3 ปลายถึง x 864) ไม่ทับฟอง
+              จุด 3 จุดเป็น div (ขยับได้แค่ transform) */
+        .cta-line-chat { position: absolute; left: 754px; top: 466px; width: 132px; height: 114px; opacity: 0; transform-origin: 13.6% 94.7%; }
+        .cta-line-chat svg { position: absolute; inset: 0; width: 132px; height: 114px; overflow: visible; }
+        #cta-line-chatglow { z-index: 2; }
+        #cta-line-chatwrap { z-index: 5; filter: drop-shadow(0 6px 0 #03102a); }
+        .cta-line-typ { position: absolute; top: 36px; width: 18px; height: 18px; border-radius: 50%; background: #03102a; opacity: 0; }
+        #cta-line-typ1 { left: 33px; }
+        #cta-line-typ2 { left: 57px; }
+        #cta-line-typ3 { left: 81px; }
 
         /* ── ไอดี y 990–1080: ชิปเขียว LINE (เล็ก) + ไอดี Black 72 */
         #cta-line-idrow { position: absolute; left: 0; right: 0; top: 990px; height: 90px; z-index: 4; display: flex; justify-content: center; align-items: center; }
@@ -122,34 +141,43 @@
           <div class="cta-line-c" id="cta-line-c3"></div>
           <div class="cta-line-c" id="cta-line-c4"></div>
         </div>
+        <!-- แสงฟ้าของฟองแชต: ใต้การ์ด (หลังกรอบสแกน ก่อนการ์ด) · รูปทรงเดียวกับตัวฟอง + เงาเลื่อนลง 6 แล้วเบลอ — ไม่วาดตัวฟองเอง -->
+        <div id="cta-line-chatglow" class="cta-line-chat" aria-hidden="true" data-layout-ignore>
+          <svg viewBox="0 0 132 114" aria-hidden="true" data-layout-ignore>
+            <defs>
+              <filter id="cta-line-glowf" x="-70%" y="-80%" width="240%" height="260%" color-interpolation-filters="sRGB">
+                <feOffset in="SourceAlpha" dy="6" result="sh" />
+                <feMerge result="sil"><feMergeNode in="SourceAlpha" /><feMergeNode in="sh" /></feMerge>
+                <feGaussianBlur in="sil" stdDeviation="18" result="bl" />
+                <feFlood flood-color="#59d2ff" flood-opacity="0.8" />
+                <feComposite in2="bl" operator="in" />
+              </filter>
+            </defs>
+            <path filter="url(#cta-line-glowf)" d="M34 6 H98 A28 28 0 0 1 126 34 V56 A28 28 0 0 1 98 84 H58 L18 108 L34 84 A28 28 0 0 1 6 56 V34 A28 28 0 0 1 34 6 Z" fill="#59d2ff" stroke="#03102a" stroke-width="5" stroke-linejoin="round" />
+          </svg>
+        </div>
         <div id="cta-line-cardwrap">
           <div id="cta-line-card">
             <img id="cta-line-qr" data-var-src="qr" src="assets/brand/line-qr.svg" alt="QR LINE @divisionxcard" />
             <div id="cta-line-scan" aria-hidden="true" data-layout-ignore></div>
           </div>
         </div>
-        <div id="cta-line-bellwrap" aria-hidden="true" data-layout-ignore>
-          <div id="cta-line-bell">
-            <svg viewBox="0 0 100 100" aria-hidden="true" data-layout-ignore>
-              <defs>
-                <linearGradient id="cta-line-bellg" x1="0" y1="0" x2="1" y2="1">
-                  <stop offset="0" stop-color="#fff4c9" />
-                  <stop offset="0.45" stop-color="#ffc24a" />
-                  <stop offset="1" stop-color="#d1901a" />
-                </linearGradient>
-              </defs>
-              <circle cx="50" cy="8" r="5" fill="#ffc24a" stroke="#03102a" stroke-width="4" />
-              <circle cx="50" cy="84" r="8.5" fill="#ffc24a" stroke="#03102a" stroke-width="5" />
-              <path d="M50 13 C34 13 25 26 25 42 V58 L14 72 H86 L75 58 V42 C75 26 66 13 50 13 Z" fill="url(#cta-line-bellg)" stroke="#03102a" stroke-width="5" stroke-linejoin="round" />
-              <path d="M36 30 C33 36 32.5 44 32.5 53" fill="none" stroke="rgba(255,255,255,0.8)" stroke-width="5" stroke-linecap="round" />
-            </svg>
-            <div id="cta-line-dot"></div>
-          </div>
+        <div id="cta-line-chatwrap" class="cta-line-chat" aria-hidden="true" data-layout-ignore>
+          <svg viewBox="0 0 132 114" aria-hidden="true" data-layout-ignore>
+            <defs>
+              <linearGradient id="cta-line-chatg" x1="0" y1="0" x2="0.9" y2="1">
+                <stop offset="0" stop-color="#c8f2ff" />
+                <stop offset="0.45" stop-color="#59d2ff" />
+                <stop offset="1" stop-color="#1b8dff" />
+              </linearGradient>
+            </defs>
+            <path d="M34 6 H98 A28 28 0 0 1 126 34 V56 A28 28 0 0 1 98 84 H58 L18 108 L34 84 A28 28 0 0 1 6 56 V34 A28 28 0 0 1 34 6 Z" fill="url(#cta-line-chatg)" stroke="#03102a" stroke-width="5" stroke-linejoin="round" />
+            <path d="M19 41 C20 29 26 19 38 15" fill="none" stroke="rgba(255,255,255,0.8)" stroke-width="5" stroke-linecap="round" />
+          </svg>
+          <div class="cta-line-typ" id="cta-line-typ1"></div>
+          <div class="cta-line-typ" id="cta-line-typ2"></div>
+          <div class="cta-line-typ" id="cta-line-typ3"></div>
         </div>
-        <svg id="cta-line-waves" viewBox="0 0 60 96" aria-hidden="true" data-layout-ignore>
-          <path d="M8 22 C20 32 24 52 16 70" />
-          <path d="M28 8 C46 24 50 58 36 84" />
-        </svg>
         <div id="cta-line-idrow">
           <div id="cta-line-idwrap">
             <div id="cta-line-idbox">
@@ -161,8 +189,8 @@
         </div>
         <div id="cta-line-hint" data-var-text="hint">แคปหน้าจอ แล้วสแกนในแอป LINE</div>
         <div id="cta-line-head" class="dvx-head">
-          <div class="cta-line-q dvx-q dvx-q1" id="cta-line-q1" data-var-text="q1" style="font-size: calc(var(--qs1, 112) * 1px)">ข่าวเติมของหน้าตู้</div>
-          <div class="cta-line-q dvx-q dvx-q2" id="cta-line-q2" data-var-text="q2" style="font-size: calc(var(--qs2, 92) * 1px)">เราแจ้งทางไลน์</div>
+          <div class="cta-line-q dvx-q dvx-q1" id="cta-line-q1" data-var-text="q1" style="font-size: calc(var(--qs1, 106) * 1px)">กดตู้แล้วติดปัญหา?</div>
+          <div class="cta-line-q dvx-q dvx-q2" id="cta-line-q2" data-var-text="q2" style="font-size: calc(var(--qs2, 92) * 1px)">แจ้งเราทางไลน์</div>
         </div>
       </div>
 
@@ -184,8 +212,12 @@
           // ── 2. การ์ด QR ลอยขึ้น (ท่าการ์ดรูปตู้ของ fmt-map) — มุมมอง 3D มาจากตัวห่อ ตอนนิ่งการ์ดจึงไม่มี transform 3D ค้าง
           tl.fromTo("#cta-line-card", { y: 300, rotationX: 30, scale: 0.86, opacity: 0 }, { y: 0, rotationX: 0, scale: 1, opacity: 1, duration: 0.55 * K, ease: "power3.out" }, T(0.4));
 
-          // ── 3. กระดิ่งเด้งเข้ามุมการ์ด (เอียงพัก 12°)
-          tl.fromTo("#cta-line-bellwrap", { scale: 0.2, opacity: 0, rotation: -24 }, { scale: 1, opacity: 1, rotation: 12, duration: 0.3 * K, ease: "back.out(2.2)" }, T(0.62));
+          // ── 3. ฟองแชตผุดจากมุมการ์ด (โตจากปลายหาง · เด้งนุ่ม ไม่สั่น · พักตรง 0° — ถ้าพักเอียง −4° มุมล่างซ้ายแตะขอบการ์ด)
+          //       แล้วจุด 3 จุดผุดทีละจุด = "…" ครั้งเดียว แล้วนิ่งถึงจบ (ไม่ไล่เป็นคลื่นแบบ "กำลังพิมพ์" — ไม่สัญญาว่ามีคนตอบอยู่ตอนนี้)
+          tl.fromTo(".cta-line-chat", { scale: 0.2, opacity: 0, rotation: -14 }, { scale: 1, opacity: 1, rotation: 0, duration: 0.34 * K, ease: "back.out(1.7)" }, T(0.62));   // ตัวฟอง + แสงใต้การ์ด
+          ["#cta-line-typ1", "#cta-line-typ2", "#cta-line-typ3"].forEach((d, i) => {
+            tl.fromTo(d, { scale: 0, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.2 * K, ease: "back.out(2.4)" }, T(0.78 + i * 0.07));
+          });
 
           // ── 4. กรอบสแกนหดเข้าจาก 1.3 เท่า + เส้นสแกนกวาดลงครั้งเดียว แล้วหายนอกการ์ด (ไม่ค้างบนโค้ด)
           tl.fromTo("#cta-line-frame", { scale: 1.3, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.25 * K, ease: "power4.out" }, T(0.85));
@@ -193,23 +225,7 @@
           tl.fromTo("#cta-line-scan", { y: -130, opacity: 1 }, { y: 450, opacity: 1, duration: SCAN, ease: "power1.inOut", immediateRender: false }, T(0.85));
           tl.set("#cta-line-scan", { opacity: 0 }, T(0.85) + SCAN + 0.02);
 
-          // ── 5. กระดิ่งดัง: 6 จังหวะ × 0.09 วิ แกว่งลดลงจนนิ่ง + คลื่นเสียงวาบ (ทุกท่อน fromTo ระบุต้น-ปลายชัด)
-          const SWING = [18, -14, 10, -7, 4, 0], STEP = 0.09, RING = SWING.length * STEP;
-          function ring(t0, amp) {
-            let prev = 0;
-            SWING.forEach((a, i) => {
-              const to = a * amp;
-              tl.fromTo("#cta-line-bell", { rotation: prev }, { rotation: to, duration: STEP, ease: "sine.inOut", immediateRender: false }, t0 + i * STEP);
-              prev = to;
-            });
-            tl.fromTo("#cta-line-waves", { opacity: 0, scale: 0.8 }, { opacity: 1, scale: 1, duration: 0.12, ease: "power2.out", immediateRender: false }, t0);
-            tl.fromTo("#cta-line-waves", { opacity: 1 }, { opacity: 0, duration: 0.34, ease: "power1.in", immediateRender: false }, t0 + 0.18);
-          }
-          const R0 = T(0.95);
-          ring(R0, 1);
-          tl.fromTo("#cta-line-dot", { scale: 0, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.3, ease: "back.out(3)" }, R0 + 0.07);
-
-          // ── 6. ไอดีกวาดเข้า (clip-path ทั้งก้อน ไม่แยกตัวอักษร · ขอบลบไว้ไม่ให้ตัดขอบตัวหนังสือ/แสงตอนนิ่ง) + คำแนะนำขึ้น
+          // ── 5. ไอดีกวาดเข้า (clip-path ทั้งก้อน ไม่แยกตัวอักษร · ขอบลบไว้ไม่ให้ตัดขอบตัวหนังสือ/แสงตอนนิ่ง) + คำแนะนำขึ้น
           // ต้นทาง: ขอบขวา 112% = ขอบซ้าย −12% พอดี → ปิดสนิท (เดิม 100% เหลือแถบ −12%…0 ให้แสงชิปโผล่เป็นเส้นเขียว)
           const W0 = T(1.1), WIPE = 0.4 * K;
           tl.fromTo("#cta-line-idbox", { clipPath: "inset(-60% 112% -60% -12%)" }, { clipPath: "inset(-60% -12% -60% -12%)", duration: WIPE, ease: "power2.inOut" }, W0);
@@ -219,8 +235,7 @@
           tl.fromTo("#cta-line-idglint", { opacity: 1 }, { opacity: 0, duration: 0.16, ease: "power1.out", immediateRender: false }, W0 + WIPE - 0.04);
           tl.fromTo("#cta-line-hint", { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.35 * K, ease: "power2.out" }, T(1.4));
 
-          // ── 7. ช่วงค้าง (finite · นับจาก dur): กระดิ่งดังทุก 1.5 วิ · กรอบหายใจเป็นคู่ไป-กลับ จบที่ขนาดเดิมก่อน END
-          for (let t0 = R0 + 1.5; t0 + RING <= END + 1e-6; t0 += 1.5) ring(t0, 0.8);
+          // ── 6. ช่วงค้าง (finite · นับจาก dur): กรอบหายใจเป็นคู่ไป-กลับ จบที่ขนาดเดิมก่อน END · ฟอง/จุดนิ่งแล้วตั้งแต่ ≈1.1 วิ
           const P0 = Math.max(1.8, T(0.85) + 0.25 * K + 0.05), HALF = 0.75;
           const halves = 2 * Math.floor(Math.max(0, END - P0) / (2 * HALF));
           if (halves >= 2) {
