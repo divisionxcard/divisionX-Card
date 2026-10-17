@@ -14,7 +14,7 @@ status: ✅ ปิดงาน — เปลี่ยน username เป็น a
 
 | จุด | ผล |
 |---|---|
-| Supabase Auth | `thananya.aa41@gmail.com` (id b03fdab6…) สร้าง 12 ก.ย. · ยืนยันอีเมลแล้ว · ไม่ถูกแบน · **last_sign_in ว่าง** |
+| Supabase Auth | (อีเมลบัญชีทีมงาน — ไม่บันทึกในวิกิ เพราะ repo เป็นสาธารณะ) (id b03fdab6…) สร้าง 12 ก.ย. · ยืนยันอีเมลแล้ว · ไม่ถูกแบน · **last_sign_in ว่าง** |
 | profiles | display_name **aomeiei** · username **`aom`** · role `marketing` |
 | login_history | ไม่มีแถวของ user นี้เลย (ตารางบันทึกเฉพาะ login/logout ที่สำเร็จ) |
 | lookup-email บน Vercel | `aom` → 200 · `aomeiei` → 404 "ไม่พบผู้ใช้" |

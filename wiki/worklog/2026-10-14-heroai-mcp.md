@@ -16,7 +16,7 @@ status: ⏸️ เจ้าของพักงานนี้ (14 ต.ค. 20:
 - **Claude Code**: `claude mcp add --transport http --scope user heroai <url> --header "Authorization: Bearer heroai_pat_…"` → เก็บใน `~/.claude.json` (นอก repo) · status Connected · เซสชันใหม่ถึงเห็นเครื่องมือ
 - **Hermes**: `config.yaml → mcp_servers.heroai: {url, headers.Authorization, timeout 180}` (สำรอง `config.yaml.bak-before-heroai`) · รีสตาร์ต gateway · `hermes mcp list` ✓ enabled
 - สคริปต์ยิงตรงไว้ทดสอบ: scratchpad `heroai_probe.py` (initialize → tools/list) · `heroai_call.py` (tools/call) — ต้องส่ง `Accept: application/json, text/event-stream`
-- บัญชี: divisionxcard@gmail.com แผน PRO 100 นาที/เดือน + 50 เครดิต · Hero จัดการคีย์ Gemini ให้ · ไม่มี ElevenLabs/HeyGen/Pexels
+- บัญชี: (อีเมลที่ใช้สมัคร — ไม่บันทึกในวิกิ เพราะ repo เป็นสาธารณะ) แผน PRO 100 นาที/เดือน + 50 เครดิต · Hero จัดการคีย์ Gemini ให้ · ไม่มี ElevenLabs/HeyGen/Pexels
 
 ## Hero MCP มี 25 เครื่องมือ — flow ที่ใช้จริง
 
