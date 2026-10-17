@@ -2,7 +2,7 @@
 type: worklog
 date: 2026-10-17
 tags: [sync, telegram-bot, stock-page, branches, login, video, cta, line, facebook]
-commits: [ac0adac, 044f91e, 829c64d, 7d4dd0c, 46693bc]
+commits: [ac0adac, 044f91e, 829c64d, 7d4dd0c, 46693bc, 9b6ac1d]
 status: ✅ ซิงค์รอบ 10:00 ทำงานจริงแล้ว · /branches ลิงก์ /stock · ฉากปิดไลน์พูดความจริง · หน้าล็อกอินไม่บอกว่าเป็นระบบหลังบ้าน
 ---
 
