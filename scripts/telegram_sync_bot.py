@@ -17,6 +17,7 @@
          (เจอจริง 16 ก.ย. 2026: เจ้าของเห็นปุ่ม แต่แอดมินอีกคนในห้องเดียวกันไม่เห็น จึงสั่งซิงค์ไม่ได้)
     - รันจริงผ่าน scripts/sync_local.py (ตัวเดียวกับที่ workflow ใช้) ทีละงาน ห้ามซ้อน
     - **ซิงค์อัตโนมัติเที่ยงคืน** แทน cron ของ GitHub ที่ใช้ไม่ได้ (ดูหัวข้อล่าง)
+    - **ซิงค์สต็อกระหว่างวัน** 10:00 ตอนห้างเปิด ตั้งเพิ่มรอบได้ (ดูหัวข้อล่าง)
 
 ซิงค์อัตโนมัติ (13 ก.ย. 2026):
     เดิม GitHub Actions รันให้ 00:00/00:05 แต่บัญชีถูกแฟล็ก cron เลยตายไปด้วย
@@ -51,12 +52,25 @@
            เครื่องปิด = โพสต์ไม่ออกจนกว่าจะเปิด (ปลายทางยังโพสต์ให้อยู่ แค่ช้ากว่าเวลาที่ตั้ง)
     สั่งได้ในห้อง: /backup (สำรองเดี๋ยวนี้) · /backup on|off · /autopost (เคาะเดี๋ยวนี้) · /autopost on|off
 
+ซิงค์สต็อกระหว่างวัน (17 ต.ค. 2026):
+    หน้าเช็กของในตู้สาธารณะบนเว็บ (/stock) อ่านจาก DB ตรง ๆ จึงสดเท่ารอบซิงค์ล่าสุด ซึ่งเดิมมีแค่ 00:10
+    เจ้าของเปิดคอมไว้ตลอด ขอรอบ 10:00 ตอนห้างเปิดเป็น "รอบแรก" → เก็บเป็นรายการเวลา ตั้งเพิ่มได้
+    แต่ละรอบทำแบบเดียวกับปุ่ม "ซิงค์ทั้งหมด" (ยอดขายไล่จากตัวชี้ → สต็อก) แล้วรายงานผลข้อความเดียว
+    ล้มแล้วลองใหม่อีกครั้งหลัง 30 นาที (เวลาลองใหม่เลยเที่ยงคืน = ไม่ลอง ปล่อยรอบเที่ยงคืนเก็บ)
+    · ค้างหลายรอบรันครั้งเดียวจบ · เลยเวลารอบเกิน 4 ชม. ข้ามของวันนั้น
+    · "ซิงค์ทั้งหมด" (ปุ่ม/รอบเที่ยงคืน) ที่ผ่านหลังเวลารอบ นับแทนรอบนั้นเลย ไม่ซิงค์ซ้ำ
+    ตั้งได้ไม่เกิน 6 รอบ ห่างกันอย่างน้อย 1 ชม. ไม่เกิน 23:00 — ทุกรอบดึงจากหลังบ้านตู้ทุกยี่ห้อ ถี่เกินเสี่ยงโดนบล็อก
+    /auto off ปิดรอบพวกนี้ไปด้วย — ข้อความของคำสั่งนั้นบอกคนในห้องว่า "ต้องกดปุ่มเอาเอง"
+
+    สั่งได้ในห้อง: /rounds (ดูสถานะ) · /rounds 10:00,15:00 (ตั้งเวลา) · /rounds on|off
+
 รัน:  .venv-image\\Scripts\\python.exe scripts\\telegram_sync_bot.py
 """
 import html as _html
 import json
 import os
 import pathlib
+import re
 import shutil
 import subprocess
 import sys
@@ -129,6 +143,27 @@ BACKUP_DIR = ROOT / "backups"
 BACKUP_EVERY_DAYS = 7
 BACKUP_AT_DEFAULT = "00:30"
 BACKUP_KEEP = 8                # ~2 เดือน · ของเดิมเก็บเป็น artifact บน GitHub 90 วัน
+
+# ── ค่าตั้งของรอบซิงค์สต็อกระหว่างวัน (17 ต.ค. 2026) ──
+# 10:00 = เวลาห้างเปิด · เจ้าของบอกว่าเป็น "รอบแรก" ที่อยากเพิ่ม จึงเก็บเป็นรายการ ตั้งเพิ่มในห้องด้วย /rounds
+STOCK_ROUNDS_DEFAULT = ["10:00"]
+# รอบกลางวันลองแค่ 2 ครั้ง (รอบเที่ยงคืนลอง 3) — พลาดไปยังมีรอบถัดไปกับรอบเที่ยงคืนเก็บให้
+# และกลางวันคนในห้องกดปุ่มเองได้ ไม่ต้องให้บอทวนลองไปจนเย็น
+STOCK_ROUND_MAX_TRIES = 2
+# เลยเวลารอบมาเกินเท่านี้แล้วยังไม่ได้เริ่ม (เครื่องเพิ่งเปิด/บอทเพิ่งฟื้น) = ข้ามรอบนั้นของวันนี้
+# 4 ชม. → รอบ 10:00 ยังรันชดเชยได้ถึง 14:00 ซึ่งยังเป็นช่วงห้างเปิดที่ข้อมูลสดมีประโยชน์
+# เกินจากนั้นไม่รันย้อน: เปิดเครื่องตอนค่ำแล้วจู่ ๆ มี "รอบ 10:00" โผล่ในห้อง คนอ่านงง
+# และอีกไม่กี่ชั่วโมงก็ถึงรอบเที่ยงคืนอยู่แล้ว
+# ⚠️ นับจากเวลาของรอบ ไม่ใช่ตัดที่ห้างปิด 22:00 — วันไหนตั้งรอบหลังห้างปิด (เช่น 22:30)
+#    รอบนั้นจะไม่มีวันได้รันเลยแบบเงียบ ๆ
+STOCK_ROUND_LATE_MAX_MIN = 240
+# เพดานของ /rounds — ทุกรอบดึงยอดขาย 3 วัน + สต็อกจากหลังบ้านตู้ทุกยี่ห้อ (VMS เคยบล็อก API ยอดขายด้วย 403 มาแล้ว)
+# ไม่มีเพดาน ใครในห้องพิมพ์ทุก 15 นาที บอทก็ซิงค์รัวทั้งวัน และข้อความตอบ /rounds ยาวเกินที่ Telegram รับ (4096 ตัว)
+STOCK_ROUNDS_MAX = 6
+STOCK_ROUND_MIN_GAP_MIN = 60
+# รอบหลัง 23:00 ล้มแล้ว เวลาลองใหม่ (เวลาที่รันไป + 30 นาที) ข้ามเที่ยงคืน = ไม่มีวันได้ลอง
+# ช่วงดึกมีรอบเที่ยงคืนดึงให้อยู่แล้ว · รอบ 23:00 ที่รันนานจนเวลาลองใหม่ข้ามวัน run_stock_round ยอมแพ้ให้เอง
+STOCK_ROUND_LAST = "23:00"
 
 
 def env(key):
@@ -287,11 +322,17 @@ def run_sync(chat_id, args, label):
 
 # ── รอบอัตโนมัติเที่ยงคืน — แทน cron ของ GitHub ──
 
-def mark_day_done():
-    """ซิงค์ครบทั้งยอดขาย+สต็อกของวันนี้แล้ว — ไม่แตะตัวชี้ยอดขาย (run_sales_catchup เลื่อนให้เอง)"""
-    STATE["auto_done_date"] = date.today().isoformat()
+def mark_day_done(now=None):
+    """ซิงค์ครบทั้งยอดขาย+สต็อกของวันนี้แล้ว — ไม่แตะตัวชี้ยอดขาย (run_sales_catchup เลื่อนให้เอง)
+
+    เรียกเฉพาะตอนยอดขายและสต็อกผ่านทั้งคู่ (run_auto · ปุ่ม "ซิงค์ทั้งหมด") · ปิดรอบกลางวันที่ถึงเวลาแล้วให้ด้วย
+    ดูเหตุผลที่ _close_passed_rounds
+    """
+    now = now or datetime.now()
+    STATE["auto_done_date"] = now.date().isoformat()
     STATE.pop("auto_retry_at", None)
     STATE["auto_tries"] = 0
+    _close_passed_rounds(now, STATE)
     save_state()
 
 
@@ -441,6 +482,350 @@ def run_auto():
         STATE["auto_retry_at"] = time.time() + AUTO_RETRY_MIN * 60
         save_state()
     finally:
+        _lock.release()
+
+
+# ── รอบซิงค์สต็อกระหว่างวัน (17 ต.ค. 2026) ──
+#
+# ทำไมต้องมี: เปิดหน้าเช็กของในตู้สาธารณะบนเว็บ (/stock) แล้ว หน้านั้นอ่านจาก DB ตรง ๆ จึงสดเท่ารอบซิงค์
+# ล่าสุด ซึ่งเดิมบอทซิงค์แค่ 00:10 · เจ้าของ (เปิดคอมไว้ตลอด) ขอเพิ่มรอบห้างเปิด 10:00
+#
+# ⚠️ แต่ละรอบทำแบบเดียวกับปุ่ม "ซิงค์ทั้งหมด" — ยอดขายไล่จากตัวชี้ก่อน แล้วค่อยสต็อก ไม่ใช่ --stock เปล่า ๆ
+#    slot_tracking คิดของที่เติม = (หลัง − ก่อน) + ยอดที่ขายระหว่างสองรอบ โดยอ่านตาราง sales
+#    "ตอนที่ซิงค์สต็อก" · ยอดที่ยังไม่เข้า DB ตอนนั้นหลุดจากหน้าต่างของรอบนี้ไปถาวร เพราะรอบถัดไป
+#    เริ่มนับจากรอบนี้ → ตัวเลขการเติมต่ำกว่าจริง (refill-recompute บน GitHub ตามซ่อมได้ แต่เป็นแค่ตาข่าย)
+#    รอบ 10:00 ที่รันตรงเวลาแทบไม่มียอดขายในหน้าต่างก็จริง แต่รอบที่รันชดเชยสาย/รอบลองใหม่ หรือรอบบ่าย
+#    ที่จะเพิ่มทีหลัง มีของขายออกไปเป็นชั่วโมงแล้ว และช่วงเช้าก็เป็นช่วงที่แอดมินเติมตู้พอดี
+# ⚠️ ไม่เรียก mark_day_done — auto_done_date แปลว่า "รอบเที่ยงคืนของวันนี้จบแล้ว" ซึ่งปกติจบไปตั้งแต่
+#    00:10 (เรียกไปก็ไม่มีผล) แต่ถ้าวันไหนรอบเที่ยงคืนถูกย้ายไปหลังรอบนี้ (/auto 11:00) หรือกำลังรอลองใหม่
+#    การ mark จะทำให้รอบนั้นหายไปเงียบ ๆ และล้างตัวนับการลองของมันทิ้ง
+#    ส่วนตัวชี้ยอดขายเลื่อนได้ตามปกติ (run_sales_catchup เลื่อนเฉพาะช่วงที่ดึงสำเร็จ) — รอบเที่ยงคืนดึงย้อน
+#    ทับซ้อน 2 วันเสมอ ยอดครึ่งวันที่รอบ 10:00 ดึงไป จะถูกดึงซ้ำให้ครบทั้งวันในคืนนั้นเอง ไม่มีวันไหนหลุด
+# ⚠️ "ซิงค์ทั้งหมด" ที่ผ่านทั้งสองขั้น (ปุ่ม หรือรอบเที่ยงคืนที่รันชดเชยสาย) หลังเวลารอบ นับแทนรอบนั้นเลย —
+#    mark_day_done ปิดรอบที่ถึงเวลาแล้วให้ ไม่งั้นรอบซิงค์ซ้ำต่อท้ายทันทีที่ปล่อยล็อก
+#    กดก่อนเวลารอบ รอบยังรันตามเวลาของมัน · กดแค่ซิงค์สต็อก/ยอดขายอย่างเดียวไม่นับ (ไม่ครบยอดขาย → สต็อก)
+
+# ตั้งระหว่างที่รอบกำลังซิงค์ (หลังเช็กซ้ำในล็อกผ่าน) ล้างใน finally — /rounds กับ /auto จะได้บอกว่า "กำลังซิงค์อยู่"
+# ไม่ใช่ "ถึงคิวแล้ว เริ่มในไม่กี่วินาที" ไปตลอด 2-5 นาทีที่รัน
+_round_running = threading.Event()
+# คีย์ของการลองใหม่ (ตัวนับนับต่อ "ชุดที่รัน" ตามรอบล่าสุดของชุด) — ล้างพร้อมกันทุกครั้งที่รอบปิด
+_ROUND_RETRY_KEYS = ("stock_round_retry_at", "stock_round_tries", "stock_round_tries_for")
+
+
+def stock_rounds(state):
+    """เวลารอบระหว่างวันที่ตั้งไว้ → ["10:00", ...] เรียงแล้ว ไม่ซ้ำ (ฟังก์ชันล้วน — ทดสอบได้)
+
+    ไม่มีคีย์ = ค่าปริยาย · ค่าพังในไฟล์ state ข้ามทีละตัว ห้ามโยน error — ตัวจับเวลาเช็กทุก 30 วิ
+    ถ้าพังตรงนี้ทุกติ๊ก รอบกลางวันจะหายเงียบไปทั้งวันโดยไม่มีใครรู้
+    """
+    raw = state.get("stock_rounds", STOCK_ROUNDS_DEFAULT)
+    if isinstance(raw, str):
+        raw = [raw]
+    if not isinstance(raw, (list, tuple)):
+        raw = STOCK_ROUNDS_DEFAULT
+    return sorted({t for t in map(parse_hhmm, raw) if t})
+
+
+def _hhmm_min(hhmm):
+    """แปลงเวลา HH:MM เป็นนาทีนับจากเที่ยงคืน"""
+    h, m = map(int, hhmm.split(":"))
+    return h * 60 + m
+
+
+def _late_min(now, hhmm):
+    """เลยเวลารอบมาแล้วกี่นาที (ติดลบ = ยังไม่ถึง)"""
+    return now.hour * 60 + now.minute - _hhmm_min(hhmm)
+
+
+def _day_map(state, key):
+    m = state.get(key)
+    return m if isinstance(m, dict) else {}
+
+
+def _mark_rounds(state, key, slots, today):
+    """บันทึก {รอบ: วันที่} ลงแผนที่ key — สร้าง dict ใหม่แล้วแทนที่ทีเดียว ไม่แก้ตัวเดิมในที่
+    (เธรดอื่นอาจกำลังคัดลอก/เซฟตัวเดิมอยู่ — /rounds ตั้งเวลาใหม่ในเธรดรับข้อความ)"""
+    state[key] = {**_day_map(state, key), **{t: today for t in slots}}
+
+
+def _close_passed_rounds(now, state):
+    """ปิดรอบกลางวันทุกรอบที่ถึงเวลาแล้วของวันนี้ — เรียกจาก mark_day_done เท่านั้น
+
+    "ซิงค์ทั้งหมด" ที่ผ่าน (ยอดขาย → สต็อก) หลังเวลารอบไหน = ข้อมูลสดกว่าที่รอบนั้นจะได้แล้ว
+    ไม่ปิด รอบก็ซิงค์ซ้ำต่อท้ายทันที (ตรวจเจอ 17 ต.ค. 2026: เครื่องเปิด 10:30 → รอบเที่ยงคืนรันชดเชยจบ
+    แล้วรอบ 10:00 ดึงยอดขาย 3 วัน + สต็อกทุกยี่ห้อซ้ำอีกรอบในติ๊กเดียวกัน)
+    ปิดเฉพาะรอบที่ถึงเวลาแล้ว — กดก่อนเวลารอบ รอบยังรันตามเวลาของมัน
+    ล้างป้าย "ล้ม" ของรอบพวกนี้ด้วย ข้อมูลสดแล้ว จะโชว์ ❌ ค้างไว้ก็ไม่จริง · ล้างการรอลองใหม่ด้วยเหตุผลเดียวกัน
+    """
+    today = now.date().isoformat()
+    passed = [t for t in stock_rounds(state) if _late_min(now, t) >= 0]
+    if passed:
+        _mark_rounds(state, "stock_round_done", passed, today)
+        if "stock_round_failed" in state:
+            state["stock_round_failed"] = {t: d for t, d in _day_map(state, "stock_round_failed").items()
+                                           if t not in passed}
+    for k in _ROUND_RETRY_KEYS:
+        state.pop(k, None)
+
+
+def _rounds_on(state):
+    # /auto off บอกคนในห้องว่า "ต้องกดปุ่มเอาเอง" — ถ้ารอบกลางวันยังวิ่งอยู่ ข้อความนั้นจะไม่จริง
+    return bool(state.get("auto_enabled", True)) and bool(state.get("stock_rounds_enabled", True))
+
+
+def _round_retry_wait(now, state):
+    r = state.get("stock_round_retry_at")
+    return isinstance(r, (int, float)) and now.timestamp() < r
+
+
+def _round_open(now, state, t):
+    """รอบ t ของวันนี้ยังค้างอยู่ไหม — ถึงเวลาแล้ว · ยังไม่จบ · ยังไม่เลยกำหนด (หรือเคยลองไปแล้ววันนี้)"""
+    today = now.date().isoformat()
+    late = _late_min(now, t)
+    if late < 0 or _day_map(state, "stock_round_done").get(t) == today:
+        return False
+    # รอบที่เริ่มทันเวลาแต่ล้ม ได้ลองซ้ำตามสิทธิ์แม้จะเลยกำหนดไปแล้ว — กำหนดมีไว้กันการ "เริ่ม" รอบที่สายเกิน
+    # ไม่ได้มีไว้ตัดสิทธิ์ลองใหม่ (ไม่งั้นรอบที่ล้มตอน 13:59 จะบอกว่า "จะลองใหม่" แล้วเงียบหายไปเฉย ๆ)
+    # ⚠️ สิทธิ์นี้ต้องเก็บรายรอบ (stock_round_attempted) — เดิมผูกกับรอบล่าสุดของชุดที่ล้มรอบเดียว
+    #    รอบ 10:00 ล้มตอน 13:50 แล้วรอบ 14:00 มาร่วมชุดลองใหม่ → 10:00 เสียสิทธิ์ หลุดจากการลองใหม่ที่สัญญาไว้
+    #    แบบเงียบ ๆ แล้วหน้าสถานะโชว์ "ข้าม เพราะบอทพร้อมช้า" ทั้งที่ลองไปแล้วสองครั้ง
+    if late > STOCK_ROUND_LATE_MAX_MIN and _day_map(state, "stock_round_attempted").get(t) != today:
+        return False
+    return True
+
+
+def stock_rounds_due(now, state):
+    """รอบระหว่างวันที่ถึงคิวตอนนี้ (ฟังก์ชันล้วน — ทดสอบได้) → ["10:00", ...] · [] = ยังไม่มีอะไรต้องทำ
+
+    เงื่อนไขแบบเดียวกับ auto_due — "วันนี้รอบนี้ทำหรือยัง" ไม่ใช่ "ตี 10 พอดีหรือยัง" — บวกอีกสองข้อ
+      · ค้างหลายรอบ (เครื่องเพิ่งเปิด) คืนมาทั้งหมดในครั้งเดียว → รันรอบเดียวแล้วปิดทุกรอบที่ค้าง
+        ข้อมูลหลังรันสดกว่าเวลาของทุกรอบที่ผ่านมาแล้ว รันไล่ทีละรอบก็ได้ของเดิมซ้ำ ๆ
+      · เลยเวลารอบมาเกิน STOCK_ROUND_LATE_MAX_MIN = ข้ามรอบนั้นของวันนี้ (เหตุผลอยู่ที่ค่าตั้ง)
+    """
+    if not _rounds_on(state) or _round_retry_wait(now, state):
+        return []
+    return [t for t in stock_rounds(state) if _round_open(now, state, t)]
+
+
+def round_states(now, state, running=None):
+    """สถานะของแต่ละรอบวันนี้ (ฟังก์ชันล้วน — ทดสอบได้) → [("10:00", "done"), ...]
+
+    done เสร็จ · failed ไม่สำเร็จ หยุดลองของวันนี้แล้ว · wait ยังไม่ถึงเวลา · due ถึงคิว
+    running กำลังซิงค์อยู่ · retry รอลองใหม่ · skipped เลยกำหนดไปแล้ว ข้ามของวันนี้
+    running: None = อ่านจากธงของตัวรันจริง (_round_running) · ส่ง True/False เองได้ตอนทดสอบ
+    """
+    if running is None:
+        running = _round_running.is_set()
+    today = now.date().isoformat()
+    done, failed = _day_map(state, "stock_round_done"), _day_map(state, "stock_round_failed")
+    out = []
+    for t in stock_rounds(state):
+        if failed.get(t) == today:
+            code = "failed"
+        elif done.get(t) == today:
+            code = "done"
+        elif _late_min(now, t) < 0:
+            code = "wait"
+        elif not _round_open(now, state, t):
+            code = "skipped"
+        elif running:
+            code = "running"
+        elif _round_retry_wait(now, state):
+            code = "retry"
+        else:
+            code = "due"
+        out.append((t, code))
+    return out
+
+
+ROUND_ICON = {"done": "✅", "failed": "❌", "wait": "⏳", "due": "▶️", "running": "🔄", "retry": "🔁",
+              "skipped": "⏭"}
+
+
+def _rounds_switch(state):
+    if not state.get("auto_enabled", True):
+        return "<b>ปิด</b> (ตาม /auto off)"
+    return "<b>เปิด</b>" if state.get("stock_rounds_enabled", True) else "<b>ปิด</b>"
+
+
+def rounds_line(now, state):
+    """บรรทัดเดียวสำหรับหน้าสถานะ /auto (ฟังก์ชันล้วน — ทดสอบได้)"""
+    times = stock_rounds(state)
+    head = "☀️ ซิงค์สต็อกระหว่างวัน: "
+    if not times:
+        return head + "ยังไม่มีรอบ — ตั้งด้วย /rounds 10:00"
+    if not _rounds_on(state):
+        return head + f"{_rounds_switch(state)} · รอบ {' · '.join(times)} น."
+    return (head + "<b>เปิด</b> · วันนี้ "
+            + " · ".join(f"{t} {ROUND_ICON[c]}" for t, c in round_states(now, state)))
+
+
+def rounds_status(now=None, state=None):
+    """ข้อความเต็มของ /rounds"""
+    now = now or datetime.now()
+    state = STATE if state is None else state
+    times = stock_rounds(state)
+    lines = [f"☀️ <b>ซิงค์สต็อกระหว่างวัน</b>: {_rounds_switch(state)}"]
+    if not times:
+        lines.append("ยังไม่มีรอบ — ตั้งด้วย /rounds 10:00")
+    elif not _rounds_on(state):
+        lines.append(f"รอบที่ตั้งไว้: {' · '.join(times)} น.")
+    else:
+        r = state.get("stock_round_retry_at")
+        left = max(1, int((r - now.timestamp()) / 60)) if isinstance(r, (int, float)) else 0
+        text = {"done": "เสร็จแล้ว",
+                "failed": "ไม่สำเร็จ — หยุดลองรอบนี้ของวันนี้แล้ว",
+                "wait": "ยังไม่ถึงเวลา",
+                "due": "ถึงคิวแล้ว — เริ่มในไม่กี่วินาที (มีซิงค์อื่นรันอยู่จะต่อคิวหลังตัวนั้น)",
+                "running": "กำลังซิงค์อยู่ — เสร็จแล้วจะรายงานในห้องนี้",
+                "retry": f"รอลองใหม่อีก {left} นาที",
+                "skipped": f"ข้ามของวันนี้ — บอทพร้อมช้ากว่าเวลารอบเกิน {STOCK_ROUND_LATE_MAX_MIN // 60} ชม."}
+        lines += [f"• {t} น. — {ROUND_ICON[c]} {text[c]}" for t, c in round_states(now, state)]
+    lines.append("")
+    lines.append("แต่ละรอบดึงยอดขายล่าสุดก่อนแล้วค่อยดึงสต็อก (ตัวเลขการเติมของจะได้ไม่เพี้ยน) ใช้เวลาราว 2-5 นาที")
+    lines.append(f"ล้มแล้วลองใหม่อีกครั้งหลัง {AUTO_RETRY_MIN} นาที · บอทพร้อมช้ากว่าเวลารอบเกิน "
+                 f"{STOCK_ROUND_LATE_MAX_MIN // 60} ชม. (เช่น เครื่องเพิ่งเปิด) จะข้ามรอบนั้น ไม่รันย้อน")
+    lines.append(f"สั่งได้: /rounds 10:00,15:00 (ตั้งเวลา — ไม่เกิน {STOCK_ROUNDS_MAX} รอบ "
+                 f"ห่างกันอย่างน้อย {STOCK_ROUND_MIN_GAP_MIN // 60} ชม. ไม่เกิน {STOCK_ROUND_LAST} น.) "
+                 "· /rounds on · /rounds off")
+    return "\n".join(lines)
+
+
+# เวลาหนึ่งตัวใน /rounds: ชั่วโมง 1-2 หลัก + ":" หรือ "." + นาที 2 หลัก (10:00 · 9:30 · 10.00)
+# ⚠️ ต้องกรองก่อนส่งให้ parse_hhmm — int() ยอม "+1" "-0" "1_0" จึงเคยรับ "+1:00" เป็น 01:00 และ "1_0:00" เป็น 10:00
+#    นาทีต้อง 2 หลัก: "9:5" เดาไม่ได้ว่า 09:05 หรือ 09:50 · \d รับเลขไทย/เลขเต็มความกว้างด้วย (int() แปลงได้) ตั้งใจให้รับ
+_ROUND_TIME = re.compile(r"(\d{1,2})[:.](\d{2})")
+
+
+def parse_rounds_arg(arg):
+    """ข้อความหลัง /rounds → (คำสั่ง, รายการเวลา) (ฟังก์ชันล้วน — ทดสอบได้)
+
+    ("show", None) ดูสถานะ · ("on", None) · ("off", None) · ("set", ["10:00", "15:00"]) · ("bad", None)
+    คั่นด้วยจุลภาคหรือเว้นวรรคก็ได้ · รับ "10.00" กับหน่วย "น." ด้วย — คนไทยเขียนเวลาแบบนั้น (เจ้าของพิมพ์มาเองว่า
+    "ห้างเปิด10.00") · มีตัวไหนอ่านไม่ออกปฏิเสธทั้งชุด ไม่ตั้งให้ครึ่ง ๆ แล้วให้คนสั่งมาเดาเอาว่าตัวไหนหาย
+    ตัวนี้ดูแค่รูปแบบ — เพดานจำนวนรอบ/ระยะห่าง/เวลาดึกสุด อยู่ที่ rounds_problem
+    """
+    a = (arg or "").strip().lower()
+    if not a:
+        return "show", None
+    if a in ("on", "เปิด"):
+        return "on", None
+    if a in ("off", "ปิด"):
+        return "off", None
+    tokens = re.sub(r"น\.?", " ", a).replace(",", " ").split()    # "10.00 น." · "10:00น." → ตัดหน่วยทิ้ง
+    times = []
+    for tok in tokens:
+        m = _ROUND_TIME.fullmatch(tok)
+        times.append(parse_hhmm(f"{m[1]}:{m[2]}") if m else None)
+    if not times or None in times:
+        return "bad", None
+    return "set", sorted(set(times))
+
+
+def rounds_problem(times):
+    """เหตุผลที่ไม่รับรายการเวลานี้ (ข้อความไทย) หรือ None ถ้าตั้งได้ (ฟังก์ชันล้วน — ทดสอบได้)
+
+    times = รายการ "HH:MM" เรียงแล้วจาก parse_rounds_arg · เหตุผลของแต่ละเพดานอยู่ที่ค่าตั้ง
+    """
+    why = "ทุกรอบดึงข้อมูลจากหลังบ้านตู้ทุกยี่ห้อ ถี่เกินเสี่ยงโดนบล็อก"
+    if len(times) > STOCK_ROUNDS_MAX:
+        return f"ตั้งได้ไม่เกิน {STOCK_ROUNDS_MAX} รอบต่อวัน (ส่งมา {len(times)} รอบ) — {why}"
+    late = [t for t in times if _hhmm_min(t) > _hhmm_min(STOCK_ROUND_LAST)]
+    if late:
+        return (f"ตั้งได้ถึง {STOCK_ROUND_LAST} น. เท่านั้น ({' · '.join(late)} ดึกเกิน) — "
+                "ถ้ารอบนั้นล้ม เวลาลองใหม่จะเลยเที่ยงคืนจนไม่ได้ลอง · ช่วงดึกมีรอบเที่ยงคืนดึงให้อยู่แล้ว")
+    for a, b in zip(times, times[1:]):
+        gap = _hhmm_min(b) - _hhmm_min(a)
+        if gap < STOCK_ROUND_MIN_GAP_MIN:
+            return (f"แต่ละรอบต้องห่างกันอย่างน้อย {STOCK_ROUND_MIN_GAP_MIN // 60} ชม. "
+                    f"({a} กับ {b} ห่างกันแค่ {gap} นาที) — {why}")
+    return None
+
+
+def run_stock_round(now=None):
+    """รอบซิงค์ระหว่างวัน: ยอดขายไล่จากตัวชี้ → สต็อก → รายงานผลเข้าห้องข้อความเดียว
+
+    ล้มแล้วลองใหม่หลัง AUTO_RETRY_MIN นาที ได้ STOCK_ROUND_MAX_TRIES ครั้งต่อชุด แล้วยอมแพ้ทุกรอบในชุดนั้นของวันนี้
+    (รอบอื่นที่ตามมาทีหลังยังได้สิทธิ์ของมันเต็ม) · เวลาลองใหม่เลยเที่ยงคืน = ยอมแพ้เลย ปล่อยรอบเที่ยงคืนเก็บ
+    ตัวจับเวลาเรียกในเธรดแยก — ดูเหตุผลที่ scheduler
+    """
+    chat_id = STATE.get("chat_id")
+    if not chat_id:
+        return                       # ยังไม่ผูกห้อง — ไม่มีที่ให้รายงาน ข้ามไปก่อน (แบบเดียวกับ run_auto)
+    if not _lock.acquire(blocking=False):
+        return                       # ซิงค์อื่นถือล็อกอยู่ (รอบเที่ยงคืน/ปุ่ม) — ไม่ mark อะไร ติ๊กหน้ามาใหม่
+    try:
+        now = now or datetime.now()
+        # เช็กซ้ำหลังได้ล็อก — ระหว่างที่รอบนี้รัน ตัวจับเวลายังเรียกซ้ำทุกติ๊ก ถ้าตัวก่อนเพิ่งจบและปิดรอบไปแล้ว
+        # ตัวที่ได้ล็อกต่อต้องไม่ซิงค์ซ้ำอีกรอบ
+        due = stock_rounds_due(now, STATE)
+        if not due:
+            return
+        _round_running.set()         # ล้างใน finally ข้างล่าง
+        today = now.date().isoformat()
+        label = "ซิงค์รอบ " + " + ".join(due)
+        t0 = time.time()
+        try:
+            parts, ok = run_sales_catchup(pending_sales_chunks(now.date()))
+            if ok:               # ยอดขายพัง อย่าไปต่อ — สต็อกจะคำนวณการเติมผิด (เหตุผลเดียวกับ run_auto)
+                ok, stock_body = _run_job(["--stock"])
+                parts.append(f"▸ สต็อกหน้าตู้\n{stock_body}")
+            body = "\n\n".join(parts)
+        except Exception as e:
+            ok, body = False, f"ล้มกลางทาง: {e}"
+        elapsed = time.time() - t0
+        mins = elapsed / 60
+
+        if ok:
+            _mark_rounds(STATE, "stock_round_done", due, today)
+            for k in _ROUND_RETRY_KEYS:
+                STATE.pop(k, None)
+            save_state()
+            # ⚠️ ห้ามเขียน "/stock" เปล่า ๆ ในข้อความ — Telegram ทำให้เป็นคำสั่งที่กดได้ กดแล้วกลายเป็นสั่งซิงค์สต็อก
+            send(chat_id, f"☀️ <b>{label} เสร็จ</b> ({mins:.1f} นาที) — หน้าเช็กของในตู้จะอัปเดตตามภายใน 1 นาที"
+                          f"\n\n<pre>{_esc(body[:3000])}</pre>")
+            return
+
+        # ทุกรอบในชุดที่ล้มได้สิทธิ์ลองใหม่แม้เลยกำหนด 4 ชม. — รายรอบ ดูเหตุผลที่ _round_open
+        _mark_rounds(STATE, "stock_round_attempted", due, today)
+        # นับครั้งต่อชุดที่รัน (ผูกกับรอบล่าสุดของชุด) — มีรอบใหม่ถึงเวลาระหว่างรอลองใหม่ รอบใหม่ได้สิทธิ์ของมันเต็ม
+        key = f"{today} {due[-1]}"
+        tries = (STATE.get("stock_round_tries") or 0) + 1 if STATE.get("stock_round_tries_for") == key else 1
+        retry_at = now.timestamp() + elapsed + AUTO_RETRY_MIN * 60
+        # เวลาลองใหม่ข้ามเที่ยงคืน = ไม่มีวันได้ลอง (ข้ามวันแล้วรอบนี้กลายเป็น "ยังไม่ถึงเวลา" ของวันใหม่)
+        # บอกว่า "จะลองใหม่" ไปก็โกหก — ยอมแพ้เลย รอบเที่ยงคืนดึงทั้งยอดขายและสต็อกให้อยู่แล้ว
+        past_midnight = datetime.fromtimestamp(retry_at).date() != now.date()
+        if tries >= STOCK_ROUND_MAX_TRIES or past_midnight:
+            # ปิดทุกรอบในชุดพร้อมกัน — ทุกตัวลองมาด้วยกันและล้มด้วยกัน
+            _mark_rounds(STATE, "stock_round_done", due, today)
+            _mark_rounds(STATE, "stock_round_failed", due, today)
+            for k in _ROUND_RETRY_KEYS:
+                STATE.pop(k, None)
+            if tries >= STOCK_ROUND_MAX_TRIES:
+                note = (f"ลองครบ {tries} ครั้งแล้ว หยุดรอบนี้ไว้ก่อน\n"
+                        "ข้อมูลไม่หายจากตู้ รอบถัดไปหรือรอบเที่ยงคืนจะดึงให้เอง หรือกดปุ่มซิงค์เองได้เลย")
+            else:
+                note = ("ไม่ลองซ้ำแล้ว เพราะเวลาลองใหม่จะเลยเที่ยงคืน\n"
+                        "ข้อมูลไม่หายจากตู้ รอบเที่ยงคืนจะดึงให้เอง หรือกดปุ่มซิงค์เองได้เลย")
+        else:
+            STATE["stock_round_tries"] = tries
+            STATE["stock_round_tries_for"] = key
+            STATE["stock_round_retry_at"] = retry_at
+            note = f"จะลองใหม่ในอีก {AUTO_RETRY_MIN} นาที (ครั้งที่ {tries}/{STOCK_ROUND_MAX_TRIES})"
+        save_state()
+        # ตอนล้มเอาท้ายข้อความ — เหตุผลอยู่ท้าย stderr (ตอนผ่านเอาหัว เหมือน run_sync)
+        send(chat_id, f"❌ <b>{label} ไม่สำเร็จ</b> ({mins:.1f} นาที) — {note}"
+                      f"\n\n<pre>{_esc(body[-3000:])}</pre>")
+    except Exception as e:
+        # ตาข่ายชั้นสุดท้าย — ตั้งเวลาลองใหม่ในหน่วยความจำก่อนเซฟ ต่อให้เซฟพังก็ไม่โดนเรียกรันรัวทุก 30 วิ
+        STATE["stock_round_retry_at"] = time.time() + AUTO_RETRY_MIN * 60
+        try:
+            save_state()
+        except Exception:
+            pass
+        send(chat_id, f"❌ รอบซิงค์ระหว่างวันล้ม: {_esc(e)}")
+    finally:
+        _round_running.clear()       # ก่อนปล่อยล็อก — ตัวถัดไปที่ได้ล็อกจะได้ตั้งธงของมันเองใหม่
         _lock.release()
 
 
@@ -694,6 +1079,15 @@ def scheduler():
                 threading.Thread(target=run_autopost, daemon=True).start()
             if backup_due(datetime.now(), STATE):
                 threading.Thread(target=run_backup, daemon=True).start()
+            # รอบซิงค์สต็อกระหว่างวัน — แยกเธรด ไม่รันในเธรดนี้แบบรอบเที่ยงคืน เพราะรอบนี้อยู่กลางวัน
+            # ถ้ารันตรงนี้ ตัวเคาะโพสต์อัตโนมัติจะค้างรอไปด้วยทุกวัน (ปกติ 2-5 นาที แต่ถ้า scraper ค้าง
+            # ค้างได้ถึง 30 นาทีต่อขั้น) · ไม่ซ้อนกับซิงค์อื่นเพราะใช้ _lock ตัวเดียวกันแบบไม่รอ
+            # ติ๊กถัดไประหว่างที่ยังรันอยู่จะเรียกซ้ำ → ล็อกไม่ว่างก็ออกทันที + เช็กซ้ำอีกทีหลังได้ล็อก
+            # วันที่รอบเที่ยงคืนต้องรันชดเชยพร้อมกัน run_auto ข้างบนรันจบในเธรดนี้ไปก่อนแล้ว จึงไม่แย่งกัน
+            # และถ้ามันผ่าน mark_day_done ปิดรอบที่ถึงเวลาแล้วให้ ตัวเช็กนี้จึงไม่เห็นอะไรค้าง ไม่ซิงค์ซ้ำต่อท้าย
+            # วางท้ายสุด — ถ้าวันไหนตัวเช็กนี้พัง งานอื่นในติ๊กเดียวกันได้รันไปก่อนแล้ว
+            if stock_rounds_due(datetime.now(), STATE):
+                threading.Thread(target=run_stock_round, daemon=True).start()
         except Exception as e:
             print(f"[scheduler] {e}")
         time.sleep(AUTO_TICK)
@@ -710,6 +1104,7 @@ def auto_status():
     retry = STATE.get("auto_retry_at")
     if retry and retry > time.time():
         lines.append(f"รอลองใหม่อีก {int((retry - time.time()) / 60)} นาที")
+    lines.append(rounds_line(datetime.now(), STATE))
     idea_on = STATE.get("ideas_enabled", True)
     idea_done = STATE.get("ideas_done_date") == date.today().isoformat()
     lines.append(f"💡 เก็บไอเดีย: <b>{'เปิด' if idea_on else 'ปิด'}</b> · เวลา <b>{IDEAS_AT_DEFAULT}</b> น. · "
@@ -723,7 +1118,8 @@ def auto_status():
                  f"เคาะทุก {AUTOPOST_EVERY_MIN} นาที · ล่าสุด {ago}")
     lines.append("\nเครื่องต้องเปิดอยู่บอทถึงจะทำงาน — ถ้าเครื่องปิดข้ามคืน "
                  "บอทจะซิงค์ชดเชยให้ทันทีที่เปิดมา")
-    lines.append("สั่งได้: /auto on · /auto off · /auto 00:30 · /ideas (เก็บไอเดียเดี๋ยวนี้) · /ideas on|off")
+    lines.append("สั่งได้: /auto on · /auto off · /auto 00:30 · /rounds (รอบซิงค์ระหว่างวัน) · "
+                 "/ideas (เก็บไอเดียเดี๋ยวนี้) · /ideas on|off")
     lines.append("ปุ่มหาย/ไม่ขึ้นบนเครื่องใคร ให้พิมพ์ /panel — แผงปุ่มในข้อความ ทุกคนในห้องกดได้")
     return "\n".join(lines)
 
@@ -804,6 +1200,44 @@ def handle(u):
             send(chat_id, "ไม่เข้าใจครับ — ใช้ /ideas · /ideas on · /ideas off")
         else:
             threading.Thread(target=run_ideas, kwargs={"manual": True}, daemon=True).start()
+    elif text.startswith("/rounds"):
+        parts = text.split(maxsplit=1)
+        action, times = parse_rounds_arg(parts[1] if len(parts) > 1 else "")
+        if action == "on":
+            state["stock_rounds_enabled"] = True
+            save_state()
+            if not state.get("auto_enabled", True):
+                # รอบกลางวันวิ่งเฉพาะตอนเปิดซิงค์อัตโนมัติ (ดู _rounds_on) — ตอบว่า "เปิดแล้ว" เฉย ๆ จะไม่จริง
+                send(chat_id, "✅ ตั้งเปิดรอบซิงค์ระหว่างวันไว้แล้ว แต่ตอนนี้ซิงค์อัตโนมัติปิดอยู่ทั้งหมด (/auto off) "
+                              "— รอบจะเริ่มทำงานเมื่อพิมพ์ /auto on")
+            else:
+                send(chat_id, "✅ เปิดซิงค์สต็อกระหว่างวันแล้ว\n\n" + rounds_status())
+        elif action == "off":
+            state["stock_rounds_enabled"] = False
+            save_state()
+            send(chat_id, "⏸ ปิดซิงค์สต็อกระหว่างวันแล้ว — ไม่กระทบรอบเที่ยงคืน (ดูที่ /auto) · กดปุ่มซิงค์เองได้ตลอด")
+        elif action == "set":
+            problem = rounds_problem(times)
+            if problem:
+                cur = stock_rounds(state)
+                send(chat_id, f"⚠️ ยังไม่ได้ตั้งให้ — {problem}\n"
+                              f"รอบที่ใช้อยู่ตอนนี้: {' · '.join(cur) + ' น.' if cur else 'ยังไม่มี'}")
+                return
+            state["stock_rounds"] = times
+            # ล้างบันทึกตาม "วันที่" ไม่ใช่ตามรายการเวลาใหม่ — เก็บของวันนี้ไว้ทั้งหมด ทิ้งของวันก่อน ๆ
+            # ถ้าล้างตามรายการ ถอดรอบที่ทำไปแล้ววันนี้ออกแล้วใส่กลับ (/rounds 15:00 → /rounds 10:00,15:00 ตอนเที่ยง)
+            # บันทึก "วันนี้ทำแล้ว" ของมันหาย รอบนั้นรันซ้ำทันที · ไฟล์ state ก็ยังไม่บวม เพราะของเก่าถูกทิ้งทุกครั้งที่ตั้ง
+            # dict(...) ก่อนวน — เธรดรอบซิงค์อาจกำลังเขียน dict ตัวเดียวกันอยู่ วนของสดแล้วขนาดเปลี่ยนกลางทางจะพัง
+            today = date.today().isoformat()
+            for k in ("stock_round_done", "stock_round_failed", "stock_round_attempted"):
+                if isinstance(state.get(k), dict):
+                    state[k] = {t: d for t, d in dict(state[k]).items() if d == today}
+            save_state()
+            send(chat_id, f"⏰ ตั้งรอบซิงค์ระหว่างวันเป็น {' · '.join(times)} น. แล้ว\n\n" + rounds_status())
+        elif action == "bad":
+            send(chat_id, "ไม่เข้าใจครับ — ใช้ /rounds · /rounds 10:00,15:00 · /rounds on · /rounds off")
+        else:
+            send(chat_id, rounds_status())
     elif text.startswith("/auto"):
         arg = text.split(maxsplit=1)[1].strip().lower() if " " in text else ""
         if arg in ("on", "เปิด"):
