@@ -140,6 +140,7 @@ export default async function ProductsPage() {
           <div className="pr-cta">
             <a className="pr-chip" href="/branches">📍 ดูสาขาใกล้คุณ</a>
           </div>
+          <div style={{ marginTop: 14, fontSize: 12 }}><a href="/privacy" style={{ color: "var(--dx-text-2)", textDecoration: "underline", textUnderlineOffset: 3 }}>นโยบายความเป็นส่วนตัว</a></div>
         </footer>
       </div>
     </main>

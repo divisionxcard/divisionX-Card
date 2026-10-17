@@ -238,7 +238,7 @@ export default async function StockPage() {
             </a>
             <a className="sk-chip" href="tel:0930737930">📞 093-073-7930</a>
           </div>
-          <div className="sk-tag">DivisionX Card · ตู้กดการ์ดเกมอัตโนมัติ</div>
+          <div className="sk-tag">DivisionX Card · ตู้กดการ์ดเกมอัตโนมัติ · <a href="/privacy" style={{ textDecoration: "underline", textUnderlineOffset: 3 }}>นโยบายความเป็นส่วนตัว</a></div>
         </footer>
       </div>
     </main>

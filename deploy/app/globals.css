@@ -4,6 +4,9 @@
 
 /* ────────────────────────────────────────────────────
    Fonts
+   ⚠️ บรรทัด @import ข้างล่างอยู่หลัง @tailwind เบราว์เซอร์จึงไม่โหลดจริง (เช็ก 17 ต.ค. 2026)
+      ถ้าจะแก้ให้โหลดจาก fonts.googleapis.com ได้ ต้องเพิ่ม Google Fonts ในหน้า /privacy (หัวข้อ 2 + 3 + อังกฤษ) ด้วย
+      · ถ้าเปลี่ยนไปใช้ next/font ฟอนต์เสิร์ฟจากเว็บเราเอง ไม่ต้องแก้ /privacy
    ──────────────────────────────────────────────────── */
 @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
 

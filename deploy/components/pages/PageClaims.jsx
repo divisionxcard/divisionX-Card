@@ -250,7 +250,7 @@ export default function PageClaims({ machines, skus, claims, onAddClaim, onConfi
             <div>
               <label style={labelStyle}>หมายเหตุ</label>
               <input value={form.note} onChange={e => setForm({ ...form, note: e.target.value })}
-                placeholder="รายละเอียดเพิ่มเติม (ไม่บังคับ)" className="dx-input"/>
+                placeholder="รายละเอียดเพิ่มเติม (ไม่บังคับ · ห้ามใส่ชื่อ เบอร์ หรือเลขบัญชีลูกค้า)" className="dx-input"/>
             </div>
 
             <button type="submit" disabled={saving}
