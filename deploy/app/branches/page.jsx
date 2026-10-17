@@ -1,5 +1,6 @@
 import "../globals.css"
 import { fetchPublic } from "../../lib/publicPageData"
+import { buildStockView } from "../../lib/publicStock"
 
 export const metadata = {
   title: "สาขาที่พร้อมให้บริการ — DivisionX Card",
@@ -16,8 +17,15 @@ export const revalidate = 60
 async function getBranches() {
   const rows = await fetchPublic(
     "machines?status=eq.active&select=machine_id,config", "branches")
+  // เก็บ machine_id ไว้ (เดิมทิ้ง) เพื่อทำปุ่ม "ดูของในตู้" → /stock#<machine_id> ที่กางการ์ดสาขานั้นให้เลย
+  // ใส่ลิงก์เฉพาะสาขาที่ /stock แสดงจริง — ให้ buildStockView ตัวเดียวกับหน้านั้นคัด ไม่เขียนเงื่อนไขซ้ำ
+  // (หน้านั้นคัดเข้มกว่า: public ต้องเป็น true จริง + มีชื่อ) · เป็นฟังก์ชันล้วน ไม่ยิงเน็ตเพิ่ม
+  const onStock = new Set(buildStockView({ machines: rows }).branches.map((s) => s.id))
   return rows
-    .map((m) => m.config?.branch)
+    .map((m) => m.config?.branch && {
+      ...m.config.branch,
+      stockId: onStock.has(String(m.machine_id)) ? String(m.machine_id) : null,
+    })
     .filter((b) => b && b.public)
     .sort((a, b) => (a.order ?? 999) - (b.order ?? 999))
 }
@@ -32,6 +40,9 @@ export default async function BranchesPage() {
     // การ์ด/แบนเนอร์/ชิปติดต่อ ยังเป็นกรมท่าเหมือนเดิม มีพื้นหลังของตัวเองอยู่แล้ว
     // สีพื้นย้ายไปอยู่ใน .bx-page เพราะเป็นพื้นหลายชั้น (แสงฟ้า + จุดไข่ปลา) เขียนใน inline style ไม่ไหว
     <main className="bx-page" style={{ minHeight: "100vh", color: "var(--dx-text)", fontFamily: "var(--dx-font)" }}>
+      {/* ⚠️ สตริง CSS ข้างล่างถูกส่งถึงผู้ชมทุกคน 2 รอบ (ใน <style> + ใน RSC payload) คอมเมนต์ในสตริงก็ไปด้วย
+          หมายเหตุใหม่ให้เขียนเป็นคอมเมนต์ JSX แบบนี้แทน (ตัวคอมไพล์ตัดทิ้ง ไม่ถึงเครื่องลูกค้า)
+          หมายเหตุของปุ่มคู่ท้ายการ์ดกับชิป /stock (17 ต.ค. 2026) อยู่ข้างตัวมันด้านล่าง */}
       <style dangerouslySetInnerHTML={{ __html: `
         /* ══ พื้นหลังหน้า — ขาว + แสงฟ้าเรืองด้านบน + จุดไข่ปลา ══
            ทำด้วย CSS ล้วน ไม่โหลดไฟล์ภาพเพิ่มสักไบต์ · หน้านี้ลูกค้าเปิดจากเน็ตในห้าง
@@ -94,10 +105,21 @@ export default async function BranchesPage() {
         .bx-floor{flex:none;background:rgba(255,90,120,.14);color:#FF8DA1;border:1px solid rgba(255,90,120,.42);
           font-size:12px;font-weight:700;padding:3px 11px;border-radius:999px;white-space:nowrap;}
         .bx-hint{color:var(--dx-text-muted);font-size:13px;margin-top:8px;line-height:1.45;flex:1;}
-        .bx-btn{margin-top:14px;display:inline-flex;align-items:center;justify-content:center;gap:7px;
+        .bx-acts{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px;}
+        .bx-acts > a{flex:1 1 0;}
+        .bx-btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:46px;white-space:nowrap;
+          border:1px solid transparent;
           background:var(--dx-cyan);color:#02263a;font-weight:700;font-size:14px;text-decoration:none;
           padding:10px 14px;border-radius:11px;transition:background .15s, box-shadow .15s;}
         .bx-btn:hover{background:var(--dx-cyan-bright);box-shadow:0 0 18px var(--dx-glow);}
+        .bx-btn-line{background:rgba(0,212,255,.06);color:var(--dx-cyan);border:1px solid rgba(0,212,255,.6);}
+        .bx-btn-line:hover{background:rgba(0,212,255,.12);box-shadow:0 0 14px var(--dx-glow-soft);}
+        .bx-stockbar{text-align:center;margin:0 0 18px;}
+        .bx-stocklink{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 18px;border-radius:999px;
+          background:var(--dx-bg-surface);border:1px solid var(--dx-border-strong);color:#fff;font-size:14px;
+          font-weight:700;text-decoration:none;transition:border-color .15s, box-shadow .15s;}
+        .bx-stocklink:hover{border-color:var(--dx-border-glow);box-shadow:0 0 14px var(--dx-glow-soft);}
+        .bx-arrow{color:var(--dx-cyan);}
         .bx-foot{text-align:center;margin-top:34px;padding-top:22px;border-top:1px solid var(--dx-border);}
         .bx-contact{display:inline-flex;flex-wrap:wrap;gap:10px 18px;justify-content:center;align-items:center;
           color:var(--dx-text);font-size:14px;font-weight:600;}
@@ -138,6 +160,14 @@ export default async function BranchesPage() {
           </div>
         </header>
 
+        {/* ทางเข้าหน้าเช็กของในตู้ทุกสาขา (/stock · เจ้าของอนุมัติ 17 ต.ค. 2026) — ชิปเล็กใต้แบนเนอร์ ไม่แตะตัวแบนเนอร์
+            .bx-stocklink: ชิปกรมท่า สูง 44px · บนพื้นชิป: ขาว 14.63:1 · ลูกศรฟ้า 8.26:1 */}
+        <div className="bx-stockbar">
+          <a className="bx-stocklink" href="/stock">
+            <span aria-hidden="true">📦</span> เช็กของในตู้ทุกสาขา <span className="bx-arrow" aria-hidden="true">→</span>
+          </a>
+        </div>
+
         {/* Branches */}
         <div className="bx-grid">
           {BRANCHES.map((b, i) => (
@@ -147,9 +177,28 @@ export default async function BranchesPage() {
                 {b.floor ? <span className="bx-floor">{b.floor}</span> : null}
               </div>
               {b.landmark ? <div className="bx-hint">{b.landmark}</div> : <div className="bx-hint" />}
-              <a className="bx-btn" href={mapHref(b.maps || b.display_name)} target="_blank" rel="noopener noreferrer">
-                🧭 นำทาง Google Maps
-              </a>
+              {/* ดูของในตู้ → การ์ดสาขานี้ใน /stock (แท็บเดิม เพราะเป็นเว็บเราเอง) · สาขาที่ /stock ไม่แสดงจะเหลือแค่ปุ่มนำทาง
+                  ใช้ <a> ธรรมดา ไม่ใช้ next/link — next/link โหลดข้อมูลสต็อกทั้งก้อนล่วงหน้าตั้งแต่ยังไม่กด
+                  (วัด 17 ต.ค. 2026: ~40 KB · บีบอัดแล้ว ~8 KB) เปลืองเน็ตลูกค้าในห้าง
+                  aria-label ใส่ชื่อ + ชั้น เพราะพระราม 2 มี 2 ตู้ชื่อเดียวกัน (ชั้น 4 กับชั้น G) */}
+              {/* สไตล์ปุ่มคู่ (.bx-acts .bx-btn): ดูของในตู้ (ขอบฟ้า = ปุ่มรอง) + นำทาง (ฟ้าทึบ = ปุ่มหลักเดิม) · สูง 46px (เดิม ~40 ต่ำกว่าเกณฑ์ 44)
+                  ปุ่มนำทางย่อเหลือ "นำทาง" แบบ /stock (คำว่า Google Maps ย้ายไป aria-label) — ข้อความสองปุ่มรวมช่องไฟใช้ 218px
+                  การ์ดแคบสุดมีที่ 242px (มือถือ 320 · จอ 920 ตอน 3 คอลัมน์) จะยืดข้อความต้องเผื่อ · ไม่พอเมื่อไรปุ่มเรียงซ้อนเอง ไม่ล้น
+                  ขอบใส 1px ของปุ่มหลักทำให้กล่องเท่าปุ่มขอบฟ้า สองปุ่มจึงกว้างเท่ากันพอดี
+                  ปุ่มรอง (.bx-btn-line) — ขอบฟ้าแบบปุ่มนำทางของ /stock แต่เข้มกว่า (.6 แทน .45) · บนการ์ด #1A2F52:
+                  ตัวหนังสือ 6.67:1 (ตอนเมาส์ชี้ 5.85:1) · ขอบ 3.71:1 ผ่านเกณฑ์ขอบปุ่ม 3:1 (.45 ได้แค่ 2.72) */}
+              <div className="bx-acts">
+                {b.stockId ? (
+                  <a className="bx-btn bx-btn-line" href={`/stock#${encodeURIComponent(b.stockId)}`}
+                    aria-label={`ดูของในตู้ ${b.display_name}${b.floor ? ` ${b.floor}` : ""}`}>
+                    📦 ดูของในตู้
+                  </a>
+                ) : null}
+                <a className="bx-btn" href={mapHref(b.maps || b.display_name)} target="_blank" rel="noopener noreferrer"
+                  aria-label={`นำทางไป ${b.display_name}${b.floor ? ` ${b.floor}` : ""} ด้วย Google Maps`}>
+                  🧭 นำทาง
+                </a>
+              </div>
             </div>
           ))}
         </div>
