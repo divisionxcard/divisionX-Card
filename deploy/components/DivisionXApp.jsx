@@ -194,7 +194,9 @@ function LoginPage() {
         <div className="flex flex-col items-center mb-8">
           <img src="/logo-white.png" alt="DivisionX Card" className="w-24 h-24 object-contain mb-3"/>
           <h1 className="text-xl font-bold text-gray-800">DivisionX Card</h1>
-          <p className="text-sm text-gray-400 mt-1">{mode === "login" ? "ระบบจัดการสต็อก" : "รีเซ็ตรหัสผ่าน"}</p>
+          {/* หน้าล็อกอินไม่บอกว่าข้างในคือระบบอะไร — เจ้าของขอ 17 ต.ค. 2026: เผื่อคนนอกได้ลิงก์ไปเปิด
+              จะได้ไม่รู้ว่าเป็นระบบหลังบ้าน (เดิมขึ้น "ระบบจัดการสต็อก") · โหมดรีเซ็ตรหัสยังบอกว่ากำลังทำอะไร */}
+          {mode !== "login" && <p className="text-sm text-gray-400 mt-1">รีเซ็ตรหัสผ่าน</p>}
         </div>
 
         {mode === "login" ? (
