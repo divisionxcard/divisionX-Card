@@ -2,8 +2,8 @@
 type: worklog
 date: 2026-10-21
 tags: [video, tts, voicestudio, gemini, trend-research, agent-reach, marketing, ideas]
-commits: [d879c53]
-status: ✅ ตัวกรองช่องทางหน้าไอเดีย · ⏳ เสียงเจ้าของ (รอเสียงจริง + บิลลิง Gemini) · ⏳ Agent Reach ช่อง FB/IG/Reddit (รอวอร์มบัญชี)
+commits: [d879c53, e117b25]
+status: ✅ ตัวกรองช่องทาง + ชิปโลโก้แพลตฟอร์มหน้าไอเดีย · ⏳ เสียงเจ้าของ (รอเสียงจริง + บิลลิง Gemini) · ⏳ Agent Reach ช่อง FB/IG/Reddit (รอวอร์มบัญชี)
 ---
 
 # เสียงของเราในคลิป · เครื่องมือหาเทรนด์ · ตัวกรองช่องทางหน้าไอเดีย (20–21 ต.ค.)
@@ -41,5 +41,21 @@ status: ✅ ตัวกรองช่องทางหน้าไอเด�
   - กด chip โหลดแค่รายการไอเดีย (`loadIdeas`) ไม่ใช่ทั้งหน้า 7 API · `counts/by_source` ยังนับทุกช่องทาง
 - `deploy/app/api/marketing/ideas/route.js` รับ `source` (ตรวจ `^[a-z_]{2,20}$`)
 - ยังไม่ได้เปิดดูหน้าจริงตอนล็อกอิน (หน้า /marketing ต้องมีบัญชีทีมงาน) — build ผ่าน · ให้เจ้าของเช็กหลังขึ้นเว็บ
+
+## 4. ชิปโลโก้แพลตฟอร์ม + ช่องที่ยังขาด (e117b25)
+
+เจ้าของ: *"ช่องไอเดีย เปลี่ยนเป็นรูปโลโก้ของโซเชียลช่องทางต่าง ๆ แทน … และเพิ่มช่องทางที่ยังขาด ใส่เข้าไปด้วย"*
+
+- `deploy/lib/ideaPlatform.js` (ใช้ร่วม API + หน้าเว็บ) ตัดสินแพลตฟอร์ม: source youtube/tiktok → global ตาม subtype
+  (reddit_* / gnews_* / ที่เหลือ = เว็บต่างประเทศ) → โดเมนลิงก์ (facebook/instagram/tiktok/youtube/reddit/x/news.google) → source
+  - ⚠️ pokebeach / tcgplayer / news ลิงก์เป็น news.google.com — ต้องดู subtype ก่อนโดเมน
+  - เรดาร์คู่แข่งเก็บลิงก์ facebook.com 8 · instagram.com 2 ไว้ใน source=manual → ตอนนี้ขึ้นใต้โลโก้ FB/IG
+- โลโก้ Simple Icons 16.35.0 (CC0) ฝัง path ในไฟล์ (ไม่โหลดจาก CDN) · ช่องที่ไม่ใช่โซเชียลใช้ไอคอน + ข้อความ
+- FB/IG/TikTok/X โชว์เสมอแม้ 0 (tooltip บอกวิธีให้มีของเข้า) · ตัวเลขจริง 21 ต.ค.: FB 8 · IG 2 · TikTok 1 · YouTube 32
+  · Reddit 15 · X 0 · Google News 29 · ทางการ 37 · เว็บต่างประเทศ 7 · ราคา 4 · ข้อมูลเรา 14 (รวม 149)
+- API: `?platform=` (กรองหลัง query · limit 500) · `by_platform` · วางลิงก์: Reddit/X ใช้ oEmbed สาธารณะ
+  (`reddit.com/oembed` · `publish.x.com/oembed` ข้อความโพสต์อยู่ใน html) · FB/IG ไม่มี oEmbed ที่ไม่ผ่าน Meta → ตั้งชื่อจากลิงก์
+  เช่น "Facebook · ชื่อเพจ" (เดิมวางลิงก์ที่ไม่ใช่ YouTube/TikTok แล้วติด "ใส่ title มาด้วย" ทั้งที่หน้าเว็บไม่มีช่องให้ใส่)
+- ตรวจหน้าตาด้วยหน้าจำลอง (แถวชิป + การ์ด) — หน้าจริงต้องล็อกอิน
 
 🔗 [[2026-10-17-owner-followups]] · [[2026-10-16-hyperframes]]
