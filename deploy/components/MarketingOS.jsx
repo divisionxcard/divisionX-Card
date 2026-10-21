@@ -42,6 +42,14 @@ const IDEA_SOURCE = {
   price:    { icon: TrendingUp, label: "ราคาตลาด",   cls: "bg-orange-50 text-orange-700" },
 }
 
+// แหล่งย่อยของไอเดีย ใช้เป็น chip ชั้นที่ 2 ตอนเลือกช่องทางแล้ว (เจ้าของขอ 21 ต.ค. 2026: "กดเลือกช่องทางโซเชียลที่จะดูเองได้")
+// ใช้ source_label ที่ตัวเก็บไอเดียตั้งไว้คงที่ต่อแหล่ง เช่น "Reddit r/OnePieceTCG ท็อปสัปดาห์" · "YouTube · GM Club"
+const ideaSubOf = (i) => {
+  const label = (i.source_label || "").trim()
+  if (!label) return i.subtype || "อื่น ๆ"
+  return i.source === "youtube" ? label.replace(/^YouTube\s*·\s*/i, "") : label
+}
+
 // ── สถานะสายพาน ────────────────────────────────────────────────────────
 const PIPE_STATE = {
   success:   { dot: "bg-green-500",  text: "ผ่าน",     cls: "text-green-600" },
@@ -285,6 +293,9 @@ export default function MarketingOS() {
   const [seriesSku, setSeriesSku] = useState("")
   const [seriesBusy, setSeriesBusy] = useState(false)
   const [perSource, setPerSource] = useState(3)   // เด็ดสุดกี่ชิ้นต่อช่องทาง
+  // chip เลือกช่องทาง: "" = ทุกช่องทาง (เด็ดสุด perSource ชิ้นต่อช่องทาง) · เลือกแล้วโหลดของช่องทางนั้นทั้งหมด
+  const [ideaSource, setIdeaSource] = useState("")
+  const [ideaSub, setIdeaSub] = useState("")      // แหล่งย่อยในช่องทางที่เลือก เช่น "Reddit r/OnePieceTCG ท็อปสัปดาห์"
   const [generating, setGenerating] = useState(new Set())   // id ที่ AI กำลังเขียนแคปชั่นให้
   const [imaging, setImaging] = useState(new Set())         // id ที่กำลังสร้างภาพ/โปสเตอร์
   const [varying, setVarying] = useState(new Set())         // id ที่กำลังแปลงไปช่องอื่น
@@ -364,11 +375,27 @@ export default function MarketingOS() {
     return json
   }, [])
 
+  // เลือกช่องทางแล้ว = เอาของช่องทางนั้นทั้งหมด (per_source=0) · ไม่เลือก = เด็ดสุด perSource ชิ้นต่อช่องทาง
+  const ideasPath = `ideas?status=new&per_source=${ideaSource ? 0 : perSource}` +
+    (ideaSource ? `&source=${encodeURIComponent(ideaSource)}` : "")
+  // loadAll อ่านผ่าน ref — กด chip แล้วโหลดแค่รายการไอเดีย ไม่ต้องโหลดทั้งหน้า 7 ตัว
+  const ideasPathRef = useRef(ideasPath)
+  ideasPathRef.current = ideasPath
+  const loadIdeas = useCallback(async () => {
+    try { setIdeas(await api(ideasPathRef.current)) } catch (e) { setErr(e.message) }
+  }, [api])
+  const ideasFirstRun = useRef(true)
+  useEffect(() => {
+    if (ideasFirstRun.current) { ideasFirstRun.current = false; return }   // รอบแรก loadAll โหลดให้แล้ว
+    if (authState === "ok") loadIdeas()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ideasPath])
+
   const loadAll = useCallback(async () => {
     if (!token) return
     setLoading(true); setErr("")
     const [i, c, p, m, a, f, cr] = await Promise.allSettled([
-      api(`ideas?status=new&per_source=${perSource}`),
+      api(ideasPathRef.current),
       api("content?status=draft,pending"),
       api("pipeline"),
       api(`metrics?days=${days}`),
@@ -393,7 +420,7 @@ export default function MarketingOS() {
     const failed = [i, c, p, m, a].filter(r => r.status === "rejected")
     if (failed.length) setErr(failed.map(f => f.reason.message).join(" · "))
     setLoading(false)
-  }, [api, token, days, perSource])
+  }, [api, token, days])
 
   useEffect(() => { if (authState === "ok") loadAll() }, [authState, loadAll])
 
@@ -750,6 +777,15 @@ export default function MarketingOS() {
     </Shell>
   )
 
+  // รายการไอเดียหลังกรอง — ชั้น 1 กรองที่ API (ideaSource) · ชั้น 2 แหล่งย่อยกรองในหน้า (ของช่องทางนั้นมาครบแล้ว)
+  const ideaItemsAll = ideas.items || []
+  const ideaSubs = ideaSource
+    ? [...ideaItemsAll.reduce((m, i) => m.set(ideaSubOf(i), (m.get(ideaSubOf(i)) || 0) + 1), new Map())]
+        .sort((a, b) => b[1] - a[1])
+    : []
+  const ideaItems = ideaSub ? ideaItemsAll.filter(i => ideaSubOf(i) === ideaSub) : ideaItemsAll
+  const pickIdeaSource = (s) => { setIdeaSource(s); setIdeaSub("") }
+
   const pending = content.items || []
   const navCounts = {
     ideas:   (ideas.items || []).length,
@@ -879,26 +915,57 @@ export default function MarketingOS() {
               <Lightbulb size={16} className="text-amber-500" />
               ไอเดียวันนี้
               <span className="px-2 py-0.5 rounded-full bg-amber-500 text-white text-xs">
-                {(ideas.items || []).length}
+                {ideaItems.length}
               </span>
             </h2>
-            {/* chip บอก "แสดง/ทั้งหมด" ต่อช่องทาง — จะได้รู้ว่ายังมีของที่ถูกซ่อนอยู่ */}
+            {/* chip เลือกช่องทาง — กดแล้วเหลือแต่ช่องทางนั้น (ทั้งหมด ไม่ใช่แค่ 3 อันเด็ด) · กดซ้ำ/กด "ทุกช่องทาง" = กลับ
+                ตอนไม่ได้เลือก ตัวเลขเป็น "แสดง/ทั้งหมด" จะได้รู้ว่ายังมีของที่ถูกซ่อนอยู่ */}
+            <button type="button" onClick={() => pickIdeaSource("")} aria-pressed={!ideaSource}
+              className={`px-2 py-0.5 rounded text-xs border transition ${!ideaSource
+                ? "bg-gray-800 text-white border-gray-800" : "bg-white text-gray-600 border-gray-200 hover:border-gray-400"}`}>
+              ทุกช่องทาง
+            </button>
             {Object.entries(ideas.by_source || {}).map(([s, total]) => {
-              const shown = (ideas.items || []).filter(i => i.source === s).length
+              const shown = ideaItemsAll.filter(i => i.source === s).length
+              const on = ideaSource === s
               return (
-                <span key={s} className={`px-2 py-0.5 rounded text-xs ${IDEA_SOURCE[s]?.cls || "bg-gray-100 text-gray-600"}`}>
-                  {IDEA_SOURCE[s]?.label || s} {shown}
-                  {total > shown && <span className="opacity-60">/{total}</span>}
-                </span>
+                <button key={s} type="button" onClick={() => pickIdeaSource(on ? "" : s)} aria-pressed={on}
+                  title={on ? "กดอีกครั้งเพื่อดูทุกช่องทาง" : `ดูเฉพาะ ${IDEA_SOURCE[s]?.label || s}`}
+                  className={`px-2 py-0.5 rounded text-xs border transition ${IDEA_SOURCE[s]?.cls || "bg-gray-100 text-gray-600"} ${on
+                    ? "border-current ring-1 ring-current font-semibold" : "border-transparent hover:border-gray-300"} ${ideaSource && !on ? "opacity-50 hover:opacity-100" : ""}`}>
+                  {IDEA_SOURCE[s]?.label || s}{" "}
+                  {ideaSource ? total : <>{shown}{total > shown && <span className="opacity-60">/{total}</span>}</>}
+                </button>
               )
             })}
-            {ideas.hidden > 0 && (
+            {!ideaSource && ideas.hidden > 0 && (
               <button onClick={() => setPerSource(p => (p === 3 ? 10 : 3))}
                 className="ml-auto text-xs text-blue-500 hover:underline">
                 {perSource === 3 ? `ดูเพิ่ม (ซ่อนอยู่ ${ideas.hidden})` : "แสดงแค่ 3 ต่อช่องทาง"}
               </button>
             )}
           </div>
+
+          {/* ชั้น 2 · แหล่งย่อยของช่องทางที่เลือก เช่น ต่างประเทศ → Reddit r/OnePieceTCG / PokeBeach · YouTube → รายช่อง
+              โชว์เมื่อมีมากกว่า 1 แหล่ง · ของช่องทางนั้นโหลดมาครบแล้ว จึงกรองในหน้าได้เลย */}
+          {ideaSource && ideaSubs.length > 1 && (
+            <div className="flex flex-wrap items-center gap-1.5 mb-2 pl-1">
+              <span className="text-[11px] text-gray-400 mr-0.5">แหล่ง:</span>
+              <button type="button" onClick={() => setIdeaSub("")} aria-pressed={!ideaSub}
+                className={`px-2 py-0.5 rounded-full text-[11px] border ${!ideaSub
+                  ? "bg-gray-800 text-white border-gray-800" : "bg-white text-gray-600 border-gray-200 hover:border-gray-400"}`}>
+                ทั้งหมด {ideaItemsAll.length}
+              </button>
+              {ideaSubs.map(([sub, n]) => (
+                <button key={sub} type="button" onClick={() => setIdeaSub(ideaSub === sub ? "" : sub)}
+                  aria-pressed={ideaSub === sub}
+                  className={`px-2 py-0.5 rounded-full text-[11px] border ${ideaSub === sub
+                    ? "bg-gray-800 text-white border-gray-800" : "bg-white text-gray-600 border-gray-200 hover:border-gray-400"}`}>
+                  {sub} {n}
+                </button>
+              ))}
+            </div>
+          )}
 
           {/* วางลิงก์เอง — ทางเดียวที่เก็บ "คลิปไวรัลที่เห็นกับตา" ได้
               (TikTok ไม่มี RSS · Creative Center API ตอบ no permission) */}
@@ -944,15 +1011,21 @@ export default function MarketingOS() {
               {ideas.warning} — รัน migration 060 แล้วสั่ง{" "}
               <code className="bg-white/60 px-1 rounded">idea_collector.py</code>
             </div>
-          ) : (ideas.items || []).length === 0 ? (
+          ) : ideaItems.length === 0 ? (
             <div className="bg-white rounded-2xl border border-gray-100 p-6 text-center">
               <Lightbulb className="mx-auto text-gray-300 mb-2" size={26} />
-              <p className="text-gray-600 text-sm">ยังไม่มีไอเดียใหม่</p>
+              <p className="text-gray-600 text-sm">
+                {ideaSource ? `ยังไม่มีไอเดียใหม่จาก ${IDEA_SOURCE[ideaSource]?.label || ideaSource}` : "ยังไม่มีไอเดียใหม่"}
+              </p>
               <p className="text-xs text-gray-400 mt-1">ตัวเก็บไอเดียรันทุกเช้า 07:00 น.</p>
+              {ideaSource && (
+                <button type="button" onClick={() => pickIdeaSource("")}
+                  className="mt-2 text-xs text-blue-500 hover:underline">ดูทุกช่องทาง</button>
+              )}
             </div>
           ) : (
             <div className="space-y-2">
-              {(ideas.items || []).map(idea => {
+              {ideaItems.map(idea => {
                 const src = IDEA_SOURCE[idea.source] || IDEA_SOURCE.manual
                 const SrcIcon = src.icon
                 return (

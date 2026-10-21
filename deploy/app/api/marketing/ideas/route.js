@@ -27,9 +27,14 @@ export async function GET(req) {
   // คัดเฉพาะ "เด็ดสุด N ชิ้นต่อช่องทาง" — 40 ชิ้นรวดเดียวสแกนไม่ไหว
   // 0 = ไม่คัด (เอาทั้งหมด)
   const perSource = Math.max(parseInt(searchParams.get("per_source") ?? "3", 10) || 0, 0)
+  // กรองช่องทางเดียว (chip บนหน้า /marketing) — counts/by_source ข้างล่างยังนับทุกช่องทางเหมือนเดิม
+  const source = (searchParams.get("source") || "").trim()
 
   if (status !== "all" && !STATUSES.includes(status)) {
     return NextResponse.json({ error: `status ไม่ถูกต้อง: ${status}` }, { status: 400 })
+  }
+  if (source && !/^[a-z_]{2,20}$/.test(source)) {
+    return NextResponse.json({ error: `source ไม่ถูกต้อง: ${source}` }, { status: 400 })
   }
 
   try {
@@ -38,6 +43,7 @@ export async function GET(req) {
       .order("created_at", { ascending: false })
       .limit(limit)
     if (status !== "all") q = q.eq("status", status)
+    if (source) q = q.eq("source", source)
     const { data, error } = await q
     if (error) throw error
 
