@@ -1,4 +1,5 @@
-// ให้ AI ออกแบบภาพโปสเตอร์ — POST /api/marketing/content/image { id, mode? }
+// ให้ AI ออกแบบภาพโปสเตอร์ — POST /api/marketing/content/image { id, mode?, brief?, force?, characters? }
+//   characters: true = ใบนี้ให้วาดตัวละครจากกล่องของชุดที่อยู่ในภาพได้ (เจ้าของติ๊กเองรายใบ · 21 ต.ค. 2026)
 //
 // เจ้าของดูผลจากเทมเพลต CSS ที่เราเขียนเองแล้วบอกว่า "ยังไม่ตรงตามความต้องการ"
 // และเห็นว่าโปสเตอร์ที่ ChatGPT ทำให้ดีกว่ามาก จึงเลือกทางนี้
@@ -632,6 +633,13 @@ export async function POST(req) {
       }, { status: 409 })
     }
 
+    // ── ตัวละครจากกล่อง (เปิดเป็นรายใบ) ──
+    // ⚠️ 21 ต.ค. 2026 — เจ้าของเลือก "ให้ AI วาดตัวละครตามกล่อง (ยอมรับความเสี่ยงลิขสิทธิ์)"
+    //    หลังลองตัดตัวละครจากภาพบนกล่องจริงแล้วดูเป็นสติกเกอร์ทุกแบบ · ต้องติ๊กเองทีละใบ (ไม่เปิดทุกใบ)
+    //    ตัวละครต้องมาจากกล่องของชุดที่อยู่ในภาพเท่านั้น → แนบรูปกล่องจริงเป็นต้นแบบ (บล็อกรูปอ้างอิง)
+    //    ข้อความข้อยกเว้นอยู่ art_direction.json → box_characters
+    const wantChars = body.characters === true
+
     // ── ข้อเท็จจริงจากฐานข้อมูล — ไม่ให้โมเดลเดาเอง ──
     const { data: machines } = await db.from("machines").select("machine_id,config").eq("status", "active")
     const branches = (machines || []).length
@@ -825,10 +833,13 @@ export async function POST(req) {
     // โหมดบรีฟไม่มีขั้นแปะโลโก้ (คนเอาไปวาดใน ChatGPT เอง) — แนบไฟล์จริงไปให้ลากเข้าแชตพร้อมรูปอื่น
     if (body.brief && stampOn) noteRef("โลโก้ DivisionX Card (วางตามบรีฟ ห้ามแก้ไฟล์)", "/logo-white.png")
 
+    // SKU ที่แนบรูปซองได้จริง — ใช้หากล่องต้นแบบตัวละคร (ใบที่ติ๊กวาดตัวละครจากกล่อง)
+    const shown = []
     const packRef = await fetchRef(sku?.image_url || sku?.image_url_box)
     if (packRef) {
       refs.push(packRef)
       noteRef(`ซองจริง: ${sku?.name || sku?.sku_id}`, sku?.image_url || sku?.image_url_box)
+      shown.push(sku)
     } else {
       // ⚠️ 24 ส.ค. 2026 — เดิมหยิบ "3 SKU ขายดีที่สุด" โดยไม่ดูค่าย
       //    ผลคือโพสต์โปเกมอน (#PokemonTCG) ได้ซอง One Piece ไปลอกทั้งสามซอง
@@ -864,6 +875,7 @@ export async function POST(req) {
         if (r) {
           refs.push(r)
           noteRef(`${withImg.length ? "ซองที่แคปชั่นเอ่ยถึง" : "ซองขายดี"}: ${s.name}`, s.image_url || s.image_url_box)
+          shown.push(s)
         }
       }
       if (picked.length) {
@@ -880,6 +892,25 @@ export async function POST(req) {
         }
       }
     }
+
+    // ── กล่องจริงเป็นต้นแบบตัวละคร (ใบที่ติ๊ก "วาดตัวละครจากกล่อง") ──
+    // แนบรูปกล่องของทุกชุดที่อยู่ในภาพ — ตัววาดต้องเห็นตัวละครจริงบนกล่อง ไม่ใช่เดาจากชื่อชุด
+    // SKU ที่ไม่มีรูปกล่อง ใช้ลายบนซองที่แนบไปแล้วเป็นต้นแบบแทน (ลายซองก็มีตัวละคร)
+    // ⚠️ โหลดรูปกล่องไม่ได้ = ไม่เปิดตัวละครของชุดนั้น — ห้ามปล่อยให้วาดตัวละครที่มันไม่เห็นต้นฉบับ
+    const charSets = []
+    if (wantChars) {
+      for (const s of shown.slice(0, 3)) {
+        const boxUrl = s.image_url_box
+        if (boxUrl && boxUrl !== (s.image_url || s.image_url_box)) {
+          const r = await fetchRef(boxUrl)
+          if (!r) continue
+          refs.push(r)
+          noteRef(`กล่องจริง (ต้นแบบตัวละคร): ${s.name}`, boxUrl)
+        }
+        charSets.push(s.name || s.sku_id)
+      }
+    }
+
     const conceptsCfg = await loadJson("poster_concepts.json")
     // body.concept = ผู้ใช้เลือกเอง · ไม่เลือก = ระบบจับให้เข้ากับรูปแบบโพสต์+ค่าย
     const concept = body.concept
@@ -906,8 +937,28 @@ export async function POST(req) {
     // ⚠️ 14 ก.ย. 2026 — กฎแยกเป็นชั้นแล้ว (ดู art_direction.json → _restructure_note)
     //    คำบังคับมีแค่กฎเหล็ก · กฎสไตล์เดิมอยู่ใน retired_rules และตั้งใจไม่อ่าน —
     //    ห้าม fallback ไปหยิบ retired_rules เด็ดขาด นั่นคือการเอาสูตรที่ทำให้ภาพจำเจกลับมาเงียบ ๆ
-    const brandRules = artCfg?.hard_rules || artCfg?.rules || []
+    let brandRules = artCfg?.hard_rules || artCfg?.rules || []
     const signature = artCfg?.brand_signature || []
+
+    // ใบที่ติ๊กวาดตัวละครจากกล่อง — สลับข้อยกเว้นเข้าที่ตัวข้อห้ามทุกจุด (กฎเหล็ก · negative · ตัวคิดไอเดีย)
+    // ⚠️ ห้ามแค่ต่อท้าย FACTS — กฎเหล็กชนะทุกกรณี ถ้ากฎยังเขียนว่าห้าม โมเดลจะไม่วาด (บทเรียน ALLOWED CARDS)
+    const boxChars = artCfg?.box_characters || {}
+    const useChars = wantChars && charSets.length > 0 && !!boxChars.hard_rule
+    let promptStyle = style
+    if (useChars) {
+      const ri = brandRules.findIndex(r => /character/i.test(r))
+      brandRules = ri >= 0
+        ? brandRules.map((r, k) => (k === ri ? boxChars.hard_rule : r))
+        : [boxChars.hard_rule, ...brandRules]
+      // "no people's faces" ก็นับเป็นข้อห้าม — โมเดลอาจอ่านว่าห้ามวาดหน้าตัวละคร
+      const negs = [...(style.negative_always || [])]
+      for (const [re, txt] of [[/characters/i, boxChars.negative], [/people'?s faces/i, boxChars.negative_faces]]) {
+        const k = negs.findIndex(n => re.test(n))
+        if (txt && k >= 0) negs[k] = txt
+      }
+      promptStyle = { ...style, negative_always: negs }
+      if (boxChars.fact) facts.push(boxChars.fact.replace("{sets}", charSets.join(" · ")))
+    }
     // แนวภาพหมุนตาม id — ใบเดิมได้แนวเดิมเสมอ (เทียบผลได้) · คนละใบได้คนละแนว
     // ตัวคูณต้องไม่มีตัวหารร่วมกับจำนวนแนว ไม่งั้นบางแนวจะไม่มีวันถูกเลือก
     // (เช่นมี 14 แนวแล้วคูณ 7 = ได้แค่ 2 แนววนไปมา) · 7 เป็นจำนวนเฉพาะ จึงเช็กแค่หารลงตัวไหม
@@ -916,6 +967,10 @@ export async function POST(req) {
     const styleHint = styles.length
       ? styles[(Math.abs(Number(content.id) || 0) * step + 3) % styles.length]
       : null
+    // แนวภาพบางแนวเขียนว่า "with no characters" — ใบที่ติ๊กวาดตัวละคร ตัดท่อนนั้นออก ไม่งั้นสั่งขัดกันเอง
+    const hintForIdea = useChars && styleHint
+      ? styleHint.replace(/,?\s*with no characters/i, "")
+      : styleHint
 
     // ธีมตามค่ายของสินค้า — ถ้าโพสต์ไม่ผูกกับ SKU ไหนเลยก็ใช้ค่ากลางที่ไม่มีลายค่ายใด
     const frCfg = await loadJson("franchise_style.json")
@@ -958,7 +1013,8 @@ export async function POST(req) {
       franchise: fr?.label,
       rules: brandRules,
       signature,
-      styleHint,
+      styleHint: hintForIdea,
+      boxCharacters: useChars ? charSets : [],
       allowedCards: cardsForIdea.map(c => `${c.name} — ${c.stage} · HP ${c.hp}`),
     })
 
@@ -1040,7 +1096,7 @@ export async function POST(req) {
     }
 
     const prompt = buildPrompt(
-      style, concept, facts, mode, refs.length > 0,
+      promptStyle, concept, facts, mode, refs.length > 0,
       idea ? ideaToPrompt(idea) : null,
       brandRules, frBlock, wantsMachine, branch, signature,
     )
@@ -1072,6 +1128,8 @@ export async function POST(req) {
           branch: branch?.display_name || null,
           headline: head.headline || null,
           sub: head.sub || null,
+          // ชุดที่เปิดให้วาดตัวละครจากกล่อง · null = ใบนี้ไม่ได้ติ๊ก (หรือติ๊กแต่ไม่มีรูปของชุดในภาพ)
+          characters: useChars ? charSets : null,
           idea: idea ? { big_idea: idea.big_idea, visual_device: idea.visual_device,
                          style_direction: idea.style_direction, style_hint: idea._style_hint } : null,
         },
@@ -1154,7 +1212,9 @@ export async function POST(req) {
     // ── เก็บลง Storage ── ชื่อไฟล์มี timestamp กดสร้างใหม่ได้ไม่ติด CDN cache
     const ext = out.mime.includes("jpeg") ? "jpg" : out.mime.includes("webp") ? "webp" : "png"
     const bucket = style.bucket || "marketing"
-    const key = `${style.path_prefix || "content"}/${id}-${Date.now()}.${ext}`
+    // "-chars" = ใบนี้มีตัวละครที่ AI วาด (เจ้าของยอมรับความเสี่ยงลิขสิทธิ์รายใบ)
+    // ถ้าวันไหนโดนแจ้ง จะไล่หาทุกโพสต์ได้จาก media_url ทันที ไม่ต้องนั่งเปิดดูทีละภาพ
+    const key = `${style.path_prefix || "content"}/${id}${useChars ? "-chars" : ""}-${Date.now()}.${ext}`
     const up = await fetch(`${SB_URL}/storage/v1/object/${bucket}/${key}`, {
       method: "POST",
       headers: {
@@ -1187,6 +1247,8 @@ export async function POST(req) {
         machine_ref: wantsMachine,
         // โลโก้ที่แปะทับ — variant ขาว/ดำตามความสว่างของมุม · มี error = ภาพนี้ไม่มีโลโก้
         logo,
+        // ชุดที่ให้วาดตัวละครจากกล่อง · ติ๊กแล้วแต่ไม่มีรูปของชุดในภาพ = ไม่ได้เปิด (บอกให้รู้ ไม่เงียบ)
+        characters: useChars ? charSets : wantChars ? { skipped: "ไม่มีรูปซอง/กล่องของชุดในภาพ" } : undefined,
         franchise: frBlock?.label || null,
         bytes: out.buf.length,
         // ถ้าโมเดลแรกพัง มันจะเลื่อนไปตัวถัดไปเงียบ ๆ — ต้องคืนออกมาให้เห็น

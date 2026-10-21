@@ -35,6 +35,23 @@ const MODEL_CHAIN = [
   "gpt-4.1",
 ].filter(Boolean)
 
+// ข้อห้ามตัวละคร — แยกเป็นค่าคงที่ เพื่อสลับเป็นฉบับข้อยกเว้นได้ตรงตัว (ดู planVisual → boxCharacters)
+// ⚠️ 21 ต.ค. 2026 — ข้อยกเว้นต้องอยู่ "ที่ตัวข้อห้าม" ไม่ใช่ต่อท้ายข้อความอื่น · ถ้าระบบบอกว่าห้ามแล้ว
+//    อีกบรรทัดบอกว่าได้ ตัวคิดเลือกข้อห้ามเสมอ (บทเรียน ALLOWED CARDS 15 ก.ย.)
+const CHARACTER_BAN = `- Never propose drawing a franchise character or mascot in ANY form — not as a figure, plush,
+  toy, costume, statue, "vintage collectible" or symbolic object. Characters may appear only
+  where they are already printed on the real pack photos, or on the face of a card from the
+  ALLOWED CARDS list when one is supplied — name which of those cards you use.`
+// ⚠️ ห้ามให้ตัวคิดเอ่ยชื่อตัวละคร — มันมองไม่เห็นรูปกล่อง จะเดาจากชื่อชุดแล้วเดาผิด
+//    แล้วตัววาดจะวาดตัวที่เดา แทนตัวที่อยู่บนกล่องจริง · ตัววาดเห็นรูปกล่อง ให้มันเลือกเอง
+const CHARACTER_BAN_BOX = `- Characters: the owner approved, for THIS poster only, bringing the characters printed on
+  the real BOX ART of the sets listed under CHARACTERS APPROVED to life as newly illustrated
+  figures — make them part of the idea. Never name which characters they are; write "the
+  characters from the <set> box art" (the illustrator sees the real box). Never add any other
+  character, never one from another set or franchise, and never as a figure, plush, toy,
+  costume, statue or collectible. Card faces still come only from the ALLOWED CARDS list when
+  one is supplied — name which of those cards you use.`
+
 const SYSTEM = `You are the art director for DivisionX Card, a Thai trading-card vending machine brand.
 
 You receive an approved Thai social caption. Decide the ONE visual idea that makes a
@@ -81,10 +98,7 @@ TRUTH — never break
   stands INSIDE a shopping mall (never outdoors, a street, a night sky or a mall's exterior)
   and it is stocked with about 30 DIFFERENT products — never one pack repeated in every slot.
 - Any pack you show must be one of our actual products — say WHICH ones. Never invented art.
-- Never propose drawing a franchise character or mascot in ANY form — not as a figure, plush,
-  toy, costume, statue, "vintage collectible" or symbolic object. Characters may appear only
-  where they are already printed on the real pack photos, or on the face of a card from the
-  ALLOWED CARDS list when one is supplied — name which of those cards you use.
+${CHARACTER_BAN}
 - If the caption teaches how the game is played and the lesson needs cards, show the card
   the lesson is actually about. Never swap in a different kind of card (an Energy or Trainer
   card standing in for a Pokémon) — a lesson picture that teaches the wrong move is worse
@@ -116,9 +130,10 @@ Reply as JSON with exactly these keys:
  * @param {string[]} [o.signature] ลายเซ็นแบรนด์จาก art_direction.json → brand_signature
  * @param {string} [o.styleHint]  แนวภาพที่เสนอให้ใบนี้ (หมุนตาม id)
  * @param {string[]} [o.allowedCards] การ์ดจริงที่วาดหน้าได้ "ชื่อ — ขั้น · HP" (เฉพาะโพสต์โปเกมอน)
+ * @param {string[]} [o.boxCharacters] ชื่อชุดที่เจ้าของติ๊กให้วาดตัวละครจากกล่องได้ (ใบนี้ใบเดียว)
  * @returns {Promise<object|null>} null = ล้มเหลว ให้ผู้เรียกไปต่อโดยไม่มีไอเดียภาพ
  */
-export async function planVisual({ caption, format, sku, franchise, rules = [], signature = [], styleHint = null, allowedCards = [] }) {
+export async function planVisual({ caption, format, sku, franchise, rules = [], signature = [], styleHint = null, allowedCards = [], boxCharacters = [] }) {
   const key = process.env.OPENAI_API_KEY
   if (!key || !caption?.trim()) return null
 
@@ -133,6 +148,8 @@ export async function planVisual({ caption, format, sku, franchise, rules = [], 
     ? `\n\nBRAND SIGNATURE (keep the poster recognisably ours — a starting point, never a template):\n` +
       signature.map(s => `- ${s}`).join("\n")
     : ""
+  // ใบที่เจ้าของติ๊กให้วาดตัวละครจากกล่อง — สลับข้อห้ามเป็นฉบับข้อยกเว้นที่ตัวข้อห้ามเอง
+  const system = boxCharacters.length ? SYSTEM.replace(CHARACTER_BAN, CHARACTER_BAN_BOX) : SYSTEM
 
   const user = [
     format ? `รูปแบบโพสต์: ${format}` : null,
@@ -149,6 +166,12 @@ export async function planVisual({ caption, format, sku, franchise, rules = [], 
       ? `ALLOWED CARDS — real cards from the set we sell. If the idea needs a card face, use only ` +
         `these and name which, spelled exactly as listed:\n${allowedCards.map(c => `- ${c}`).join("\n")}`
       : null,
+    boxCharacters.length
+      ? `CHARACTERS APPROVED (the owner's decision for this poster): the characters printed on the ` +
+        `box art of ${boxCharacters.join(" · ")}. Build the idea around them coming to life — for ` +
+        `example bursting out of their own box or pack. Refer to them only as "the characters ` +
+        `from the <set> box art", never by name.`
+      : null,
     `\nแคปชั่นที่อนุมัติแล้ว:\n${caption.trim()}`,
   ].filter(Boolean).join("\n")
 
@@ -162,7 +185,7 @@ export async function planVisual({ caption, format, sku, franchise, rules = [], 
           model,
           response_format: { type: "json_object" },
           messages: [
-            { role: "system", content: SYSTEM + hard + sig },
+            { role: "system", content: system + hard + sig },
             { role: "user", content: user },
           ],
         }),

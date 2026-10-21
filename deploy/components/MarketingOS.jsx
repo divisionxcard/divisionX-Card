@@ -176,6 +176,7 @@ export default function MarketingOS() {
   const [proof, setProof] = useState({})                // id → ผลตรวจ
   const [briefing, setBriefing] = useState(new Set())   // id ที่กำลังสร้างบรีฟ
   const [brief, setBrief] = useState(null)              // { id, text } บรีฟที่เปิดดูอยู่
+  const [charOn, setCharOn] = useState(new Set())       // id ที่ติ๊ก "วาดตัวละครจากกล่อง" (ไม่จำข้ามรีเฟรช)
 
   // โหลดรูปแนบทั้งชุดทีเดียว — เว้นจังหวะระหว่างไฟล์เพราะเบราว์เซอร์บล็อกการดาวน์โหลดรัว ๆ
   // จากหน้าเดียวกัน (ไฟล์แรกผ่าน ที่เหลือเงียบ) ซึ่งดูเหมือนปุ่มพังทั้งที่โค้ดถูก
@@ -217,7 +218,8 @@ export default function MarketingOS() {
       //    หรือข้อมูลชั้น/จุดสังเกตของสาขา — เอาไปให้ ChatGPT ก็ได้ของที่อ่อนกว่าที่ระบบทำได้
       //    brief:true คืนบรีฟอย่างเดียว ไม่เรียกโมเดลวาด จึงไม่กินเครดิต
       const r = await api("content/image", {
-        method: "POST", body: JSON.stringify({ id: item.id, brief: true }),
+        method: "POST",
+        body: JSON.stringify({ id: item.id, brief: true, ...(charOn.has(item.id) ? { characters: true } : {}) }),
       })
       setBrief({ id: item.id, text: r.brief, by: r.generated_by, download: r.download || [] })
       try { await navigator.clipboard?.writeText(r.brief) } catch { /* ไม่ให้เขียนคลิปบอร์ดก็ไม่เป็นไร */ }
@@ -529,13 +531,16 @@ export default function MarketingOS() {
 
   // ── ให้ AI สร้างภาพประกอบ ──
   // ใช้รูป SKU จริงเป็นภาพอ้างอิง ไม่ได้ให้มันวาดการ์ดขึ้นเอง
-  const makeImage = useCallback(async (contentId, force = false) => {
+  // characters = ช่องติ๊ก "วาดตัวละครจากกล่อง" ของใบนั้น — ส่งเป็นอาร์กิวเมนต์ ไม่อ่าน state ตรงนี้
+  // เพราะ useCallback นี้ deps มีแค่ api จะจับ state ของ render แรกค้างไว้
+  const makeImage = useCallback(async (contentId, force = false, characters = false) => {
     setImaging(s => new Set(s).add(contentId))
     setImagingKind(m => ({ ...m, [contentId]: "ai" }))
     setImagingSince(m => ({ ...m, [contentId]: Date.now() }))
     try {
       const updated = await api("content/image", {
-        method: "POST", body: JSON.stringify({ id: contentId, force }),
+        method: "POST",
+        body: JSON.stringify({ id: contentId, force, ...(characters ? { characters: true } : {}) }),
       })
       setContent(c => ({
         ...c,
@@ -547,7 +552,7 @@ export default function MarketingOS() {
       if (e.code === "already_has_image") {
         setImaging(s => { const n = new Set(s); n.delete(contentId); return n })
         if (window.confirm("ใบนี้มีรูปอยู่แล้ว — สร้างใหม่จะเสียค่าสร้างภาพเพิ่มอีกหนึ่งใบ ยืนยันไหม")) {
-          return makeImage(contentId, true)
+          return makeImage(contentId, true, characters)
         }
         return
       }
@@ -1302,6 +1307,30 @@ export default function MarketingOS() {
                       </div>
                     )}
 
+                    {/* ตัวละครจากกล่อง — เจ้าของเลือก 21 ต.ค. 2026 "ให้ AI วาดตัวละครตามกล่อง (ยอมรับความเสี่ยง)"
+                        ติ๊กทีละใบ ไม่เปิดทุกใบ · มีผลกับทั้ง "บรีฟทำรูป" และ "ให้ AI ออกแบบ" ด้านล่าง
+                        ไม่จำค่าข้ามการรีเฟรช — ตั้งใจให้ตัดสินใจใหม่ทุกครั้งที่สร้างภาพ */}
+                    {item.content_format !== "top5" && (
+                      <label
+                        title="ให้ AI วาดตัวละครที่อยู่บนกล่องของชุดในภาพขึ้นใหม่ (แบบภาพตัวอย่าง) · สวยขึ้นแต่เสี่ยงโดนแจ้งลิขสิทธิ์ · ใช้กับปุ่มบรีฟทำรูปและปุ่มให้ AI ออกแบบ"
+                        className="w-full sm:w-36 flex items-center gap-1.5 px-1 text-[10px] text-rose-700 cursor-pointer select-none">
+                        <input
+                          type="checkbox"
+                          className="accent-rose-600"
+                          checked={charOn.has(item.id)}
+                          onChange={(e) => {
+                            const on = e.target.checked
+                            setCharOn(s => {
+                              const n = new Set(s)
+                              if (on) n.add(item.id)
+                              else n.delete(item.id)
+                              return n
+                            })
+                          }} />
+                        วาดตัวละครจากกล่อง
+                      </label>
+                    )}
+
                     {/* บรีฟสั่งทำภาพ — ก๊อปไปวางใน ChatGPT ได้เลย
                         อยู่เหนือปุ่มสร้างโปสเตอร์เพราะเป็นทางที่เจ้าของใช้จริงมากกว่า */}
                     <button
@@ -1376,7 +1405,7 @@ export default function MarketingOS() {
                     <>
                     <button
                       disabled={imaging.has(item.id)}
-                      onClick={() => makeImage(item.id)}
+                      onClick={() => makeImage(item.id, false, charOn.has(item.id))}
                       title="ให้ AI ออกแบบโปสเตอร์ทั้งใบจากแคปชั่น + รูปซองจริง · ปกติไม่เกิน 2 นาที · เสียค่าสร้างภาพต่อใบ"
                       className="w-full sm:w-36 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg
                                  bg-blue-600 text-white text-[11px] font-medium disabled:opacity-50">
