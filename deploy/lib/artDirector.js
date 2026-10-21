@@ -179,6 +179,13 @@ export async function planVisual({ caption, format, sku, franchise, rules = [], 
       if (!txt) { lastErr = `${model}: ไม่มีเนื้อหากลับมา`; continue }
       const idea = JSON.parse(txt)
       if (!idea?.big_idea) { lastErr = `${model}: ผลลัพธ์ไม่มี big_idea`; continue }
+      // ⚠️ 21 ต.ค. 2026 — ตัวคิดลอกตัวอย่างในกฎเหล็กข้อ 7 ("Official Set Name [OP-14]") ลงช่อง subject ตรง ๆ
+      //    ตัววาดอาจพิมพ์คำนั้นลงภาพ · แก้ถ้อยคำกฎแล้ว แต่กันอีกชั้นที่นี่ — ไอเดียทุกช่องผ่านจุดนี้ก่อนถึงตัววาด
+      for (const k of Object.keys(idea)) {
+        if (typeof idea[k] === "string") {
+          idea[k] = idea[k].replace(/official set name\s*\[([^\]]+)\]/gi, "the real $1 pack")
+        }
+      }
       return { ...idea, _model: model, _style_hint: styleHint }
     } catch (e) {
       lastErr = `${model}: ${String(e.message || e).slice(0, 120)}`

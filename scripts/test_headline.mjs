@@ -78,6 +78,29 @@ for (const s of SYNTH) {
   if (issues.length) console.log(`     ↳ ${issues.join(" · ")}`)
 }
 
+// ── จำนวนตู้/สาขาห้ามขึ้นพาดหัว (กฎเหล็กข้อ 5) — 21 ต.ค. 2026 แคปชั่น #63 ฉบับแรก ──
+console.log("\n" + "─".repeat(96))
+console.log("เคสจำนวนตู้/สาขา (ห้ามขึ้นพาดหัว)")
+const COUNT_CASES = [
+  { caption: "13 ตู้ของ OP-14 ชนกับ 12 ตู้ของ OP-16 — ถ้าให้เลือกกดได้แค่ตู้เดียว นายเดินเข้าหาตู้ไหนก่อน?\n\nบางคนเลือกชุดที่เอาไปจัดเด็คต่อได้เลย\n#DivisionXCard",
+    headline: "ถ้าให้เลือกกดได้แค่ตู้เดียว", sub: "นายเดินเข้าหาตู้ไหนก่อน?" },
+  { caption: "ครบ 12 สาขาแล้ว!\nแวะกดซองได้ทุกวันในห้าง\n#DivisionXCard",
+    headline: "แวะกดซองได้ทุกวันในห้าง", sub: "" },
+  { caption: "ถ้าให้เลือกกดได้แค่ตู้เดียว นายเดินเข้าหาตู้ไหนก่อน?\n#DivisionXCard",
+    headline: "ถ้าให้เลือกกดได้แค่ตู้เดียว", sub: "นายเดินเข้าหาตู้ไหนก่อน?" },
+  // รหัสชุดติดคำว่าตู้ ไม่ใช่จำนวนตู้ — ห้ามทิ้งบรรทัดนี้
+  { caption: "ซอง OP-14 ตู้ไหนก็มี\nแวะกดได้ทุกวันในห้าง",
+    headline: "ซอง OP-14 ตู้ไหนก็มี", sub: "แวะกดได้ทุกวันในห้าง" },
+]
+for (const c of COUNT_CASES) {
+  const got = splitHeadline(c.caption)
+  const ok = got.headline === c.headline && got.sub === c.sub &&
+    !/(?<![A-Za-z\d-])\d\s*(ตู้|สาขา)/.test(got.headline + got.sub)
+  if (!ok) bad++
+  console.log(`${ok ? "  " : "❌"}   ${got.headline.padEnd(34)}${String(got.headline.length).padStart(3)}  ${got.sub.slice(0, 40)}`)
+  if (!ok) console.log(`     ↳ ต้องการ "${c.headline}" / "${c.sub}"`)
+}
+
 const lens = rows.map(r => splitHeadline(r.caption).headline.length)
 const before = rows.map(r => {
   const c = (r.caption || "").replace(/#\S+/g, "").trim()

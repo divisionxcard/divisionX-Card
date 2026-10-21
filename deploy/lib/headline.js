@@ -75,6 +75,9 @@ function cut(s, limit) {
   if (next > 0 && next <= HEAD_HARD) {
     return { head: t.slice(0, next).trim(), rest: t.slice(next).trim() }
   }
+  // 4b) ท้ายย่อหน้าก็เป็นจุดตัดที่ปลอดภัย — ทั้งก้อนยาวไม่เกินเพดานแข็ง ใช้ทั้งก้อน
+  //     (21 ต.ค. 2026 ตอนเปลี่ยนเป็นตัดเฉพาะย่อหน้าแรก: #36 #47 เคยรอดเพราะช่องว่างที่ต่อย่อหน้าถัดไป)
+  if (t.length <= HEAD_HARD) return { head: t, rest: "" }
 
   // 5) ยาวทั้งดุ้นไม่มีช่องว่างเลย — ถอยจนจุดตัดไม่ผ่ากลางคำ
   //
@@ -86,26 +89,53 @@ function cut(s, limit) {
   return { head: t.slice(0, i).trim(), rest: t.slice(i).trim() }
 }
 
+// จำนวนตู้/สาขา/ห้าง — กฎเหล็กข้อ 5 ห้ามพิมพ์ลงภาพ (ตัวเลขเปลี่ยนทุกสัปดาห์ โปสเตอร์อยู่นานกว่า)
+// เลขที่ติดตัวอักษร/ขีดข้างหน้าคือรหัสชุด ไม่ใช่จำนวน ("ซอง OP-14 ตู้ไหนก็มี" ไม่ใช่ "14 ตู้")
+const COUNT = /(?<![A-Za-z\d-])\d[\d,]*\s*(?:ตู้|สาขา|ห้าง|แห่ง)/
+// ตัวคั่นที่มีช่องว่างล้อม = ผู้เขียนแบ่งท่อนความเอง ("13 ตู้ของ OP-14 … — ถ้าให้เลือก…")
+const CLAUSE_SEP = /\s+[—–|·]\s+/
+
+/**
+ * ทิ้งท่อนที่มีจำนวนตู้/สาขาก่อนเอาไปทำพาดหัว (ฟังก์ชันล้วน — ทดสอบได้)
+ *
+ * ⚠️ 21 ต.ค. 2026 — แคปชั่น #63 ขึ้นต้น "13 ตู้ของ OP-14 ชนกับ 12 ตู้ของ OP-16 — ถ้าให้เลือกกดได้แค่ตู้เดียว …"
+ *    พาดหัวออกมาเป็น "13 ตู้ของ OP-14 ชนกับ 12" ทั้งตัดกลางวลี และส่งจำนวนตู้ให้โมเดลเขียนลงภาพ
+ *    ขัดกับกฎเหล็กข้อ 5 ในบรีฟเดียวกัน (สั่งทั้ง "copy exactly" และ "never print a machine count")
+ * ทิ้งเป็นท่อนตามตัวคั่น · ท่อนไหนแยกไม่ได้ก็ทิ้งทั้งบรรทัด · ทิ้งแล้วไม่เหลืออะไร = ใช้ของเดิม
+ */
+export function dropCountClauses(caption) {
+  const lines = String(caption || "").split("\n")
+  const kept = []
+  for (const line of lines) {
+    if (!COUNT.test(line)) { kept.push(line); continue }
+    const parts = line.split(CLAUSE_SEP).filter(p => !COUNT.test(p))
+    if (parts.length) kept.push(parts.join(" — "))
+  }
+  const out = kept.join("\n")
+  return out.replace(/#\S+/g, "").trim() ? out : String(caption || "")
+}
+
 /**
  * @param {string} caption แคปชั่นเต็ม (ยังมีแฮชแท็กได้ ฟังก์ชันนี้ตัดให้เอง)
  * @returns {{headline:string, sub:string}} sub เป็น "" ได้ถ้าไม่มีอะไรเหลือ
  */
 export function splitHeadline(caption) {
-  const clean = String(caption || "").replace(/#\S+/g, " ").replace(/\s+/g, " ").trim()
-  if (!clean) return { headline: "", sub: "" }
+  caption = dropCountClauses(caption)
+  const tidy = (s) => s.replace(/#\S+/g, " ").replace(/\s+/g, " ").trim()
+  const paras = String(caption || "").split("\n").map(tidy).filter(Boolean)
+  if (!paras.length) return { headline: "", sub: "" }
 
-  const first = cut(clean, HEAD_MAX)
-  const headline = first.head
+  // ⚠️ 21 ต.ค. 2026 — ตัดจากย่อหน้าแรกเท่านั้น · เดิมรวมทั้งแคปชั่นเป็นบรรทัดเดียวก่อนตัด
+  //    บรรทัดรองจึงลากข้ามไปย่อหน้าถัดไป (#63: "นายเดินเข้าหาตู้ไหนก่อน? บางคนเลือกชุดที่…")
+  const first = cut(paras[0], HEAD_MAX)
+  // ตัวคั่นห้อยท้ายพาดหัว ("กติกาง่าย ๆ:") ไม่มีความหมายบนโปสเตอร์ — ประโยคถัดไปอยู่บรรทัดรองแล้ว
+  const headline = first.head.replace(/\s*[:—–·|]+$/, "")
 
   // บรรทัดรองมาจากส่วนที่เหลือของประโยคแรก ถ้าไม่มีค่อยไปเอาย่อหน้าถัดไป
-  let subSource = first.rest
-  if (!subSource) {
-    const paras = String(caption || "").split("\n").map(s => s.trim()).filter(Boolean)
-    subSource = (paras[1] || "").replace(/#\S+/g, " ").replace(/\s+/g, " ").trim()
-  }
+  const subSource = first.rest || paras[1] || ""
   const sub = subSource ? cut(subSource, SUB_MAX).head : ""
 
   return { headline, sub }
 }
 
-export default { splitHeadline, HEAD_MAX, SUB_MAX }
+export default { splitHeadline, dropCountClauses, HEAD_MAX, SUB_MAX }

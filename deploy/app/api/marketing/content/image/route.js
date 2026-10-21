@@ -19,7 +19,7 @@ import path from "path"
 import { requireMarketing } from "../../../../../lib/apiAuth"
 import { planVisual, ideaToPrompt } from "../../../../../lib/artDirector"
 import { detectFranchise, FRANCHISE_LABEL } from "../../../../../lib/franchiseDetect"
-import { topSkusByFranchise } from "../../../../../lib/skuPicker"
+import { topSkusByFranchise, skusNamedIn } from "../../../../../lib/skuPicker"
 import { splitHeadline } from "../../../../../lib/headline"
 import { fetchAll } from "../../../../../lib/fetchAll"
 import { loadPkmCards, findPkmSet, artworkPkmCards } from "../../../../../lib/pkmKnowledge"
@@ -725,6 +725,8 @@ export async function POST(req) {
     const third = pool.length
       ? pool[(Math.abs(Number(content.id) || 0) + 1) % pool.length]
       : "อยู่ในห้างใกล้บ้าน"
+    // สินค้าที่แคปชั่นเอ่ยชื่อ — ใช้ทั้งนับตู้ (ข้างล่าง) และเลือกรูปซองอ้างอิง (บล็อกรูปอ้างอิง)
+    let namedSkus = []
     if (wantFr) {
       // นับตู้ที่มีค่ายนี้อยู่จริงตอนนี้
       //
@@ -745,10 +747,12 @@ export async function POST(req) {
         //    → จับชื่อชุด/ชื่อสินค้าจากแคปชั่นด้วย แล้วใช้ "ตู้ที่มีครบทุกตัวที่เอ่ยถึง"
         //      ไม่ใช่ผลรวม — ลูกค้าอ่านแล้วคาดหวังว่าไปตู้นั้นเจอทุกตัวที่โฆษณา
         const { data: frSkus } = await db.from("skus")
-          .select("sku_id,name,set_code").eq("is_active", true).eq("franchise", wantFr)
+          .select("sku_id,name,franchise,set_code,image_url,image_url_box")
+          .eq("is_active", true).eq("franchise", wantFr)
         const hay = `${caption} ${content.idea?.title || ""}`
-        const named = (frSkus || []).filter(s =>
-          (s.name && hay.includes(s.name)) || (s.set_code && hay.includes(s.set_code)))
+        // ⚠️ 21 ต.ค. 2026 — แคปชั่นเขียน "OP-14" แต่ set_code เก็บ "OP14" · เทียบตรง ๆ จับไม่ได้ (lib/skuPicker.js)
+        const named = skusNamedIn(hay, frSkus)
+        namedSkus = named
         let ids = sku?.sku_id ? [sku.sku_id]
           : named.length ? named.map(s => s.sku_id)
           : (frSkus || []).map(s => s.sku_id)
@@ -785,8 +789,15 @@ export async function POST(req) {
         }
       } catch { /* นับไม่ได้ก็ใช้ป้ายข้อความตามเดิม */ }
     }
+    // ⚠️ 21 ต.ค. 2026 — คำสั่งเว้นมุมโลโก้อยู่บรรทัด Brand logo แต่โมเดลจัดแถวป้ายตามบรรทัดนี้
+    //    แล้วเริ่มแถวชิดขอบ → ป้ายแรกตกอยู่ใต้โลโก้ที่แปะทีหลัง (โปสเตอร์จริง #47 #49 + ทดลอง #63)
+    //    ต้องบอกที่บรรทัดป้ายเองด้วยว่าแถวต้องหลบมุมนั้น
+    const [cornerEdge, cornerSide] = cornerText.split(" ")
     facts.push(`- Trust badges to show (exactly these three, in this order): ` +
-      `${badgeCfg.anchor || "ของแท้ 100%"} · ${mid} · ${third}`)
+      `${badgeCfg.anchor || "ของแท้ 100%"} · ${mid} · ${third}` +
+      (stampOn ? ` — keep all three out of the reserved ${cornerText} logo corner: a badge row along ` +
+        `the ${cornerEdge} edge must stay at least a quarter of the image width away from the ` +
+        `${cornerSide} edge.` : ""))
 
     // ประกาศค่ายให้ชัดที่สุด — เคสจริง 24 ส.ค. 2026 โพสต์ #PokemonTCG
     // ได้ซอง One Piece ไปทั้งสามซอง เพราะไม่มีใครบอกโมเดลว่าโพสต์นี้เรื่องอะไร
@@ -836,17 +847,24 @@ export async function POST(req) {
       //   - ใบเดิมได้ชุดเดิมเสมอ (กดซ้ำแล้วบรีฟไม่แกว่ง เทียบผลกันได้)
       //   - คนละใบได้คนละชุด ซึ่งคือสิ่งที่ขาดไป
       const POOL = 9
-      const pool = await topSkusByFranchise(db, { franchise: wantFr, limit: POOL })
       const cid = Math.abs(Number(content.id) || 0)
+      // ⚠️ 21 ต.ค. 2026 — แคปชั่นเอ่ยชุดไหน ต้องได้รูปซองชุดนั้นก่อน (#63 ถาม OP-14/16/17 แต่เคยได้ซองขายดีตัวอื่น)
+      //    ไม่เอ่ยชุดไหนเลย ค่อยหมุนซองขายดีตามเดิม
+      const withImg = namedSkus.filter(s => s.image_url || s.image_url_box)
+      const pool = withImg.length ? [] : await topSkusByFranchise(db, { franchise: wantFr, limit: POOL })
       // ⚠️ เลื่อนทีละ 1 ไม่ใช่ทีละ 3 — ก้าว 3 บนกอง 9 ให้จุดเริ่มได้แค่ {0,3,6}
       //    = หมุนได้แค่ 3 ชุด ซึ่งแทบไม่ต่างจากปัญหาเดิม (ตัวหารร่วมมากต้องเป็น 1)
-      const picked = pool.length
+      const picked = withImg.length ? withImg.slice(0, 3)
+        : pool.length
         ? Array.from({ length: Math.min(3, pool.length) },
                      (_, i) => pool[(cid + i) % pool.length])
         : []
       for (const s of picked) {
         const r = await fetchRef(s.image_url || s.image_url_box)
-        if (r) { refs.push(r); noteRef(`ซองขายดี: ${s.name}`, s.image_url || s.image_url_box) }
+        if (r) {
+          refs.push(r)
+          noteRef(`${withImg.length ? "ซองที่แคปชั่นเอ่ยถึง" : "ซองขายดี"}: ${s.name}`, s.image_url || s.image_url_box)
+        }
       }
       if (picked.length) {
         const sameFr = !wantFr || picked.every(s => s.franchise === wantFr)
@@ -1126,7 +1144,7 @@ export async function POST(req) {
       try {
         const s = await stampLogo(out.buf, stampCfg)
         out = { ...out, buf: s.buf, mime: s.mime }
-        logo = { variant: s.variant, corner: s.corner, lum: s.lum }
+        logo = { variant: s.variant, corner: s.corner, lum: s.lum, scores: s.scores }
       } catch (e) {
         console.warn("[image] แปะโลโก้ไม่สำเร็จ —", e?.message || e)
         logo = { error: String(e?.message || e).slice(0, 160) }

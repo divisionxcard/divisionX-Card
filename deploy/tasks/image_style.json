@@ -62,12 +62,16 @@
   "image_size": "1K",
   "aspect_ratio": "1:1",
   "_logo_stamp_note": "15 ก.ย. 2026 — เจ้าของขอให้โลโก้บริษัทคงรูปเดิมทุกใบ · เดิม AI วาดโลโก้เองแล้วทรงเพี้ยนไม่ซ้ำกันสักใบ จึงสั่งห้ามวาด+เว้นมุม แล้วแปะไฟล์จริง public/logo-white.png หรือ logo-black.png (เลือกตามความสว่างของมุมนั้น) หลังวาดเสร็จ ด้วย lib/logoStamp.js · corner: bottom-left | bottom-right | top-left | top-right · width_pct = ความกว้างโลโก้เป็น % ของภาพ · light_threshold = มุมสว่างเกินค่านี้ (0-255) ใช้โลโก้ดำ · enabled:false = กลับไปให้ AI วาดโลโก้เองแบบเดิม",
+  "_logo_auto_corner_note": "21 ต.ค. 2026 — AI ยังวางป้ายแรกของแถวล่างทับมุมโลโก้ได้ (#47 #49 #63) · auto_corner:true = วัดความรกทุกมุมก่อนแปะ (0-100 · ดู lib/logoStamp.js → busyness) แล้วย้ายเฉพาะตอนมุมที่ตั้งไว้รกเกิน busy_above และมีมุมอื่นโล่งต่ำกว่า clean_below · ไม่มีมุมไหนโล่งจริงให้คงมุมเดิม (มุมบนมักเป็นพาดหัว) · ค่ามาจากเทียบโปสเตอร์จริง 19 ใบ: ตัวหนังสือ/ป้าย ≥ 11.7 · มุมโล่ง ≤ 4.8 · ผลวัดทุกมุมอยู่ใน response → logo.scores",
   "logo_stamp": {
     "enabled": true,
     "corner": "bottom-left",
     "width_pct": 15,
     "margin_pct": 3.5,
-    "light_threshold": 140
+    "light_threshold": 140,
+    "auto_corner": true,
+    "busy_above": 12,
+    "clean_below": 6
   },
   "_bucket_note": "เก็บใน Supabase Storage bucket 'marketing' (public อยู่แล้ว) · ไม่เก็บ base64 ลง DB เพราะแถวจะบวมและ query ช้า",
   "bucket": "marketing",

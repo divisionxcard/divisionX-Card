@@ -61,4 +61,26 @@ export async function topSkusByFranchise(db, { franchise = null, limit = 1, need
   }
 }
 
-export default { topSkusByFranchise }
+// รหัสชุดเขียนได้หลายทรง: แคปชั่นเขียน "OP-14" · "op 14" · "OP14" แต่ skus.set_code เก็บ "OP14"
+// ⚠️ 21 ต.ค. 2026 — เดิมเทียบสตริงตรง ๆ แคปชั่น #63 ("OP-14 / OP-16 / OP-17") จึงจับไม่ได้สักชุด
+//    แล้วตกไปใช้ซองขายดีตัวอื่นเป็นรูปอ้างอิง = โปสเตอร์ถามเรื่อง OP-14 แต่โชว์ซองชุดอื่น
+const normCode = (s) => String(s || "").toUpperCase().replace(/[^A-Z0-9]/g, "")
+// ตัวอักษร 2-4 ตัว + ตัวเลข 2-3 หลัก (OP14 · EB03 · PRB01 · FB09 · ST13) · \b กันไปจับกลางคำอังกฤษอื่น
+const CODE_IN_TEXT = /\b[A-Z]{2,4}[\s-]?\d{2,3}\b/gi
+
+/**
+ * SKU ที่ข้อความเอ่ยถึง — ด้วยชื่อสินค้าตรงตัว หรือรหัสชุดทรงไหนก็ได้
+ * (ฟังก์ชันล้วน — ทดสอบได้ · ลำดับผลตามลำดับใน skus ที่ส่งมา)
+ *
+ * @param {string} text  แคปชั่น/หัวข้อไอเดีย
+ * @param {Array} skus   แถว skus ที่มี name/set_code
+ */
+export function skusNamedIn(text, skus) {
+  const hay = String(text || "")
+  const codes = new Set((hay.match(CODE_IN_TEXT) || []).map(normCode))
+  return (skus || []).filter(s =>
+    (s.name && hay.includes(s.name)) ||
+    (s.set_code && (hay.includes(s.set_code) || codes.has(normCode(s.set_code)))))
+}
+
+export default { topSkusByFranchise, skusNamedIn }
