@@ -8,6 +8,7 @@
 import { createClient } from "@supabase/supabase-js"
 import { NextResponse } from "next/server"
 import { requireMarketing } from "../../../../lib/apiAuth"
+import { platformOf, platformOfUrl, PLATFORM, PLATFORM_ORDER } from "../../../../lib/ideaPlatform"
 
 const db = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -23,7 +24,10 @@ export async function GET(req) {
 
   const { searchParams } = new URL(req.url)
   const status = searchParams.get("status") || "new"
-  const limit = Math.min(parseInt(searchParams.get("limit") || "200", 10) || 200, 500)
+  // กรองแพลตฟอร์มเดียว (ชิปโลโก้บนหน้า /marketing) — ตัดสินด้วย lib/ideaPlatform ตัวเดียวกับหน้าเว็บ
+  // แพลตฟอร์มคำนวณจากหลายคอลัมน์ กรองใน query ไม่ได้ → ดึงกว้างขึ้นแล้วกรองที่นี่
+  const platform = (searchParams.get("platform") || "").trim()
+  const limit = Math.min(parseInt(searchParams.get("limit") || (platform ? "500" : "200"), 10) || 200, 500)
   // คัดเฉพาะ "เด็ดสุด N ชิ้นต่อช่องทาง" — 40 ชิ้นรวดเดียวสแกนไม่ไหว
   // 0 = ไม่คัด (เอาทั้งหมด)
   const perSource = Math.max(parseInt(searchParams.get("per_source") ?? "3", 10) || 0, 0)
@@ -35,6 +39,9 @@ export async function GET(req) {
   }
   if (source && !/^[a-z_]{2,20}$/.test(source)) {
     return NextResponse.json({ error: `source ไม่ถูกต้อง: ${source}` }, { status: 400 })
+  }
+  if (platform && !PLATFORM_ORDER.includes(platform)) {
+    return NextResponse.json({ error: `platform ไม่ถูกต้อง: ${platform}` }, { status: 400 })
   }
 
   try {
@@ -54,8 +61,10 @@ export async function GET(req) {
     // วนเลือกทีละประเภททำให้ได้ มาแรง 1 · ยอดตก 1 · ของใกล้หมด 1
     // (ใช้กับข่าวด้วย — 3 ชิ้นจะมาจาก 3 คำค้นต่างกัน ไม่กระจุกที่คำค้นเดียว)
     let items = data || []
+    // เลือกแพลตฟอร์มแล้ว = เอาของแพลตฟอร์มนั้นทั้งหมด ไม่คัด N ต่อช่องทาง
+    if (platform) items = items.filter(r => platformOf(r) === platform)
     const hiddenBySource = {}
-    if (perSource > 0) {
+    if (perSource > 0 && !platform) {
       const bySource = new Map()
       for (const r of items) {
         if (!bySource.has(r.source)) bySource.set(r.source, new Map())
@@ -84,14 +93,18 @@ export async function GET(req) {
       items = picked.sort((a, b) => Number(b.score) - Number(a.score))
     }
 
-    const { data: all } = await db.from("marketing_ideas").select("status,source")
-    const counts = {}, bySource = {}
+    const { data: all } = await db.from("marketing_ideas").select("status,source,subtype,url")
+    const counts = {}, bySource = {}, byPlatform = {}
     for (const r of all || []) {
       counts[r.status] = (counts[r.status] || 0) + 1
-      if (r.status === "new") bySource[r.source] = (bySource[r.source] || 0) + 1
+      if (r.status === "new") {
+        bySource[r.source] = (bySource[r.source] || 0) + 1
+        const p = platformOf(r)
+        byPlatform[p] = (byPlatform[p] || 0) + 1
+      }
     }
     return NextResponse.json({
-      items, counts, by_source: bySource,
+      items, counts, by_source: bySource, by_platform: byPlatform, platform: platform || null,
       per_source: perSource,
       hidden: Object.values(hiddenBySource).reduce((s, n) => s + n, 0),
       hidden_by_source: hiddenBySource,
@@ -117,7 +130,47 @@ const OEMBED = [
     api: (u) => `https://www.tiktok.com/oembed?url=${encodeURIComponent(u)}` },
   { test: /(youtube\.com|youtu\.be)/i,  source: "youtube",
     api: (u) => `https://www.youtube.com/oembed?url=${encodeURIComponent(u)}&format=json` },
+  // Reddit/X มี oEmbed สาธารณะเหมือนกัน (ทดสอบ 21 ต.ค. 2026) · เก็บเป็น source=manual แพลตฟอร์มดูจากโดเมนลิงก์
+  { test: /(reddit\.com|redd\.it)/i,     source: "manual",
+    api: (u) => `https://www.reddit.com/oembed?url=${encodeURIComponent(u)}` },
+  { test: /(^|\/\/|\.)(x|twitter)\.com/i, source: "manual",
+    api: (u) => `https://publish.x.com/oembed?url=${encodeURIComponent(u)}&omit_script=1` },
 ]
+
+// Facebook/Instagram ไม่มี oEmbed ที่ใช้ได้โดยไม่ผ่าน Meta (ต้องมี token + สิทธิ์ oEmbed Read) ·
+// oEmbed อื่นล้มก็ได้ — ตั้งชื่อจากลิงก์แทน ไม่ให้วางลิงก์แล้วติด "ใส่ title มาด้วย" ซึ่งหน้าเว็บไม่มีช่องให้ใส่
+function titleFromUrl(u, platform) {
+  let p
+  try { p = new URL(u) } catch { return null }
+  const seg = p.pathname.split("/").filter(Boolean).map(s => { try { return decodeURIComponent(s) } catch { return s } })
+  if (platform === "reddit") {
+    const i = seg.indexOf("r"), c = seg.indexOf("comments")
+    const sub = i >= 0 && seg[i + 1] ? `r/${seg[i + 1]}` : ""
+    const slug = c >= 0 && seg[c + 2] ? seg[c + 2].replace(/[_-]+/g, " ") : ""
+    return ["Reddit", sub, slug].filter(Boolean).join(" · ")
+  }
+  if (platform === "x") return seg[0] ? `X · @${seg[0]}` : "X · โพสต์ที่วางลิงก์ไว้"
+  if (platform === "instagram") {
+    return seg[0] && !["p", "reel", "reels", "stories", "tv", "explore"].includes(seg[0])
+      ? `Instagram · @${seg[0]}` : "Instagram · โพสต์ที่วางลิงก์ไว้"
+  }
+  if (platform === "facebook") {
+    if (seg[0] === "groups" && seg[1]) return `Facebook · กลุ่ม ${seg[1]}`
+    const skip = ["watch", "share", "reel", "story.php", "permalink.php", "photo", "photo.php", "profile.php", "events"]
+    return seg[0] && !skip.includes(seg[0]) ? `Facebook · ${seg[0]}` : "Facebook · โพสต์ที่วางลิงก์ไว้"
+  }
+  return `ลิงก์จาก ${p.hostname.replace(/^www\./, "")}`
+}
+
+// ข้อความโพสต์ X อยู่ใน html ของ oEmbed (title ว่างเสมอ) — ดึงบรรทัดแรกของ <p> มาเป็นชื่อ
+function textFromOembedHtml(html) {
+  const m = String(html || "").match(/<p[^>]*>([\s\S]*?)<\/p>/i)
+  if (!m) return null
+  const t = m[1].replace(/<br\s*\/?>/gi, " ").replace(/<[^>]+>/g, "")
+    .replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#39;/g, "'")
+    .replace(/\s+/g, " ").trim()
+  return t ? t.slice(0, 200) : null
+}
 
 export async function POST(req) {
   const gate = await requireMarketing(req)
@@ -143,7 +196,7 @@ export async function POST(req) {
       })
       if (res.ok) {
         const meta = await res.json()
-        title = title || meta.title || null
+        title = title || meta.title || textFromOembedHtml(meta.html) || null
         author = meta.author_name || null
         thumb = meta.thumbnail_url || null
       }
@@ -152,9 +205,14 @@ export async function POST(req) {
     }
   }
 
+  // แพลตฟอร์มดูจากโดเมน (ตัวเดียวกับชิปโลโก้) · ชื่อไม่ได้จาก oEmbed → ตั้งจากลิงก์ เช่น "Facebook · ชื่อเพจ"
+  const platform = platformOfUrl(url)
+  const platformLabel = PLATFORM[platform]?.label
+  title = title || titleFromUrl(url, platform)
+
   if (!title) {
     return NextResponse.json(
-      { error: "ดึงชื่อคลิปไม่ได้ (คลิปอาจเป็นส่วนตัวหรือถูกลบ) — ใส่ title มาด้วย" },
+      { error: "ดึงชื่อจากลิงก์ไม่ได้ (โพสต์อาจเป็นส่วนตัวหรือถูกลบ) — ใส่ title มาด้วย" },
       { status: 422 })
   }
 
@@ -162,7 +220,9 @@ export async function POST(req) {
     const { data, error } = await db.from("marketing_ideas").insert({
       status: "new",
       source: provider?.source || "manual",
-      source_label: author ? `${provider ? provider.source : "ลิงก์"} · @${author}` : "วางลิงก์เอง",
+      source_label: author
+        ? `${platformLabel || provider?.source || "ลิงก์"} · @${author}`
+        : (platformLabel ? `วางลิงก์เอง · ${platformLabel}` : "วางลิงก์เอง"),
       title: title.slice(0, 300),
       summary: thumb ? `ปก: ${thumb}` : null,
       url,

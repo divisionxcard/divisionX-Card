@@ -23,6 +23,7 @@ import { supabase, signOutAndGoHome } from "../lib/supabase"
 import KpiCard from "./shared/KpiCard"
 import PostCalendar from "./marketing/PostCalendar"
 import { ensureBrandTag } from "../lib/brandTag"
+import { PLATFORM, PLATFORM_ORDER, PLATFORM_MISSING_OK, platformOf } from "../lib/ideaPlatform"
 
 const PLATFORM_LABEL = { fb: "FB เพจ", line: "LINE OA", ig: "Instagram", tiktok: "TikTok" }
 const SLOT_LABEL = { morning: "เช้า", evening: "เย็น" }
@@ -42,12 +43,40 @@ const IDEA_SOURCE = {
   price:    { icon: TrendingUp, label: "ราคาตลาด",   cls: "bg-orange-50 text-orange-700" },
 }
 
-// แหล่งย่อยของไอเดีย ใช้เป็น chip ชั้นที่ 2 ตอนเลือกช่องทางแล้ว (เจ้าของขอ 21 ต.ค. 2026: "กดเลือกช่องทางโซเชียลที่จะดูเองได้")
+// แหล่งย่อยของไอเดีย ใช้เป็น chip ชั้นที่ 2 ตอนเลือกแพลตฟอร์มแล้ว (เจ้าของขอ 21 ต.ค. 2026: "กดเลือกช่องทางโซเชียลที่จะดูเองได้")
 // ใช้ source_label ที่ตัวเก็บไอเดียตั้งไว้คงที่ต่อแหล่ง เช่น "Reddit r/OnePieceTCG ท็อปสัปดาห์" · "YouTube · GM Club"
 const ideaSubOf = (i) => {
   const label = (i.source_label || "").trim()
   if (!label) return i.subtype || "อื่น ๆ"
   return i.source === "youtube" ? label.replace(/^YouTube\s*·\s*/i, "") : label
+}
+
+// โลโก้แพลตฟอร์ม (Simple Icons · ดู lib/ideaPlatform) · ช่องที่ไม่ใช่โซเชียลไม่มีโลโก้แบรนด์ ใช้ไอคอนแทน
+const PLATFORM_ICON = { official: BadgeCheck, web: Globe, price: TrendingUp, internal: BarChart3, manual: Pencil }
+const PLATFORM_TONE = {
+  official: "text-indigo-600", web: "text-cyan-700", price: "text-orange-600",
+  internal: "text-emerald-700", manual: "text-gray-500",
+}
+function PlatformLogo({ p, size = 16 }) {
+  const m = PLATFORM[p] || PLATFORM.manual
+  if (m.path) {
+    return (
+      <svg viewBox="0 0 24 24" width={size} height={size} role="img" aria-label={m.label} fill={m.color}
+        className="shrink-0">
+        <title>{m.label}</title>
+        <path d={m.path} />
+      </svg>
+    )
+  }
+  const Icon = PLATFORM_ICON[p] || Pencil
+  return <Icon size={size} className={`shrink-0 ${PLATFORM_TONE[p] || "text-gray-500"}`} aria-label={m.label} />
+}
+// ช่องโซเชียลที่ยังไม่มีไอเดีย — บอกวิธีให้มีของเข้า (FB/IG/TikTok/X ดึงอัตโนมัติไม่ได้ · ดู memory trend radar)
+const PLATFORM_EMPTY_HINT = {
+  facebook: "เห็นโพสต์ Facebook น่าสนใจ วางลิงก์ในช่องด้านล่างได้เลย · เรดาร์คู่แข่งก็เก็บเพจมาที่นี่",
+  instagram: "เห็นโพสต์ Instagram น่าสนใจ วางลิงก์ในช่องด้านล่างได้เลย",
+  tiktok: "เห็นคลิป TikTok ไวรัล วางลิงก์ในช่องด้านล่างได้เลย (TikTok ไม่เปิดให้ดึงอัตโนมัติ)",
+  x: "เห็นโพสต์ X น่าสนใจ (เช่น บัญชีทางการญี่ปุ่นที่ประกาศก่อน) วางลิงก์ในช่องด้านล่างได้เลย",
 }
 
 // ── สถานะสายพาน ────────────────────────────────────────────────────────
@@ -293,9 +322,9 @@ export default function MarketingOS() {
   const [seriesSku, setSeriesSku] = useState("")
   const [seriesBusy, setSeriesBusy] = useState(false)
   const [perSource, setPerSource] = useState(3)   // เด็ดสุดกี่ชิ้นต่อช่องทาง
-  // chip เลือกช่องทาง: "" = ทุกช่องทาง (เด็ดสุด perSource ชิ้นต่อช่องทาง) · เลือกแล้วโหลดของช่องทางนั้นทั้งหมด
-  const [ideaSource, setIdeaSource] = useState("")
-  const [ideaSub, setIdeaSub] = useState("")      // แหล่งย่อยในช่องทางที่เลือก เช่น "Reddit r/OnePieceTCG ท็อปสัปดาห์"
+  // ชิปโลโก้เลือกแพลตฟอร์ม: "" = ทุกช่องทาง (เด็ดสุด perSource ชิ้นต่อช่องทาง) · เลือกแล้วโหลดของแพลตฟอร์มนั้นทั้งหมด
+  const [ideaPlatform, setIdeaPlatform] = useState("")
+  const [ideaSub, setIdeaSub] = useState("")      // แหล่งย่อยในแพลตฟอร์มที่เลือก เช่น "Reddit r/OnePieceTCG ท็อปสัปดาห์"
   const [generating, setGenerating] = useState(new Set())   // id ที่ AI กำลังเขียนแคปชั่นให้
   const [imaging, setImaging] = useState(new Set())         // id ที่กำลังสร้างภาพ/โปสเตอร์
   const [varying, setVarying] = useState(new Set())         // id ที่กำลังแปลงไปช่องอื่น
@@ -375,9 +404,9 @@ export default function MarketingOS() {
     return json
   }, [])
 
-  // เลือกช่องทางแล้ว = เอาของช่องทางนั้นทั้งหมด (per_source=0) · ไม่เลือก = เด็ดสุด perSource ชิ้นต่อช่องทาง
-  const ideasPath = `ideas?status=new&per_source=${ideaSource ? 0 : perSource}` +
-    (ideaSource ? `&source=${encodeURIComponent(ideaSource)}` : "")
+  // เลือกแพลตฟอร์มแล้ว = เอาของแพลตฟอร์มนั้นทั้งหมด (per_source=0) · ไม่เลือก = เด็ดสุด perSource ชิ้นต่อช่องทาง
+  const ideasPath = `ideas?status=new&per_source=${ideaPlatform ? 0 : perSource}` +
+    (ideaPlatform ? `&platform=${encodeURIComponent(ideaPlatform)}` : "")
   // loadAll อ่านผ่าน ref — กด chip แล้วโหลดแค่รายการไอเดีย ไม่ต้องโหลดทั้งหน้า 7 ตัว
   const ideasPathRef = useRef(ideasPath)
   ideasPathRef.current = ideasPath
@@ -777,14 +806,17 @@ export default function MarketingOS() {
     </Shell>
   )
 
-  // รายการไอเดียหลังกรอง — ชั้น 1 กรองที่ API (ideaSource) · ชั้น 2 แหล่งย่อยกรองในหน้า (ของช่องทางนั้นมาครบแล้ว)
+  // รายการไอเดียหลังกรอง — ชั้น 1 กรองที่ API (ideaPlatform) · ชั้น 2 แหล่งย่อยกรองในหน้า (ของแพลตฟอร์มนั้นมาครบแล้ว)
   const ideaItemsAll = ideas.items || []
-  const ideaSubs = ideaSource
+  const ideaSubs = ideaPlatform
     ? [...ideaItemsAll.reduce((m, i) => m.set(ideaSubOf(i), (m.get(ideaSubOf(i)) || 0) + 1), new Map())]
         .sort((a, b) => b[1] - a[1])
     : []
   const ideaItems = ideaSub ? ideaItemsAll.filter(i => ideaSubOf(i) === ideaSub) : ideaItemsAll
-  const pickIdeaSource = (s) => { setIdeaSource(s); setIdeaSub("") }
+  const pickIdeaPlatform = (p) => { setIdeaPlatform(p); setIdeaSub("") }
+  // ชิปที่โชว์: ช่องที่มีไอเดีย + ช่องโซเชียลที่ยังขาด (FB/IG/TikTok/X) ซึ่งโชว์เสมอให้รู้ว่าวางลิงก์เข้ามาได้
+  const byPlatform = ideas.by_platform || {}
+  const platformChips = PLATFORM_ORDER.filter(p => (byPlatform[p] || 0) > 0 || PLATFORM_MISSING_OK.includes(p))
 
   const pending = content.items || []
   const navCounts = {
@@ -918,27 +950,38 @@ export default function MarketingOS() {
                 {ideaItems.length}
               </span>
             </h2>
-            {/* chip เลือกช่องทาง — กดแล้วเหลือแต่ช่องทางนั้น (ทั้งหมด ไม่ใช่แค่ 3 อันเด็ด) · กดซ้ำ/กด "ทุกช่องทาง" = กลับ
+            {/* ชิปโลโก้เลือกแพลตฟอร์ม — กดแล้วเหลือแต่แพลตฟอร์มนั้น (ทั้งหมด ไม่ใช่แค่ 3 อันเด็ด) · กดซ้ำ/กด "ทุกช่องทาง" = กลับ
+                โซเชียลโชว์แค่โลโก้ + ตัวเลข (ชื่ออยู่ใน tooltip) · ช่องที่ไม่ใช่โซเชียลมีไอคอน + ข้อความ
                 ตอนไม่ได้เลือก ตัวเลขเป็น "แสดง/ทั้งหมด" จะได้รู้ว่ายังมีของที่ถูกซ่อนอยู่ */}
-            <button type="button" onClick={() => pickIdeaSource("")} aria-pressed={!ideaSource}
-              className={`px-2 py-0.5 rounded text-xs border transition ${!ideaSource
+            <button type="button" onClick={() => pickIdeaPlatform("")} aria-pressed={!ideaPlatform}
+              className={`h-7 px-2.5 rounded-lg text-xs border transition ${!ideaPlatform
                 ? "bg-gray-800 text-white border-gray-800" : "bg-white text-gray-600 border-gray-200 hover:border-gray-400"}`}>
               ทุกช่องทาง
             </button>
-            {Object.entries(ideas.by_source || {}).map(([s, total]) => {
-              const shown = ideaItemsAll.filter(i => i.source === s).length
-              const on = ideaSource === s
+            {platformChips.map(p => {
+              const total = byPlatform[p] || 0
+              const shown = ideaItemsAll.filter(i => platformOf(i) === p).length
+              const on = ideaPlatform === p
+              const m = PLATFORM[p] || PLATFORM.manual
+              const social = Boolean(m.path)
+              const tip = total === 0 && PLATFORM_EMPTY_HINT[p]
+                ? `${m.label} · ยังไม่มีไอเดีย — ${PLATFORM_EMPTY_HINT[p]}`
+                : on ? `${m.label} · กดอีกครั้งเพื่อดูทุกช่องทาง` : `ดูเฉพาะ ${m.label}`
               return (
-                <button key={s} type="button" onClick={() => pickIdeaSource(on ? "" : s)} aria-pressed={on}
-                  title={on ? "กดอีกครั้งเพื่อดูทุกช่องทาง" : `ดูเฉพาะ ${IDEA_SOURCE[s]?.label || s}`}
-                  className={`px-2 py-0.5 rounded text-xs border transition ${IDEA_SOURCE[s]?.cls || "bg-gray-100 text-gray-600"} ${on
-                    ? "border-current ring-1 ring-current font-semibold" : "border-transparent hover:border-gray-300"} ${ideaSource && !on ? "opacity-50 hover:opacity-100" : ""}`}>
-                  {IDEA_SOURCE[s]?.label || s}{" "}
-                  {ideaSource ? total : <>{shown}{total > shown && <span className="opacity-60">/{total}</span>}</>}
+                <button key={p} type="button" onClick={() => pickIdeaPlatform(on ? "" : p)} aria-pressed={on}
+                  title={tip} aria-label={`${m.label} ${total}`}
+                  className={`inline-flex items-center gap-1.5 h-7 px-2 rounded-lg text-xs border bg-white transition ${on
+                    ? "border-gray-800 ring-1 ring-gray-800 font-semibold text-gray-900"
+                    : "border-gray-200 text-gray-600 hover:border-gray-400"} ${total === 0 && !on ? "opacity-45 hover:opacity-100" : ""} ${ideaPlatform && !on && total > 0 ? "opacity-60 hover:opacity-100" : ""}`}>
+                  <PlatformLogo p={p} size={15} />
+                  {!social && <span>{m.label}</span>}
+                  <span className="tabular-nums">
+                    {ideaPlatform || total === 0 ? total : <>{shown}{total > shown && <span className="opacity-60">/{total}</span>}</>}
+                  </span>
                 </button>
               )
             })}
-            {!ideaSource && ideas.hidden > 0 && (
+            {!ideaPlatform && ideas.hidden > 0 && (
               <button onClick={() => setPerSource(p => (p === 3 ? 10 : 3))}
                 className="ml-auto text-xs text-blue-500 hover:underline">
                 {perSource === 3 ? `ดูเพิ่ม (ซ่อนอยู่ ${ideas.hidden})` : "แสดงแค่ 3 ต่อช่องทาง"}
@@ -948,7 +991,7 @@ export default function MarketingOS() {
 
           {/* ชั้น 2 · แหล่งย่อยของช่องทางที่เลือก เช่น ต่างประเทศ → Reddit r/OnePieceTCG / PokeBeach · YouTube → รายช่อง
               โชว์เมื่อมีมากกว่า 1 แหล่ง · ของช่องทางนั้นโหลดมาครบแล้ว จึงกรองในหน้าได้เลย */}
-          {ideaSource && ideaSubs.length > 1 && (
+          {ideaPlatform && ideaSubs.length > 1 && (
             <div className="flex flex-wrap items-center gap-1.5 mb-2 pl-1">
               <span className="text-[11px] text-gray-400 mr-0.5">แหล่ง:</span>
               <button type="button" onClick={() => setIdeaSub("")} aria-pressed={!ideaSub}
@@ -975,7 +1018,7 @@ export default function MarketingOS() {
               value={pasteUrl}
               onChange={e => setPasteUrl(e.target.value)}
               onKeyDown={e => { if (e.key === "Enter") addFromUrl() }}
-              placeholder="วางลิงก์ TikTok / YouTube ที่เห็นว่าไวรัล แล้วกด Enter"
+              placeholder="วางลิงก์ Facebook / IG / TikTok / YouTube / Reddit / X ที่น่าสนใจ แล้วกด Enter"
               className="flex-1 text-sm border border-gray-200 rounded-xl px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-amber-200"
             />
             <button onClick={addFromUrl} disabled={pasting || !pasteUrl.trim()}
@@ -1014,12 +1057,17 @@ export default function MarketingOS() {
           ) : ideaItems.length === 0 ? (
             <div className="bg-white rounded-2xl border border-gray-100 p-6 text-center">
               <Lightbulb className="mx-auto text-gray-300 mb-2" size={26} />
+              {ideaPlatform && (
+                <div className="flex justify-center mb-2"><PlatformLogo p={ideaPlatform} size={22} /></div>
+              )}
               <p className="text-gray-600 text-sm">
-                {ideaSource ? `ยังไม่มีไอเดียใหม่จาก ${IDEA_SOURCE[ideaSource]?.label || ideaSource}` : "ยังไม่มีไอเดียใหม่"}
+                {ideaPlatform ? `ยังไม่มีไอเดียใหม่จาก ${PLATFORM[ideaPlatform]?.label || ideaPlatform}` : "ยังไม่มีไอเดียใหม่"}
               </p>
-              <p className="text-xs text-gray-400 mt-1">ตัวเก็บไอเดียรันทุกเช้า 07:00 น.</p>
-              {ideaSource && (
-                <button type="button" onClick={() => pickIdeaSource("")}
+              <p className="text-xs text-gray-400 mt-1">
+                {PLATFORM_EMPTY_HINT[ideaPlatform] || "ตัวเก็บไอเดียรันทุกเช้า 07:00 น."}
+              </p>
+              {ideaPlatform && (
+                <button type="button" onClick={() => pickIdeaPlatform("")}
                   className="mt-2 text-xs text-blue-500 hover:underline">ดูทุกช่องทาง</button>
               )}
             </div>
@@ -1027,11 +1075,14 @@ export default function MarketingOS() {
             <div className="space-y-2">
               {ideaItems.map(idea => {
                 const src = IDEA_SOURCE[idea.source] || IDEA_SOURCE.manual
-                const SrcIcon = src.icon
+                const plat = platformOf(idea)
                 return (
                   <article key={idea.id} className="bg-white rounded-xl border border-gray-100 p-3">
                     <div className="flex items-start gap-2.5">
-                      <span className={`shrink-0 rounded-lg p-1.5 ${src.cls}`}><SrcIcon size={15} /></span>
+                      {/* โลโก้แพลตฟอร์มต้นทาง — รู้ทันทีว่ามาจาก YouTube / Reddit / Facebook ฯลฯ */}
+                      <span className="shrink-0 rounded-lg p-1.5 bg-gray-50 border border-gray-100" title={PLATFORM[plat]?.label}>
+                        <PlatformLogo p={plat} size={16} />
+                      </span>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-0.5">
                           <span className="text-[11px] text-gray-400">{idea.source_label || src.label}</span>
