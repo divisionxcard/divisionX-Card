@@ -99,6 +99,11 @@ STATE_FILE = pathlib.Path(__file__).parent / ".sync_bot_state.json"
 SYNC_SCRIPT = pathlib.Path(__file__).parent / "sync_local.py"
 IDEA_COLLECTOR = ROOT / "deploy" / "agents" / "idea_collector.py"
 IDEA_ANGLES = ROOT / "deploy" / "agents" / "idea_angles.py"
+# เฝ้าเพจ FB/IG/Reddit ที่ติดตามไว้ (21 ต.ค. 2026) — ต้องใช้ Chrome profile Research บนเครื่องนี้ จึงอยู่ในบอท
+# ไม่อยู่ใน idea_collector.py (ตัวนั้นรันบน GitHub Actions ด้วย ซึ่งไม่มี Chrome/บัญชี)
+SOCIAL_WATCH = ROOT / "deploy" / "agents" / "social_watch.py"
+# รายงานบทเรียนรายสัปดาห์จากคลังของตัวเฝ้าเพจ — เรียกทุกรอบ ตัวสคริปต์เงียบเองถ้าสัปดาห์นี้ส่งไปแล้ว
+SOCIAL_INSIGHT = ROOT / "deploy" / "agents" / "social_insight.py"
 
 BTN_STOCK = "🔄 ซิงค์สต็อกหน้าตู้"
 BTN_ALL = "📊 ซิงค์ทั้งหมด (ยอดขาย+สต็อก)"
@@ -970,17 +975,18 @@ def ideas_due(now, state):
     return True
 
 
-def ideas_summary(collector_out, angles_out=""):
+def ideas_summary(collector_out, angles_out="", social_out="", insight_out=""):
     """ตัดเหลือบรรทัดสรุปที่อ่านจบในสายตาเดียว (ฟังก์ชันล้วน — ทดสอบได้)
 
     ตัวเก็บพิมพ์รายการไอเดีย 15 อันดับแรก ตัวคิดมุมพิมพ์ทีละชิ้นทีละมุม — ยาวเกินห้องแชต
-    เก็บเฉพาะบรรทัดที่ขึ้นต้นด้วยป้าย [ideas] [purge] [angles] กับบรรทัดเตือนที่มี ⚠️
+    เก็บเฉพาะบรรทัดที่ขึ้นต้นด้วยป้าย [ideas] [purge] [social] [angles] [insight] กับบรรทัดเตือนที่มี ⚠️
+    เรียงตามลำดับที่รันจริง: เก็บ → เฝ้าเพจ → คิดมุม → รายงานรายสัปดาห์
     """
     keep = []
-    for out in (collector_out or "", angles_out or ""):
+    for out in (collector_out or "", social_out or "", angles_out or "", insight_out or ""):
         for line in out.splitlines():
             s = line.strip()
-            if s.startswith(("[ideas]", "[purge]", "[angles]")) or "⚠️" in s:
+            if s.startswith(("[ideas]", "[purge]", "[social]", "[angles]", "[insight]")) or "⚠️" in s:
                 keep.append(s)
     return "\n".join(keep)
 
@@ -1004,12 +1010,24 @@ def run_ideas(manual=False):
         p, err = _run_py(IDEA_COLLECTOR, [], timeout=900)
         ok = p is not None and p.returncode == 0
         col_out = p.stdout if p is not None else ""
-        ang_out, ang_note = "", ""
+        ang_out, ang_note, soc_out, soc_note, ins_out = "", "", "", "", ""
         if ok:
+            # ก่อนคิดมุม — ไอเดียจากโซเชียลจะได้มุมในรอบเดียวกัน · ล้มไม่นับว่ารอบเก็บไอเดียล้ม
+            s, s_err = _run_py(SOCIAL_WATCH, [], timeout=1500)
+            soc_out = s.stdout if s is not None else ""
+            if s is None or s.returncode != 0:
+                soc_note = ("\n⚠️ เฝ้าเพจโซเชียลไม่สำเร็จ — ไอเดียจากแหล่งอื่นเข้าครบ · "
+                            + _esc((s_err if s is None else (s.stderr or "").strip()[-300:]) or "ไม่มีรายละเอียด"))
             a, a_err = _run_py(IDEA_ANGLES, ["--limit", IDEAS_ANGLE_LIMIT], timeout=2700)
             if a is None or a.returncode != 0:
                 ang_note = "\n⚠️ ขั้นคิดมุมไม่สำเร็จ — ไอเดียยังอยู่ครบ ใช้มุมจาก template ไปก่อน"
             ang_out = a.stdout if a is not None else a_err
+            # หลังคิดมุม — ใช้คลังของตัวเฝ้าเพจ ไม่แตะคิวไอเดีย · ส่งรายงานเข้าห้องเอง (ไฟล์แนบยาว)
+            i, i_err = _run_py(SOCIAL_INSIGHT, [], timeout=900)
+            ins_out = i.stdout if i is not None else ""
+            if i is None or i.returncode != 0:
+                ins_out += ("\n⚠️ รายงานบทเรียนรายสัปดาห์ไม่สำเร็จ: "
+                            + ((i_err if i is None else (i.stderr or "").strip()[-200:]) or "ไม่มีรายละเอียด"))
         mins = (time.time() - t0) / 60
 
         if ok:
@@ -1019,7 +1037,7 @@ def run_ideas(manual=False):
             save_state()
             if chat_id:
                 send(chat_id, f"💡 <b>เก็บไอเดียประจำวันแล้ว</b> ({mins:.1f} นาที) — ดูที่หน้า /marketing"
-                              f"{ang_note}\n\n<pre>{_esc(ideas_summary(col_out, ang_out)[:3000])}</pre>")
+                              f"{soc_note}{ang_note}\n\n<pre>{_esc(ideas_summary(col_out, ang_out, soc_out, ins_out)[:3000])}</pre>")
             return
 
         detail = err if p is None else ((p.stderr or "").strip()[-1200:] or col_out[-800:])

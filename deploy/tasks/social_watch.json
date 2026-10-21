@@ -1,0 +1,76 @@
+{
+  "_about": "ตัวเฝ้าเพจโซเชียล (deploy/agents/social_watch.py) — รันบนเครื่องเจ้าของในบอท Telegram ตอนเก็บไอเดีย 07:00 · อ่านอย่างเดียวผ่าน OpenCLI + Chrome profile Research (บัญชีสำรอง ไม่ใช่บัญชีร้าน) · รายชื่อมาจาก wiki/marketing/trend-follow-list.md (ตรวจ 21 ต.ค. 2026)",
+  "_rules": "ห้ามใส่คำสั่ง [write] ของ OpenCLI (follow/like/comment/join) · ห้ามเพิ่มกลุ่มส่วนตัว · เพิ่มเพจใหม่ให้ตรวจว่าเป็นเพจจริงก่อน (มีเพจปลอมชื่อคล้ายเยอะ)",
+
+  "chrome_profile_dir": "Profile 9",
+  "bridge_profile": "research",
+  "gates": {
+    "_why": "IG/Reddit เป็นบัญชีใหม่ ให้ใช้แบบคนทั่วไปก่อนถึงวันนี้ (ตกลงกับเจ้าของ 21 ต.ค. 2026) · Facebook เป็นบัญชีเก่า เริ่มได้เลย",
+    "instagram": "2026-10-28",
+    "reddit": "2026-10-28"
+  },
+
+  "max_targets_per_run": { "facebook": 6, "instagram": 4, "reddit": 5 },
+  "fb_scroll_steps": 10,
+  "fb_max_posts": 12,
+  "keep_days": 120,
+  "baseline_days": 60,
+  "outlier_ratio": 2.0,
+  "min_engagement": 10,
+  "min_views": 3000,
+  "reddit_min_upvotes": 100,
+  "max_ideas_per_target": 2,
+  "max_ideas_per_run": 8,
+  "max_social_in_queue": 20,
+
+  "facebook": [
+    { "name": "BLACK CARD TCG", "url": "https://www.facebook.com/profile.php?id=61583179858522", "group": "competitor", "every_days": 2 },
+    { "name": "Take a Hit Card", "url": "https://www.facebook.com/TakeaHitCard/", "group": "competitor", "every_days": 2 },
+    { "name": "Hi-Top Technology", "url": "https://www.facebook.com/HITOPTechnologyThailand/", "group": "competitor", "every_days": 3 },
+    { "name": "Worldwide Vending Thailand", "url": "https://www.facebook.com/WorldwidevendingThailand/", "group": "competitor", "every_days": 3 },
+
+    { "name": "Nut Card", "url": "https://www.facebook.com/NutCardTCG/", "group": "shop", "every_days": 3 },
+    { "name": "Cardworld BKK", "url": "https://www.facebook.com/cardworld.bkk", "group": "shop", "every_days": 3 },
+    { "name": "Nx Gallery", "url": "https://www.facebook.com/NxGallery/", "group": "shop", "every_days": 3 },
+    { "name": "HalouiS 's Home", "url": "https://www.facebook.com/halouishome/", "group": "shop", "every_days": 3 },
+    { "name": "TCG Nexus", "url": "https://www.facebook.com/TcgNexus/", "group": "shop", "every_days": 4 },
+    { "name": "Always One Plaza", "url": "https://www.facebook.com/alwaysoneplaza", "group": "shop", "every_days": 4 },
+    { "name": "B2S Thailand", "url": "https://www.facebook.com/B2SThailand/", "group": "shop", "every_days": 5 },
+    { "name": "MetalBridges", "url": "https://www.facebook.com/metalbridges", "group": "media", "every_days": 4 },
+    { "name": "SASOM", "url": "https://www.facebook.com/SASOMALERT", "group": "media", "every_days": 4 },
+
+    { "name": "Pokémon Trainers Thailand", "url": "https://www.facebook.com/PokemonTCGTH", "group": "official", "every_days": 3 },
+    { "name": "One Piece Card Game Asia", "url": "https://www.facebook.com/onepiececardgameasia", "group": "official", "every_days": 3 },
+    { "name": "Bandai Card Games Fans TH", "url": "https://www.facebook.com/thaicarddassclub", "group": "official", "every_days": 3 },
+    { "name": "Bandai Card Games for Asia", "url": "https://www.facebook.com/Bandai.Card.Games.Asia", "group": "official", "every_days": 5 },
+    { "name": "DBS Card Game Fusion World for Asia", "url": "https://www.facebook.com/DBSCGFW.asia", "group": "official", "every_days": 5 },
+    { "name": "Yu-Gi-Oh! Asia", "url": "https://www.facebook.com/OfficialYuGiOhAsia", "group": "official", "every_days": 5 },
+    { "name": "NARUTO CARD GAME (Asia)", "url": "https://www.facebook.com/NARUTOTCG.forAsia", "group": "official", "every_days": 7 },
+    { "name": "Pokémon Thailand", "url": "https://www.facebook.com/PokemonThailand", "group": "official", "every_days": 5 }
+  ],
+
+  "instagram": [
+    { "name": "BLACK CARD TCG", "user": "blackcard.tcg", "group": "competitor", "every_days": 3 },
+    { "name": "Sanctuary Gallery", "user": "sanctuarygalleryth", "group": "competitor", "every_days": 3 },
+    { "name": "Pokémon TCG", "user": "pokemontcg", "group": "official", "every_days": 4 },
+    { "name": "ONE PIECE CARD GAME English", "user": "onepiecetcg_en", "group": "official", "every_days": 4 },
+    { "name": "ポケモン公式", "user": "pokemon_jpn", "group": "official", "every_days": 5 },
+    { "name": "Yu-Gi-Oh! TCG", "user": "officialyugiohtcg", "group": "official", "every_days": 6 },
+    { "name": "Naruto Card Game English", "user": "narutotcg_en", "group": "official", "every_days": 6 },
+    { "name": "Cardworld BKK", "user": "cardworld.bkk", "group": "shop", "every_days": 4 },
+    { "name": "B2S Thailand", "user": "b2sthailand", "group": "shop", "every_days": 6 },
+    { "name": "SASOM", "user": "sasom_official", "group": "media", "every_days": 5 }
+  ],
+
+  "reddit": [
+    { "name": "r/OnePieceTCG", "sub": "OnePieceTCG", "group": "community", "every_days": 1 },
+    { "name": "r/OnePieceTCGFinance", "sub": "OnePieceTCGFinance", "group": "community", "every_days": 2 },
+    { "name": "r/PokemonTCG", "sub": "PokemonTCG", "group": "community", "every_days": 1 },
+    { "name": "r/PokeInvesting", "sub": "PokeInvesting", "group": "community", "every_days": 2 },
+    { "name": "r/PokemonCardValue", "sub": "PokemonCardValue", "group": "community", "every_days": 3 },
+    { "name": "r/pokemoncardcollectors", "sub": "pokemoncardcollectors", "group": "community", "every_days": 3 },
+    { "name": "r/dbsfusionworld", "sub": "dbsfusionworld", "group": "community", "every_days": 3 },
+    { "name": "r/yugioh", "sub": "yugioh", "group": "community", "every_days": 4 },
+    { "name": "r/KayouNarutoCards", "sub": "KayouNarutoCards", "group": "community", "every_days": 4 }
+  ]
+}

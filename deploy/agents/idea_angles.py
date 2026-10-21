@@ -135,7 +135,18 @@ LANE_NOTE = {
                  "ที่คลิปนั้นตอบ มาทำเป็นโพสต์ของเราเองจากข้อมูลของเรา"),
     "tiktok":   ("ที่มา = กระแสคลิปสั้น — ห้ามลอกมุก/บท ให้เอาเฉพาะ 'ความอยากรู้' ของคนดูมาตอบในแบบของเรา"),
     "internal": ("ที่มา = ข้อมูลขายจริงของเรา (จุดแข็งที่คู่แข่งไม่มี) — เล่าเชิงคุณภาพ ห้ามเปิดเผยยอดขายดิบ"),
+    # ไม่ใช่ source จริง — social_watch.py ใส่ source 'manual' + subtype social_* (ดู lane_of)
+    "social":   ("ที่มา = โพสต์ของเพจอื่น (คู่แข่ง/ร้าน/เพจทางการ/ชุมชน) ที่คนตอบรับแรงกว่าปกติของเพจนั้น — "
+                 "ให้ถอด 'รูปแบบ' (ฮุคเปิด · ชนิดโพสต์ · เรื่องที่เล่า) มาทำในแบบของเราจากสินค้า/ตู้จริง "
+                 "ห้ามลอกข้อความ/ภาพ/มุก ห้ามเอ่ยชื่อเพจหรือร้านนั้นในโพสต์ ห้ามเอาตัวเลขยอดไลก์/วิวของเขามาใส่"),
 }
+
+
+def lane_of(idea):
+    """เลนสำหรับกติกา — ไอเดียจากตัวเฝ้าโซเชียลเก็บเป็น source 'manual' จึงต้องดู subtype ด้วย"""
+    if str(idea.get("subtype") or "").startswith("social_"):
+        return "social"
+    return idea.get("source") or ""
 
 
 def build_prompt(voice, idea, formats, patterns=None):
@@ -157,7 +168,7 @@ def build_prompt(voice, idea, formats, patterns=None):
         parts.append(f"แหล่งที่มา: {idea['source']}" + (f" ({idea['source_label']})" if idea.get("source_label") else ""))
     if idea.get("relevance"):
         parts.append(f"ทำไมเกี่ยวกับเรา: {idea['relevance']}")
-    note = LANE_NOTE.get(idea.get("source") or "")
+    note = LANE_NOTE.get(lane_of(idea))
     if note:
         parts += ["", f"⚠️ {note}"]
 
@@ -255,10 +266,11 @@ def classify(code, detail):
     return "fatal"              # key ผิด/prompt ผิด → ยิงซ้ำก็เหมือนเดิม
 
 
-def ask_gemini(prompt, model):
+def ask_gemini(prompt, model, temperature=0.95, max_tokens=2048):
+    # ค่าตั้งต้น = ของตัวคิดมุม · social_insight.py ขอ temperature ต่ำกว่า + ที่เขียนยาวกว่า (สรุปบทเรียนหลายข้อ)
     body = {
         "contents": [{"role": "user", "parts": [{"text": prompt}]}],
-        "generationConfig": {"temperature": 0.95, "maxOutputTokens": 2048},
+        "generationConfig": {"temperature": temperature, "maxOutputTokens": max_tokens},
     }
     spike = minute = 0          # นับแยกกัน — คนละอาการ คนละจังหวะรอ
     while True:
@@ -353,14 +365,14 @@ class Router:
             return f"ollama:{os.environ.get('OLLAMA_MODEL') or self.voice.get('ollama_model') or 'qwen2.5:14b'}"
         return self.chain[self.i]
 
-    def ask(self, prompt):
+    def ask(self, prompt, **gen):
         if self.on_ollama:
             return ask_ollama(prompt, self.voice)
         last = None
         i = self.i
         while i < len(self.chain):
             try:
-                return ask_gemini(prompt, self.chain[i])
+                return ask_gemini(prompt, self.chain[i], **gen)
             except SwitchModel as e:
                 last = e
                 if e.permanent:
@@ -415,7 +427,7 @@ def main():
     formats = voice.get("content_formats") or []
     model = os.environ.get("GEMINI_MODEL") or voice.get("gemini_model") or "gemini-flash-latest"
 
-    sel = "id,title,summary,source,source_label,relevance,related_sku,angle,angles"
+    sel = "id,title,summary,source,subtype,source_label,relevance,related_sku,angle,angles"
     try:
         if args.id:
             rows = sb("GET", f"marketing_ideas?id=eq.{args.id}&select={sel}")
