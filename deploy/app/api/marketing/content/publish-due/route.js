@@ -11,7 +11,7 @@
 import { createClient } from "@supabase/supabase-js"
 import { NextResponse } from "next/server"
 import { fbConfig } from "../../../../../lib/facebook"
-import { publishOne, PUBLISHABLE, PLATFORM_LABEL } from "../../../../../lib/publishContent"
+import { publishOne, PUBLISHABLE, PLATFORM_LABEL, CLAIM_PREFIX, CLAIM_STALE_MIN } from "../../../../../lib/publishContent"
 
 const db = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -84,21 +84,37 @@ export async function POST(req) {
     scheduled_at: r.scheduled_at,
   }))
 
+  // ── การจองที่ค้าง (ดู lib/publishContent.js → claimForPublish) ──
+  // ทางที่จองตายกลางทาง (รอ Facebook จนหมดเวลา) — ไม่รู้ว่าขึ้นเพจไปแล้วหรือยัง ระบบห้ามเดาเอง
+  // รายงานเป็น "ล้ม" ทุกรอบจนคนแก้ บอทจะเตือนเข้าห้อง (ข้อความซ้ำไม่เกินชั่วโมงละครั้งตามกติกาของบอท)
+  const staleBefore = new Date(Date.now() - CLAIM_STALE_MIN * 60000).toISOString()
+  const { data: claims } = await db.from(TABLE).select("id,post_id,scheduled_at")
+    .like("post_id", `${CLAIM_PREFIX}%`)
+  const stale = (claims || [])
+    .filter(r => r.post_id.slice(CLAIM_PREFIX.length) < staleBefore)
+    .map(r => ({
+      id: r.id, scheduled_at: r.scheduled_at, ok: false, post_url: null, needsManualFix: false,
+      error: "ค้างกลางทางตอนโพสต์ — ดูบนเพจว่าขึ้นไหม แล้วแจ้งให้แก้ post_id ในฐานข้อมูล",
+    }))
+
   // ⚠ ต้องคืน "รูปเดียวกัน" กับตอนมีของถึงคิว — ครบทุก field รวมทั้ง failed
   // เคยพลาดมาแล้ว: ทางนี้เคยคืนแค่ posted แล้ว workflow ที่มองหา "failed":0
   // หาไม่เจอ จึงเตือนว่ามีชิ้นโพสต์ไม่สำเร็จทั้งที่ไม่มีอะไรล้มเลย
   // คำตอบที่รูปไม่คงที่ = คนอ่านผลผิด ต่อให้ตัวเลขทุกตัวถูก
   if (!due?.length) {
     return NextResponse.json({
-      ok: true, checked_at: nowIso, dryRun, due: 0, posted: 0, failed: 0, results: [],
-      waiting_unsupported: waiting.length, waiting,
+      ok: true, checked_at: nowIso, dryRun, due: 0, posted: 0, failed: stale.length, skipped: [],
+      results: stale, waiting_unsupported: waiting.length, waiting,
     })
   }
 
-  const results = []
+  const results = [...stale]
+  const skipped = []
   for (const item of due) {
     // ยิงทีละชิ้นและไม่หยุดทั้งรอบเมื่อชิ้นใดล้ม — ชิ้นที่เหลือไม่ควรตกคิวเพราะเพื่อนพัง
     const r = await publishOne(db, item, { dryRun, requireSchedule: true })
+    // อีกทางจองไปแล้ว = ไม่ใช่ความล้มเหลว · ห้ามนับเป็น failed ไม่งั้นบอทเตือนผิดทุกครั้งที่สองทางชนกัน
+    if (r.skipped) { skipped.push(item.id); continue }
     results.push({
       id: item.id,
       scheduled_at: item.scheduled_at,
@@ -112,7 +128,7 @@ export async function POST(req) {
   const posted = results.filter(r => r.ok).length
   return NextResponse.json({
     ok: true, checked_at: nowIso, dryRun,
-    due: due.length, posted, failed: results.length - posted,
+    due: due.length, posted, failed: results.length - posted, skipped,
     // ⚠️ ต้องมีทุกคำตอบ ไม่ใช่เฉพาะตอนมีของค้าง — คำตอบที่รูปไม่คงที่ทำให้คนอ่านผิด
     waiting_unsupported: waiting.length, waiting,
     results,

@@ -78,7 +78,33 @@ export function blockReason(item, { requireSchedule = false } = {}) {
   return null
 }
 
+// ── จองก่อนโพสต์ — กันสองทางหยิบชิ้นเดียวกัน ──
+//
+// ⚠️ 22 ต.ค. 2026 (เจ้าของสั่ง ก่อนเริ่มทดสอบตั้งเวลาหลังแอป Meta Live) — ตัวยิง publish-due มี 2 ทาง
+//    (บอทในเครื่อง + GitHub Actions · ทุก 15 นาทีทั้งคู่) และปุ่มกดเองก็เรียกโมดูลนี้
+//    เดิมไม่มีการจอง: สองทางอ่านเจอ post_id ว่างพร้อมกัน → ยิงทั้งคู่ → เพจขึ้นโพสต์ซ้ำ (Facebook ไม่กันให้)
+// จองด้วยการเขียน post_id = "claim:<เวลา>" แบบมีเงื่อนไข (post_id ว่าง + อนุมัติแล้ว) — Postgres ให้สำเร็จแค่ทางเดียว
+// ใช้ post_id ไม่ใช่ status เพราะ "posted + post_id ว่าง" เป็นสถานะปกติของชิ้นที่คนโพสต์มือแล้วกด "โพสต์แล้ว"
+// และ post_id ไม่ว่าง = ทุกด่านเดิมถือว่าโพสต์แล้วอยู่แล้ว (คิว publish-due · blockReason ข้อ 1 · คิวของ Hermes)
+export const CLAIM_PREFIX = "claim:"
+export const CLAIM_STALE_MIN = 10       // จองค้างนานกว่านี้ = ทางที่จองตายกลางทาง ต้องมีคนดู
+
+export async function claimForPublish(db, id) {
+  const mark = CLAIM_PREFIX + new Date().toISOString()
+  const { data, error } = await db.from(TABLE).update({ post_id: mark })
+    .eq("id", id).is("post_id", null).in("status", ["approved", "scheduled"])
+    .select("id")
+  if (error) return { error: `จองชิ้นนี้ก่อนโพสต์ไม่สำเร็จ (${error.message})` }
+  return data?.length ? { mark } : { taken: true }
+}
+
+// คืนการจอง — ใช้เฉพาะตอนแน่ใจว่ายังไม่ขึ้นเพจ (เงื่อนไข post_id = การจองของเราเอง กันไปลบของทางอื่น)
+export async function releaseClaim(db, id, mark) {
+  await db.from(TABLE).update({ post_id: null }).eq("id", id).eq("post_id", mark)
+}
+
 // โพสต์จริง + บันทึกผลลง DB · คืน { ok, post_id, post_url } หรือ { error, status, ... }
+// skipped = อีกทางจองชิ้นนี้ไปแล้ว (ไม่ใช่ความล้มเหลว — ผู้เรียกไม่ควรนับเป็นล้ม)
 // dryRun = อัปรูปขึ้น Facebook แต่ไม่เผยแพร่ ไม่แตะ DB
 export async function publishOne(db, item, { dryRun = false, requireSchedule = false } = {}) {
   const blocked = blockReason(item, { requireSchedule })
@@ -88,6 +114,17 @@ export async function publishOne(db, item, { dryRun = false, requireSchedule = f
   // ทางเขียน/แก้แคปชั่นเติมให้แล้วก็จริง แต่ตรงนี้คือจุดเดียวที่ทุกโพสต์ต้องผ่าน (ดู lib/brandTag.js)
   const caption = ensureBrandTag(item.caption, platformOf(item))
 
+  let mark = null
+  if (!dryRun) {
+    const c = await claimForPublish(db, item.id)
+    if (c.error) return { error: c.error, status: 500 }
+    if (c.taken) {
+      return { skipped: true, status: 409,
+               error: "มีอีกทางกำลังโพสต์ชิ้นนี้อยู่ หรือโพสต์ไปแล้ว — ข้ามเพื่อกันโพสต์ซ้ำ" }
+    }
+    mark = c.mark
+  }
+
   let result
   try {
     result = await publishToPage({
@@ -96,6 +133,17 @@ export async function publishOne(db, item, { dryRun = false, requireSchedule = f
       publish: !dryRun,
     })
   } catch (err) {
+    if (mark) {
+      // Facebook ตอบ error กลับมา = ยังไม่ขึ้นเพจแน่ → คืนการจอง รอบหน้าลองใหม่ได้เหมือนเดิม
+      // ไม่มีคำตอบ (หมดเวลา/เน็ตหลุด) = ไม่รู้ว่าขึ้นไปแล้วหรือยัง → คงการจองไว้ ห้ามยิงซ้ำเอง
+      //   publish-due จะรายงานเป็นของค้างหลัง CLAIM_STALE_MIN นาที ให้คนดูบนเพจก่อน
+      if (err.status != null) {
+        await releaseClaim(db, item.id, mark)
+      } else {
+        return { error: `ไม่แน่ใจว่าขึ้นเพจหรือยัง — ดูบนเพจก่อน อย่าสั่งโพสต์ซ้ำ (${err.message})`,
+                 status: 504 }
+      }
+    }
     return { error: err.message, fbCode: err.fbCode, status: err.status || 502 }
   }
 
