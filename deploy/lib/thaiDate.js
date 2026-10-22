@@ -66,9 +66,20 @@ export function shiftMonth(month, by) {
   return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`
 }
 
-/** เวลาที่จะเก็บลง scheduled_at เมื่อคนเลือก "วัน" จากปฏิทิน
- *  ตรึงไว้ 10:00 น. ไทย — ปฏิทินสนใจแค่วัน แต่คอลัมน์เป็น timestamptz
- *  ถ้าเก็บเที่ยงคืนไทย (= 17:00 UTC ของวันก่อนหน้า) เวลาเปิดดูใน DB ตรง ๆ จะงงว่าทำไมวันไม่ตรง
+/** วัน + เวลาไทยที่คนเลือกจากปฏิทิน → ค่าที่เก็บลง scheduled_at (UTC)
+ *  เวลาไม่ส่งมา/รูปแบบผิด = 10:00 น. ไทย (ค่าตั้งต้นเดิมตอนปฏิทินยังเลือกได้แค่วัน)
+ *  ⚠️ ห้ามเก็บเที่ยงคืนไทยเป็นค่าตั้งต้น (= 17:00 UTC ของวันก่อนหน้า) เปิดดูใน DB ตรง ๆ จะงงว่าทำไมวันไม่ตรง
  */
-export const scheduleAt = (day) =>
-  day ? new Date(new Date(`${day}T10:00:00Z`).getTime() - TH_OFFSET_MS).toISOString() : null
+export const scheduleAt = (day, time = "10:00") => {
+  if (!day) return null
+  const hhmm = /^([01]\d|2[0-3]):[0-5]\d$/.test(time || "") ? time : "10:00"
+  return new Date(new Date(`${day}T${hhmm}:00Z`).getTime() - TH_OFFSET_MS).toISOString()
+}
+
+/** 'HH:MM' ตามเวลาไทย · ค่าที่ใช้ไม่ได้คืน null */
+export function thaiTime(input) {
+  if (!input) return null
+  const t = input instanceof Date ? input.getTime() : new Date(input).getTime()
+  if (Number.isNaN(t)) return null
+  return new Date(t + TH_OFFSET_MS).toISOString().slice(11, 16)
+}

@@ -10,7 +10,7 @@ import {
   Calendar as CalendarIcon, ChevronLeft, ChevronRight, X, ExternalLink,
   Image as ImageIcon, Check, Clock, Inbox,
 } from "lucide-react"
-import { thaiDay, thaiMonthNow, monthCells, shiftMonth, scheduleAt } from "../../lib/thaiDate"
+import { thaiDay, thaiMonthNow, monthCells, shiftMonth, scheduleAt, thaiTime } from "../../lib/thaiDate"
 
 const TH_MONTH = ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน",
                   "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"]
@@ -25,7 +25,36 @@ const SLOT_LABEL = { morning: "เช้า", evening: "เย็น" }
 const KIND = {
   posted:    { dot: "bg-emerald-500", chip: "bg-emerald-50 text-emerald-800 border-emerald-200", label: "โพสต์แล้ว" },
   auto:      { dot: "bg-violet-500",  chip: "bg-violet-50 text-violet-800 border-violet-200",    label: "โพสต์อัตโนมัติ" },
-  scheduled: { dot: "bg-blue-500",    chip: "bg-blue-50 text-blue-800 border-blue-200",          label: "จองวันไว้ (ยังไม่ยิงเอง)" },
+  scheduled: { dot: "bg-blue-500",    chip: "bg-blue-50 text-blue-800 border-blue-200",          label: "จองเวลาไว้ (ยังไม่ยิงเอง)" },
+}
+
+// โพสต์ติดกันใกล้กว่านี้คนตามอ่านไม่ทัน ดูเหมือนสแปม — ตัวเลขเดียวกับที่ Hermes ใช้ (dvx_data.MIN_GAP_MINUTES)
+const MIN_GAP_MIN = 45
+const DEFAULT_TIME = "10:00"
+
+// เวลาของชิ้นในปฏิทิน (ไทย) — ขึ้นเพจแล้วใช้เวลาที่ขึ้นจริง ยังไม่ขึ้นใช้เวลาที่ตั้งไว้
+const timeOf = (it) => thaiTime(it.kind === "posted" ? it.posted_at : it.scheduled_at)
+
+/** ช่องวัน + เวลา + ปุ่มบันทึก
+ *  ⚠️ 22 ต.ค. 2026 — เดิมเลือกวันแล้วบันทึกทันที (ตรึง 10:00) · ตอนแอป Meta ยังไม่ Live พลาดไม่เสียหาย
+ *     ตอนนี้โพสต์ขึ้นจริงแล้ว เผลอเลือกวันนี้ = ระบบโพสต์ทันทีในรอบถัดไป → ต้องกดบันทึกเองเสมอ */
+function ScheduleForm({ day: day0, time: time0, today, busy, onSave, saveLabel = "บันทึก" }) {
+  const [day, setDay] = useState(day0 || "")
+  const [time, setTime] = useState(time0 || DEFAULT_TIME)
+  return (
+    <div className="flex flex-wrap items-center gap-1.5">
+      <input type="date" value={day} min={today} disabled={busy}
+        onChange={e => setDay(e.target.value)}
+        className="flex-1 min-w-[8.5rem] text-xs border border-gray-200 rounded-lg px-2 py-1.5 text-gray-600 disabled:opacity-50" />
+      <input type="time" value={time} step={300} disabled={busy}
+        onChange={e => setTime(e.target.value)}
+        className="w-[6.5rem] text-xs border border-gray-200 rounded-lg px-2 py-1.5 text-gray-600 disabled:opacity-50" />
+      <button disabled={busy || !day || !time} onClick={() => onSave(day, time)}
+        className="px-2.5 py-1.5 rounded-lg bg-blue-600 text-white text-xs font-medium disabled:opacity-40">
+        {busy ? "กำลังบันทึก…" : saveLabel}
+      </button>
+    </div>
+  )
 }
 
 export default function PostCalendar({ api, onPreview }) {
@@ -46,13 +75,33 @@ export default function PostCalendar({ api, onPreview }) {
 
   useEffect(() => { load(month) }, [load, month])
 
-  /** ปักวัน / ย้ายวัน / เอาวันออก — PATCH เดิมรับ scheduled_at อยู่แล้ว ไม่ต้องมี route ใหม่ */
-  async function setDate(id, day) {
+  /** ปักวันเวลา / ย้าย / เอาออก — PATCH เดิมรับ scheduled_at อยู่แล้ว ไม่ต้องมี route ใหม่
+   *  คืน true เมื่อบันทึกจริง (ผู้เรียกใช้ตัดสินว่าจะปิดหน้าต่างไหม) */
+  async function setDate(id, day, time) {
+    const iso = scheduleAt(day, time)
+    if (iso) {
+      // เวลาที่ผ่านมาแล้ว = ระบบโพสต์ขึ้นเพจในรอบถัดไป (ไม่เกิน 15 นาที) — ให้ยืนยันก่อน ไม่บล็อก
+      // (เจ้าของอาจตั้งใจ "โพสต์เลย" · Hermes ถูกห้ามตั้งย้อนหลังเพราะมันวางแผน ไม่ได้กดเอง)
+      if (new Date(iso) <= new Date() &&
+          !window.confirm(`${day} ${time} น. ผ่านมาแล้ว — ระบบจะโพสต์ขึ้นเพจภายใน 15 นาทีหลังบันทึก\n\nยืนยันไหม`)) {
+        return false
+      }
+      // ใกล้โพสต์อื่นที่วางไว้ในเดือนนี้เกินไป — กติกาเดียวกับ Hermes แต่คนกดเองให้ยืนยันแทนการบล็อก
+      const near = Object.values(days).flat()
+        .filter(o => o.id !== id && o.kind !== "posted" && o.scheduled_at &&
+                     Math.abs(new Date(o.scheduled_at) - new Date(iso)) < MIN_GAP_MIN * 60000)
+      if (near.length && !window.confirm(
+        `ใกล้โพสต์ที่วางไว้แล้วเกินไป (ห่างไม่ถึง ${MIN_GAP_MIN} นาที): ` +
+        near.map(o => `#${o.id} ${timeOf(o)} น.`).join(" · ") + "\n\nยืนยันเวลานี้ไหม")) {
+        return false
+      }
+    }
     setBusyId(id)
     try {
-      await api("content", { method: "PATCH", body: JSON.stringify({ id, scheduled_at: scheduleAt(day) }) })
+      await api("content", { method: "PATCH", body: JSON.stringify({ id, scheduled_at: iso }) })
       await load(month)
-    } catch (e) { setErr(e.message) } finally { setBusyId(null) }
+      return true
+    } catch (e) { setErr(e.message); return false } finally { setBusyId(null) }
   }
 
   const cells = monthCells(month)
@@ -113,7 +162,8 @@ export default function PostCalendar({ api, onPreview }) {
           </div>
           <div className="grid grid-cols-7">
             {cells.map((day, i) => {
-              const items = day ? days[day] || [] : []
+              // เรียงตามเวลาในวัน — พอตั้งเวลาได้ ชิ้นเช้าต้องอยู่บนชิ้นเย็น
+              const items = day ? [...(days[day] || [])].sort((a, b) => (timeOf(a) || "").localeCompare(timeOf(b) || "")) : []
               const isToday = day === today
               return (
                 <div key={i}
@@ -131,7 +181,7 @@ export default function PostCalendar({ api, onPreview }) {
                             title={it.caption?.slice(0, 120)}
                             className={`block w-full text-left px-1.5 py-1 rounded-md border text-[11px]
                                         leading-tight truncate ${KIND[it.kind].chip}`}>
-                            {it.slot ? `${SLOT_LABEL[it.slot]} · ` : ""}
+                            {timeOf(it) ? `${timeOf(it)} · ` : it.slot ? `${SLOT_LABEL[it.slot]} · ` : ""}
                             {(it.caption || "").replace(/\s+/g, " ").slice(0, 40) || `#${it.id}`}
                           </button>
                         ))}
@@ -182,14 +232,11 @@ export default function PostCalendar({ api, onPreview }) {
                   <p className="text-xs text-gray-600 line-clamp-2 mb-1.5">
                     {(it.caption || "").replace(/\s+/g, " ").slice(0, 90)}
                   </p>
-                  {/* ช่อง date ของเบราว์เซอร์โชว์รูปแบบตาม locale เครื่อง (บางเครื่องเป็น mm/dd/yyyy)
+                  {/* ช่อง date/time ของเบราว์เซอร์โชว์รูปแบบตาม locale เครื่อง (บางเครื่องเป็น mm/dd/yyyy)
                       ใส่ป้ายกำกับไว้ ไม่งั้นคนไม่รู้ว่าช่องนี้คืออะไร */}
-                  <label className="block text-[10px] text-gray-400 mb-0.5">เลือกวันที่จะโพสต์</label>
-                  <input type="date" disabled={busyId === it.id}
-                    min={today}
-                    onChange={e => e.target.value && setDate(it.id, e.target.value)}
-                    className="w-full text-xs border border-gray-200 rounded-lg px-2 py-1.5
-                               text-gray-600 disabled:opacity-50" />
+                  <label className="block text-[10px] text-gray-400 mb-0.5">เลือกวันและเวลาที่จะโพสต์ (เวลาไทย)</label>
+                  <ScheduleForm today={today} busy={busyId === it.id} saveLabel="ตั้งเวลา"
+                    onSave={(d, t) => setDate(it.id, d, t)} />
                 </div>
               ))}
             </div>
@@ -254,15 +301,17 @@ export default function PostCalendar({ api, onPreview }) {
                 {/* ⚠ ต้องรับทั้ง scheduled และ auto — ตอนเพิ่ม kind "auto" เกือบทำให้ปุ่มเลื่อน/เอาวันออก
                     หายไปจากชิ้นที่ตั้งเวลาไว้แล้ว ซึ่งเป็นชิ้นที่ต้องแก้วันบ่อยที่สุด */}
                 {(detail.kind === "scheduled" || detail.kind === "auto") && (
-                  <>
-                    <input type="date" defaultValue={thaiDay(detail.scheduled_at)}
-                      onChange={e => e.target.value && setDate(detail.id, e.target.value).then(() => setDetail(null))}
-                      className="text-sm border border-gray-200 rounded-lg px-2 py-1.5 text-gray-600" />
-                    <button onClick={() => setDate(detail.id, null).then(() => setDetail(null))}
+                  <div className="w-full space-y-2">
+                    <label className="block text-[11px] text-gray-400">เลื่อนวันหรือเวลาโพสต์ (เวลาไทย)</label>
+                    <ScheduleForm key={detail.id} today={today} busy={busyId === detail.id}
+                      day={thaiDay(detail.scheduled_at)} time={thaiTime(detail.scheduled_at)}
+                      saveLabel="บันทึกเวลาใหม่"
+                      onSave={(d, t) => setDate(detail.id, d, t).then(ok => ok && setDetail(null))} />
+                    <button onClick={() => setDate(detail.id, null).then(ok => ok && setDetail(null))}
                       className="px-3 py-1.5 rounded-lg bg-gray-100 text-gray-600 text-sm">
-                      เอาวันออก
+                      เอาวันเวลาออก
                     </button>
-                  </>
+                  </div>
                 )}
                 {detail.posted_at && (
                   <span className="flex items-center gap-1.5 text-xs text-gray-400">
