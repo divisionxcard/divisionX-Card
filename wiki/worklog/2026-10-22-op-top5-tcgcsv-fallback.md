@@ -2,7 +2,7 @@
 type: worklog
 date: 2026-10-22
 tags: [top5, one-piece, card2price, tcgcsv, price, fallback]
-commits: []
+commits: [9c7c04c, 3169436]
 status: ✅ 5 ใบเด็ด One Piece สลับไป TCGCSV เองเมื่อ card2price เก่าเกิน 14 วัน
 ---
 
