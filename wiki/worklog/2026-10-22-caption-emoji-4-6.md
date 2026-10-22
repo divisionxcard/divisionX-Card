@@ -2,7 +2,7 @@
 type: worklog
 date: 2026-10-22
 tags: [content, caption, emoji, hermes]
-commits: []
+commits: [2dbfde6]
 status: ✅ กฎอีโมจิ 4–6 ตัว ลงตัวเขียน + ตัวตรวจ Hermes แล้ว · แคปชั่นที่ค้างในคิวไม่เปลี่ยนเอง
 ---
 
