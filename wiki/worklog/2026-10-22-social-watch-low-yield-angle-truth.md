@@ -2,7 +2,7 @@
 type: worklog
 date: 2026-10-22
 tags: [social-watch, opencli, facebook, ideas, angles, truth]
-commits: []
+commits: [32df971]
 status: ✅ แก้แล้วทั้งสองเรื่อง · รอบชดเชยวันนี้ได้ 71 โพสต์ ไอเดียใหม่ 5 ชิ้น · มุมเล่าใหม่ครบ 11 ไอเดีย
 ---
 
