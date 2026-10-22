@@ -84,7 +84,8 @@ def set_names(st):
     return (code.group(1) if code else ""), (name.group(1).strip() if name else (label or ""))
 
 
-# ป้ายหัว + เครดิตรูปของแต่ละค่าย (ชื่อเกมเป็นตัวหนังสือ ไม่ใช่โลโก้ค่าย)
+# ป้ายหัว + ข้อความเครดิตรูปของแต่ละค่าย (ชื่อเกมเป็นตัวหนังสือ ไม่ใช่โลโก้ค่าย)
+# ⚠️ 22 ต.ค. 2026 เจ้าของสั่งเอาเครดิตรูปที่มุมขวาล่างออก — ข้อความชุดที่สองเก็บไว้เผื่อใช้ ไม่ได้ขึ้นภาพแล้ว
 FRANCHISE_TEXT = {
     "OP": ("ONE PIECE CARD GAME", "ภาพการ์ดจากเว็บทางการ ONE PIECE CARD GAME"),
     "PKM": ("POKÉMON CARD GAME", "ภาพการ์ดจากเว็บทางการ Pokémon Card Game (ญี่ปุ่น)"),
@@ -201,7 +202,7 @@ def build_html(top5, bg_uri):
     st = top5.get("set") or {}
     franchise = st.get("franchise") or "OP"          # ไฟล์ก่อน 22 ต.ค. 2026 ไม่มีค่าย = One Piece
     theme, light = theme_css(franchise)
-    eyebrow, credit = FRANCHISE_TEXT.get(franchise, FRANCHISE_TEXT["OP"])
+    eyebrow, _credit = FRANCHISE_TEXT.get(franchise, FRANCHISE_TEXT["OP"])
 
     # พื้นสว่าง (Pokémon · Naruto · MLP) ใช้โลโก้ดำ ไม่งั้นโลโก้ขาวหายไปกับพื้น
     logo_path = pr.ROOT / "public" / ("logo-black.png" if light else "logo-white.png")
@@ -252,7 +253,6 @@ def build_html(top5, bg_uri):
             .replace("{{HEAD}}", head)
             .replace("{{SUB}}", pr.esc(sub))
             .replace("{{CARDS}}", body)
-            .replace("{{CREDIT}}", pr.esc(credit))
             .replace("{{LOGO}}", logo))
 
 

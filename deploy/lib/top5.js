@@ -235,7 +235,8 @@ async function opFromTcgcsv(set, { now, probe, staleAsOf }) {
     picked.push({
       code, baseCode: c.code, variant: tags.length ? tags.join(" · ") : null, ghost: false,
       name: c.name, rarity: c.rarity, rarityLabel: RARITY_TH[c.rarity] || c.rarity,
-      tag: [c.rarity, th || "ใบปกติ"].filter(Boolean).join(" · "),
+      // ป้ายใต้การ์ดเล็กกว้างแค่ ~220px — "SEC · ซูเปอร์พาราเรลแดง" ถูกตัดเป็น "…" (ลองจริง 22 ต.ค.) → พาราเรลโชว์แค่ชื่อเวอร์ชัน
+      tag: th || [c.rarity, "ใบปกติ"].filter(Boolean).join(" · "),
       variantLabel: tags.length ? `เวอร์ชัน${th} (${tags.join(" · ")})` : "ใบปกติ",
       type: c.type || null, color: c.color || null, cost: c.cost ?? null, power: c.power ?? null,
       traits: c.traits || null, ability: shortAbility(c.ability),
