@@ -5,8 +5,8 @@
   "fetched_at": "2026-08-24",
   "lang": "en"
  },
- "_license": "เนื้อหาลิขสิทธิ์ KAYOU และเจ้าของตัวการ์ตูน (Naruto→Pierrot · MLP→Hasbro) ใช้อ้างอิงข้อมูลสินค้าเท่านั้น ห้ามใช้รูปการ์ดจากเว็บทางการเป็นภาพโพสต์ของเรา",
- "_important": "การ์ดสะสม ไม่ใช่เกมการ์ด — ไม่มีกฎการเล่น ห้ามตอบลูกค้าว่าเอาไปเล่นแข่งได้ · KAYOU เป็นผู้ผลิตที่ถือไลเซนส์ ไม่ใช่เจ้าของตัวการ์ตูน (Naruto→Pierrot · My Little Pony→Hasbro) · specs กับอัตราออกการ์ดบนเว็บเป็นของฉบับอเมริกา ซึ่งอาจไม่ตรงกับกล่องฝั่งเอเชียที่เราขาย — อย่าเอาไปแก้ตัวเลขใน DB ต้องดูใบสอดในกล่องจริงก่อน",
+ "_license": "เนื้อหาลิขสิทธิ์ KAYOU และเจ้าของตัวการ์ตูน (Naruto→Pierrot · MLP→Hasbro) ใช้อ้างอิงข้อมูลสินค้า · รูปการ์ดใช้ในโปสเตอร์ 'ส่อง 5 ใบเด็ด' ได้ตามที่เจ้าของเลือก 22 ต.ค. 2026 (ยอมรับความเสี่ยงเอง · เฉพาะการ์ดในชุดที่โพสต์พูดถึง)",
+ "_important": "ส่วนใหญ่เป็นการ์ดสะสม ไม่ใช่เกมการ์ด — ยกเว้นซีรีส์ที่ product_type = Trading Card Game (MLP Booster Pack BP01 · กล่องเขียน CARD GAME) ซึ่งเป็นเกมการ์ด แต่คลังนี้ไม่มีกฎการเล่น · KAYOU เป็นผู้ผลิตที่ถือไลเซนส์ ไม่ใช่เจ้าของตัวการ์ตูน (Naruto→Pierrot · My Little Pony→Hasbro) · specs กับอัตราออกการ์ดบนเว็บเป็นของฉบับอเมริกา ซึ่งอาจไม่ตรงกับกล่องฝั่งเอเชียที่เราขาย — อย่าเอาไปแก้ตัวเลขใน DB ต้องดูใบสอดในกล่องจริงก่อน",
  "_fields": {
   "code": "รหัสการ์ดทางการ เช่น NRSA02-R-050L1 — ใช้เป็นตัวอ้างอิงหลัก",
   "sheet_no": "เลขใบย่อยของภาพชุดเดียวกัน เช่น 5/5 (ไม่ใช่เลขในชุด)",
@@ -15,7 +15,7 @@
   "editions": "กล่องแต่ละเวอร์ชัน — อัตราออกการ์ดไม่เท่ากัน ต้องระบุว่าพูดถึงเวอร์ชันไหน",
   "pull_rates": "อัตราออกการ์ดต่อซองจากเว็บทางการ (ฉบับอเมริกา)"
  },
- "_todo_mapping": "ยังไม่ได้ผูกกับ sku_id ของเรา — รหัสของ KAYOU (NRSA01/NRI01) ไม่ตรงกับ set_code ที่เราตั้งเอง (JIN01/SERIES01) ต้องให้คนเทียบกล่องจริงก่อน อย่าเดา",
+ "_mapping": "ซีรีส์ที่มี our_set_code = อยู่ในตู้เรา (เทียบรูปกล่องจริง 22 ต.ค. 2026 · ดู OUR_SETS ใน kayou_kb.py) · match_confidence medium = ยังควรเทียบใบสอดในกล่องจริงอีกที · skus.set_code ไม่ได้แก้ (เจ้าของสั่ง 24 ส.ค.)",
  "_stats": {
   "series": 24,
   "cards": 2953,
@@ -143,6 +143,10 @@
      ]
     }
    ],
+   "our_set_code": "BP01",
+   "our_sku_id": "MLP BP-01",
+   "match_confidence": "high",
+   "match_evidence": "กล่องเขียน MY LITTLE PONY CARD GAME · Fantasy Wonderland · Booster Pack 01",
    "cards": [
     {
      "code": "BP01-CR12",
@@ -9620,6 +9624,10 @@
      "pull_rates": []
     }
    ],
+   "our_set_code": "SEA02",
+   "our_sku_id": "MLP SEA02",
+   "match_confidence": "high",
+   "match_evidence": "กล่องเขียน Fun Moments Edition · Friendship Eternal Cards · 02 SERIES · SILVER",
    "cards": [
     {
      "code": "FME02-N-020L1",
@@ -22483,6 +22491,10 @@
      ]
     }
    ],
+   "our_set_code": "JIN01",
+   "our_sku_id": "NRT Jin - 1",
+   "match_confidence": "medium",
+   "match_evidence": "กล่องเขียน JIN Chapter · Smriti · Series 1 — เว็บอเมริกาเรียกชุดนี้ว่า Heaven Scroll แต่รหัส NRSA เดียวกับ Chapter Jin 2/3 และเป็นชุดแรกของไลน์",
    "cards": [
     {
      "code": "NRSA01-R-050L1",
@@ -24050,6 +24062,10 @@
      "pull_rates": []
     }
    ],
+   "our_set_code": "SERIES02",
+   "our_sku_id": "NRT Series - 02",
+   "match_confidence": "high",
+   "match_evidence": "กล่องเขียน EARTH SCROLL · Smriti · 02 SERIES · SILVER · Awaken, the Fifth Hokage",
    "cards": [
     {
      "code": "NREA02-R-050L1",
@@ -27609,6 +27625,10 @@
      ]
     }
    ],
+   "our_set_code": "JIN02",
+   "our_sku_id": "NRT Jin - 2",
+   "match_confidence": "high",
+   "match_evidence": "กล่องเขียน JIN Chapter · Smriti · 02 SERIES · PLATINUM",
    "cards": [
     {
      "code": "NRSA02-R-050L1",
@@ -29435,6 +29455,10 @@
      ]
     }
    ],
+   "our_set_code": "SERIES01",
+   "our_sku_id": "NRT Series - 01",
+   "match_confidence": "high",
+   "match_evidence": "กล่องเขียน EARTH SCROLL · Smriti · 01 SERIES · SILVER · Chunin Exams Hidden Leaf Village Falls!",
    "cards": [
     {
      "code": "NRI01-R-050L1",

@@ -1,0 +1,2641 @@
+{
+ "_source": {
+  "name": "KAYOU regional sites (Shopify) - SEA releases that are not on www.kayouofficial.com",
+  "url": "https://id.kayouofficial.com/en/pages/new-releases",
+  "fetched_at": "2026-10-22",
+  "lang": "en",
+  "method": "No JSON API on these sites (Shopify products.json is empty; pages are image-only). MLBB: names/codes read from the 177 official card images on the page. TF: names/codes read from the official infographic image."
+ },
+ "_why": "22 ต.ค. 2026 เจ้าของสั่งเติมข้อมูลให้ครบทุกค่ายที่ขายในตู้ · สองไลน์นี้ไม่มีบน www.kayouofficial.com (ตัวดึง kayou_kb.py ใช้ไม่ได้) แต่มีบนเว็บ KAYOU ฝั่งเอเชีย id./th.kayouofficial.com เป็นหน้ารูปล้วน → ชื่อ/รหัส/ระดับความหายาก อ่านจากภาพทางการด้วยตา · ทุกข้อเท็จจริงที่มาจากร้านค้าหรือชุมชนกำกับไว้ในฟิลด์ของมันเอง",
+ "_license": "เนื้อหาลิขสิทธิ์ KAYOU และเจ้าของ IP (Transformers→Hasbro · MLBB→Moonton) ใช้อ้างอิงข้อมูลสินค้า · รูปการ์ดใช้ในโปสเตอร์ 'ส่อง 5 ใบเด็ด' ได้ตามที่เจ้าของเลือก 22 ต.ค. 2026 (TF ไม่มีรูปรายใบ มีแต่ภาพตารางรวม)",
+ "_important": "Collectible cards, not a playable game. Names were read off card images by eye and are spelled as printed (MLBB 'Natan'; TF 'Genvo', 'Shredhead'). Our set_codes OVD01 / HOD02 are internal; the official card-code prefixes are TFEU01 / MLHD02. Which TF edition (001A or 001B) is in our machines is unknown: check the model code on the box.",
+ "_fields": {
+  "code": "official card code as printed; code_verified=false means inferred",
+  "rarity_full": "official tier label from the TF sheet (MLBB has none officially)",
+  "playing_card": "MLBB R cards are printed as a playing-card deck",
+  "official_file_group": "group code taken from the official image file name (meaning not stated)"
+ },
+ "series": [
+  {
+   "series_id": "sea-tf-overdrive-001a / sea-tf-overdrive-001b",
+   "ip_name": "Transformers",
+   "title": "Transformers-Energy Critical Premium Cards-Overdrive Edition-001A-SEA / -001B-SEA",
+   "product_type": "Premium Cards (collectible)",
+   "code_prefix": "TFEU01",
+   "card_count_named_on_card": 104,
+   "card_count_total": {
+    "001A": 238,
+    "001B": 239
+   },
+   "rarity_tiers": [
+    {
+     "name": "Prize Redemption Card",
+     "full": "Prize Redemption Card",
+     "count": 1,
+     "code_pattern": "001B only",
+     "official_pull_rate": "1:324.00 (001B only)"
+    },
+    {
+     "name": "XR☆",
+     "full": "Crimson Glory Cards",
+     "count": 9,
+     "code_pattern": "TFEU01-XR☆-001..009",
+     "official_pull_rate": "1:1620.00"
+    },
+    {
+     "name": "XR",
+     "full": "Glory Cards",
+     "count": 9,
+     "code_pattern": "TFEU01-XR-001..009",
+     "official_pull_rate": "1:108.00"
+    },
+    {
+     "name": "OR☆",
+     "full": "Assemble Cards☆",
+     "count": 8,
+     "code_pattern": "TFEU01-OR☆-001..007 and -008-B (as printed)",
+     "official_pull_rate": "1:648.00"
+    },
+    {
+     "name": "OR",
+     "full": null,
+     "count": 8,
+     "code_pattern": null,
+     "official_pull_rate": "1:36.00",
+     "full_note": "แผ่นทางการไม่ได้แยกชื่อระดับนี้ · ร้านค้าเรียก 'Assemble Cards (Overseas Exclusive)'"
+    },
+    {
+     "name": "WR",
+     "full": "Battle Cards",
+     "count": 6,
+     "code_pattern": "TFEU01-WR-00n",
+     "official_pull_rate": "1:27.00"
+    },
+    {
+     "name": "LR☆",
+     "full": "Hero Cards☆",
+     "count": 12,
+     "code_pattern": "TFEU01-LR☆-001..012",
+     "official_pull_rate": "1:254.79"
+    },
+    {
+     "name": "LR",
+     "full": "Hero Cards",
+     "count": 12,
+     "code_pattern": "TFEU01-LR-001..012",
+     "official_pull_rate": "1:7.20"
+    },
+    {
+     "name": "UR☆",
+     "full": "Cover Variant Cards",
+     "count": 28,
+     "code_pattern": "TFEU01-UR☆-nnn",
+     "official_pull_rate": "1:3.00"
+    },
+    {
+     "name": "AR",
+     "full": "Portrait Cards",
+     "count": 31,
+     "code_pattern": "TFEU01-AR-nnn",
+     "official_pull_rate": "1:2.25"
+    },
+    {
+     "name": "UR",
+     "full": "Cover Variant Cards",
+     "count": 28,
+     "code_pattern": "TFEU01-UR-nnn",
+     "official_pull_rate": "Guaranteed 1 card per pack"
+    },
+    {
+     "name": "HR",
+     "full": "3D Faction Cards",
+     "count": 31,
+     "code_pattern": "TFEU01-HR-nnn",
+     "official_pull_rate": "Guaranteed 2 card per pack"
+    },
+    {
+     "name": "SSR",
+     "full": "Comics Breakthrough Cards",
+     "count": 20,
+     "code_pattern": "TFEU01-SSR-nnn",
+     "official_pull_rate": "Guaranteed 2 card per pack"
+    },
+    {
+     "name": "SR",
+     "full": "Montage Cards",
+     "count": 36,
+     "code_pattern": "TFEU01-SR-nnn",
+     "official_pull_rate": "Guaranteed 4 cards per pack"
+    }
+   ],
+   "rarity_order_note": "Tier order above = the official count-table order. Ordering by the official pull-rate column instead gives XR☆ 1:1620 > OR☆ 1:648 > Prize 1:324 (001B) > LR☆ 1:254.79 > XR 1:108 > OR 1:36 > WR 1:27 > LR 1:7.2 > UR☆ 1:3 > AR 1:2.25 > the 'guaranteed' tiers.",
+   "editions": [
+    {
+     "label": "001A-SEA",
+     "specs": {
+      "Product Name": "Transformers-Energy Critical Premium Cards-Overdrive Edition-001A-SEA",
+      "Product Model": "TFM-KP-NLLJ-GZ-001A-SEA",
+      "Specifications": "5 cards/pack; 10 packs/box; 36 boxes/carton",
+      "Package Size": "68×4×125mm",
+      "Release Date": "2025.11",
+      "Total": "238 types of cards divided into 13 rarities"
+     },
+     "pull_rates": [
+      {
+       "per_pack": "5:10",
+       "detail": "1HR+2SR+1SSR+1AR/LR/LR☆/WR/OR/OR☆/XR/XR☆"
+      },
+      {
+       "per_pack": "5:10",
+       "detail": "1HR+2SR+1SSR+1UR/UR☆"
+      }
+     ],
+     "source": "https://id.kayouofficial.com/en/pages/sea-tf-overdrive-001a",
+     "sheet_image": "https://id.kayouofficial.com/cdn/shop/files/SEA-TF-overdrive-001A.jpg?v=1767929800"
+    },
+    {
+     "label": "001B-SEA",
+     "specs": {
+      "Product Name": "Transformers-Energy Critical Premium Cards-Overdrive Edition-001B-SEA",
+      "Product Model": "TFM-KP-NLLJ-GZ-001B-SEA",
+      "Specifications": "5 cards/pack; 10 packs/box; 36 boxes/carton",
+      "Package Size": "68×4×125mm",
+      "Release Date": "2025.11",
+      "Total": "239 types of cards divided into 14 rarities"
+     },
+     "pull_rates": [
+      {
+       "per_pack": "5:10",
+       "detail": "1HR+2SR+1SSR+1AR/LR/LR☆/WR/OR/OR☆/XR/XR☆/PRIZE REDEMPTION CARD"
+      },
+      {
+       "per_pack": "5:10",
+       "detail": "1HR+2SR+1SSR+1UR/UR☆"
+      }
+     ],
+     "source": "https://id.kayouofficial.com/en/pages/sea-tf-overdrive-001b",
+     "sheet_image": "https://id.kayouofficial.com/cdn/shop/files/SEA-TF-overdrive-001B.jpg?v=1767929801"
+    }
+   ],
+   "pull_rate_caveat": "Verbatim from the official sheet, which contradicts itself: the pack-composition row says 1HR+2SR+1SSR+1 hit per pack, but the pull-rate column says SR 'Guaranteed 4 cards per pack' and SSR/HR 'Guaranteed 2 card per pack'. Do not quote these as per-pack guarantees. '5:10' is printed as 'production ratio' and is not explained.",
+   "packs_per_box_values": {
+    "official sheet (001A and 001B)": 10,
+    "shops crossingxclub / kingcard.ca": 10,
+    "DivisionX scraper PACKS_PER_BOX map": 15
+   },
+   "serial_numbering_shop_only": {
+    "XR☆": "Serialized No.1-99",
+    "OR☆": "Serialized No.1-380",
+    "LR☆": "Average Serialized No.1-499",
+    "source": "crossingxclub.myshopify.com and kingcard.ca (shops); not shown on the official sheet"
+   },
+   "unnamed_tiers_note": "OR☆, OR, WR, UR☆, UR, SSR and SR cards print no character name on the card face; no per-card list was built for them.",
+   "sources": {
+    "official": [
+     "https://id.kayouofficial.com/en/pages/sea-tf-overdrive-001a",
+     "https://id.kayouofficial.com/en/pages/sea-tf-overdrive-001b",
+     "https://th.kayouofficial.com/en/pages/sea-tf-overdrive-001a",
+     "https://th.kayouofficial.com/en/pages/sea-tf-overdrive-001b",
+     "https://id.kayouofficial.com/en/pages/new-releases-detail-trans"
+    ],
+    "shop": [
+     "https://crossingxclub.myshopify.com/products/kayou-transformers-energy-critical-premium-cards-overdrive-edition-sea",
+     "https://kingcard.ca/products/transformers-energy-critical-premium-cards-overdrive-edition-series-1"
+    ]
+   },
+   "our_set_code": "OVD01",
+   "our_sku_id": "TF Overdrive 01",
+   "franchise": "TF",
+   "cards": [
+    {
+     "code": "TFEU01-XR☆-001",
+     "name": "Bumblebee",
+     "rarity": "XR☆",
+     "rarity_full": "Crimson Glory Cards",
+     "code_verified": true,
+     "sort": 1
+    },
+    {
+     "code": "TFEU01-XR☆-002",
+     "name": "Starscream",
+     "rarity": "XR☆",
+     "rarity_full": "Crimson Glory Cards",
+     "code_verified": true,
+     "sort": 2
+    },
+    {
+     "code": "TFEU01-XR☆-003",
+     "name": "Optimus Prime",
+     "rarity": "XR☆",
+     "rarity_full": "Crimson Glory Cards",
+     "code_verified": true,
+     "sort": 3
+    },
+    {
+     "code": "TFEU01-XR☆-004",
+     "name": "Soundwave",
+     "rarity": "XR☆",
+     "rarity_full": "Crimson Glory Cards",
+     "code_verified": true,
+     "sort": 4
+    },
+    {
+     "code": "TFEU01-XR☆-005",
+     "name": "Devastator",
+     "rarity": "XR☆",
+     "rarity_full": "Crimson Glory Cards",
+     "code_verified": true,
+     "sort": 5
+    },
+    {
+     "code": "TFEU01-XR☆-006",
+     "name": "Shockwave",
+     "rarity": "XR☆",
+     "rarity_full": "Crimson Glory Cards",
+     "code_verified": true,
+     "sort": 6
+    },
+    {
+     "code": "TFEU01-XR☆-007",
+     "name": "Megatron",
+     "rarity": "XR☆",
+     "rarity_full": "Crimson Glory Cards",
+     "code_verified": true,
+     "sort": 7
+    },
+    {
+     "code": "TFEU01-XR☆-008",
+     "name": "Ultra Magnus",
+     "rarity": "XR☆",
+     "rarity_full": "Crimson Glory Cards",
+     "code_verified": true,
+     "sort": 8
+    },
+    {
+     "code": "TFEU01-XR☆-009",
+     "name": "Arcee",
+     "rarity": "XR☆",
+     "rarity_full": "Crimson Glory Cards",
+     "code_verified": true,
+     "sort": 9
+    },
+    {
+     "code": "TFEU01-XR-001",
+     "name": "Bumblebee",
+     "rarity": "XR",
+     "rarity_full": "Glory Cards",
+     "code_verified": true,
+     "sort": 10
+    },
+    {
+     "code": "TFEU01-XR-002",
+     "name": "Starscream",
+     "rarity": "XR",
+     "rarity_full": "Glory Cards",
+     "code_verified": true,
+     "sort": 11
+    },
+    {
+     "code": "TFEU01-XR-003",
+     "name": "Optimus Prime",
+     "rarity": "XR",
+     "rarity_full": "Glory Cards",
+     "code_verified": true,
+     "sort": 12
+    },
+    {
+     "code": "TFEU01-XR-004",
+     "name": "Soundwave",
+     "rarity": "XR",
+     "rarity_full": "Glory Cards",
+     "code_verified": true,
+     "sort": 13
+    },
+    {
+     "code": "TFEU01-XR-005",
+     "name": "Devastator",
+     "rarity": "XR",
+     "rarity_full": "Glory Cards",
+     "code_verified": true,
+     "sort": 14
+    },
+    {
+     "code": "TFEU01-XR-006",
+     "name": "Shockwave",
+     "rarity": "XR",
+     "rarity_full": "Glory Cards",
+     "code_verified": true,
+     "sort": 15
+    },
+    {
+     "code": "TFEU01-XR-007",
+     "name": "Megatron",
+     "rarity": "XR",
+     "rarity_full": "Glory Cards",
+     "code_verified": true,
+     "sort": 16
+    },
+    {
+     "code": "TFEU01-XR-008",
+     "name": "Ultra Magnus",
+     "rarity": "XR",
+     "rarity_full": "Glory Cards",
+     "code_verified": true,
+     "sort": 17
+    },
+    {
+     "code": "TFEU01-XR-009",
+     "name": "Arcee",
+     "rarity": "XR",
+     "rarity_full": "Glory Cards",
+     "code_verified": true,
+     "sort": 18
+    },
+    {
+     "code": "TFEU01-LR☆-001",
+     "name": "Optimus Prime",
+     "rarity": "LR☆",
+     "rarity_full": "Hero Cards☆",
+     "code_verified": true,
+     "sort": 19
+    },
+    {
+     "code": "TFEU01-LR☆-002",
+     "name": "Starscream",
+     "rarity": "LR☆",
+     "rarity_full": "Hero Cards☆",
+     "code_verified": true,
+     "sort": 20
+    },
+    {
+     "code": "TFEU01-LR☆-003",
+     "name": "Soundwave",
+     "rarity": "LR☆",
+     "rarity_full": "Hero Cards☆",
+     "code_verified": true,
+     "sort": 21
+    },
+    {
+     "code": "TFEU01-LR☆-004",
+     "name": "Arcee",
+     "rarity": "LR☆",
+     "rarity_full": "Hero Cards☆",
+     "code_verified": true,
+     "sort": 22
+    },
+    {
+     "code": "TFEU01-LR☆-005",
+     "name": "Cliffjumper",
+     "rarity": "LR☆",
+     "rarity_full": "Hero Cards☆",
+     "code_verified": true,
+     "sort": 23
+    },
+    {
+     "code": "TFEU01-LR☆-006",
+     "name": "Optimus Prime",
+     "rarity": "LR☆",
+     "rarity_full": "Hero Cards☆",
+     "code_verified": true,
+     "sort": 24
+    },
+    {
+     "code": "TFEU01-LR☆-007",
+     "name": "Soundwave",
+     "rarity": "LR☆",
+     "rarity_full": "Hero Cards☆",
+     "code_verified": true,
+     "sort": 25
+    },
+    {
+     "code": "TFEU01-LR☆-008",
+     "name": "Optimus Prime",
+     "rarity": "LR☆",
+     "rarity_full": "Hero Cards☆",
+     "code_verified": true,
+     "sort": 26
+    },
+    {
+     "code": "TFEU01-LR☆-009",
+     "name": "Megatron",
+     "rarity": "LR☆",
+     "rarity_full": "Hero Cards☆",
+     "code_verified": true,
+     "sort": 27
+    },
+    {
+     "code": "TFEU01-LR☆-010",
+     "name": "Devastator",
+     "rarity": "LR☆",
+     "rarity_full": "Hero Cards☆",
+     "code_verified": true,
+     "sort": 28
+    },
+    {
+     "code": "TFEU01-LR☆-011",
+     "name": "Optimus Prime",
+     "rarity": "LR☆",
+     "rarity_full": "Hero Cards☆",
+     "code_verified": true,
+     "sort": 29
+    },
+    {
+     "code": "TFEU01-LR☆-012",
+     "name": "Thundercracker",
+     "rarity": "LR☆",
+     "rarity_full": "Hero Cards☆",
+     "code_verified": true,
+     "sort": 30
+    },
+    {
+     "code": "TFEU01-LR-001",
+     "name": "Optimus Prime",
+     "rarity": "LR",
+     "rarity_full": "Hero Cards",
+     "code_verified": true,
+     "sort": 31
+    },
+    {
+     "code": "TFEU01-LR-002",
+     "name": "Starscream",
+     "rarity": "LR",
+     "rarity_full": "Hero Cards",
+     "code_verified": true,
+     "sort": 32
+    },
+    {
+     "code": "TFEU01-LR-003",
+     "name": "Soundwave",
+     "rarity": "LR",
+     "rarity_full": "Hero Cards",
+     "code_verified": true,
+     "sort": 33
+    },
+    {
+     "code": "TFEU01-LR-004",
+     "name": "Arcee",
+     "rarity": "LR",
+     "rarity_full": "Hero Cards",
+     "code_verified": true,
+     "sort": 34
+    },
+    {
+     "code": "TFEU01-LR-005",
+     "name": "Cliffjumper",
+     "rarity": "LR",
+     "rarity_full": "Hero Cards",
+     "code_verified": true,
+     "sort": 35
+    },
+    {
+     "code": "TFEU01-LR-006",
+     "name": "Optimus Prime",
+     "rarity": "LR",
+     "rarity_full": "Hero Cards",
+     "code_verified": true,
+     "sort": 36
+    },
+    {
+     "code": "TFEU01-LR-007",
+     "name": "Soundwave",
+     "rarity": "LR",
+     "rarity_full": "Hero Cards",
+     "code_verified": true,
+     "sort": 37
+    },
+    {
+     "code": "TFEU01-LR-008",
+     "name": "Optimus Prime",
+     "rarity": "LR",
+     "rarity_full": "Hero Cards",
+     "code_verified": true,
+     "sort": 38
+    },
+    {
+     "code": "TFEU01-LR-009",
+     "name": "Megatron",
+     "rarity": "LR",
+     "rarity_full": "Hero Cards",
+     "code_verified": true,
+     "sort": 39
+    },
+    {
+     "code": "TFEU01-LR-010",
+     "name": "Devastator",
+     "rarity": "LR",
+     "rarity_full": "Hero Cards",
+     "code_verified": true,
+     "sort": 40
+    },
+    {
+     "code": "TFEU01-LR-011",
+     "name": "Optimus Prime",
+     "rarity": "LR",
+     "rarity_full": "Hero Cards",
+     "code_verified": true,
+     "sort": 41
+    },
+    {
+     "code": "TFEU01-LR-012",
+     "name": "Thundercracker",
+     "rarity": "LR",
+     "rarity_full": "Hero Cards",
+     "code_verified": true,
+     "sort": 42
+    },
+    {
+     "code": "TFEU01-AR-001",
+     "name": "Optimus Prime",
+     "faction": "Autobot",
+     "rarity": "AR",
+     "rarity_full": "Portrait Cards",
+     "code_verified": false,
+     "note": "code inferred from display order (printed codes too small to read)",
+     "sort": 43
+    },
+    {
+     "code": "TFEU01-AR-002",
+     "name": "Starscream",
+     "faction": "Decepticon",
+     "rarity": "AR",
+     "rarity_full": "Portrait Cards",
+     "code_verified": false,
+     "note": "code inferred from display order (printed codes too small to read)",
+     "sort": 44
+    },
+    {
+     "code": "TFEU01-AR-003",
+     "name": "Bumblebee",
+     "faction": "Autobot",
+     "rarity": "AR",
+     "rarity_full": "Portrait Cards",
+     "code_verified": false,
+     "note": "code inferred from display order (printed codes too small to read)",
+     "sort": 45
+    },
+    {
+     "code": "TFEU01-AR-004",
+     "name": "Cliffjumper",
+     "faction": "Autobot",
+     "rarity": "AR",
+     "rarity_full": "Portrait Cards",
+     "code_verified": false,
+     "note": "code inferred from display order (printed codes too small to read)",
+     "sort": 46
+    },
+    {
+     "code": "TFEU01-AR-005",
+     "name": "Soundwave",
+     "faction": "Decepticon",
+     "rarity": "AR",
+     "rarity_full": "Portrait Cards",
+     "code_verified": false,
+     "note": "code inferred from display order (printed codes too small to read)",
+     "sort": 47
+    },
+    {
+     "code": "TFEU01-AR-006",
+     "name": "Ratchet",
+     "faction": "Autobot",
+     "rarity": "AR",
+     "rarity_full": "Portrait Cards",
+     "code_verified": false,
+     "note": "code inferred from display order (printed codes too small to read)",
+     "sort": 48
+    },
+    {
+     "code": "TFEU01-AR-007",
+     "name": "Skywarp",
+     "faction": "Decepticon",
+     "rarity": "AR",
+     "rarity_full": "Portrait Cards",
+     "code_verified": false,
+     "note": "code inferred from display order (printed codes too small to read)",
+     "sort": 49
+    },
+    {
+     "code": "TFEU01-AR-008",
+     "name": "Jazz",
+     "faction": "Autobot",
+     "rarity": "AR",
+     "rarity_full": "Portrait Cards",
+     "code_verified": false,
+     "note": "code inferred from display order (printed codes too small to read)",
+     "sort": 50
+    },
+    {
+     "code": "TFEU01-AR-009",
+     "name": "Megatron",
+     "faction": "Decepticon",
+     "rarity": "AR",
+     "rarity_full": "Portrait Cards",
+     "code_verified": false,
+     "note": "code inferred from display order (printed codes too small to read)",
+     "sort": 51
+    },
+    {
+     "code": "TFEU01-AR-010",
+     "name": "Thundercracker",
+     "faction": "Decepticon",
+     "rarity": "AR",
+     "rarity_full": "Portrait Cards",
+     "code_verified": false,
+     "note": "code inferred from display order (printed codes too small to read)",
+     "sort": 52
+    },
+    {
+     "code": "TFEU01-AR-011",
+     "name": "Arcee",
+     "faction": "Autobot",
+     "rarity": "AR",
+     "rarity_full": "Portrait Cards",
+     "code_verified": false,
+     "note": "code inferred from display order (printed codes too small to read)",
+     "sort": 53
+    },
+    {
+     "code": "TFEU01-AR-012",
+     "name": "Devastator",
+     "faction": "Decepticon",
+     "rarity": "AR",
+     "rarity_full": "Portrait Cards",
+     "code_verified": false,
+     "note": "code inferred from display order (printed codes too small to read)",
+     "sort": 54
+    },
+    {
+     "code": "TFEU01-AR-013",
+     "name": "Wheeljack",
+     "faction": "Autobot",
+     "rarity": "AR",
+     "rarity_full": "Portrait Cards",
+     "code_verified": false,
+     "note": "code inferred from display order (printed codes too small to read)",
+     "sort": 55
+    },
+    {
+     "code": "TFEU01-AR-014",
+     "name": "Astrotrain",
+     "faction": "Decepticon",
+     "rarity": "AR",
+     "rarity_full": "Portrait Cards",
+     "code_verified": false,
+     "note": "code inferred from display order (printed codes too small to read)",
+     "sort": 56
+    },
+    {
+     "code": "TFEU01-AR-015",
+     "name": "Ultra Magnus",
+     "faction": "Autobot",
+     "rarity": "AR",
+     "rarity_full": "Portrait Cards",
+     "code_verified": false,
+     "note": "code inferred from display order (printed codes too small to read)",
+     "sort": 57
+    },
+    {
+     "code": "TFEU01-AR-016",
+     "name": "Beachcomber",
+     "faction": "Autobot",
+     "rarity": "AR",
+     "rarity_full": "Portrait Cards",
+     "code_verified": false,
+     "note": "code inferred from display order (printed codes too small to read)",
+     "sort": 58
+    },
+    {
+     "code": "TFEU01-AR-017",
+     "name": "Onslaught",
+     "faction": "Decepticon",
+     "rarity": "AR",
+     "rarity_full": "Portrait Cards",
+     "code_verified": false,
+     "note": "code inferred from display order (printed codes too small to read)",
+     "sort": 59
+    },
+    {
+     "code": "TFEU01-AR-018",
+     "name": "Vortex",
+     "faction": "Decepticon",
+     "rarity": "AR",
+     "rarity_full": "Portrait Cards",
+     "code_verified": false,
+     "note": "code inferred from display order (printed codes too small to read)",
+     "sort": 60
+    },
+    {
+     "code": "TFEU01-AR-019",
+     "name": "Carly",
+     "faction": "Human",
+     "rarity": "AR",
+     "rarity_full": "Portrait Cards",
+     "code_verified": false,
+     "note": "code inferred from display order (printed codes too small to read)",
+     "sort": 61
+    },
+    {
+     "code": "TFEU01-AR-020",
+     "name": "Genvo",
+     "faction": "Decepticon",
+     "rarity": "AR",
+     "rarity_full": "Portrait Cards",
+     "code_verified": false,
+     "note": "code inferred from display order (printed codes too small to read)",
+     "sort": 62
+    },
+    {
+     "code": "TFEU01-AR-021",
+     "name": "Kup",
+     "faction": "Autobot",
+     "rarity": "AR",
+     "rarity_full": "Portrait Cards",
+     "code_verified": false,
+     "note": "code inferred from display order (printed codes too small to read)",
+     "sort": 63
+    },
+    {
+     "code": "TFEU01-AR-022",
+     "name": "Starscream",
+     "faction": "Decepticon",
+     "rarity": "AR",
+     "rarity_full": "Portrait Cards",
+     "code_verified": false,
+     "note": "code inferred from display order (printed codes too small to read)",
+     "sort": 64
+    },
+    {
+     "code": "TFEU01-AR-023",
+     "name": "Swindle",
+     "faction": "Decepticon",
+     "rarity": "AR",
+     "rarity_full": "Portrait Cards",
+     "code_verified": false,
+     "note": "code inferred from display order (printed codes too small to read)",
+     "sort": 65
+    },
+    {
+     "code": "TFEU01-AR-024",
+     "name": "Bluestreak",
+     "faction": "Autobot",
+     "rarity": "AR",
+     "rarity_full": "Portrait Cards",
+     "code_verified": false,
+     "note": "code inferred from display order (printed codes too small to read)",
+     "sort": 66
+    },
+    {
+     "code": "TFEU01-AR-025",
+     "name": "Brawl",
+     "faction": "Decepticon",
+     "rarity": "AR",
+     "rarity_full": "Portrait Cards",
+     "code_verified": false,
+     "note": "code inferred from display order (printed codes too small to read)",
+     "sort": 67
+    },
+    {
+     "code": "TFEU01-AR-026",
+     "name": "Trailbreaker",
+     "faction": "Autobot",
+     "rarity": "AR",
+     "rarity_full": "Portrait Cards",
+     "code_verified": false,
+     "note": "code inferred from display order (printed codes too small to read)",
+     "sort": 68
+    },
+    {
+     "code": "TFEU01-AR-027",
+     "name": "Blast Off",
+     "faction": "Decepticon",
+     "rarity": "AR",
+     "rarity_full": "Portrait Cards",
+     "code_verified": false,
+     "note": "code inferred from display order (printed codes too small to read)",
+     "sort": 69
+    },
+    {
+     "code": "TFEU01-AR-028",
+     "name": "Thrust",
+     "faction": "Decepticon",
+     "rarity": "AR",
+     "rarity_full": "Portrait Cards",
+     "code_verified": false,
+     "note": "code inferred from display order (printed codes too small to read)",
+     "sort": 70
+    },
+    {
+     "code": "TFEU01-AR-029",
+     "name": "Shredhead",
+     "faction": "Autobot",
+     "rarity": "AR",
+     "rarity_full": "Portrait Cards",
+     "code_verified": false,
+     "note": "code inferred from display order (printed codes too small to read)",
+     "sort": 71
+    },
+    {
+     "code": "TFEU01-AR-030",
+     "name": "Blurr",
+     "faction": "Autobot",
+     "rarity": "AR",
+     "rarity_full": "Portrait Cards",
+     "code_verified": false,
+     "note": "code inferred from display order (printed codes too small to read)",
+     "sort": 72
+    },
+    {
+     "code": "TFEU01-AR-031",
+     "name": "Megatron",
+     "faction": "Decepticon",
+     "rarity": "AR",
+     "rarity_full": "Portrait Cards",
+     "code_verified": false,
+     "note": "code inferred from display order (printed codes too small to read)",
+     "sort": 73
+    },
+    {
+     "code": "TFEU01-HR-001",
+     "name": "Optimus Prime",
+     "faction": "Autobot",
+     "rarity": "HR",
+     "rarity_full": "3D Faction Cards",
+     "code_verified": false,
+     "note": "code inferred: every legible HR code matches this roster order",
+     "sort": 74
+    },
+    {
+     "code": "TFEU01-HR-002",
+     "name": "Starscream",
+     "faction": "Decepticon",
+     "rarity": "HR",
+     "rarity_full": "3D Faction Cards",
+     "code_verified": false,
+     "note": "code inferred: every legible HR code matches this roster order",
+     "sort": 75
+    },
+    {
+     "code": "TFEU01-HR-003",
+     "name": "Bumblebee",
+     "faction": "Autobot",
+     "rarity": "HR",
+     "rarity_full": "3D Faction Cards",
+     "code_verified": true,
+     "sort": 76
+    },
+    {
+     "code": "TFEU01-HR-004",
+     "name": "Cliffjumper",
+     "faction": "Autobot",
+     "rarity": "HR",
+     "rarity_full": "3D Faction Cards",
+     "code_verified": true,
+     "sort": 77
+    },
+    {
+     "code": "TFEU01-HR-005",
+     "name": "Soundwave",
+     "faction": "Decepticon",
+     "rarity": "HR",
+     "rarity_full": "3D Faction Cards",
+     "code_verified": false,
+     "note": "code inferred: every legible HR code matches this roster order",
+     "sort": 78
+    },
+    {
+     "code": "TFEU01-HR-006",
+     "name": "Ratchet",
+     "faction": "Autobot",
+     "rarity": "HR",
+     "rarity_full": "3D Faction Cards",
+     "code_verified": true,
+     "sort": 79
+    },
+    {
+     "code": "TFEU01-HR-007",
+     "name": "Skywarp",
+     "faction": "Decepticon",
+     "rarity": "HR",
+     "rarity_full": "3D Faction Cards",
+     "code_verified": false,
+     "note": "code inferred: every legible HR code matches this roster order",
+     "sort": 80
+    },
+    {
+     "code": "TFEU01-HR-008",
+     "name": "Jazz",
+     "faction": "Autobot",
+     "rarity": "HR",
+     "rarity_full": "3D Faction Cards",
+     "code_verified": false,
+     "note": "code inferred: every legible HR code matches this roster order",
+     "sort": 81
+    },
+    {
+     "code": "TFEU01-HR-009",
+     "name": "Megatron",
+     "faction": "Decepticon",
+     "rarity": "HR",
+     "rarity_full": "3D Faction Cards",
+     "code_verified": true,
+     "sort": 82
+    },
+    {
+     "code": "TFEU01-HR-010",
+     "name": "Thundercracker",
+     "faction": "Decepticon",
+     "rarity": "HR",
+     "rarity_full": "3D Faction Cards",
+     "code_verified": false,
+     "note": "code inferred: every legible HR code matches this roster order",
+     "sort": 83
+    },
+    {
+     "code": "TFEU01-HR-011",
+     "name": "Arcee",
+     "faction": "Autobot",
+     "rarity": "HR",
+     "rarity_full": "3D Faction Cards",
+     "code_verified": false,
+     "note": "code inferred: every legible HR code matches this roster order",
+     "sort": 84
+    },
+    {
+     "code": "TFEU01-HR-012",
+     "name": "Devastator",
+     "faction": "Decepticon",
+     "rarity": "HR",
+     "rarity_full": "3D Faction Cards",
+     "code_verified": false,
+     "note": "code inferred: every legible HR code matches this roster order",
+     "sort": 85
+    },
+    {
+     "code": "TFEU01-HR-013",
+     "name": "Wheeljack",
+     "faction": "Autobot",
+     "rarity": "HR",
+     "rarity_full": "3D Faction Cards",
+     "code_verified": false,
+     "note": "code inferred: every legible HR code matches this roster order",
+     "sort": 86
+    },
+    {
+     "code": "TFEU01-HR-014",
+     "name": "Astrotrain",
+     "faction": "Decepticon",
+     "rarity": "HR",
+     "rarity_full": "3D Faction Cards",
+     "code_verified": false,
+     "note": "code inferred: every legible HR code matches this roster order",
+     "sort": 87
+    },
+    {
+     "code": "TFEU01-HR-015",
+     "name": "Ultra Magnus",
+     "faction": "Autobot",
+     "rarity": "HR",
+     "rarity_full": "3D Faction Cards",
+     "code_verified": false,
+     "note": "code inferred: every legible HR code matches this roster order",
+     "sort": 88
+    },
+    {
+     "code": "TFEU01-HR-016",
+     "name": "Beachcomber",
+     "faction": "Autobot",
+     "rarity": "HR",
+     "rarity_full": "3D Faction Cards",
+     "code_verified": false,
+     "note": "code inferred: every legible HR code matches this roster order",
+     "sort": 89
+    },
+    {
+     "code": "TFEU01-HR-017",
+     "name": "Onslaught",
+     "faction": "Decepticon",
+     "rarity": "HR",
+     "rarity_full": "3D Faction Cards",
+     "code_verified": true,
+     "sort": 90
+    },
+    {
+     "code": "TFEU01-HR-018",
+     "name": "Vortex",
+     "faction": "Decepticon",
+     "rarity": "HR",
+     "rarity_full": "3D Faction Cards",
+     "code_verified": false,
+     "note": "code inferred: every legible HR code matches this roster order",
+     "sort": 91
+    },
+    {
+     "code": "TFEU01-HR-019",
+     "name": "Carly",
+     "faction": "Human",
+     "rarity": "HR",
+     "rarity_full": "3D Faction Cards",
+     "code_verified": true,
+     "sort": 92
+    },
+    {
+     "code": "TFEU01-HR-020",
+     "name": "Genvo",
+     "faction": "Decepticon",
+     "rarity": "HR",
+     "rarity_full": "3D Faction Cards",
+     "code_verified": true,
+     "sort": 93
+    },
+    {
+     "code": "TFEU01-HR-021",
+     "name": "Kup",
+     "faction": "Autobot",
+     "rarity": "HR",
+     "rarity_full": "3D Faction Cards",
+     "code_verified": false,
+     "note": "code inferred: every legible HR code matches this roster order",
+     "sort": 94
+    },
+    {
+     "code": "TFEU01-HR-022",
+     "name": "Starscream",
+     "faction": "Decepticon",
+     "rarity": "HR",
+     "rarity_full": "3D Faction Cards",
+     "code_verified": false,
+     "note": "code inferred: every legible HR code matches this roster order",
+     "sort": 95
+    },
+    {
+     "code": "TFEU01-HR-023",
+     "name": "Swindle",
+     "faction": "Decepticon",
+     "rarity": "HR",
+     "rarity_full": "3D Faction Cards",
+     "code_verified": false,
+     "note": "code inferred: every legible HR code matches this roster order",
+     "sort": 96
+    },
+    {
+     "code": "TFEU01-HR-024",
+     "name": "Bluestreak",
+     "faction": "Autobot",
+     "rarity": "HR",
+     "rarity_full": "3D Faction Cards",
+     "code_verified": true,
+     "sort": 97
+    },
+    {
+     "code": "TFEU01-HR-025",
+     "name": "Brawl",
+     "faction": "Decepticon",
+     "rarity": "HR",
+     "rarity_full": "3D Faction Cards",
+     "code_verified": true,
+     "sort": 98
+    },
+    {
+     "code": "TFEU01-HR-026",
+     "name": "Trailbreaker",
+     "faction": "Autobot",
+     "rarity": "HR",
+     "rarity_full": "3D Faction Cards",
+     "code_verified": true,
+     "sort": 99
+    },
+    {
+     "code": "TFEU01-HR-027",
+     "name": "Blast Off",
+     "faction": "Decepticon",
+     "rarity": "HR",
+     "rarity_full": "3D Faction Cards",
+     "code_verified": true,
+     "sort": 100
+    },
+    {
+     "code": "TFEU01-HR-028",
+     "name": "Thrust",
+     "faction": "Decepticon",
+     "rarity": "HR",
+     "rarity_full": "3D Faction Cards",
+     "code_verified": true,
+     "sort": 101
+    },
+    {
+     "code": "TFEU01-HR-029",
+     "name": "Shredhead",
+     "faction": "Autobot",
+     "rarity": "HR",
+     "rarity_full": "3D Faction Cards",
+     "code_verified": true,
+     "sort": 102
+    },
+    {
+     "code": "TFEU01-HR-030",
+     "name": "Blurr",
+     "faction": "Autobot",
+     "rarity": "HR",
+     "rarity_full": "3D Faction Cards",
+     "code_verified": true,
+     "sort": 103
+    },
+    {
+     "code": "TFEU01-HR-031",
+     "name": "Megatron",
+     "faction": "Decepticon",
+     "rarity": "HR",
+     "rarity_full": "3D Faction Cards",
+     "code_verified": true,
+     "sort": 104
+    }
+   ]
+  },
+  {
+   "series_id": "sea-mlbb-hand-002",
+   "ip_name": "Mobile Legends: Bang Bang",
+   "licensor_on_card": "©Moonton. All rights reserved. (printed on the PTR cards)",
+   "title": "Mobile Legends: Bang Bang-Collectible Cards-Hand of Destiny-002-SEA",
+   "title_variants": {
+    "official_page_tile": "Mobile Legends: Bang Bang-Collectible Cards-Hand of Destiny-002-SEA",
+    "official_box_render": "HAND OF DESTINY - Stargazer - / Collectible Cards / 02 SERIES",
+    "shop_funtcg": "Mobile Legends: Bang Bang-Collectible Cards-Hand of Destiny-002A-SEA (item code MLBB-KP-GXMY-002A-SEA)"
+   },
+   "subtitle": "Stargazer",
+   "product_type": "Collectible Cards",
+   "code_prefix": "MLHD02",
+   "card_count": 177,
+   "rarity_tiers": [
+    {
+     "name": "SP",
+     "full": null,
+     "count": 10,
+     "art_theme": "hero + zodiac sign printed on the card (9 signs; Gemini twice)"
+    },
+    {
+     "name": "UR",
+     "full": null,
+     "count": 15,
+     "art_theme": "hero + large title text (e.g. 'Bloody Hunt' on Franco)"
+    },
+    {
+     "name": "PTR",
+     "full": null,
+     "count": 11,
+     "art_theme": "frame with an emblem, no hero name"
+    },
+    {
+     "name": "AR",
+     "full": null,
+     "count": 30,
+     "art_theme": "6 groups of 5 (official file groups CA/CR/CY/FO/NI/OC; meaning not stated)"
+    },
+    {
+     "name": "QR",
+     "full": null,
+     "count": 20,
+     "art_theme": "chibi-style hero art"
+    },
+    {
+     "name": "SR",
+     "full": null,
+     "count": 12,
+     "art_theme": "landscape location cards (place names)"
+    },
+    {
+     "name": "R",
+     "full": null,
+     "count": 54,
+     "art_theme": "playing-card design: 4 suits A-K + 2 Jokers"
+    },
+    {
+     "name": "N",
+     "full": null,
+     "count": 25,
+     "art_theme": "landscape scene cards in a film-strip frame"
+    }
+   ],
+   "rarity_order_note": "The official page gives NO explicit rarity ranking and NO full tier names. Two official orderings exist: image file numbering 1 N, 2 R, 3 SR, 4 QR, 5 PTR, 6 AR, 7 UR, 8 SP; page display order SP, UR, PTR, AR, QR, SR, N, R. A community article (news.aoshimarket.id) claims PTR is the rarest tier - unverified. The tier list above follows the page display order and is NOT a verified rarity ranking.",
+   "editions": [
+    {
+     "label": "002 / 002A SEA (English)",
+     "specs": {
+      "Cards per pack": "5 (printed '5 CARDS' on the pack in the official box render)",
+      "Packs per box": "20 (shop: funtcg.com) / 20 (DivisionX scraper PACKS_PER_BOX map)",
+      "Boxes per carton": "48 (shop: funtcg.com)",
+      "Release date": "not stated by any official source found"
+     },
+     "pull_rates": [],
+     "pull_rates_note": "No official pull rates found. A retailer (ruparupa, series not stated) lists pack contents as 2R + 1N + 1SR + 1 of QR/AR/PTR/UR/SP."
+    }
+   ],
+   "not_in_packs": "PR promo cards (e.g. MLHD02-PR-002 Hayabusa) shown by shop funtcg as a buy-6/8-boxes bonus, marked 'UNDER COPYRIGHT HOLDER REVIEW'.",
+   "sources": {
+    "official": [
+     "https://id.kayouofficial.com/en/pages/sea-mlbb-hand-002",
+     "https://th.kayouofficial.com/en/pages/sea-mlbb-hand-002",
+     "https://id.kayouofficial.com/pages/new-detail-mlbb",
+     "https://id.kayouofficial.com/cdn/shop/files/5.jpg?v=1778222454"
+    ],
+    "shop": [
+     "https://funtcg.com/products/mobile-legends-bang-bang-collectible-cards-hand-of-destiny-002a-sea-kayou",
+     "https://www.ruparupa.com/toyskingdomonline/p/kayou-kartu-mobile-legends-hand-of-destiny-sea-set-5-pcs-random.html"
+    ]
+   },
+   "our_set_code": "HOD02",
+   "our_sku_id": "MLBB HOD - 02",
+   "franchise": "MLBB",
+   "cards": [
+    {
+     "code": "MLHD02-N-001",
+     "name": "Sora",
+     "rarity": "N",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/1_NN-___1.jpg?v=1778224413",
+     "sort": 1
+    },
+    {
+     "code": "MLHD02-N-002",
+     "name": "Odette",
+     "rarity": "N",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/1_NN-_-02.jpg?v=1778224414",
+     "sort": 2
+    },
+    {
+     "code": "MLHD02-N-003",
+     "name": "Novaria",
+     "rarity": "N",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/1_NN-_-03.jpg?v=1778224416",
+     "sort": 3
+    },
+    {
+     "code": "MLHD02-N-004",
+     "name": "Edith",
+     "rarity": "N",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/1_NN-_-04.jpg?v=1778224418",
+     "sort": 4
+    },
+    {
+     "code": "MLHD02-N-005",
+     "name": "Layla",
+     "rarity": "N",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/1_NN-_-05.jpg?v=1778224420",
+     "sort": 5
+    },
+    {
+     "code": "MLHD02-N-006",
+     "name": "Moskov",
+     "rarity": "N",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/1_NN-_-06.jpg?v=1778224425",
+     "sort": 6
+    },
+    {
+     "code": "MLHD02-N-007",
+     "name": "Kalea",
+     "rarity": "N",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/1_NN-_-07.jpg?v=1778224428",
+     "sort": 7
+    },
+    {
+     "code": "MLHD02-N-008",
+     "name": "Arlott",
+     "rarity": "N",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/1_NN-_-08.jpg?v=1778224431",
+     "sort": 8
+    },
+    {
+     "code": "MLHD02-N-009",
+     "name": "Dyrroth",
+     "rarity": "N",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/1_NN-_-09.jpg?v=1778224434",
+     "sort": 9
+    },
+    {
+     "code": "MLHD02-N-010",
+     "name": "Ixia",
+     "rarity": "N",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/1_NN-_-10.jpg?v=1778224436",
+     "sort": 10
+    },
+    {
+     "code": "MLHD02-N-011",
+     "name": "Aurora",
+     "rarity": "N",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/1_NN-_-11.jpg?v=1778224441",
+     "sort": 11
+    },
+    {
+     "code": "MLHD02-N-012",
+     "name": "Aurora",
+     "rarity": "N",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/1_NN-_-12_6ff9b218-0e6e-494e-9752-6764566b368d.jpg?v=1778224447",
+     "sort": 12
+    },
+    {
+     "code": "MLHD02-N-013",
+     "name": "Chip",
+     "rarity": "N",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/1_NN-_-13.jpg?v=1778224458",
+     "sort": 13
+    },
+    {
+     "code": "MLHD02-N-014",
+     "name": "Ixia",
+     "rarity": "N",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/1_NN-_-14.jpg?v=1778224464",
+     "sort": 14
+    },
+    {
+     "code": "MLHD02-N-015",
+     "name": "Ixia",
+     "rarity": "N",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/1_NN-_-15.jpg?v=1778224468",
+     "sort": 15
+    },
+    {
+     "code": "MLHD02-N-016",
+     "name": "Kimmy",
+     "rarity": "N",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/1_NN-_-16.jpg?v=1778224471",
+     "sort": 16
+    },
+    {
+     "code": "MLHD02-N-017",
+     "name": "Novaria",
+     "rarity": "N",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/1_NN-_-17.jpg?v=1778224475",
+     "sort": 17
+    },
+    {
+     "code": "MLHD02-N-018",
+     "name": "Obsidia",
+     "rarity": "N",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/1_NN-_-18.jpg?v=1778224477",
+     "sort": 18
+    },
+    {
+     "code": "MLHD02-N-019",
+     "name": "Novaria",
+     "rarity": "N",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/1_NN-_-19.jpg?v=1778224482",
+     "sort": 19
+    },
+    {
+     "code": "MLHD02-N-020",
+     "name": "Chip & Angela",
+     "rarity": "N",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/1_NN-_-20.jpg?v=1778224488",
+     "sort": 20
+    },
+    {
+     "code": "MLHD02-N-021",
+     "name": "Lukas",
+     "rarity": "N",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/1_NN-_-21.jpg?v=1778224491",
+     "sort": 21
+    },
+    {
+     "code": "MLHD02-N-022",
+     "name": "Hanabi",
+     "rarity": "N",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/1_NN-_-22.jpg?v=1778224495",
+     "sort": 22
+    },
+    {
+     "code": "MLHD02-N-023",
+     "name": "Leomord",
+     "rarity": "N",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/1_NN-_-23.jpg?v=1778224498",
+     "sort": 23
+    },
+    {
+     "code": "MLHD02-N-024",
+     "name": "Cici",
+     "rarity": "N",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/1_NN-_-24.jpg?v=1778224502",
+     "sort": 24
+    },
+    {
+     "code": "MLHD02-N-025",
+     "name": "Suyou",
+     "rarity": "N",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/1_NN-_-25.jpg?v=1778224505",
+     "sort": 25
+    },
+    {
+     "code": "MLHD02-R-001",
+     "name": "Suyou",
+     "rarity": "R",
+     "playing_card": "A of Spades",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/2_RR-___1.jpg?v=1778225019",
+     "sort": 26
+    },
+    {
+     "code": "MLHD02-R-002",
+     "name": "Julian",
+     "rarity": "R",
+     "playing_card": "2 of Spades",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/2_RR-_-02.jpg?v=1778225021",
+     "sort": 27
+    },
+    {
+     "code": "MLHD02-R-003",
+     "name": "Alpha",
+     "rarity": "R",
+     "playing_card": "3 of Spades",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/2_RR-_-03.jpg?v=1778225025",
+     "sort": 28
+    },
+    {
+     "code": "MLHD02-R-004",
+     "name": "Alucard",
+     "rarity": "R",
+     "playing_card": "4 of Spades",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/2_RR-_-04.jpg?v=1778225027",
+     "sort": 29
+    },
+    {
+     "code": "MLHD02-R-005",
+     "name": "Argus",
+     "rarity": "R",
+     "playing_card": "5 of Spades",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/2_RR-_-05.jpg?v=1778225089",
+     "sort": 30
+    },
+    {
+     "code": "MLHD02-R-006",
+     "name": "Kaja",
+     "rarity": "R",
+     "playing_card": "6 of Spades",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/2_RR-_-06.jpg?v=1778225091",
+     "sort": 31
+    },
+    {
+     "code": "MLHD02-R-007",
+     "name": "Balmond",
+     "rarity": "R",
+     "playing_card": "7 of Spades",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/2_RR-_-07.jpg?v=1778225094",
+     "sort": 32
+    },
+    {
+     "code": "MLHD02-R-008",
+     "name": "Martis",
+     "rarity": "R",
+     "playing_card": "8 of Spades",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/2_RR-_-08.jpg?v=1778225096",
+     "sort": 33
+    },
+    {
+     "code": "MLHD02-R-009",
+     "name": "Badang",
+     "rarity": "R",
+     "playing_card": "9 of Spades",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/2_RR-_-09.jpg?v=1778225099",
+     "sort": 34
+    },
+    {
+     "code": "MLHD02-R-010",
+     "name": "Phoveus",
+     "rarity": "R",
+     "playing_card": "10 of Spades",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/2_RR-_-10.jpg?v=1778225154",
+     "sort": 35
+    },
+    {
+     "code": "MLHD02-R-011",
+     "name": "Sun",
+     "rarity": "R",
+     "playing_card": "J of Spades",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/2_RR-_-11.jpg?v=1778225158",
+     "sort": 36
+    },
+    {
+     "code": "MLHD02-R-012",
+     "name": "Silvanna",
+     "rarity": "R",
+     "playing_card": "Q of Spades",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/2_RR-_-12.jpg?v=1778225161",
+     "sort": 37
+    },
+    {
+     "code": "MLHD02-R-013",
+     "name": "Sora",
+     "rarity": "R",
+     "playing_card": "K of Spades",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/2_RR-_-13.jpg?v=1778225164",
+     "sort": 38
+    },
+    {
+     "code": "MLHD02-R-014",
+     "name": "Lunox",
+     "rarity": "R",
+     "playing_card": "A of Hearts",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/2_RR-_-14.jpg?v=1778225167",
+     "sort": 39
+    },
+    {
+     "code": "MLHD02-R-015",
+     "name": "Nana",
+     "rarity": "R",
+     "playing_card": "2 of Hearts",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/2_RR-_-15.jpg?v=1778225301",
+     "sort": 40
+    },
+    {
+     "code": "MLHD02-R-016",
+     "name": "Lylia",
+     "rarity": "R",
+     "playing_card": "3 of Hearts",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/2_RR-_-16.jpg?v=1778225304",
+     "sort": 41
+    },
+    {
+     "code": "MLHD02-R-017",
+     "name": "Yve",
+     "rarity": "R",
+     "playing_card": "4 of Hearts",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/2_RR-_-17.jpg?v=1778225310",
+     "sort": 42
+    },
+    {
+     "code": "MLHD02-R-018",
+     "name": "Zhuxin",
+     "rarity": "R",
+     "playing_card": "5 of Hearts",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/2_RR-_-18.jpg?v=1778225310",
+     "sort": 43
+    },
+    {
+     "code": "MLHD02-R-019",
+     "name": "Valentina",
+     "rarity": "R",
+     "playing_card": "6 of Hearts",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/2_RR-_-19.jpg?v=1778225313",
+     "sort": 44
+    },
+    {
+     "code": "MLHD02-R-020",
+     "name": "Pharsa",
+     "rarity": "R",
+     "playing_card": "7 of Hearts",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/2_RR-_-20.jpg?v=1778225366",
+     "sort": 45
+    },
+    {
+     "code": "MLHD02-R-021",
+     "name": "Esmeralda",
+     "rarity": "R",
+     "playing_card": "8 of Hearts",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/2_RR-_-21.jpg?v=1778225369",
+     "sort": 46
+    },
+    {
+     "code": "MLHD02-R-022",
+     "name": "Chang'e",
+     "rarity": "R",
+     "playing_card": "9 of Hearts",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/2_RR-_-22.jpg?v=1778225375",
+     "sort": 47
+    },
+    {
+     "code": "MLHD02-R-023",
+     "name": "Novaria",
+     "rarity": "R",
+     "playing_card": "10 of Hearts",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/2_RR-_-23.jpg?v=1778225379",
+     "sort": 48
+    },
+    {
+     "code": "MLHD02-R-024",
+     "name": "Harley",
+     "rarity": "R",
+     "playing_card": "J of Hearts",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/2_RR-_-24.jpg?v=1778225387",
+     "sort": 49
+    },
+    {
+     "code": "MLHD02-R-025",
+     "name": "Kagura",
+     "rarity": "R",
+     "playing_card": "Q of Hearts",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/2_RR-_-25.jpg?v=1778226141",
+     "sort": 50
+    },
+    {
+     "code": "MLHD02-R-026",
+     "name": "Xavier",
+     "rarity": "R",
+     "playing_card": "K of Hearts",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/2_RR-_-26.jpg?v=1778226144",
+     "sort": 51
+    },
+    {
+     "code": "MLHD02-R-027",
+     "name": "Hanzo",
+     "rarity": "R",
+     "playing_card": "A of Clubs",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/2_RR-_-27.jpg?v=1778226147",
+     "sort": 52
+    },
+    {
+     "code": "MLHD02-R-028",
+     "name": "Beatrix",
+     "rarity": "R",
+     "playing_card": "2 of Clubs",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/2_RR-_-28.jpg?v=1778226151",
+     "sort": 53
+    },
+    {
+     "code": "MLHD02-R-029",
+     "name": "Lesley",
+     "rarity": "R",
+     "playing_card": "3 of Clubs",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/2_RR-_-29.jpg?v=1778226154",
+     "sort": 54
+    },
+    {
+     "code": "MLHD02-R-030",
+     "name": "Natan",
+     "rarity": "R",
+     "playing_card": "4 of Clubs",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/2_RR-_-30.jpg?v=1778226231",
+     "sort": 55
+    },
+    {
+     "code": "MLHD02-R-031",
+     "name": "Karrie",
+     "rarity": "R",
+     "playing_card": "5 of Clubs",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/2_RR-_-31.jpg?v=1778226235",
+     "sort": 56
+    },
+    {
+     "code": "MLHD02-R-032",
+     "name": "Luo Yi",
+     "rarity": "R",
+     "playing_card": "6 of Clubs",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/2_RR-_-32.jpg?v=1778226238",
+     "sort": 57
+    },
+    {
+     "code": "MLHD02-R-033",
+     "name": "Gusion",
+     "rarity": "R",
+     "playing_card": "7 of Clubs",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/2_RR-_-33.jpg?v=1778226242",
+     "sort": 58
+    },
+    {
+     "code": "MLHD02-R-034",
+     "name": "Karina",
+     "rarity": "R",
+     "playing_card": "8 of Clubs",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/2_RR-_-34.jpg?v=1778226245",
+     "sort": 59
+    },
+    {
+     "code": "MLHD02-R-035",
+     "name": "Selena",
+     "rarity": "R",
+     "playing_card": "9 of Clubs",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/2_RR-_-35.jpg?v=1778226335",
+     "sort": 60
+    },
+    {
+     "code": "MLHD02-R-036",
+     "name": "Irithel",
+     "rarity": "R",
+     "playing_card": "10 of Clubs",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/2_RR-_-36.jpg?v=1778226340",
+     "sort": 61
+    },
+    {
+     "code": "MLHD02-R-037",
+     "name": "Roger",
+     "rarity": "R",
+     "playing_card": "J of Clubs",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/2_RR-_-37.jpg?v=1778226346",
+     "sort": 62
+    },
+    {
+     "code": "MLHD02-R-038",
+     "name": "Hanabi",
+     "rarity": "R",
+     "playing_card": "Q of Clubs",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/2_RR-_-38.jpg?v=1778226350",
+     "sort": 63
+    },
+    {
+     "code": "MLHD02-R-039",
+     "name": "Aamon",
+     "rarity": "R",
+     "playing_card": "K of Clubs",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/2_RR-_-39.jpg?v=1778226355",
+     "sort": 64
+    },
+    {
+     "code": "MLHD02-R-040",
+     "name": "Ruby",
+     "rarity": "R",
+     "playing_card": "A of Diamonds",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/2_RR-_-40.jpg?v=1778226502",
+     "sort": 65
+    },
+    {
+     "code": "MLHD02-R-041",
+     "name": "Chip",
+     "rarity": "R",
+     "playing_card": "2 of Diamonds",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/2_RR-_-41.jpg?v=1778226505",
+     "sort": 66
+    },
+    {
+     "code": "MLHD02-R-042",
+     "name": "Kalea",
+     "rarity": "R",
+     "playing_card": "3 of Diamonds",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/2_RR-_-42.jpg?v=1778226509",
+     "sort": 67
+    },
+    {
+     "code": "MLHD02-R-043",
+     "name": "Gloo",
+     "rarity": "R",
+     "playing_card": "4 of Diamonds",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/2_RR-_-43.jpg?v=1778226514",
+     "sort": 68
+    },
+    {
+     "code": "MLHD02-R-044",
+     "name": "Hilda",
+     "rarity": "R",
+     "playing_card": "5 of Diamonds",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/2_RR-_-44.jpg?v=1778226517",
+     "sort": 69
+    },
+    {
+     "code": "MLHD02-R-045",
+     "name": "Edith",
+     "rarity": "R",
+     "playing_card": "6 of Diamonds",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/2_RR-_-45.jpg?v=1778226575",
+     "sort": 70
+    },
+    {
+     "code": "MLHD02-R-046",
+     "name": "Barats",
+     "rarity": "R",
+     "playing_card": "7 of Diamonds",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/2_RR-_-46.jpg?v=1778226579",
+     "sort": 71
+    },
+    {
+     "code": "MLHD02-R-047",
+     "name": "Khufra",
+     "rarity": "R",
+     "playing_card": "8 of Diamonds",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/2_RR-_-47.jpg?v=1778226582",
+     "sort": 72
+    },
+    {
+     "code": "MLHD02-R-048",
+     "name": "Ixia",
+     "rarity": "R",
+     "playing_card": "9 of Diamonds",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/2_RR-_-48.jpg?v=1778226586",
+     "sort": 73
+    },
+    {
+     "code": "MLHD02-R-049",
+     "name": "Belerick",
+     "rarity": "R",
+     "playing_card": "10 of Diamonds",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/2_RR-_-49.jpg?v=1778226589",
+     "sort": 74
+    },
+    {
+     "code": "MLHD02-R-050",
+     "name": "Fredrinn",
+     "rarity": "R",
+     "playing_card": "J of Diamonds",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/2_RR-_-50.jpg?v=1778226655",
+     "sort": 75
+    },
+    {
+     "code": "MLHD02-R-051",
+     "name": "Cici",
+     "rarity": "R",
+     "playing_card": "Q of Diamonds",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/2_RR-_-51.jpg?v=1778226701",
+     "sort": 76
+    },
+    {
+     "code": "MLHD02-R-052",
+     "name": "Hylos",
+     "rarity": "R",
+     "playing_card": "K of Diamonds",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/2_RR-_-52.jpg?v=1778226705",
+     "sort": 77
+    },
+    {
+     "code": "MLHD02-R-053",
+     "name": "Miya",
+     "rarity": "R",
+     "playing_card": "Joker",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/2_RR-_-53.jpg?v=1778226708",
+     "sort": 78
+    },
+    {
+     "code": "MLHD02-R-054",
+     "name": "Layla",
+     "rarity": "R",
+     "playing_card": "Joker",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/2_RR-_-54.jpg?v=1778226712",
+     "sort": 79
+    },
+    {
+     "code": "MLHD02-SR-001",
+     "name": "Wind Fort & Fire Throat",
+     "subject": "location",
+     "rarity": "SR",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/3_SRSR-___1.jpg?v=1778224107",
+     "sort": 80
+    },
+    {
+     "code": "MLHD02-SR-002",
+     "name": "Eruditio",
+     "subject": "location",
+     "rarity": "SR",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/3_SRSR-_-02.jpg?v=1778224109",
+     "sort": 81
+    },
+    {
+     "code": "MLHD02-SR-003",
+     "name": "Eruditio",
+     "subject": "location",
+     "rarity": "SR",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/3_SRSR-_-03.jpg?v=1778224112",
+     "sort": 82
+    },
+    {
+     "code": "MLHD02-SR-004",
+     "name": "Zhu'an",
+     "subject": "location",
+     "rarity": "SR",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/3_SRSR-_-04.jpg?v=1778224115",
+     "sort": 83
+    },
+    {
+     "code": "MLHD02-SR-005",
+     "name": "Zhu'an",
+     "subject": "location",
+     "rarity": "SR",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/3_SRSR-_-05.jpg?v=1778224117",
+     "sort": 84
+    },
+    {
+     "code": "MLHD02-SR-006",
+     "name": "Molten Realm",
+     "subject": "location",
+     "rarity": "SR",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/3_SRSR-_-06.jpg?v=1778224120",
+     "sort": 85
+    },
+    {
+     "code": "MLHD02-SR-007",
+     "name": "Zhu'an",
+     "subject": "location",
+     "rarity": "SR",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/3_SRSR-_-07.jpg?v=1778224123",
+     "sort": 86
+    },
+    {
+     "code": "MLHD02-SR-008",
+     "name": "Sessrumnir",
+     "subject": "location",
+     "rarity": "SR",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/3_SRSR-_-08.jpg?v=1778224127",
+     "sort": 87
+    },
+    {
+     "code": "MLHD02-SR-009",
+     "name": "Eruditio",
+     "subject": "location",
+     "rarity": "SR",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/3_SRSR-_-09.jpg?v=1778224129",
+     "sort": 88
+    },
+    {
+     "code": "MLHD02-SR-010",
+     "name": "Necrokeep",
+     "subject": "location",
+     "rarity": "SR",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/3_SRSR-_-10.jpg?v=1778224132",
+     "sort": 89
+    },
+    {
+     "code": "MLHD02-SR-011",
+     "name": "Night Palace",
+     "subject": "location",
+     "rarity": "SR",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/3_SRSR-_-11.jpg?v=1778224135",
+     "sort": 90
+    },
+    {
+     "code": "MLHD02-SR-012",
+     "name": "Gleaming Marsh",
+     "subject": "location",
+     "rarity": "SR",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/3_SRSR-_-12.jpg?v=1778224138",
+     "sort": 91
+    },
+    {
+     "code": "MLHD02-QR-001",
+     "name": "Vexana",
+     "rarity": "QR",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/4_QRQR_-___1.jpg?v=1778223786",
+     "sort": 92
+    },
+    {
+     "code": "MLHD02-QR-002",
+     "name": "Moskov",
+     "rarity": "QR",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/4_QRQR_-_-02.jpg?v=1778223789",
+     "sort": 93
+    },
+    {
+     "code": "MLHD02-QR-003",
+     "name": "Sora",
+     "rarity": "QR",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/4_QRQR_-_-03.jpg?v=1778223791",
+     "sort": 94
+    },
+    {
+     "code": "MLHD02-QR-004",
+     "name": "Nana",
+     "rarity": "QR",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/4_QRQR_-_-04.jpg?v=1778223794",
+     "sort": 95
+    },
+    {
+     "code": "MLHD02-QR-005",
+     "name": "Lylia",
+     "rarity": "QR",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/4_QRQR_-_-05.jpg?v=1778223796",
+     "sort": 96
+    },
+    {
+     "code": "MLHD02-QR-006",
+     "name": "Fredrinn",
+     "rarity": "QR",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/4_QRQR_-_-06.jpg?v=1778223801",
+     "sort": 97
+    },
+    {
+     "code": "MLHD02-QR-007",
+     "name": "Hanabi",
+     "rarity": "QR",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/4_QRQR_-_-07.jpg?v=1778223802",
+     "sort": 98
+    },
+    {
+     "code": "MLHD02-QR-008",
+     "name": "Lesley",
+     "rarity": "QR",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/4_QRQR_-_-08.jpg?v=1778223805",
+     "sort": 99
+    },
+    {
+     "code": "MLHD02-QR-009",
+     "name": "Ruby",
+     "rarity": "QR",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/4_QRQR_-_-09.jpg?v=1778223807",
+     "sort": 100
+    },
+    {
+     "code": "MLHD02-QR-010",
+     "name": "Angela",
+     "rarity": "QR",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/4_QRQR_-_-10.jpg?v=1778223811",
+     "sort": 101
+    },
+    {
+     "code": "MLHD02-QR-011",
+     "name": "Chip",
+     "rarity": "QR",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/4_QRQR_-_-11.jpg?v=1778223812",
+     "sort": 102
+    },
+    {
+     "code": "MLHD02-QR-012",
+     "name": "Hayabusa",
+     "rarity": "QR",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/4_QRQR_-_-12.jpg?v=1778223816",
+     "sort": 103
+    },
+    {
+     "code": "MLHD02-QR-013",
+     "name": "Fredrinn",
+     "rarity": "QR",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/4_QRQR_-_-13.jpg?v=1778223819",
+     "sort": 104
+    },
+    {
+     "code": "MLHD02-QR-014",
+     "name": "Granger",
+     "rarity": "QR",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/4_QRQR_-_-14.jpg?v=1778223823",
+     "sort": 105
+    },
+    {
+     "code": "MLHD02-QR-015",
+     "name": "Melissa",
+     "rarity": "QR",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/4_QRQR_-_-15.jpg?v=1778223827",
+     "sort": 106
+    },
+    {
+     "code": "MLHD02-QR-016",
+     "name": "Esmeralda",
+     "rarity": "QR",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/4_QRQR_-_-16.jpg?v=1778223830",
+     "sort": 107
+    },
+    {
+     "code": "MLHD02-QR-017",
+     "name": "Obsidia",
+     "rarity": "QR",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/4_QRQR_-_-17.jpg?v=1778223833",
+     "sort": 108
+    },
+    {
+     "code": "MLHD02-QR-018",
+     "name": "Balmond",
+     "rarity": "QR",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/4_QRQR_-_-18.jpg?v=1778223835",
+     "sort": 109
+    },
+    {
+     "code": "MLHD02-QR-019",
+     "name": "Alpha",
+     "rarity": "QR",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/4_QRQR_-_-19.jpg?v=1778223838",
+     "sort": 110
+    },
+    {
+     "code": "MLHD02-QR-020",
+     "name": "Lesley",
+     "rarity": "QR",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/4_QRQR_-_-20.jpg?v=1778223841",
+     "sort": 111
+    },
+    {
+     "code": "MLHD02-PTR-001",
+     "rarity": "PTR",
+     "note": "no hero name printed; frame with a see-through window, an emblem, and \"©Moonton. All rights reserved.\"",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/5_PTRPTR-___1.png?v=1778223109",
+     "sort": 112
+    },
+    {
+     "code": "MLHD02-PTR-002",
+     "rarity": "PTR",
+     "note": "no hero name printed; frame with a see-through window, an emblem, and \"©Moonton. All rights reserved.\"",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/5_PTRPTR-_-02.png?v=1778223097",
+     "sort": 113
+    },
+    {
+     "code": "MLHD02-PTR-003",
+     "rarity": "PTR",
+     "note": "no hero name printed; frame with a see-through window, an emblem, and \"©Moonton. All rights reserved.\"",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/5_PTRPTR-_-03.png?v=1778223099",
+     "sort": 114
+    },
+    {
+     "code": "MLHD02-PTR-004",
+     "rarity": "PTR",
+     "note": "no hero name printed; frame with a see-through window, an emblem, and \"©Moonton. All rights reserved.\"",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/5_PTRPTR-_-04.png?v=1778223102",
+     "sort": 115
+    },
+    {
+     "code": "MLHD02-PTR-005",
+     "rarity": "PTR",
+     "note": "no hero name printed; frame with a see-through window, an emblem, and \"©Moonton. All rights reserved.\"",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/5_PTRPTR-_-05.png?v=1778223105",
+     "sort": 116
+    },
+    {
+     "code": "MLHD02-PTR-006",
+     "rarity": "PTR",
+     "note": "no hero name printed; frame with a see-through window, an emblem, and \"©Moonton. All rights reserved.\"",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/5_PTRPTR-_-06.png?v=1778223107",
+     "sort": 117
+    },
+    {
+     "code": "MLHD02-PTR-007",
+     "rarity": "PTR",
+     "note": "no hero name printed; frame with a see-through window, an emblem, and \"©Moonton. All rights reserved.\"",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/5_PTRPTR-_-07.png?v=1778223110",
+     "sort": 118
+    },
+    {
+     "code": "MLHD02-PTR-008",
+     "rarity": "PTR",
+     "note": "no hero name printed; frame with a see-through window, an emblem, and \"©Moonton. All rights reserved.\"",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/5_PTRPTR-_-08.png?v=1778223112",
+     "sort": 119
+    },
+    {
+     "code": "MLHD02-PTR-009",
+     "rarity": "PTR",
+     "note": "no hero name printed; frame with a see-through window, an emblem, and \"©Moonton. All rights reserved.\"",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/5_PTRPTR-_-09.png?v=1778223114",
+     "sort": 120
+    },
+    {
+     "code": "MLHD02-PTR-010",
+     "rarity": "PTR",
+     "note": "no hero name printed; frame with a see-through window, an emblem, and \"©Moonton. All rights reserved.\"",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/5_PTRPTR-_-10.png?v=1778223116",
+     "sort": 121
+    },
+    {
+     "code": "MLHD02-PTR-011",
+     "rarity": "PTR",
+     "note": "no hero name printed; frame with a see-through window, an emblem, and \"©Moonton. All rights reserved.\"",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/5_PTRPTR-_-11.png?v=1778223119",
+     "sort": 122
+    },
+    {
+     "name": "Nana",
+     "rarity": "AR",
+     "official_file_group": "ARCA",
+     "group_index": 1,
+     "note": "card code not visible on the official image",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/6_ARCA-___1.jpg?v=1778223263",
+     "sort": 123
+    },
+    {
+     "name": "Lolita",
+     "rarity": "AR",
+     "official_file_group": "ARCA",
+     "group_index": 2,
+     "note": "card code not visible on the official image",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/6_ARCA-_-02.jpg?v=1778223266",
+     "sort": 124
+    },
+    {
+     "name": "Angela",
+     "rarity": "AR",
+     "official_file_group": "ARCA",
+     "group_index": 3,
+     "note": "card code not visible on the official image",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/6_ARCA-_-03.jpg?v=1778223268",
+     "sort": 125
+    },
+    {
+     "name": "Lylia",
+     "rarity": "AR",
+     "official_file_group": "ARCA",
+     "group_index": 4,
+     "note": "card code not visible on the official image",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/6_ARCA-_-04.jpg?v=1778223271",
+     "sort": 126
+    },
+    {
+     "name": "Cici",
+     "rarity": "AR",
+     "official_file_group": "ARCA",
+     "group_index": 5,
+     "note": "card code not visible on the official image",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/6_ARCA-_-05.jpg?v=1778223274",
+     "sort": 127
+    },
+    {
+     "name": "Layla",
+     "rarity": "AR",
+     "official_file_group": "ARCR",
+     "group_index": 1,
+     "note": "card code not visible on the official image",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/6_ARCR-___1.jpg?v=1778223326",
+     "sort": 128
+    },
+    {
+     "name": "Ruby",
+     "rarity": "AR",
+     "official_file_group": "ARCR",
+     "group_index": 2,
+     "note": "card code not visible on the official image",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/6_ARCR-_-02.jpg?v=1778223330",
+     "sort": 129
+    },
+    {
+     "name": "Melissa",
+     "rarity": "AR",
+     "official_file_group": "ARCR",
+     "group_index": 3,
+     "note": "card code not visible on the official image",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/6_ARCR-_-03.jpg?v=1778223332",
+     "sort": 130
+    },
+    {
+     "name": "Leomord",
+     "rarity": "AR",
+     "official_file_group": "ARCR",
+     "group_index": 4,
+     "note": "card code not visible on the official image",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/6_ARCR-_-04.jpg?v=1778223335",
+     "sort": 131
+    },
+    {
+     "name": "Benedetta",
+     "rarity": "AR",
+     "official_file_group": "ARCR",
+     "group_index": 5,
+     "note": "card code not visible on the official image",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/6_ARCR-_-05.jpg?v=1778223338",
+     "sort": 132
+    },
+    {
+     "name": "Saber",
+     "rarity": "AR",
+     "official_file_group": "ARCY",
+     "group_index": 1,
+     "note": "card code not visible on the official image",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/6_ARCY-___1.jpg?v=1778223412",
+     "sort": 133
+    },
+    {
+     "name": "Hayabusa",
+     "rarity": "AR",
+     "official_file_group": "ARCY",
+     "group_index": 2,
+     "note": "card code not visible on the official image",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/6_ARCY-_-02.jpg?v=1778223416",
+     "sort": 134
+    },
+    {
+     "name": "Natalia",
+     "rarity": "AR",
+     "official_file_group": "ARCY",
+     "group_index": 3,
+     "note": "card code not visible on the official image",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/6_ARCY-_-03.jpg?v=1778223420",
+     "sort": 135
+    },
+    {
+     "name": "Yi Sun-shin",
+     "rarity": "AR",
+     "official_file_group": "ARCY",
+     "group_index": 4,
+     "note": "card code not visible on the official image",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/6_ARCY-_-04.jpg?v=1778223423",
+     "sort": 136
+    },
+    {
+     "name": "Lesley",
+     "rarity": "AR",
+     "official_file_group": "ARCY",
+     "group_index": 5,
+     "note": "card code not visible on the official image",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/6_ARCY-_-05.jpg?v=1778223425",
+     "sort": 137
+    },
+    {
+     "name": "Miya",
+     "rarity": "AR",
+     "official_file_group": "ARFO",
+     "group_index": 1,
+     "note": "card code not visible on the official image",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/6_ARFO-___1.jpg?v=1778223500",
+     "sort": 138
+    },
+    {
+     "name": "Akai",
+     "rarity": "AR",
+     "official_file_group": "ARFO",
+     "group_index": 2,
+     "note": "card code not visible on the official image",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/6_ARFO-_-02.jpg?v=1778223504",
+     "sort": 139
+    },
+    {
+     "name": "Odette",
+     "rarity": "AR",
+     "official_file_group": "ARFO",
+     "group_index": 3,
+     "note": "card code not visible on the official image",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/6_ARFO-_-03.jpg?v=1778223510",
+     "sort": 140
+    },
+    {
+     "name": "Hylos",
+     "rarity": "AR",
+     "official_file_group": "ARFO",
+     "group_index": 4,
+     "note": "card code not visible on the official image",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/6_ARFO-_-04.jpg?v=1778223516",
+     "sort": 141
+    },
+    {
+     "name": "Lunox",
+     "rarity": "AR",
+     "official_file_group": "ARFO",
+     "group_index": 5,
+     "note": "card code not visible on the official image",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/6_ARFO-_-05.jpg?v=1778223518",
+     "sort": 142
+    },
+    {
+     "name": "Eudora",
+     "rarity": "AR",
+     "official_file_group": "ARNI",
+     "group_index": 1,
+     "note": "card code not visible on the official image",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/6_ARNI-___1.jpg?v=1778223623",
+     "sort": 143
+    },
+    {
+     "name": "Vexana",
+     "rarity": "AR",
+     "official_file_group": "ARNI",
+     "group_index": 2,
+     "note": "card code not visible on the official image",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/6_ARNI-_-02.jpg?v=1778223629",
+     "sort": 144
+    },
+    {
+     "name": "Roger",
+     "rarity": "AR",
+     "official_file_group": "ARNI",
+     "group_index": 3,
+     "note": "card code not visible on the official image",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/6_ARNI-_-03.jpg?v=1778223633",
+     "sort": 145
+    },
+    {
+     "name": "Granger",
+     "rarity": "AR",
+     "official_file_group": "ARNI",
+     "group_index": 4,
+     "note": "card code not visible on the official image",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/6_ARNI-_-04.jpg?v=1778223637",
+     "sort": 146
+    },
+    {
+     "name": "Carmilla",
+     "rarity": "AR",
+     "official_file_group": "ARNI",
+     "group_index": 5,
+     "note": "card code not visible on the official image",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/6_ARNI-_-05.jpg?v=1778223641",
+     "sort": 147
+    },
+    {
+     "name": "Yi Sun-shin",
+     "rarity": "AR",
+     "official_file_group": "AROC",
+     "group_index": 1,
+     "note": "card code not visible on the official image",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/6_AROC-___1.jpg?v=1778223698",
+     "sort": 148
+    },
+    {
+     "name": "Gatotkaca",
+     "rarity": "AR",
+     "official_file_group": "AROC",
+     "group_index": 2,
+     "note": "card code not visible on the official image",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/6_AROC-_-02.jpg?v=1778223703",
+     "sort": 149
+    },
+    {
+     "name": "Odette",
+     "rarity": "AR",
+     "official_file_group": "AROC",
+     "group_index": 3,
+     "note": "card code not visible on the official image",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/6_AROC-_-03.jpg?v=1778223708",
+     "sort": 150
+    },
+    {
+     "name": "Kadita",
+     "rarity": "AR",
+     "official_file_group": "AROC",
+     "group_index": 4,
+     "note": "card code not visible on the official image",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/6_AROC-_-04.jpg?v=1778223711",
+     "sort": 151
+    },
+    {
+     "name": "Luo Yi",
+     "rarity": "AR",
+     "official_file_group": "AROC",
+     "group_index": 5,
+     "note": "card code not visible on the official image",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/6_AROC-_-05.jpg?v=1778223715",
+     "sort": 152
+    },
+    {
+     "code": "MLHD02-UR-001",
+     "name": "Franco",
+     "card_title": "Bloody Hunt",
+     "rarity": "UR",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/7_URUR__1.jpg?v=1778222844",
+     "sort": 153
+    },
+    {
+     "code": "MLHD02-UR-002",
+     "name": "Alice",
+     "card_title": "Throne of ruin",
+     "rarity": "UR",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/7_URUR-02.jpg?v=1778222847",
+     "sort": 154
+    },
+    {
+     "code": "MLHD02-UR-003",
+     "name": "Layla",
+     "card_title": "Destruction Rush",
+     "rarity": "UR",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/7_URUR-03.jpg?v=1778222849",
+     "sort": 155
+    },
+    {
+     "code": "MLHD02-UR-004",
+     "name": "Pharsa",
+     "card_title": "Feathered Air Strike",
+     "rarity": "UR",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/7_URUR-04.jpg?v=1778222852",
+     "sort": 156
+    },
+    {
+     "code": "MLHD02-UR-005",
+     "name": "Valir",
+     "card_title": "Vengeance Flame",
+     "rarity": "UR",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/7_URUR-05.jpg?v=1778222855",
+     "sort": 157
+    },
+    {
+     "code": "MLHD02-UR-006",
+     "name": "Sun",
+     "card_title": "Clone Techniques",
+     "rarity": "UR",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/7_URUR-06.jpg?v=1778222859",
+     "sort": 158
+    },
+    {
+     "code": "MLHD02-UR-007",
+     "name": "Hanzo",
+     "card_title": "Pinnacle Ninja",
+     "rarity": "UR",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/7_URUR-07.jpg?v=1778222861",
+     "sort": 159
+    },
+    {
+     "code": "MLHD02-UR-008",
+     "name": "Silvanna",
+     "card_title": "Imperial Justice",
+     "rarity": "UR",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/7_URUR-08.jpg?v=1778222864",
+     "sort": 160
+    },
+    {
+     "code": "MLHD02-UR-009",
+     "name": "Brody",
+     "card_title": "Torn-Apart Memory",
+     "rarity": "UR",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/7_URUR-09.jpg?v=1778222866",
+     "sort": 161
+    },
+    {
+     "code": "MLHD02-UR-010",
+     "name": "Beatrix",
+     "card_title": "Renner's Apathy",
+     "rarity": "UR",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/7_URUR-10.jpg?v=1778222868",
+     "sort": 162
+    },
+    {
+     "code": "MLHD02-UR-011",
+     "name": "Natan",
+     "card_title": "Entropy?",
+     "rarity": "UR",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/7_URUR-11.jpg?v=1778222872",
+     "sort": 163
+    },
+    {
+     "code": "MLHD02-UR-012",
+     "name": "Aamon",
+     "card_title": "Endless Shards",
+     "rarity": "UR",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/7_URUR-12.jpg?v=1778222875",
+     "sort": 164
+    },
+    {
+     "code": "MLHD02-UR-013",
+     "name": "Phoveus",
+     "card_title": "Infernal Pursuit",
+     "rarity": "UR",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/7_URUR-13.jpg?v=1778222877",
+     "sort": 165
+    },
+    {
+     "code": "MLHD02-UR-014",
+     "name": "Paquito",
+     "card_title": "Knockout Strike",
+     "rarity": "UR",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/7_URUR-14.jpg?v=1778222885",
+     "sort": 166
+    },
+    {
+     "code": "MLHD02-UR-015",
+     "name": "Cecilion",
+     "card_title": "Bats Feast",
+     "rarity": "UR",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/7_URUR-15.jpg?v=1778222887",
+     "sort": 167
+    },
+    {
+     "code": "MLHD02-SP-001",
+     "name": "Hilda",
+     "zodiac": "Aries",
+     "rarity": "SP",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/8_SPSP_MLHD02-SP-001.jpg?v=1778222604",
+     "sort": 168
+    },
+    {
+     "code": "MLHD02-SP-002",
+     "name": "Minotaur",
+     "zodiac": "Taurus",
+     "rarity": "SP",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/8_SPSP_MLHD02-SP-002.jpg?v=1778222608",
+     "sort": 169
+    },
+    {
+     "code": "MLHD02-SP-003",
+     "name": "Selena",
+     "zodiac": "Gemini",
+     "rarity": "SP",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/8_SPSP_MLHD02-SP-003.jpg?v=1778222610",
+     "sort": 170
+    },
+    {
+     "code": "MLHD02-SP-004",
+     "name": "Karina",
+     "zodiac": "Gemini",
+     "rarity": "SP",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/8_SPSP_MLHD02-SP-004.jpg?v=1778222613",
+     "sort": 171
+    },
+    {
+     "code": "MLHD02-SP-005",
+     "name": "Zhask",
+     "zodiac": "Cancer",
+     "rarity": "SP",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/8_SPSP_MLHD02-SP-005.jpg?v=1778222617",
+     "sort": 172
+    },
+    {
+     "code": "MLHD02-SP-006",
+     "name": "Badang",
+     "zodiac": "Leo",
+     "rarity": "SP",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/8_SPSP_MLHD02-SP-006.jpg?v=1778222621",
+     "sort": 173
+    },
+    {
+     "code": "MLHD02-SP-007",
+     "name": "Odette",
+     "zodiac": "Virgo",
+     "rarity": "SP",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/8_SPSP_MLHD02-SP-007.jpg?v=1778222623",
+     "sort": 174
+    },
+    {
+     "code": "MLHD02-SP-008",
+     "name": "Lunox",
+     "zodiac": "Libra",
+     "rarity": "SP",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/8_SPSP_MLHD02-SP-008.jpg?v=1778222627",
+     "sort": 175
+    },
+    {
+     "code": "MLHD02-SP-009",
+     "name": "Helcurt",
+     "zodiac": "Scorpio",
+     "rarity": "SP",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/8_SPSP_MLHD02-SP-009.jpg?v=1778222629",
+     "sort": 176
+    },
+    {
+     "code": "MLHD02-SP-010",
+     "name": "Irithel",
+     "zodiac": "Sagittarius",
+     "rarity": "SP",
+     "image": "https://id.kayouofficial.com/cdn/shop/files/8_SPSP_MLHD02-SP-010.jpg?v=1778222632",
+     "sort": 177
+    }
+   ]
+  }
+ ]
+}

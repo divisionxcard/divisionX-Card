@@ -1,4 +1,5 @@
-// ความรู้ทางการของค่ายที่เหลือ — Dragon Ball · Yu-Gi-Oh · KAYOU (Naruto, My Little Pony)
+// ความรู้ทางการของค่ายที่เหลือ — Dragon Ball · Yu-Gi-Oh · Solo Leveling · KAYOU (Naruto, My Little Pony,
+// Transformers, Mobile Legends)
 //
 // รวมไว้ไฟล์เดียวเพราะทั้งสามใช้โครงเดียวกัน (เลือกชุด → หยิบการ์ดเด่น → ต่อคำเตือน)
 // ต่างจาก One Piece/Pokémon ที่แยกไฟล์ เพราะสองตัวนั้นมีตรรกะเฉพาะตัวเยอะกว่ามาก
@@ -21,6 +22,7 @@ let _dbfwFaq = null
 let _kayou = null
 let _ygo = null
 let _ua = null
+let _kayouSea = null
 
 // ⚠️ path ต้องเขียนเป็นสตริงตรง ๆ ห้ามส่งชื่อไฟล์ผ่านตัวแปร — Next ไล่หาไฟล์ที่ต้องแพ็ก
 //    จากการอ่านโค้ด ถ้าเป็นตัวแปรมันมองไม่เห็นแล้วไฟล์จะหายตอน deploy
@@ -48,6 +50,13 @@ export function loadYgoCards() {
   return _ygo
 }
 
+// Transformers Overdrive · MLBB Hand of Destiny 002 — อ่านจากภาพทางการ KAYOU ฝั่งเอเชีย (ไม่มีตัวดึงอัตโนมัติ)
+export function loadKayouSeaCards() {
+  _kayouSea ??= readFile(path.join(process.cwd(), "tasks", "kayou_sea_cards.json"), "utf-8")
+    .then(JSON.parse).catch(() => null)
+  return _kayouSea
+}
+
 export function loadUaCards() {
   _ua ??= readFile(path.join(process.cwd(), "tasks", "ua_cards.json"), "utf-8")
     .then(JSON.parse).catch(() => null)
@@ -55,7 +64,7 @@ export function loadUaCards() {
 }
 
 /** ค่ายที่ไฟล์นี้ดูแล — ใช้เช็คก่อนเรียก จะได้ไม่โหลดไฟล์ฟรี */
-export const TCG_FRANCHISES = new Set(["DB", "YGH", "NRT", "MLP", "SL"])
+export const TCG_FRANCHISES = new Set(["DB", "YGH", "NRT", "MLP", "SL", "TF", "MLBB"])
 
 // คำที่บอกว่าโพสต์นี้พูดถึงค่ายไหน เผื่อคอนเทนต์ไม่ได้ผูก SKU
 const HINTS = [
@@ -64,6 +73,8 @@ const HINTS = [
   ["NRT", /naruto|นารูโตะ|นินจา|อุซึมากิ/i],
   ["MLP", /my\s*little\s*pony|โพนี่|ลิตเติ้ลโพนี่/i],
   ["SL", /solo\s*level|โซโล\s*เลเวล|ระดับข้าคือ|union\s*arena|ยูเนียน\s*อารีน่า/i],
+  ["TF", /transformers|ทรานส์ฟอร์เมอร์ส?|ออพติมัส|optimus\s*prime|overdrive/i],
+  ["MLBB", /mobile\s*legends?|\bmlbb\b|โมบายเลเจนด์|hand\s*of\s*destiny/i],
 ]
 
 export function franchiseFromText(text) {
@@ -207,44 +218,128 @@ async function ygoBlock(setCode, topic, maxChars) {
 // ─────────────────────────────────────────────────────────────────────────
 const KAYOU_IP = { NRT: "Naruto", MLP: "My Little Pony" }
 
-async function kayouBlock(franchise, topic, maxChars) {
+const normSet = (x) => String(x || "").toUpperCase().replace(/[^A-Z0-9]/g, "")
+
+// ชื่อการ์ดจากระดับแรก ๆ ที่เว็บทางการจัดแสดง — ไล่ทีละระดับตามลำดับนั้น ไม่ใช่ตามลำดับการ์ดในไฟล์
+// (การ์ดในไฟล์เรียงจากระดับต่ำขึ้นสูง ถ้าไล่ตามการ์ด MLBB จะได้ UR ก่อน SP)
+// ⚠️ ลำดับบนเว็บไม่ใช่ "หายากสุดก่อน" เสมอ — MLP BP01 มี C/U อยู่กลางรายการ จึงใช้คำว่า "ระดับแรก ๆ ที่เว็บจัดแสดง"
+function kayouHeadliners(series, tiers = 2, limit = 6) {
+  const seen = new Set(), out = []
+  for (const t of (series?.rarity_tiers || []).slice(0, tiers)) {
+    for (const c of series?.cards || []) {
+      if (c.rarity !== t.name || !c.name || seen.has(c.name)) continue
+      seen.add(c.name); out.push(`${c.name} [${c.rarity}]`)
+      if (out.length >= limit) return out
+    }
+  }
+  return out
+}
+
+function tierLines(series) {
+  return (series?.rarity_tiers || []).map(t =>
+    `  ${t.name}${t.full ? ` (${t.full})` : ""} — ${t.count} ใบ` +
+    `${t.art_theme ? ` · ธีม ${t.art_theme}` : ""}`).join("\n")
+}
+
+/**
+ * ⚠️ 22 ต.ค. 2026 — จับคู่ซีรีส์ทางการกับสินค้าในตู้ได้แล้ว (our_set_code · เทียบรูปกล่องจริง)
+ *    ชุดที่จับคู่ได้ = เล่าเจาะชุดนั้นได้ และบอกได้ว่าอยู่ในตู้ · ไม่ระบุชุด = ภาพรวมแบบเดิม
+ * ⚠️ MLP Booster Pack BP01 เป็น "Trading Card Game" (กล่องเขียน CARD GAME) — เดิมบล็อกนี้เขียนทุกชุดว่า
+ *    "การ์ดสะสม ไม่ใช่เกมการ์ด" ซึ่งผิดกับชุดนี้ · ตอนนี้ดูจาก product_type ของซีรีส์
+ */
+async function kayouBlock(franchise, setCode, topic, maxChars) {
   const data = await loadKayouCards()
   const ipName = KAYOU_IP[franchise]
   if (!data?.series?.length || !ipName) return ""
   const mine = data.series.filter(s => s.ip_name === ipName)
   if (!mine.length) return ""
 
-  // เรียงตามจำนวนการ์ด — ไลน์ใหญ่คือไลน์หลักที่คนรู้จัก
-  const top = [...mine].sort((a, b) => b.card_count - a.card_count).slice(0, 5)
-  const parts = ["ไลน์สินค้าทางการ (เรียงตามขนาดชุด):\n" +
-    top.map(s => `  ${s.line} · ${s.title} [${s.code_prefix}] — ${s.card_count} ใบ · ` +
-      `${s.rarity_tiers?.length || 0} ระดับความหายาก`).join("\n")]
+  const code = normSet(setCode)
+  const ours = code ? mine.find(s => normSet(s.our_set_code) === code) : null
+  const parts = []
+  let focus
 
-  // ระดับความหายากจากไลน์ที่ใหญ่ที่สุด — ลูกค้าถามข้อนี้บ่อยที่สุด
-  const big = top[0]
-  if (big?.rarity_tiers?.length) {
-    parts.push(`ระดับความหายากของ ${big.line} ${big.title} (หายากสุดอยู่บน):\n` +
-      big.rarity_tiers.map(t =>
-        `  ${t.name}${t.full ? ` (${t.full})` : ""} — ${t.count} ใบ` +
-        `${t.art_theme ? ` · ธีม ${t.art_theme}` : ""}`).join("\n"))
+  if (ours) {
+    focus = ours
+    parts.push(`ชุดที่อยู่ในตู้เรา: ${ours.line} · ${ours.title} [รหัสทางการ ${ours.code_prefix}] — ` +
+      `${ours.card_count} ใบ · ${ours.rarity_tiers?.length || 0} ระดับความหายาก` +
+      (ours.match_confidence === "medium"
+        ? "\n  (จับคู่จากหน้ากล่อง · ชื่อไลน์บนเว็บอเมริกาไม่ตรงกับหน้ากล่องเอเชีย — ให้เรียกตามหน้ากล่อง)"
+        : ""))
+  } else {
+    // เรียงตามจำนวนการ์ด — ไลน์ใหญ่คือไลน์หลักที่คนรู้จัก
+    const top = [...mine].sort((a, b) => b.card_count - a.card_count).slice(0, 5)
+    focus = top[0]
+    parts.push("ไลน์สินค้าทางการ (เรียงตามขนาดชุด):\n" +
+      top.map(s => `  ${s.line} · ${s.title} [${s.code_prefix}] — ${s.card_count} ใบ · ` +
+        `${s.rarity_tiers?.length || 0} ระดับความหายาก${s.our_set_code ? " · มีในตู้เรา" : ""}`).join("\n"))
   }
-  const rates = big?.editions?.find(e => e.pull_rates?.length)
+
+  // ระดับความหายาก — ลูกค้าถามข้อนี้บ่อยที่สุด
+  if (focus?.rarity_tiers?.length) {
+    parts.push(`ระดับความหายากของ ${focus.line} ${focus.title} (ตามลำดับที่เว็บทางการจัดแสดง):\n` + tierLines(focus))
+  }
+  const heads = kayouHeadliners(focus)
+  if (heads.length) parts.push(`การ์ดจากระดับแรก ๆ ที่เว็บจัดแสดง: ${heads.join(" · ")}`)
+  const rates = focus?.editions?.find(e => e.pull_rates?.length)
   if (rates) {
-    parts.push(`อัตราออกการ์ดของกล่อง "${rates.label}":\n` +
+    parts.push(`อัตราออกการ์ดของกล่อง "${rates.label}" (ฉบับอเมริกา):\n` +
       rates.pull_rates.map(p => `  ${p.per_pack} → ${p.detail}`).join("\n"))
   }
 
   let body = parts.join("\n\n")
   if (body.length > maxChars) body = body.slice(0, maxChars).replace(/\n[^\n]*$/, "")
+  const isGame = /trading card game/i.test(focus?.product_type || "")
   return `\n━━━ ข้อมูลทางการ ${ipName} (KAYOU) ━━━\n` + body +
     `\n\nที่มา: เว็บทางการ KAYOU · ดึงเมื่อ ${data?._source?.fetched_at || "-"}\n` +
-    "⚠️ นี่คือ**การ์ดสะสม ไม่ใช่เกมการ์ด** — ไม่มีกฎการเล่น ห้ามชวนลูกค้าว่าเอาไปแข่งได้\n" +
+    (isGame
+      ? "⚠️ ชุดนี้เป็น**เกมการ์ดที่เล่นได้** (กล่องเขียน CARD GAME) แต่คลังเรายังไม่มีกฎการเล่น — ห้ามอธิบายวิธีเล่นเอง\n"
+      : "⚠️ นี่คือ**การ์ดสะสม ไม่ใช่เกมการ์ด** — ไม่มีกฎการเล่น ห้ามชวนลูกค้าว่าเอาไปแข่งได้\n") +
     `⚠️ KAYOU เป็นผู้ผลิตที่ถือไลเซนส์ ไม่ใช่เจ้าของ ${ipName} ` +
     "ห้ามเขียนว่าเป็นสินค้าของเจ้าของการ์ตูนโดยตรง\n" +
-    "⚠️ ยังไม่ได้จับคู่ไลน์พวกนี้กับสินค้าในตู้เรา — " +
-    "**ห้ามระบุว่าไลน์ไหนหรือชุดไหนมีขายในตู้** ให้พูดถึงในภาพรวมเท่านั้น\n" +
-    "⚠️ อัตราออกการ์ดข้างบนเป็นของกล่องฉบับอเมริกา อาจไม่ตรงกับกล่องที่เราขาย — " +
+    (ours
+      ? ""
+      : "⚠️ ไม่ได้ระบุชุด — **ห้ามระบุว่าไลน์ไหนหรือชุดไหนมีขายในตู้** ยกเว้นที่ขึ้นว่า \"มีในตู้เรา\"\n") +
+    "⚠️ อัตราออกการ์ดเป็นของกล่องฉบับอเมริกา อาจไม่ตรงกับกล่องที่เราขาย (จำนวนซองต่อกล่องก็ต่างกัน) — " +
     "ห้ามโฆษณาตัวเลขนี้ว่าเป็นของกล่องในตู้เรา\n"
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// KAYOU ฝั่งเอเชีย — Transformers Overdrive · MLBB Hand of Destiny 002
+// ─────────────────────────────────────────────────────────────────────────
+// ไม่มีบนเว็บ KAYOU หลัก · ข้อมูลอ่านจากภาพทางการบน id./th.kayouofficial.com (22 ต.ค. 2026)
+// ดู tasks/kayou_sea_cards.json → _important
+const SEA_FRANCHISE = { TF: "Transformers", MLBB: "Mobile Legends: Bang Bang" }
+
+async function seaBlock(franchise, setCode, maxChars) {
+  const data = await loadKayouSeaCards()
+  const ip = SEA_FRANCHISE[franchise]
+  const s = data?.series?.find(x => x.ip_name === ip)
+  if (!s) return ""
+  const parts = [`ชุด ${s.title}${s.subtitle ? ` — "${s.subtitle}"` : ""} · ${s.product_type}` +
+    ` · รหัสบนการ์ด ${s.code_prefix}`]
+  if (s.rarity_tiers?.length) {
+    parts.push(`ระดับความหายาก${franchise === "TF" ? " (ตามตารางทางการ · อัตราออกจากตารางทางการ)" : " (ลำดับตามหน้าเว็บทางการ — ไม่ใช่ลำดับความหายากที่ยืนยัน)"}:\n` +
+      s.rarity_tiers.map(t => `  ${t.name}${t.full ? ` (${t.full})` : ""} — ${t.count} ใบ` +
+        `${t.official_pull_rate ? ` · ${t.official_pull_rate}` : ""}` +
+        `${t.art_theme ? ` · ${t.art_theme}` : ""}`).join("\n"))
+  }
+  const heads = kayouHeadliners(s, 2, 8)
+  if (heads.length) parts.push(`การ์ดจากระดับแรก ๆ ที่เว็บจัดแสดง: ${heads.join(" · ")}`)
+
+  let body = parts.join("\n\n")
+  if (body.length > maxChars) body = body.slice(0, maxChars).replace(/\n[^\n]*$/, "")
+  const warn = franchise === "TF"
+    ? "⚠️ มี 2 เวอร์ชันกล่อง (001A 238 แบบ · 001B 239 แบบ มีบัตรแลกรางวัลเพิ่ม 1 ใบ) ยังไม่รู้ว่าตู้เราเป็นแบบไหน — ห้ามพูดถึงบัตรแลกรางวัล\n" +
+      "⚠️ ตารางทางการเขียนส่วนประกอบในซองขัดกันเอง — ห้ามบอกว่าซองหนึ่ง \"การันตี\" ได้อะไร\n" +
+      "⚠️ เลขซีเรียลของ XR☆/OR☆/LR☆ มาจากร้านค้า ไม่ใช่ทางการ — ห้ามอ้าง\n"
+    : "⚠️ ไม่มีอัตราออกการ์ดและลำดับความหายากทางการ — ห้ามบอกว่าระดับไหนหายากที่สุด ห้ามอ้างอัตราออก\n" +
+      "⚠️ ชื่อชุดทางการคือ \"Stargazer\" (ไม่ใช่ Decisive Peak) · การ์ด SP มี 10 ใบ 9 ราศี (ไม่ใช่ 12 ราศี)\n"
+  return `\n━━━ ข้อมูลทางการ ${ip} (KAYOU) ━━━\n` + body +
+    `\n\nที่มา: เว็บทางการ KAYOU ฝั่งเอเชีย (id./th.kayouofficial.com) · อ่านจากภาพทางการ ${data?._source?.fetched_at || "-"}\n` +
+    "⚠️ นี่คือ**การ์ดสะสม ไม่ใช่เกมการ์ด** — ห้ามชวนว่าเอาไปเล่นแข่งได้\n" +
+    `⚠️ KAYOU เป็นผู้ผลิตที่ถือไลเซนส์ ไม่ใช่เจ้าของ ${ip} ห้ามเขียนว่าเป็นสินค้าของเจ้าของ IP โดยตรง\n` +
+    "⚠️ ชื่อการ์ดสะกดตามที่พิมพ์บนการ์ด ห้ามแก้ตัวสะกดเอง\n" + warn
 }
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -291,7 +386,7 @@ async function uaBlock(setCode, topic, maxChars) {
  * ก้อนข้อมูลอ้างอิงสำหรับใส่ prompt — คืน "" ถ้าไม่มีอะไรเกี่ยว
  *
  * @param {object} o
- * @param {string} [o.franchise] ค่าจาก skus.franchise (DB/YGH/NRT/MLP)
+ * @param {string} [o.franchise] ค่าจาก skus.franchise (DB/YGH/NRT/MLP/SL/TF/MLBB)
  * @param {string} [o.setCode]   ค่าจาก skus.set_code
  * @param {string} [o.topic]     หัวข้อคอนเทนต์ ใช้เดาค่ายเมื่อไม่ได้ผูก SKU
  */
@@ -301,7 +396,8 @@ export async function tcgKnowledgeBlock({ franchise, setCode, topic = "", maxCha
   try {
     if (fr === "DB") return await dbBlock(setCode, topic, maxChars)
     if (fr === "YGH") return await ygoBlock(setCode, topic, maxChars)
-    if (fr === "NRT" || fr === "MLP") return await kayouBlock(fr, topic, maxChars)
+    if (fr === "NRT" || fr === "MLP") return await kayouBlock(fr, setCode, topic, maxChars)
+    if (fr === "TF" || fr === "MLBB") return await seaBlock(fr, setCode, maxChars)
     if (fr === "SL") return await uaBlock(setCode, topic, maxChars)
   } catch {
     return ""     // ไฟล์หายหรือรูปแบบเปลี่ยน — ปล่อยให้เขียนคอนเทนต์ต่อได้โดยไม่มีบล็อกนี้
@@ -310,7 +406,7 @@ export async function tcgKnowledgeBlock({ franchise, setCode, topic = "", maxCha
 }
 
 export default {
-  loadDbfwCards, loadDbfwFaq, loadKayouCards, loadYgoCards, loadUaCards,
+  loadDbfwCards, loadDbfwFaq, loadKayouCards, loadKayouSeaCards, loadYgoCards, loadUaCards,
   TCG_FRANCHISES, franchiseFromText,
   notableDbCards, notableYgoCards, tcgKnowledgeBlock,
 }

@@ -2,8 +2,24 @@
 type: note
 date: 2026-08-24
 tags: [kayou, sku, mapping, blocked]
-status: ⏸️ ค้างไว้ตั้งใจ — เจ้าของสั่งอย่าเพิ่งเปลี่ยน
+status: ✅ จับคู่ที่คลังความรู้แล้ว (22 ต.ค. 2026) · skus.set_code ยังไม่แก้ตามที่เจ้าของสั่ง
 ---
+
+> [!success] จับคู่แล้ว 22 ต.ค. 2026 — **ที่คลังความรู้ ไม่ได้แก้ `skus.set_code`**
+> เทียบจากรูปกล่องจริงใน Supabase `sku-images` · ตาราง `OUR_SETS` ใน `deploy/agents/kayou_kb.py`
+> และฟิลด์ `our_set_code` ใน `deploy/tasks/kayou_cards.json`
+>
+> | SKU เรา | ชุดทางการ | หลักฐานบนกล่อง | ความมั่นใจ |
+> |---|---|---|---|
+> | NRT Series - 01 | `NRI01` Earth Scroll S1 | EARTH SCROLL · 01 SERIES · SILVER | สูง |
+> | NRT Series - 02 | `NREA02` Earth Scroll S2 | EARTH SCROLL · 02 SERIES · SILVER | สูง |
+> | NRT Jin - 2 | `NRSA02` Chapter Jin S2 | JIN Chapter · 02 SERIES · PLATINUM | สูง |
+> | NRT Jin - 1 | `NRSA01` (เว็บอเมริกาเรียก Heaven Scroll S1) | JIN Chapter · Series 1 | กลาง — ควรเทียบใบสอด |
+> | MLP SEA02 | `FME02` Fun Moments Edition S2 | Fun Moments Edition · 02 SERIES | สูง |
+> | MLP BP-01 | `BP01` Fantasy Wonderland | MY LITTLE PONY **CARD GAME** · Booster Pack 01 | สูง |
+>
+> ⚠️ BP01 เป็น**เกมการ์ด** (product_type Trading Card Game) — เดิมคลังเขียนทุกชุด KAYOU ว่า "ไม่ใช่เกมการ์ด" แก้แล้ว
+> · กล่องฝั่งเอเชียจำนวนซอง/กล่องต่างจากเว็บอเมริกา (เช่น Series 01 ของเรา 30 ซอง) — อัตราออกการ์ดบนเว็บใช้กับตู้เราไม่ได้
 
 # รหัสชุด KAYOU ไม่ตรงกับ set_code ของเรา — ยังไม่แก้
 

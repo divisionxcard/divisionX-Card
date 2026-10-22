@@ -42,9 +42,31 @@ WANTED = {"Naruto", "My Little Pony"}
 # ของที่เราขายแต่ยังไม่มีบนเว็บทางการ — ให้เตือนทุกครั้งที่รัน
 # วันไหน KAYOU ขึ้นหน้าให้ เราจะรู้ทันทีโดยไม่ต้องมานั่งเช็คเอง
 WATCH_FOR = {"transformers", "mobile legends", "mlbb"}
+# ⚠️ Transformers Overdrive กับ MLBB Hand of Destiny 002 มีบนเว็บ KAYOU ฝั่งเอเชีย (id./th.kayouofficial.com)
+#    แต่เป็นหน้ารูปล้วน ไม่มี API ให้ดึง → ข้อมูลอ่านจากภาพทางการ เก็บแยกที่ tasks/kayou_sea_cards.json (22 ต.ค. 2026)
+
+# ซีรีส์ทางการ → สินค้าในตู้เรา (22 ต.ค. 2026 เทียบจากรูปกล่องจริงใน Supabase sku-images)
+# ⚠️ ไม่แก้ skus.set_code — เจ้าของสั่งไว้ 24 ส.ค. ว่ากลัวแอดมินงง (wiki/kb-research/kayou-sku-mapping-todo.md)
+#    จับคู่ไว้ที่คลังความรู้แทน ตัวเขียนจะได้รู้ว่าชุดไหนอยู่ในตู้
+OUR_SETS = {
+    "NRI01":  {"our_set_code": "SERIES01", "our_sku_id": "NRT Series - 01", "match_confidence": "high",
+               "match_evidence": "กล่องเขียน EARTH SCROLL · Smriti · 01 SERIES · SILVER · Chunin Exams Hidden Leaf Village Falls!"},
+    "NREA02": {"our_set_code": "SERIES02", "our_sku_id": "NRT Series - 02", "match_confidence": "high",
+               "match_evidence": "กล่องเขียน EARTH SCROLL · Smriti · 02 SERIES · SILVER · Awaken, the Fifth Hokage"},
+    "NRSA02": {"our_set_code": "JIN02", "our_sku_id": "NRT Jin - 2", "match_confidence": "high",
+               "match_evidence": "กล่องเขียน JIN Chapter · Smriti · 02 SERIES · PLATINUM"},
+    "NRSA01": {"our_set_code": "JIN01", "our_sku_id": "NRT Jin - 1", "match_confidence": "medium",
+               "match_evidence": "กล่องเขียน JIN Chapter · Smriti · Series 1 — เว็บอเมริกาเรียกชุดนี้ว่า Heaven Scroll "
+                                 "แต่รหัส NRSA เดียวกับ Chapter Jin 2/3 และเป็นชุดแรกของไลน์"},
+    "FME02":  {"our_set_code": "SEA02", "our_sku_id": "MLP SEA02", "match_confidence": "high",
+               "match_evidence": "กล่องเขียน Fun Moments Edition · Friendship Eternal Cards · 02 SERIES · SILVER"},
+    "BP01":   {"our_set_code": "BP01", "our_sku_id": "MLP BP-01", "match_confidence": "high",
+               "match_evidence": "กล่องเขียน MY LITTLE PONY CARD GAME · Fantasy Wonderland · Booster Pack 01"},
+}
 
 LICENSE_NOTE = ("เนื้อหาลิขสิทธิ์ KAYOU และเจ้าของตัวการ์ตูน (Naruto→Pierrot · MLP→Hasbro) "
-                "ใช้อ้างอิงข้อมูลสินค้าเท่านั้น ห้ามใช้รูปการ์ดจากเว็บทางการเป็นภาพโพสต์ของเรา")
+                "ใช้อ้างอิงข้อมูลสินค้า · รูปการ์ดใช้ในโปสเตอร์ 'ส่อง 5 ใบเด็ด' ได้ตามที่เจ้าของเลือก 22 ต.ค. 2026 "
+                "(ยอมรับความเสี่ยงเอง · เฉพาะการ์ดในชุดที่โพสต์พูดถึง)")
 
 
 def log(msg):
@@ -190,6 +212,7 @@ def build(only_ip=None):
                                   "art_theme": t.get("intro"), "count": t.get("count")}
                                  for t in (d.get("rarityTiers") or [])],
                 "editions": eds,
+                **OUR_SETS.get(cards[0]["code"].split("-")[0] if cards and cards[0].get("code") else "", {}),
                 "cards": cards,
             })
             log(f"   {d.get('seriesTypeName')} · {d.get('title')} "
@@ -206,7 +229,8 @@ def build(only_ip=None):
         },
         "_license": LICENSE_NOTE,
         "_important": (
-            "การ์ดสะสม ไม่ใช่เกมการ์ด — ไม่มีกฎการเล่น ห้ามตอบลูกค้าว่าเอาไปเล่นแข่งได้ · "
+            "ส่วนใหญ่เป็นการ์ดสะสม ไม่ใช่เกมการ์ด — ยกเว้นซีรีส์ที่ product_type = Trading Card Game "
+            "(MLP Booster Pack BP01 · กล่องเขียน CARD GAME) ซึ่งเป็นเกมการ์ด แต่คลังนี้ไม่มีกฎการเล่น · "
             "KAYOU เป็นผู้ผลิตที่ถือไลเซนส์ ไม่ใช่เจ้าของตัวการ์ตูน "
             "(Naruto→Pierrot · My Little Pony→Hasbro) · "
             "specs กับอัตราออกการ์ดบนเว็บเป็นของฉบับอเมริกา "
@@ -221,10 +245,9 @@ def build(only_ip=None):
             "editions": "กล่องแต่ละเวอร์ชัน — อัตราออกการ์ดไม่เท่ากัน ต้องระบุว่าพูดถึงเวอร์ชันไหน",
             "pull_rates": "อัตราออกการ์ดต่อซองจากเว็บทางการ (ฉบับอเมริกา)",
         },
-        "_todo_mapping": (
-            "ยังไม่ได้ผูกกับ sku_id ของเรา — รหัสของ KAYOU (NRSA01/NRI01) "
-            "ไม่ตรงกับ set_code ที่เราตั้งเอง (JIN01/SERIES01) "
-            "ต้องให้คนเทียบกล่องจริงก่อน อย่าเดา"
+        "_mapping": (
+            "ซีรีส์ที่มี our_set_code = อยู่ในตู้เรา (เทียบรูปกล่องจริง 22 ต.ค. 2026 · ดู OUR_SETS ใน kayou_kb.py) "
+            "· match_confidence medium = ยังควรเทียบใบสอดในกล่องจริงอีกที · skus.set_code ไม่ได้แก้ (เจ้าของสั่ง 24 ส.ค.)"
         ),
         "_stats": {"series": len(series_out), "cards": total,
                    "ips_on_site": sorted(ips), "not_on_site_yet": sorted(WATCH_FOR)},

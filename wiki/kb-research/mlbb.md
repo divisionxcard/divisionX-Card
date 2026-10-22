@@ -15,7 +15,14 @@ sources:
   - https://www.wildberries.ru/catalog/1167819625/detail.aspx
   - https://www.carousell.sg/mlbb-card/q/
   - https://www.kidzandkai.com/product/ka-bang-bang-collectible-cards-hand-of-destiny-sea-kayou/
+status: ⚠️ แทนที่แล้ว — ดู kayou_sea_cards.json
 ---
+
+> [!warning] ไฟล์นี้มีข้อมูลผิด — ใช้ `deploy/tasks/kayou_sea_cards.json` แทน (22 ต.ค. 2026)
+> ข้อมูลใหม่อ่านจากการ์ดทางการ 177 ใบบน id./th.kayouofficial.com · จุดที่ไฟล์นี้ผิด:
+> - ชื่อชุดทางการคือ **Stargazer** ไม่ใช่ "Decisive Peak"
+> - การ์ด SP มี 10 ใบ 9 ราศี ไม่ใช่ "12 ราศี"
+> - kayousea.com ไม่มีอยู่จริง
 
 # Mobile Legends: Bang Bang — Hand of Destiny Series 2 ("Decisive Peak")
 

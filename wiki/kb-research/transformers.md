@@ -9,7 +9,15 @@ sources:
   - https://news.tfw2005.com/2025/01/22/new-official-40th-anniversary-trading-cards-by-kayou-530280
   - https://www.skybound.com/article/first-look-one-has-fallen-one-will-rise-in-transformers-22-by-daniel-warren
   - https://news.tfw2005.com/2026/08/21/skybounds-energon-universe-comics-solicitations-november-2026-572245
+status: ⚠️ แทนที่แล้ว — ดู kayou_sea_cards.json
 ---
+
+> [!warning] ไฟล์นี้มีข้อมูลผิด — ใช้ `deploy/tasks/kayou_sea_cards.json` แทน (22 ต.ค. 2026)
+> ข้อมูลใหม่อ่านจากภาพทางการบน id./th.kayouofficial.com · จุดที่ไฟล์นี้ผิด:
+> - แต่งระดับ R / N ขึ้นมา (ของจริงต่ำสุดคือ SR) และไม่มีระดับ WR
+> - ใช้ชื่อระดับของร้านค้า ไม่ใช่ชื่อทางการ · "239 แบบ 14 ระดับ" เป็นของกล่อง 001B เท่านั้น
+> - Rodimus / Grimlock / Soundblaster ไม่มีบนการ์ดที่ระบุชื่อ · "Optimus SSR/HR ขายดีที่สุด" ไม่มีแหล่ง
+> - ทางการ 10 ซอง/กล่อง (DB และ scraper เราใส่ 15 — ยังไม่แก้ รอเจ้าของ)
 
 # Transformers – Energy Critical Premium Cards (Overdrive Edition Series 1)
 
