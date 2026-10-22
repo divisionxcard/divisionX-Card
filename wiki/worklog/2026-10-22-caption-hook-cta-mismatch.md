@@ -2,7 +2,7 @@
 type: worklog
 date: 2026-10-22
 tags: [content, caption, review, hermes, poster]
-commits: []
+commits: [1b9d692]
 status: ✅ แก้แคปชั่น + รูป #63 แล้ว (pending รอ Hermes ตรวจใหม่) · เพิ่มกฎข้อ 10 ให้ตัวเขียนและตัวตรวจ
 ---
 
