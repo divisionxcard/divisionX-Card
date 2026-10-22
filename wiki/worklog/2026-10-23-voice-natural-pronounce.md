@@ -2,7 +2,7 @@
 type: worklog
 date: 2026-10-23
 tags: [video, voice, tts, pronunciation, gemini, whisper]
-commits: []
+commits: [bf737f3]
 status: ✅ คำอ่าน (tts_pronounce.json) · ตัวย่อช่วงเงียบไม่ทำจังหวะแบนแล้ว · ต่อเสียงรุ่น 3.8 ได้ · ⏳ ค่าเริ่มต้นยังรุ่น 2.5 — รอเจ้าของฟังเทียบ
 ---
 
