@@ -1,0 +1,465 @@
+{
+ "_source": {
+  "tcgcsv": "https://tcgcsv.com/tcgplayer/68",
+  "official": "https://asia-th.onepiece-cardgame.com/images/cardlist/card/",
+  "built_at": "2026-10-22"
+ },
+ "_method": "dHash 256 บิตของส่วนภาพ · รับเมื่อระยะ ≤ 72 และห่างอันดับสอง ≥ 14 · ดู docstring ของ opcg_tcg_variants.py",
+ "_why": "แปลงเวอร์ชันของ TCGplayer (ชื่อเป็นคำ) เป็นรหัสรูปทางการ (_pN) สำหรับ 5 ใบเด็ด One Piece ตอนสลับไป TCGCSV",
+ "map": {
+  "654923": {
+   "code": "EB02-028_p1",
+   "dist": 38,
+   "margin": 94,
+   "set": "OP13",
+   "number": "EB02-028",
+   "tag": "SP"
+  },
+  "655081": {
+   "code": "OP07-111_p2",
+   "dist": 36,
+   "margin": 84,
+   "set": "OP13",
+   "number": "OP07-111",
+   "tag": "SP"
+  },
+  "655082": {
+   "code": "OP07-118_p2",
+   "dist": 47,
+   "margin": 67,
+   "set": "OP13",
+   "number": "OP07-118",
+   "tag": "SP"
+  },
+  "657444": {
+   "code": "OP09-009_p2",
+   "dist": 59,
+   "margin": 50,
+   "set": "OP13",
+   "number": "OP09-009",
+   "tag": "SP"
+  },
+  "657446": {
+   "code": "OP09-118_p3",
+   "dist": 24,
+   "margin": 102,
+   "set": "OP13",
+   "number": "OP09-118",
+   "tag": "SP · Wanted Poster"
+  },
+  "657448": {
+   "code": "OP09-119_p3",
+   "dist": 54,
+   "margin": 66,
+   "set": "OP13",
+   "number": "OP09-119",
+   "tag": "SP"
+  },
+  "657449": {
+   "code": "OP10-030_p2",
+   "dist": 30,
+   "margin": 89,
+   "set": "OP13",
+   "number": "OP10-030",
+   "tag": "SP"
+  },
+  "657251": {
+   "code": "OP13-001_p2",
+   "dist": 26,
+   "margin": 101,
+   "set": "OP13",
+   "number": "OP13-001",
+   "tag": "Alternate Art"
+  },
+  "657253": {
+   "code": "OP13-002_p1",
+   "dist": 36,
+   "margin": 85,
+   "set": "OP13",
+   "number": "OP13-002",
+   "tag": "Alternate Art"
+  },
+  "657255": {
+   "code": "OP13-003_p1",
+   "dist": 26,
+   "margin": 108,
+   "set": "OP13",
+   "number": "OP13-003",
+   "tag": "Alternate Art"
+  },
+  "657257": {
+   "code": "OP13-004_p1",
+   "dist": 24,
+   "margin": 104,
+   "set": "OP13",
+   "number": "OP13-004",
+   "tag": "Alternate Art"
+  },
+  "657261": {
+   "code": "OP13-007_p1",
+   "dist": 14,
+   "margin": 112,
+   "set": "OP13",
+   "number": "OP13-007",
+   "tag": "Alternate Art"
+  },
+  "657271": {
+   "code": "OP13-016_p1",
+   "dist": 34,
+   "margin": 89,
+   "set": "OP13",
+   "number": "OP13-016",
+   "tag": "Alternate Art"
+  },
+  "657279": {
+   "code": "OP13-023_p1",
+   "dist": 13,
+   "margin": 137,
+   "set": "OP13",
+   "number": "OP13-023",
+   "tag": "Alternate Art"
+  },
+  "657284": {
+   "code": "OP13-027_p1",
+   "dist": 34,
+   "margin": 84,
+   "set": "OP13",
+   "number": "OP13-027",
+   "tag": "Alternate Art"
+  },
+  "657286": {
+   "code": "OP13-028_p1",
+   "dist": 16,
+   "margin": 99,
+   "set": "OP13",
+   "number": "OP13-028",
+   "tag": "Alternate Art"
+  },
+  "657301": {
+   "code": "OP13-042_p1",
+   "dist": 36,
+   "margin": 98,
+   "set": "OP13",
+   "number": "OP13-042",
+   "tag": "Alternate Art"
+  },
+  "657311": {
+   "code": "OP13-051_p1",
+   "dist": 23,
+   "margin": 91,
+   "set": "OP13",
+   "number": "OP13-051",
+   "tag": "Alternate Art"
+  },
+  "657315": {
+   "code": "OP13-054_p1",
+   "dist": 19,
+   "margin": 105,
+   "set": "OP13",
+   "number": "OP13-054",
+   "tag": "Alternate Art"
+  },
+  "657326": {
+   "code": "OP13-064_p1",
+   "dist": 33,
+   "margin": 85,
+   "set": "OP13",
+   "number": "OP13-064",
+   "tag": "Alternate Art"
+  },
+  "657328": {
+   "code": "OP13-065_p1",
+   "dist": 29,
+   "margin": 101,
+   "set": "OP13",
+   "number": "OP13-065",
+   "tag": "Alternate Art"
+  },
+  "657330": {
+   "code": "OP13-066_p1",
+   "dist": 26,
+   "margin": 84,
+   "set": "OP13",
+   "number": "OP13-066",
+   "tag": "Alternate Art"
+  },
+  "657341": {
+   "code": "OP13-076_p1",
+   "dist": 36,
+   "margin": 82,
+   "set": "OP13",
+   "number": "OP13-076",
+   "tag": "Alternate Art"
+  },
+  "657345": {
+   "code": "OP13-079_p1",
+   "dist": 37,
+   "margin": 76,
+   "set": "OP13",
+   "number": "OP13-079",
+   "tag": "Alternate Art"
+  },
+  "657351": {
+   "code": "OP13-082_p1",
+   "dist": 12,
+   "margin": 108,
+   "set": "OP13",
+   "number": "OP13-082",
+   "tag": "Alternate Art"
+  },
+  "657353": {
+   "code": "OP13-083_p1",
+   "dist": 27,
+   "margin": 28,
+   "set": "OP13",
+   "number": "OP13-083",
+   "tag": "Alternate Art"
+  },
+  "657354": {
+   "code": "OP13-083_p2",
+   "dist": 45,
+   "margin": 16,
+   "set": "OP13",
+   "number": "OP13-083",
+   "tag": "Parallel"
+  },
+  "657356": {
+   "code": "OP13-084_p1",
+   "dist": 30,
+   "margin": 33,
+   "set": "OP13",
+   "number": "OP13-084",
+   "tag": "Alternate Art"
+  },
+  "657357": {
+   "code": "OP13-084_p2",
+   "dist": 45,
+   "margin": 15,
+   "set": "OP13",
+   "number": "OP13-084",
+   "tag": "Parallel"
+  },
+  "657363": {
+   "code": "OP13-089_p1",
+   "dist": 31,
+   "margin": 34,
+   "set": "OP13",
+   "number": "OP13-089",
+   "tag": "Alternate Art"
+  },
+  "657364": {
+   "code": "OP13-089_p2",
+   "dist": 47,
+   "margin": 30,
+   "set": "OP13",
+   "number": "OP13-089",
+   "tag": "Parallel"
+  },
+  "657367": {
+   "code": "OP13-091_p1",
+   "dist": 27,
+   "margin": 24,
+   "set": "OP13",
+   "number": "OP13-091",
+   "tag": "Alternate Art"
+  },
+  "657378": {
+   "code": "OP13-100_p1",
+   "dist": 23,
+   "margin": 91,
+   "set": "OP13",
+   "number": "OP13-100",
+   "tag": "Alternate Art"
+  },
+  "657387": {
+   "code": "OP13-108_p1",
+   "dist": 20,
+   "margin": 102,
+   "set": "OP13",
+   "number": "OP13-108",
+   "tag": "Alternate Art"
+  },
+  "657390": {
+   "code": "OP13-110_p1",
+   "dist": 26,
+   "margin": 105,
+   "set": "OP13",
+   "number": "OP13-110",
+   "tag": "Alternate Art"
+  },
+  "657394": {
+   "code": "OP13-113_p1",
+   "dist": 22,
+   "margin": 106,
+   "set": "OP13",
+   "number": "OP13-113",
+   "tag": "Alternate Art"
+  },
+  "657396": {
+   "code": "OP13-114_p1",
+   "dist": 17,
+   "margin": 121,
+   "set": "OP13",
+   "number": "OP13-114",
+   "tag": "Alternate Art"
+  },
+  "657401": {
+   "code": "OP13-118_p3",
+   "dist": 52,
+   "margin": 26,
+   "set": "OP13",
+   "number": "OP13-118",
+   "tag": "Red Super Alternate Art"
+  },
+  "657402": {
+   "code": "OP13-118_p2",
+   "dist": 44,
+   "margin": 24,
+   "set": "OP13",
+   "number": "OP13-118",
+   "tag": "Super Alternate Art"
+  },
+  "657403": {
+   "code": "OP13-118_p1",
+   "dist": 26,
+   "margin": 72,
+   "set": "OP13",
+   "number": "OP13-118",
+   "tag": "Parallel"
+  },
+  "657404": {
+   "code": "OP13-118_p4",
+   "dist": 28,
+   "margin": 93,
+   "set": "OP13",
+   "number": "OP13-118",
+   "tag": "Wanted Poster"
+  },
+  "657406": {
+   "code": "OP13-119_p3",
+   "dist": 49,
+   "margin": 18,
+   "set": "OP13",
+   "number": "OP13-119",
+   "tag": "Red Super Alternate Art"
+  },
+  "657407": {
+   "code": "OP13-119_p2",
+   "dist": 42,
+   "margin": 14,
+   "set": "OP13",
+   "number": "OP13-119",
+   "tag": "Super Alternate Art"
+  },
+  "657408": {
+   "code": "OP13-119_p1",
+   "dist": 23,
+   "margin": 59,
+   "set": "OP13",
+   "number": "OP13-119",
+   "tag": "Parallel"
+  },
+  "657409": {
+   "code": "OP13-119_p4",
+   "dist": 25,
+   "margin": 88,
+   "set": "OP13",
+   "number": "OP13-119",
+   "tag": "Wanted Poster"
+  },
+  "657411": {
+   "code": "OP13-120_p3",
+   "dist": 39,
+   "margin": 22,
+   "set": "OP13",
+   "number": "OP13-120",
+   "tag": "Red Super Alternate Art"
+  },
+  "657412": {
+   "code": "OP13-120_p2",
+   "dist": 31,
+   "margin": 20,
+   "set": "OP13",
+   "number": "OP13-120",
+   "tag": "Super Alternate Art"
+  },
+  "657413": {
+   "code": "OP13-120_p1",
+   "dist": 22,
+   "margin": 58,
+   "set": "OP13",
+   "number": "OP13-120",
+   "tag": "Parallel"
+  },
+  "657414": {
+   "code": "OP13-120_p4",
+   "dist": 27,
+   "margin": 86,
+   "set": "OP13",
+   "number": "OP13-120",
+   "tag": "Wanted Poster"
+  }
+ },
+ "unmatched": [
+  {
+   "productId": 657442,
+   "name": "Shanks - OP09-004 (SP) (Gold)",
+   "set": "OP13",
+   "number": "OP09-004",
+   "why": "ก้ำกึ่งสองรูป",
+   "best": "OP09-004_p5",
+   "dist": 43,
+   "margin": 7
+  },
+  {
+   "productId": 657443,
+   "name": "Shanks - OP09-004 (SP) (Silver)",
+   "set": "OP13",
+   "number": "OP09-004",
+   "why": "ก้ำกึ่งสองรูป",
+   "best": "OP09-004_p6",
+   "dist": 37,
+   "margin": 13
+  },
+  {
+   "productId": 659982,
+   "name": "Monkey.D.Luffy - OP11-058 (TR)",
+   "set": "OP13",
+   "number": "OP11-058",
+   "why": "ไม่ใกล้พอ",
+   "best": "OP11-058_p1",
+   "dist": 108,
+   "margin": 22
+  },
+  {
+   "productId": 657347,
+   "name": "St. Ethanbaron V. Nusjuro (Alternate Art)",
+   "set": "OP13",
+   "number": "OP13-080",
+   "why": "ก้ำกึ่งสองรูป",
+   "best": "OP13-080_p1",
+   "dist": 23,
+   "margin": 10
+  },
+  {
+   "productId": 657348,
+   "name": "St. Ethanbaron V. Nusjuro (Parallel)",
+   "set": "OP13",
+   "number": "OP13-080",
+   "why": "ก้ำกึ่งสองรูป",
+   "best": "OP13-080_p2",
+   "dist": 37,
+   "margin": 4
+  },
+  {
+   "productId": 657368,
+   "name": "St. Marcus Mars (Parallel)",
+   "set": "OP13",
+   "number": "OP13-091",
+   "why": "ก้ำกึ่งสองรูป",
+   "best": "OP13-091_p1",
+   "dist": 55,
+   "margin": 2
+  }
+ ]
+}

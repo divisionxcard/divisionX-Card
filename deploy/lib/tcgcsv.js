@@ -25,6 +25,15 @@ export const TCGCSV_SETS = {
     groups: Object.fromEntries(Array.from({ length: 9 }, (_, i) => [`FB0${i + 1}`, `FB0${i + 1}`])),
   },
   SL: { cat: 81, groups: { UA51: "UE17BT", UA51BT: "UE17BT" }, market: "Union Arena Solo Leveling ฉบับอังกฤษ (UE17BT)", sameLanguage: false },
+  // One Piece = ทางสำรองเมื่อ card2price เก่าเกิน 14 วัน (เจ้าของเลือก 22 ต.ค. 2026 · ดู lib/top5.js → opFromTcgcsv)
+  // EB04 ไม่มีกลุ่มของตัวเองบน TCGplayer (รวมอยู่ใน OP14-EB04 / OP15-EB04) — ไม่ใส่ ดีกว่าเอาราคาผิดชุดมา
+  OP: {
+    cat: 68, market: "One Piece ฉบับอังกฤษ", sameLanguage: false,
+    groups: {
+      ...Object.fromEntries(Array.from({ length: 17 }, (_, i) => [`OP${String(i + 1).padStart(2, "0")}`, `OP${String(i + 1).padStart(2, "0")}`])),
+      EB01: "EB01", EB02: "EB02", EB03: "EB03", PRB01: "PRB-01", PRB02: "PRB-02",
+    },
+  },
 }
 
 const sleep = (ms) => new Promise(r => setTimeout(r, ms))

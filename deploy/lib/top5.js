@@ -7,9 +7,12 @@
 // ⚠️ ใช้ราคาเฉพาะเวอร์ชันที่อยู่ในชุดนี้ (series_id ตรงกัน) — ใบเดียวกันพิมพ์ซ้ำหลายชุดได้
 // ⚠️ ชื่อและระดับความหายากเอาจากคลังทางการของเรา ไม่ใช่จาก card2price (เขาใส่ระดับไม่ตรงบางใบ)
 // ⚠️ ราคาเป็นของแคปชั่นเท่านั้น โปสเตอร์ใช้แค่รูปและชื่อ (กติกาที่เจ้าของเลือก)
+import { readFile } from "fs/promises"
+import path from "path"
 import { loadCards, findSet } from "./opcgKnowledge"
 import { fetchCardPrices, fetchCardPrice, priceBackedBySales } from "./cardPrice"
 import { pickTop5Franchise } from "./top5Franchise"
+import { fetchSetPrices } from "./tcgcsv"
 
 export const TOP_N = 5
 
@@ -130,6 +133,17 @@ export async function pickTop5(setKey, {
     }
   }
 
+  // ── card2price ไม่มีราคาที่สดเลยสักใบ → สลับไป TCGCSV (เจ้าของเลือก 22 ต.ค. 2026 · ทาง "ใช้ card2price ก่อน
+  //    ถ้าเก่าเกิน 14 วันค่อยใช้ TCGCSV") · เกิดจริง: card2price หยุดอัปเดตตั้งแต่ 5 ต.ค. โพสต์ OP เลยไม่มีราคา
+  //    ใช้แหล่งเดียวทั้งโพสต์เสมอ — ห้ามปนบาทกับดอลลาร์ในรายการเดียว
+  if (!picked.some(p => p.priced)) {
+    const seenAt = Object.values(prices || {}).flatMap(i => i?.variants || []).map(v => v.rawAt).filter(Boolean).sort().pop()
+    try {
+      const alt = await opFromTcgcsv(set, { now, probe, staleAsOf: seenAt || null })
+      if (alt?.priced) return alt
+    } catch { /* ทางสำรองล้ม = ใช้ผลเดิม (เรียงตามความหายาก) */ }
+  }
+
   const dates = picked.filter(p => p.priced).map(p => p.rawAt).sort()
   return {
     set: { code: set.code, label: set.label, sku: set.our_sku_id || null, seriesId: sid, franchise: "OP" },
@@ -162,6 +176,94 @@ export async function pickTop5(setKey, {
       priced,
       image: v.image,
     }
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// One Piece ทางสำรอง — ราคา TCGCSV (TCGplayer ฉบับอังกฤษ · USD) + รูปทางการ asia-th
+// ─────────────────────────────────────────────────────────────────────────
+// TCGplayer เรียกเวอร์ชันเป็นคำ (Parallel · Super Alternate Art · Red Super Alternate Art · Wanted Poster …)
+// รูปทางการใช้เลข _p1 … _pN → แปลงด้วย tasks/opcg_tcg_variants.json (เทียบภาพ · agents/opcg_tcg_variants.py)
+// ไม่มีในไฟล์นั้น: ใบปกติ = รหัสตรงตัว · การ์ดที่มีพาราเรลแบบเดียวทั้งสองฝั่ง = _p1 · นอกนั้นไม่ใช้ (รูปผิดใบแย่กว่าไม่มี)
+let _opVar = null
+function loadOpVariants() {
+  _opVar ??= readFile(path.join(process.cwd(), "tasks", "opcg_tcg_variants.json"), "utf-8")
+    .then(JSON.parse).catch(() => null)
+  return _opVar
+}
+
+const OP_TAG_TH = {
+  "Parallel": "พาราเรล", "Alternate Art": "พาราเรล", "Super Alternate Art": "ซูเปอร์พาราเรล",
+  "Red Super Alternate Art": "ซูเปอร์พาราเรลแดง", "Wanted Poster": "ใบประกาศจับ", "Manga": "มังงะ",
+  "SP": "SP", "Gold": "ทอง", "Silver": "เงิน",
+}
+const opTags = (name) => [...String(name).matchAll(/\(([^)]+)\)/g)].map(m => m[1].trim()).filter(t => !/^\d{3}$/.test(t))
+const opTagTh = (tags) => tags.map(t => OP_TAG_TH[t] || t).join(" ")
+
+async function opFromTcgcsv(set, { now, probe, staleAsOf }) {
+  const tc = await fetchSetPrices("OP", set.code)
+  if (!tc?.cards?.length) return null
+  const vmap = (await loadOpVariants())?.map || {}
+  const byCode = Object.fromEntries(set.cards.map(c => [c.code, c]))
+  const nonBase = {}
+  for (const p of tc.cards) if (opTags(p.name).length) nonBase[p.number] = (nonBase[p.number] || 0) + 1
+  const isPrb = /^PRB/.test(set.code)
+
+  const pool = [], noImage = []
+  for (const p of tc.cards.filter(x => x.market).sort((a, b) => b.market - a.market)) {
+    const c = byCode[p.number]
+    if (!c) continue
+    const tags = opTags(p.name)
+    let code = null
+    if (!tags.length) code = c.code
+    else if (vmap[String(p.productId)]?.code) code = vmap[String(p.productId)].code
+    else if (!isPrb && (c.art_variants || 0) === 1 && nonBase[p.number] === 1) code = `${c.code}_p1`
+    if (!code) { noImage.push({ name: c.name, tags, market: p.market }); continue }
+    pool.push({ c, p, code, tags })
+  }
+
+  const picked = [], perCard = {}
+  for (const { c, p, code, tags } of pool) {
+    if (picked.length >= TOP_N) break
+    if ((perCard[c.code] || 0) >= MAX_PER_CARD) continue
+    const image = `${OP_IMAGE_BASE}${code}.png`
+    let ok = false
+    try { ok = await probe(image) } catch { ok = false }
+    if (!ok) continue
+    perCard[c.code] = (perCard[c.code] || 0) + 1
+    const th = opTagTh(tags)
+    picked.push({
+      code, baseCode: c.code, variant: tags.length ? tags.join(" · ") : null, ghost: false,
+      name: c.name, rarity: c.rarity, rarityLabel: RARITY_TH[c.rarity] || c.rarity,
+      tag: [c.rarity, th || "ใบปกติ"].filter(Boolean).join(" · "),
+      variantLabel: tags.length ? `เวอร์ชัน${th} (${tags.join(" · ")})` : "ใบปกติ",
+      type: c.type || null, color: c.color || null, cost: c.cost ?? null, power: c.power ?? null,
+      traits: c.traits || null, ability: shortAbility(c.ability),
+      raw: p.market, rawAt: tc.updatedAt, priced: true, image,
+    })
+  }
+  if (!picked.length) return null
+
+  const floor = Math.min(...picked.map(i => i.raw))
+  const higher = noImage.filter(x => x.market > floor).slice(0, 3)
+  const notes = [
+    `card2price ไม่ได้อัปเดตราคาเกิน 14 วัน${staleAsOf ? ` (ล่าสุด ${staleAsOf})` : ""} จึงใช้ราคาตลาดสหรัฐฯ ของการ์ดฉบับภาษาอังกฤษจาก TCGplayer ผ่าน TCGCSV แทน`,
+    "ภาพการ์ดเป็นของฉบับเอเชียจากเว็บทางการ (ภาพเดียวกับฉบับอังกฤษ) · ซองในตู้เป็นฉบับญี่ปุ่น",
+  ]
+  if (higher.length) {
+    notes.push(`มีเวอร์ชันพิเศษที่ราคาสูงกว่าบางใบในรายการ แต่ไม่มีรูปทางการที่ยืนยันได้ จึงไม่ได้อยู่ใน 5 ใบนี้ ` +
+      `(${higher.map(h => `${h.name} ${h.tags.join(" ")}`).join(" · ")}) — ห้ามเรียก 5 ใบนี้ว่าแพงที่สุดของชุด ` +
+      `ให้เรียกว่า 5 ใบเด่นที่มีราคาตลาด และห้ามเอ่ยชื่อใบที่ไม่ได้อยู่ในรายการ`)
+  }
+  return {
+    set: { code: set.code, label: set.label, sku: set.our_sku_id || null, seriesId: String(set.series_id || ""), franchise: "OP" },
+    items: picked.map((it, i) => ({ rank: i + 1, ...it })),
+    priced: picked.length,
+    priceAsOf: tc.updatedAt || null,
+    unbacked: [],
+    source: "tcgcsv", sourceLabel: "TCGplayer (ตลาดสหรัฐฯ) ผ่าน TCGCSV",
+    rankBasis: "price", currency: "USD", market: tc.market, sameLanguage: false, notes, posterMode: "cards",
+    fallbackFrom: "card2price", pickedAt: new Date(now).toISOString(),
   }
 }
 
