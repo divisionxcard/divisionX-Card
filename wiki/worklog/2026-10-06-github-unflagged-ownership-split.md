@@ -161,7 +161,8 @@ _*.py
       ทางแก้ที่ตรงจุดกว่า: แก้ `--prompt` ของงานให้เขียนไฟล์ชั่วคราวขึ้นต้นด้วย `_` เท่านั้น
       หรือย้าย `workdir` ออกจากรีโป (ต้องเช็กก่อนว่างานต้องอ่านไฟล์ในรีโปอะไรบ้าง)
 - [ ] ยังไม่ได้ตรวจว่า*ผลลัพธ์*ของงานตรวจคอนเทนต์ถูกต้องไหม — รู้แค่ว่ารอบมันจบ `ok`
-- [ ] รูปการ์ด One Piece (`opcgCardArt.js` + `opcg_kb.py --images`) ยังไม่ต่อเข้า route รอเจ้าของเลือกทาง
+- [x] รูปการ์ด One Piece (`opcgCardArt.js` + `opcg_kb.py --images`) ยังไม่ต่อเข้า route รอเจ้าของเลือกทาง
+      → 22 ต.ค. เจ้าของเลือกเก็บสำรองนอก repo (`research/archive/2026-10-22-uncommitted-leftovers/`) · [[2026-10-22-config-guard-and-leftovers]]
 
 เกี่ยวข้อง: [[2026-09-10-github-account-flagged]] · [[2026-09-28-mall-news-watch]] ·
 [[2026-09-16-backup-autopost-local-bot]] · [[2026-09-13-midnight-sync-local]]

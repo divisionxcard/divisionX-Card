@@ -217,7 +217,8 @@ grep -rn "24 hours\|24-hour\|24/7\|round the clock" deploy/tasks/ deploy/app/ de
 - **ห้ามลบ SAMPLE / ห้ามสั่ง AI วาดโดยตัด SAMPLE ออก / ห้ามใส่โลโก้เราทับรูปการ์ด** — เพิ่มความเสี่ยง ไม่ได้ลด
 - การ์ดพิมพ์ซ้ำใช้ภาพคนละแบบกับชุดเดิม — ต้องใช้รหัสรูปของ "หน้าชุดนั้น" (OP05-119 ใน PRB-01 = `OP05-119_p3`)
 - AI วาดจากชื่อ+ตัวเลขอย่างเดียวได้ภาพคนละใบ (#46: Luffy Gear 5 กลายเป็นลูฟี่ชุดแดง) — ตัวเลขถูกไม่ได้แปลว่าการ์ดถูก
-- ทางที่เจ้าของเลือกดู [[project_pack_image_rights]] ใน memory · โค้ดเตรียมไว้: `opcg_kb.py --images` + `lib/opcgCardArt.js`
+- ทางที่เจ้าของเลือกดู [[project_pack_image_rights]] ใน memory · โค้ดที่เคยเตรียมไว้ (`opcg_kb.py --images` + `lib/opcgCardArt.js`)
+  ไม่เคยต่อเข้า route และถูกแทนด้วยลิงก์รูปของซีรีส์ 5 ใบเด็ด → ย้ายไปเก็บสำรอง `research/archive/2026-10-22-uncommitted-leftovers/` (22 ต.ค.)
 
 ---
 
@@ -334,9 +335,13 @@ error ที่ได้คือ *"The model 'gpt-image-2' does not support the
 
 ### 7. ไฟล์ตั้งค่า JSON พัง = กฎเหล็กหายเงียบ ๆ ทั้งบรีฟ
 
-`loadJson()` ใน route คืน `null` เมื่ออ่านไม่ได้ แล้วไปต่อ → `art_direction.json` พังเมื่อไหร่ บรีฟจะ**ไม่มี HARD RULES
+เดิม `loadJson()` ใน route คืน `null` เมื่ออ่านไม่ได้ แล้วไปต่อ → `art_direction.json` พังเมื่อไหร่ บรีฟจะ**ไม่มี HARD RULES
 และลายเซ็นแบรนด์เลยสักข้อ** แต่ยังวาดได้ปกติ ไม่มี error ให้เห็น · เจอจริง 21 ต.ค. 2026: ใส่ `"..."` ไว้ในสตริงหมายเหตุ
 จับได้เพราะเทียบบรีฟก่อน/หลังแก้ ไม่ใช่จากภาพ
+
+✅ **22 ต.ค. 2026 (เจ้าของสั่ง) route หยุดเองแล้ว** — ไฟล์ใน `tasks/` ที่มีแต่อ่านไม่ออกโยน `ConfigError` ทุกไฟล์
+· `image_style.json` กับ `art_direction.json` เป็น `required` (ไม่มีไฟล์ก็หยุด) · ตอบ `code: "config_broken"` + hint
+ก่อนเรียกตัวคิดไอเดีย/ตัววาด = ไม่เสียเงิน · หน้าเว็บโชว์ข้อความ + hint ในกล่องแดง · แต่ยังควรรันบรรทัดข้างล่างก่อน commit
 
 ```bash
 cd deploy && for f in tasks/*.json; do node -e "const s=require('fs').readFileSync('$f','utf8'); JSON.parse(s.charCodeAt(0)===0xFEFF?s.slice(1):s)" || echo "พัง: $f"; done

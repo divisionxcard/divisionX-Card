@@ -35,11 +35,28 @@ const db = createClient(SB_URL, SB_KEY, {
 const GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta"
 const OPENAI_BASE = "https://api.openai.com/v1"
 
-async function loadJson(name) {
+// ⚠️ 22 ต.ค. 2026 (เจ้าของสั่ง) — เดิมกลืน error ทุกแบบแล้วคืน null · art_direction.json พังเมื่อไหร่
+//    บรีฟไม่มีกฎเหล็กเลยสักข้อ แต่ยังวาดได้ปกติ ไม่มีใครรู้ (เกิดจริง 21 ต.ค. ตอนพิมพ์ " ในสตริงหมายเหตุ
+//    จับได้เพราะเทียบบรีฟก่อน/หลังแก้) · ตอนนี้ไฟล์ "มีแต่อ่านไม่ออก" หยุดเสมอ ก่อนเสียเงินคิดไอเดีย/วาด
+//    ไฟล์ "ไม่มี" ยังคืน null ได้ถ้าเป็นของเสริม · required = ขาดไม่ได้ (กฎเหล็ก/ค่าตั้งหลัก) ไม่มีไฟล์ก็หยุด
+class ConfigError extends Error {}
+
+async function loadJson(name, { required = false } = {}) {
+  let raw
   try {
-    return JSON.parse(await readFile(path.join(process.cwd(), "tasks", name), "utf-8"))
-  } catch { return null }
+    raw = await readFile(path.join(process.cwd(), "tasks", name), "utf-8")
+  } catch {
+    if (required) throw new ConfigError(`ไม่พบไฟล์ตั้งค่า tasks/${name} — ไฟล์นี้ขาดไม่ได้`)
+    return null
+  }
+  try {
+    return JSON.parse(raw)
+  } catch (e) {
+    throw new ConfigError(`ไฟล์ตั้งค่า tasks/${name} เสีย อ่านไม่ได้ — ${String(e.message).slice(0, 160)}`)
+  }
 }
+
+const CONFIG_HINT = "ยังไม่ได้วาดและยังไม่เสียเงิน — ต้องแก้ไฟล์ตั้งค่าในโฟลเดอร์ tasks ให้ถูกก่อน แล้วค่อยกดใหม่"
 
 // ── รูปอ้างอิง ────────────────────────────────────────────────────────────
 // จำกัดขนาดกัน payload บวมจนโดนปฏิเสธ · รูป SKU จริงอยู่ราว 30-150 KB, รูปตู้ ~210 KB
@@ -576,8 +593,12 @@ export async function POST(req) {
   const id = parseInt(body.id, 10)
   if (!id) return NextResponse.json({ error: "ต้องระบุ id" }, { status: 400 })
 
-  const style = await loadJson("image_style.json")
-  if (!style) return NextResponse.json({ error: "อ่าน tasks/image_style.json ไม่ได้" }, { status: 500 })
+  let style
+  try {
+    style = await loadJson("image_style.json", { required: true })
+  } catch (e) {
+    return NextResponse.json({ code: "config_broken", error: e.message, hint: CONFIG_HINT }, { status: 500 })
+  }
 
   const forced = (process.env.IMAGE_PROVIDER || style.provider || "").toLowerCase()
   const provider = forced || (process.env.OPENAI_API_KEY ? "openai"
@@ -933,7 +954,7 @@ export async function POST(req) {
     // ── ขั้นคิดไอเดียภาพ (ก่อนวาด) ──
     // ค่าใช้จ่ายหลักหลักสตางค์ต่อครั้ง เทียบกับค่าวาด ~$0.06 (flare) → คุ้มมากถ้าช่วยให้ไม่ต้องวาดซ้ำ
     // ล้มแล้วไม่ทำให้ทั้งงานล้ม — planVisual คืน null แล้วเราวาดต่อแบบเดิม
-    const artCfg = await loadJson("art_direction.json")
+    const artCfg = await loadJson("art_direction.json", { required: true })   // กฎเหล็ก — ขาดไม่ได้
     // ⚠️ 14 ก.ย. 2026 — กฎแยกเป็นชั้นแล้ว (ดู art_direction.json → _restructure_note)
     //    คำบังคับมีแค่กฎเหล็ก · กฎสไตล์เดิมอยู่ใน retired_rules และตั้งใจไม่อ่าน —
     //    ห้าม fallback ไปหยิบ retired_rules เด็ดขาด นั่นคือการเอาสูตรที่ทำให้ภาพจำเจกลับมาเงียบ ๆ
@@ -1273,6 +1294,7 @@ export async function POST(req) {
   } catch (err) {
     return NextResponse.json({
       error: err.message,
+      ...(err instanceof ConfigError ? { code: "config_broken", hint: CONFIG_HINT } : {}),
       attempts: err.attempts?.length ? err.attempts : undefined,
     }, { status: 500 })
   }
