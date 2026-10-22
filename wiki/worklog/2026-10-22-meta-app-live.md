@@ -2,7 +2,7 @@
 type: worklog
 date: 2026-10-22
 tags: [facebook, meta-app, autopost, live]
-commits: []
+commits: [128d474]
 status: ✅ แอป Meta "DivisionX Card" เผยแพร่แล้ว — โพสต์จากระบบคนนอกเห็นแล้ว
 ---
 
