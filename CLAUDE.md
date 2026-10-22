@@ -309,6 +309,8 @@ Hermes (agent ที่เจ้าของคุยผ่าน Telegram) ฝ�
   · ค่าตั้งของโปรเจกต์อยู่ `.claude/daily-log.json` · รีโปสาธารณะ: ห้ามตัวเลขยอดขาย/อีเมลทีม/token ในไฟล์นี้
   · **หน้าไดอารี่ส่วนตัวของเจ้าของ** (Artifact บน claude.ai · ซอร์ส `scripts/diary/diary.html`) — เพิ่มวันใหม่ทุกครั้ง:
     `scripts/diary/days/YYYY-MM-DD.json` → `ArtifactData set` คอลเลกชัน `days` (มีแล้ว = คง `done` ที่เจ้าของติ๊กไว้)
+  · **เริ่ม session → `ArtifactData list days` ก่อน** ดู `pending[].done` ที่เจ้าของติ๊กจากเว็บ → ติ๊ก `- [x]` ใน wiki/daily ให้ตรงกัน
+    · ข้อที่ต้องเลือกทาง (เช่น รอ/สลับแหล่งราคา) ติ๊กอย่างเดียวไม่บอกว่าเลือกทางไหน — ถามเจ้าของก่อนลงมือ
 
 ---
 
