@@ -96,7 +96,9 @@ def prepare(plan, work):
                     model=plan.get("tts_model"), style=plan.get("voice_style"))
     # ย่อช่วงเงียบยาวกลางประโยค (23 ต.ค. 2026 · คลิปจริงเงียบสนิท 0.6–1.6 วิ ระหว่างบรรทัด) — ก่อน whisper จับเวลา
     # ภาพทุกฉากจึงตามเสียงที่ย่อแล้ว · ปิดได้ด้วย plan["keep_pauses"] = true
-    if not plan.get("keep_pauses"):
+    # เสียงรุ่น 3.x ไม่ย่อ — หยุดตามจังหวะพูดจริงอยู่แล้ว (คลิปทดสอบ 0.32–0.64 วิ) · บางรอบเว้นลุ้นก่อนเฉลยเอง ~1.3 วิ ซึ่งต้องเก็บไว้
+    tighten = not plan.get("keep_pauses") and         not voice_mod._interactions(plan.get("tts_model") or config.TTS_MODEL)
+    if tighten:
         try:
             if sound.tighten_pauses(wav):
                 _log("1/4", "ย่อช่วงเงียบยาวในเสียงพากย์แล้ว")
@@ -108,7 +110,7 @@ def prepare(plan, work):
     stamp_f = wav.with_suffix(".stamp.json")
     # เวลารายคำผูกกับเสียงหลังย่อช่วงเงียบ — แคชเดิม (ก่อนย่อ) ต้องไม่ถูกหยิบมาใช้
     stamp = (stamp_f.read_text(encoding="utf-8") if stamp_f.exists() else "") + \
-        ("" if plan.get("keep_pauses") else f"|{sound.TIGHT_VERSION}:{sound.PAUSE_MAX}:{sound.PAUSE_KEEP}")
+        (f"|{sound.TIGHT_VERSION}:{sound.PAUSE_MAX}:{sound.PAUSE_KEEP}:{sound.PAUSE_SQUASH}" if tighten else "")
     words_f = work / "words.json"
     words = None
     try:
@@ -126,7 +128,10 @@ def prepare(plan, work):
         except Exception as e:
             _log("1/4", f"⚠️ whisper ไม่สำเร็จ ({str(e)[:80]}) — แบ่งเวลาตามตัวอักษรแทน")
             words = []
-    timing = align.map_segments(segs, words, total) if words else align._even(segs, total)
+    # เทียบเวลากับ "คำที่อ่านจริง" (tasks/tts_pronounce.json) — whisper ได้ยิน "โปเกมอน" ไม่ใช่ "Pokémon"
+    # ซับ/ภาพยังใช้ข้อความเขียนเดิม (segs) · เวลาของแต่ละบรรทัดผูกด้วย index เดียวกัน
+    said = [dict(sg, text=voice_mod.pronounce(sg["text"])) for sg in segs]
+    timing = align.map_segments(said, words, total) if words else align._even(segs, total)
     chunks = align.subtitle_chunks(segs, timing, max_chars=int(plan.get("sub_chars", 20)))
     _log("2/4", f"เวลา {len(words)} คำ · ซับ {len(chunks)} ท่อน ({time.time() - t0:.0f} วิ)")
     return segs, wav, total, timing, words, chunks
@@ -163,9 +168,11 @@ def phrase_time(phrase, chunks, words, lo, hi):
             nw = _norm(w)
             joined += nw
             starts += [s] * len(nw)
-    j = joined.find(target)
-    if j >= 0 and (guess is None or abs(starts[j] - guess) < 0.8):
-        return starts[j]
+    from . import voice as voice_mod
+    for tgt in dict.fromkeys([target, _norm(voice_mod.pronounce(phrase))]):   # คำเขียน แล้วคำอ่าน ("โปเกมอน…")
+        j = joined.find(tgt) if tgt else -1
+        if j >= 0 and (guess is None or abs(starts[j] - guess) < 0.8):
+            return starts[j]
     return guess
 
 

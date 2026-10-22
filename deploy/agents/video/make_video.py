@@ -173,7 +173,9 @@ def build_video(plan, out_mp4=None, skip_align=False):
     else:
         try:
             words = align.word_times(wav, model_size=plan.get("whisper", "large-v3-turbo"))
-            timing = align.map_segments(segs, words, total)
+            # เทียบกับคำที่อ่านจริง (tasks/tts_pronounce.json) — ซับยังใช้ข้อความเขียนเดิม
+            said = [dict(sg, text=voice_mod.pronounce(sg["text"])) for sg in segs]
+            timing = align.map_segments(said, words, total)
             _save_words(words)                       # ให้รอบแก้ถัด ๆ ไปใช้ต่อโดยไม่ต้องรัน whisper ซ้ำ
             _log("3/6", f"จับเวลาจากเสียงจริง {len(words)} คำ ({time.time()-t0:.0f} วิ)")
         except Exception as e:

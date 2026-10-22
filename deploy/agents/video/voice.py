@@ -11,8 +11,10 @@ Gemini คืน raw PCM ไม่ใช่ไฟล์เสียงสำเ�
 เขียนลงไฟล์ตรง ๆ จะได้ไฟล์เปิดไม่ได้ ต้องใส่ header เอง
 """
 import base64
+import io
 import json
 import pathlib
+import re
 import time
 import urllib.error
 import urllib.request
@@ -21,14 +23,46 @@ import wave
 from . import config
 
 API = "https://generativelanguage.googleapis.com/v1beta/models/{m}:generateContent"
+# รุ่น 3.x (gemini-3.8-flash-tts — ตัวแทนรุ่น 2.5 ที่ปิด 17 พ.ย. 2026) ใช้ Interactions API คนละรูปแบบ:
+# ข้อความ = บทพูดตรงตัวเท่านั้น · คำสั่งอารมณ์ไปอยู่ใน annotations (speech_metadata.style)
+# ถ้ายัดคำสั่งไว้หน้าบทแบบรุ่น 2.5 รุ่นนี้จะอ่านคำสั่งออกเสียงด้วย
+INTERACTIONS = "https://generativelanguage.googleapis.com/v1beta/interactions"
+PRONOUNCE = config.TASKS / "tts_pronounce.json"
 
 # เสียงที่ทดสอบกับภาษาไทยแล้ว — ชื่ออื่นมีอีกเยอะแต่ยังไม่ได้ลอง อย่าใส่มั่ว
+# (รุ่น 3.8 ใช้ชื่อชุดเดียวกัน · คลังเสียงตามภาษาของ Google มี 30 ภาษา ไม่มีไทย — ตรวจ 23 ต.ค. 2026)
 VOICES = {
     "Aoede":   "หญิง · โทนสบาย ไม่เร่ง — ค่าเริ่มต้น เข้ากับโทนเพื่อนคุยกัน",
     "Kore":    "หญิง · หนักแน่นกว่า เหมาะกับคอนเทนต์ให้ความรู้",
     "Puck":    "ชาย · สดใส จังหวะเร็ว",
     "Charon":  "ชาย · ทุ้มนิ่ง เหมาะกับเล่าเรื่อง",
 }
+
+
+def _interactions(model):
+    return model.startswith("gemini-3")
+
+
+_rules_cache = {}
+
+
+def pronounce(text):
+    """ข้อความเขียน → ข้อความที่ให้ TTS อ่าน ตาม deploy/tasks/tts_pronounce.json (ซับยังใช้ข้อความเขียนเดิม)
+
+    23 ต.ค. 2026 · เจ้าของ: "ยังมีบางคำที่อ่านผิด" — รุ่น 2.5 อ่าน "Pokémon" แบบฝรั่ง (whisper ถอดกลับได้ "พอร์คีมม่อน")
+    กฎอยู่ในไฟล์ ไม่ฝังโค้ด จะได้เติมคำที่เจ้าของได้ยินผิดได้ทันที · ไฟล์เสีย/ไม่มี = อ่านตามเดิม ไม่ล้มทั้งคลิป
+    """
+    try:
+        mtime = PRONOUNCE.stat().st_mtime
+        if _rules_cache.get("mtime") != mtime:
+            raw = json.loads(PRONOUNCE.read_text(encoding="utf-8"))
+            _rules_cache.update(mtime=mtime, rules=[(re.compile(r["from"]), r["to"]) for r in raw.get("rules", [])])
+        rules = _rules_cache["rules"]
+    except Exception:
+        return text
+    for rx, to in rules:
+        text = rx.sub(to, text)
+    return text
 
 
 def synth(text, out_wav, voice=None, model=None, retries=3, style=None):
@@ -46,11 +80,15 @@ def synth(text, out_wav, voice=None, model=None, retries=3, style=None):
     out_wav = pathlib.Path(out_wav)
     voice = voice or config.TTS_VOICE
     model = model or config.TTS_MODEL
-    if style:
-        text = f"{style.strip()}:\n\n{text}"
+    text = pronounce(text)
+    meta = (style or "").strip()
+    if meta and not _interactions(model):
+        text = f"{meta}:\n\n{text}"
 
     stamp = out_wav.with_suffix(".stamp.json")
     key = {"text": text, "voice": voice, "model": model}
+    if meta and _interactions(model):
+        key["style"] = meta
     if out_wav.exists() and stamp.exists():
         try:
             if json.loads(stamp.read_text(encoding="utf-8")) == key:
@@ -62,17 +100,30 @@ def synth(text, out_wav, voice=None, model=None, retries=3, style=None):
     if not api_key:
         raise RuntimeError("ไม่มี GEMINI_API_KEY ใน deploy/.env.local")
 
-    body = {
-        "contents": [{"parts": [{"text": text}]}],
-        "generationConfig": {
-            "responseModalities": ["AUDIO"],
-            "speechConfig": {
-                "voiceConfig": {"prebuiltVoiceConfig": {"voiceName": voice}}
+    if _interactions(model):
+        content = {"type": "text", "text": text}
+        if meta:
+            content["annotations"] = [{"type": "speech_metadata", "style": meta}]
+        body = {
+            "model": model,
+            "input": [{"type": "user_input", "content": [content]}],
+            "response_format": {"type": "audio", "mime_type": "audio/l16", "sample_rate": config.TTS_RATE},
+            "generation_config": {"speech_config": [{"voice": voice}]},
+        }
+        url = INTERACTIONS
+    else:
+        body = {
+            "contents": [{"parts": [{"text": text}]}],
+            "generationConfig": {
+                "responseModalities": ["AUDIO"],
+                "speechConfig": {
+                    "voiceConfig": {"prebuiltVoiceConfig": {"voiceName": voice}}
+                },
             },
-        },
-    }
+        }
+        url = API.format(m=model)
     req = urllib.request.Request(
-        API.format(m=model),
+        url,
         data=json.dumps(body).encode("utf-8"),
         headers={"Content-Type": "application/json", "x-goog-api-key": api_key},
     )
@@ -108,8 +159,17 @@ def synth(text, out_wav, voice=None, model=None, retries=3, style=None):
             raise RuntimeError(f"Gemini TTS ล้ม: {last}")
 
     try:
-        part = d["candidates"][0]["content"]["parts"][0]["inlineData"]
-        pcm = base64.b64decode(part["data"])
+        if _interactions(model):
+            data = next(c["data"] for st in d.get("steps") or [] for c in st.get("content") or [] if c.get("data"))
+            pcm = base64.b64decode(data)
+            if pcm[:4] == b"RIFF":                      # ขอ l16 แล้ว แต่ถ้าได้ wav มาก็แกะเฟรมออกเอง
+                with wave.open(io.BytesIO(pcm)) as w:
+                    if w.getframerate() != config.TTS_RATE or w.getnchannels() != 1:
+                        raise ValueError(f"wav {w.getframerate()} Hz · {w.getnchannels()} ch")
+                    pcm = w.readframes(w.getnframes())
+        else:
+            part = d["candidates"][0]["content"]["parts"][0]["inlineData"]
+            pcm = base64.b64decode(part["data"])
     except Exception:
         raise RuntimeError(f"Gemini ไม่ได้ส่งเสียงกลับมา: {json.dumps(d)[:300]}")
 
