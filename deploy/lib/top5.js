@@ -9,6 +9,7 @@
 // ⚠️ ราคาเป็นของแคปชั่นเท่านั้น โปสเตอร์ใช้แค่รูปและชื่อ (กติกาที่เจ้าของเลือก)
 import { loadCards, findSet } from "./opcgKnowledge"
 import { fetchCardPrices, fetchCardPrice, priceBackedBySales } from "./cardPrice"
+import { pickTop5Franchise } from "./top5Franchise"
 
 export const TOP_N = 5
 
@@ -64,8 +65,10 @@ const shortAbility = (s, n = 140) => {
  * @param {Function} [o.fetchPrices]  ฉีดตัวดึงราคาเองได้ (ทดสอบโดยไม่ยิงเน็ต)
  */
 export async function pickTop5(setKey, {
-  now = Date.now(), fetchPrices = fetchCardPrices, fetchOne = fetchCardPrice, probe = headOk,
+  franchise = "OP", now = Date.now(), fetchPrices = fetchCardPrices, fetchOne = fetchCardPrice, probe = headOk,
 } = {}) {
+  // ค่ายอื่นแยกไฟล์ (lib/top5Franchise.js · 22 ต.ค. 2026) — ตรรกะ card2price ข้างล่างเป็นของ One Piece เท่านั้น
+  if (franchise && franchise !== "OP") return pickTop5Franchise(franchise, setKey, { now, probe })
   const cards = await loadCards()
   const set = findSet(cards, setKey)
   if (!set) return null
@@ -129,12 +132,14 @@ export async function pickTop5(setKey, {
 
   const dates = picked.filter(p => p.priced).map(p => p.rawAt).sort()
   return {
-    set: { code: set.code, label: set.label, sku: set.our_sku_id || null, seriesId: sid },
+    set: { code: set.code, label: set.label, sku: set.our_sku_id || null, seriesId: sid, franchise: "OP" },
     items: picked.map((p, i) => ({ rank: i + 1, ...p })),
     priced: picked.filter(p => p.priced).length,
     priceAsOf: dates.length ? dates[dates.length - 1] : null,
     unbacked,                            // รหัสที่ราคาไม่มีการซื้อขายจริงรองรับ (ตัดทิ้งแล้ว)
     source: "card2price.com",
+    sourceLabel: "card2price",
+    rankBasis: "price", currency: "THB", sameLanguage: true, notes: [], posterMode: "cards",
     pickedAt: new Date(now).toISOString(),
   }
 
@@ -160,6 +165,17 @@ export async function pickTop5(setKey, {
   }
 }
 
+// เงินแต่ละสกุล + เกณฑ์ "หลัก" ที่ใช้สรุป · USD = TCGCSV (ค่ายที่ไม่ใช่ One Piece · 22 ต.ค. 2026)
+// ⚠️ ห้ามแปลง USD เป็นบาทเอง — ไม่มีอัตราแลกเปลี่ยนที่เชื่อได้ในระบบ ตัวเลขที่แปลงเองคือตัวเลขที่แต่งขึ้น
+const MONEY = {
+  THB: { fmt: (n) => `฿${n.toLocaleString("en-US")}`,
+         tiers: [[100000, "หลักแสน (เกิน ฿100,000)"], [10000, "หลักหมื่นขึ้นไป (เกิน ฿10,000)"],
+                 [1000, "หลักพันขึ้นไป (เกิน ฿1,000)"]] },
+  USD: { fmt: (n) => `$${n.toLocaleString("en-US", { maximumFractionDigits: 2 })}`,
+         tiers: [[1000, "หลักพันดอลลาร์ขึ้นไป (เกิน $1,000)"], [100, "หลักร้อยดอลลาร์ขึ้นไป (เกิน $100)"]] },
+}
+const moneyOf = (t) => MONEY[t?.currency] || MONEY.THB
+
 /**
  * ข้อเท็จจริงสรุปที่คำนวณไว้ให้ — โมเดลห้ามคำนวณเอง
  *
@@ -170,14 +186,13 @@ export async function pickTop5(setKey, {
 export function top5Summary(t) {
   const priced = (t?.items || []).filter(it => it.priced && it.raw)
   if (!priced.length) return []
-  const fmt = (n) => `฿${n.toLocaleString("en-US")}`
+  const { fmt, tiers } = moneyOf(t)
   const out = []
   const hi = Math.max(...priced.map(p => p.raw)), lo = Math.min(...priced.map(p => p.raw))
   out.push(priced.length === t.items.length
     ? `ราคาของทั้ง ${priced.length} ใบอยู่ระหว่าง ${fmt(lo)} ถึง ${fmt(hi)}`
     : `มีราคาตลาด ${priced.length} จาก ${t.items.length} ใบ อยู่ระหว่าง ${fmt(lo)} ถึง ${fmt(hi)}`)
-  for (const [th, label] of [[100000, "หลักแสน (เกิน ฿100,000)"], [10000, "หลักหมื่นขึ้นไป (เกิน ฿10,000)"],
-                             [1000, "หลักพันขึ้นไป (เกิน ฿1,000)"]]) {
+  for (const [th, label] of tiers) {
     const n = priced.filter(p => p.raw >= th).length
     // ⚠️ อย่าเขียนว่า "จาก N ใบที่ระบบส่งมา/ที่มีราคา" — โมเดลลอกวลีจากข้อมูลไปลงโพสต์ตรง ๆ
     //    (ทดสอบ 10 ต.ค.: "มีการ์ดหลักแสน 2 ใบ จาก 5 ใบที่ระบบส่งมา")
@@ -193,26 +208,44 @@ export function top5Summary(t) {
   return out
 }
 
+// เวอร์ชันของใบเป็นคำไทย — One Piece ใช้ variant/ghost จาก card2price · ค่ายอื่นส่ง variantLabel มาเอง
+function versionText(it) {
+  if (it.variantLabel !== undefined) return it.variantLabel || ""
+  return !it.variant ? "ใบปกติ" : `เวอร์ชันพาราเรล (ภาพพิเศษ)${it.ghost ? " แบบ ghost rare" : ""}`
+}
+
 /** บล็อกข้อมูลสำหรับ prompt ของคนเขียน — ทุกตัวเลขมีที่มาและวันที่ */
 export function top5Knowledge(t) {
   if (!t?.items?.length) return ""
-  const summary = top5Summary(t)
+  const byRarity = t.rankBasis === "rarity"
+  const usd = t.currency === "USD"
+  const { fmt } = moneyOf(t)
+  const credit = usd ? "TCGplayer (ตลาดสหรัฐฯ) ผ่าน TCGCSV" : "card2price"
+  const summary = byRarity ? [] : top5Summary(t)
   const lines = t.items.map(it => {
-    const ver = !it.variant ? "ใบปกติ"
-      : `เวอร์ชันพาราเรล (ภาพพิเศษ)${it.ghost ? " แบบ ghost rare" : ""}`
-    const price = it.priced
-      ? `ราคาตลาดใบดิบ ฿${it.raw.toLocaleString("en-US")} (ณ ${it.rawAt})`
-      : "ไม่มีราคาตลาดที่สดพอ — ห้ามพูดถึงราคาของใบนี้"
+    const ver = versionText(it)
+    const price = byRarity ? null
+      : it.priced
+        ? `ราคาตลาด${usd ? "สหรัฐฯ" : "ใบดิบ"} ${fmt(it.raw)} (ณ ${it.rawAt})`
+        : "ไม่มีราคาตลาดที่สดพอ — ห้ามพูดถึงราคาของใบนี้"
     const stat = [it.type, it.color, it.cost != null ? `คอสต์ ${it.cost}` : null,
-      it.power != null ? `พลัง ${it.power}` : null].filter(Boolean).join(" · ")
-    return `${it.rank}. ${it.name} (${it.code}) · ${RARITY_TH[it.rarity] || it.rarity} · ${ver}\n` +
-      `   ${price}\n` +
+      it.power != null ? (/^[0-9]/.test(String(it.power)) ? `พลัง ${it.power}` : it.power) : null]
+      .filter(Boolean).join(" · ")
+    const rar = it.rarityLabel || RARITY_TH[it.rarity] || it.rarity
+    return `${it.rank}. ${it.name} (${it.code}) · ${rar}${ver ? ` · ${ver}` : ""}\n` +
+      (price ? `   ${price}\n` : "") +
       (stat ? `   ข้อมูลการ์ด: ${stat}${it.traits ? ` · คุณสมบัติ ${it.traits}` : ""}\n` : "") +
       (it.ability ? `   ความสามารถ: ${it.ability}\n` : "")
   })
-  return `\n━━━ ข้อมูล "ส่อง 5 ใบเด็ด" — ชุด ${t.set.label} ━━━\n` +
-    `เรียงตามราคาตลาดมือสองของใบดิบจาก card2price.com` +
-    (t.priceAsOf ? ` (ข้อมูลล่าสุด ณ ${t.priceAsOf})` : "") + `\n\n` +
+  const setName = [t.set.displayCode, t.set.title || t.set.label].filter(Boolean).join(" ")
+  const head = byRarity
+    ? `เรียงตามลำดับระดับการ์ดที่เว็บทางการจัดแสดง (${t.sourceLabel || "เว็บทางการ"}) — ไม่มีข้อมูลราคา`
+    : usd
+      ? `เรียงตามราคาตลาดใน TCGplayer (ตลาดสหรัฐฯ) ผ่าน TCGCSV — ราคาเป็นดอลลาร์สหรัฐ` +
+        (t.sameLanguage === false ? ` ของการ์ด${t.market ? ` ${t.market}` : "ฉบับภาษาอังกฤษ"}` : "")
+      : `เรียงตามราคาตลาดมือสองของใบดิบจาก card2price.com`
+  return `\n━━━ ข้อมูล "ส่อง 5 ใบเด็ด" — ชุด ${setName} ━━━\n` +
+    head + (t.priceAsOf && !byRarity ? ` (ข้อมูลล่าสุด ณ ${t.priceAsOf})` : "") + `\n\n` +
     lines.join("\n") +
     (summary.length
       ? `\nข้อเท็จจริงสรุป (นับและคำนวณไว้แล้ว — ถ้าจะสรุปเชิงตัวเลข ใช้เฉพาะข้อเหล่านี้ ห้ามนับหรือคำนวณเอง):\n` +
@@ -220,25 +253,35 @@ export function top5Knowledge(t) {
       : "") +
     // มีราคาไม่ครบ = ใบท้าย ๆ ถูกเติมตามความหายาก ไม่ได้เรียงตามราคา — ต้องบอกให้ชัด
     // ไม่งั้นโมเดลจะเขียนว่า "5 อันดับราคาสูงสุด" ทั้งที่ 2 ใบหลังไม่มีราคาเลย (เจอกับ PRB-01: มีราคา 3 จาก 5)
-    (t.priced < t.items.length
+    (!byRarity && t.priced < t.items.length
       ? `\n⚠️ ใบที่ไม่มีราคา (${t.items.filter(i => !i.priced).map(i => `#${i.rank}`).join(" ")}) ถูกเลือกเพราะความหายาก ไม่ได้จัดอันดับตามราคา — ` +
         `ห้ามเรียกทั้ง 5 ใบว่า "5 อันดับราคาสูงสุด" ให้เรียกใบเหล่านี้ว่าใบเด่นของชุดแทน\n`
       : "") +
+    ((t.notes || []).length ? `\nเรื่องที่ต้องรู้ของค่ายนี้:\n${t.notes.map(n => `- ${n}`).join("\n")}\n` : "") +
     `\nกติกาเรื่องราคา (ห้ามละเมิด):\n` +
     // ⚠️ บรรทัดเครดิตต้องมีเฉพาะตอนมีราคาจริง — เดิมสั่งทุกครั้ง โพสต์ #52 (OP-17 ไม่มีราคาสักใบ)
     //    จึงปิดท้ายด้วย "อ้างอิงราคาตลาดจาก card2price ณ วันที่ดึงข้อมูล" ทั้งที่ไม่มีราคาในโพสต์เลย
-    (t.priced > 0
+    (byRarity
+      ? `- ชุดนี้ไม่มีข้อมูลราคา — ห้ามพูดถึงราคา มูลค่า หรือบอกว่าใบไหนแพงที่สุด และห้ามใส่บรรทัดเครดิตราคา\n` +
+        `- เรียกทั้ง 5 ใบว่า "5 ใบเด่นของชุด" ไม่ใช่ "5 อันดับราคาสูงสุด"\n`
+      : t.priced > 0
       ? `- ใช้เฉพาะราคาในรายการนี้ ห้ามเดาหรือปัดเลขเอง และห้ามพยากรณ์ว่าราคาจะขึ้นหรือลง\n` +
         // #53 เขียนว่า "2 ใบที่ขยับไปอยู่ระดับหลักแสนแล้ว" — ประวัติจริงบน card2price คือ "ร่วง" ทั้งคู่
         // (฿398k → ฿257k · ฿160k → ฿100k) · ราคาที่ส่งให้เป็นจุดเดียว จึงห้ามเล่าทิศทางย้อนหลังด้วย
         `- ราคาในรายการเป็นตัวเลข ณ วันเดียว ไม่มีประวัติราคา — ห้ามเล่าทิศทางที่ผ่านมา (ขยับขึ้น/พุ่ง/ร่วง/ทะลุ…แล้ว) ให้บอกแค่ว่าอยู่ระดับไหน\n` +
         `- ราคาขึ้นลงตามกระแส ให้เขียนว่าเป็นราคาตลาด "ช่วงนี้" หรือ "ณ วันที่" ไม่ใช่ราคาตายตัว\n` +
-        `- ท้ายโพสต์ต้องมีบรรทัดเครดิต: อ้างอิงราคาตลาดจาก card2price ณ ${t.priceAsOf}\n`
+        (usd
+          ? `- ราคาเป็นดอลลาร์สหรัฐของตลาดอเมริกา — เขียนเป็น $ ตามรายการ ห้ามแปลงเป็นบาทเอง และต้องบอกว่าเป็นราคาตลาดอเมริกา\n` +
+            (t.sameLanguage === false
+              ? `- ราคานี้เป็นของการ์ดฉบับภาษาอังกฤษ ส่วนซองในตู้เราเป็นฉบับญี่ปุ่น (ภาพการ์ดเดียวกัน) — ต้องบอกในโพสต์ให้ชัด\n`
+              : "")
+          : "") +
+        `- ท้ายโพสต์ต้องมีบรรทัดเครดิต: อ้างอิงราคาตลาดจาก ${credit} ณ ${t.priceAsOf}\n`
       : `- รอบนี้ไม่มีราคาที่เชื่อถือได้เลย — ห้ามพูดถึงราคาหรือมูลค่าการ์ด และห้ามใส่บรรทัดเครดิตราคา\n`) +
     `- ห้ามโยงว่าซื้อซองหรือกดตู้แล้วจะได้ใบนี้ หรือจะได้เงิน — ตู้ขายซองปิดผนึกธรรมดา ทุกซองคือการลุ้น\n` +
     `- เวอร์ชันพาราเรลให้เรียกว่า "เวอร์ชันพาราเรล" หรือ "ภาพพิเศษ" ห้ามเขียนรหัส p1/p2 ลงในโพสต์\n` +
     // #52 เขียน Luffy EB04-061 ว่า "ยิ่งไลฟ์น้อยยิ่งกดดัน" — ตัวบทจริงคือเกณฑ์เดียว (ไลฟ์ ≤1 → คอสต์ -1)
     // และความสามารถตอนลงสนามเป็นสายตั้งรับ ([บล็อกเกอร์]) ไม่ใช่สายกดดัน · คนเล่นจริงจับผิดได้ทันที
     `- ความสามารถการ์ด: สรุปจากตัวบทที่ให้ไว้ตรง ๆ เงื่อนไขเป็นเกณฑ์ตายตัว ห้ามเขียนเป็น "ยิ่ง…ยิ่ง…" ` +
-    `และห้ามตีความว่าเป็นสายบุก/สายตั้งรับถ้าตัวบทไม่ได้บอก\n`
+    `และห้ามตีความว่าเป็นสายบุก/สายตั้งรับถ้าตัวบทไม่ได้บอก · ใบที่ไม่มีความสามารถในรายการ ห้ามแต่งความสามารถขึ้นเอง\n`
 }

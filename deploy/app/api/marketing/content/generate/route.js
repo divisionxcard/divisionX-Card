@@ -717,16 +717,22 @@ export async function POST(req) {
       return out
     }
 
-    // ── ซีรีส์ "ส่อง 5 ใบเด็ด": 5 ใบจริงของชุด + ราคาตลาดจาก card2price (ดู lib/top5.js) ──
+    // ── ซีรีส์ "ส่อง 5 ใบเด็ด": 5 ใบจริงของชุด + ราคาตลาด (ดู lib/top5.js · lib/top5Franchise.js) ──
+    // One Piece = card2price (บาท) · Pokémon/Dragon Ball/Solo Leveling = TCGCSV (ดอลลาร์ ตลาดสหรัฐฯ)
+    // · KAYOU = จัดตามระดับความหายาก (ไม่มีแหล่งราคา) · Yu-Gi-Oh ยังทำไม่ได้ (คืน blocked พร้อมเหตุผล)
     // ไม่มีข้อมูลก็ไม่เขียน — รูปแบบนี้ทั้งโพสต์คือข้อมูล 5 ใบ ปล่อยให้เขียนโดยไม่มีคือให้แต่งเอง
     let top5 = null
     if (manualFmt?.knowledge === "top5") {
       const setKey = sku?.set_code || sku?.sku_id || content.source_sku || idea?.related_sku
-      try { top5 = setKey ? await pickTop5(setKey) : null } catch { top5 = null }
+      let blocked = null
+      try {
+        top5 = setKey ? await pickTop5(setKey, { franchise: sku?.franchise || "OP" }) : null
+        if (top5?.blocked) { blocked = top5.blocked; top5 = null }
+      } catch { top5 = null }
       if (!top5?.items?.length) {
         return NextResponse.json({
-          error: `หาข้อมูลการ์ดของชุด ${setKey || "(ไม่ได้ผูกสินค้า)"} ไม่เจอ — ไม่เขียน`,
-          hint: "ซีรีส์นี้ใช้ได้กับซอง One Piece ที่มีในคลังการ์ดเท่านั้น · ตรวจว่าโพสต์ผูกสินค้าถูกชุด",
+          error: blocked || `หาข้อมูลการ์ดของชุด ${setKey || "(ไม่ได้ผูกสินค้า)"} ไม่เจอ — ไม่เขียน`,
+          hint: "ซีรีส์นี้ใช้ได้กับชุดที่มีในคลังการ์ด · ตรวจว่าโพสต์ผูกสินค้าถูกชุด",
         }, { status: 422 })
       }
     }

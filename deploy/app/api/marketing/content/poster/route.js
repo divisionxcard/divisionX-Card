@@ -135,9 +135,13 @@ async function top5Poster(id, token) {
   const SB_URL = process.env.NEXT_PUBLIC_SUPABASE_URL
   const SB_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
 
+  // อ่านทั้งไฟล์ ไม่ใช่แค่ HEAD — ต้องรู้ค่ายของชุดเพื่อวาดพื้นหลังตามหน้าตาค่าย (เจ้าของเลือก 22 ต.ค. 2026)
+  // ไฟล์เก่าก่อนวันนั้นไม่มี set.franchise = One Piece ทั้งหมด
   const probe = await fetch(`${SB_URL}/storage/v1/object/public/${TOP5_BUCKET}/${top5Path(id)}`,
-                            { method: "HEAD" }).catch(() => null)
-  if (!probe?.ok) {
+                            { cache: "no-store" }).catch(() => null)
+  const saved = probe?.ok ? await probe.json().catch(() => null) : null
+  const franchise = saved?.set?.franchise || "OP"
+  if (!probe?.ok || !saved) {
     return NextResponse.json({
       error: "ยังไม่มีข้อมูล 5 ใบของโพสต์นี้",
       hint: "กด 'เขียนใหม่' หนึ่งครั้งให้ระบบดึงการ์ดและราคาเก็บไว้ก่อน แล้วค่อยกดทำโปสเตอร์",
@@ -146,7 +150,7 @@ async function top5Poster(id, token) {
 
   let bgUrl = null, bgNote = ""
   try {
-    const bg = await generateBackground(await top5BackgroundPrompt("OP"),
+    const bg = await generateBackground(await top5BackgroundPrompt(franchise),
                                         { deadline: Date.now() + 200_000 })
     const key = `aibg/top5-${id}-${Date.now()}.png`
     const up = await fetch(`${SB_URL}/storage/v1/object/${TOP5_BUCKET}/${key}`, {

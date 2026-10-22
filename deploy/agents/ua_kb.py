@@ -21,10 +21,19 @@ import html as H
 import json
 import pathlib
 import re
+import sys
 import time
 import urllib.error
 import urllib.parse
 import urllib.request
+
+# ⚠️ เครื่องนี้ ACP = cp1252 — พิมพ์ไทยแล้วตายตั้งแต่ log บรรทัดแรก (เจอจริง 22 ต.ค. 2026 · ดู CLAUDE.md)
+for _s in (sys.stdout, sys.stderr):
+    if _s is not None:
+        try:
+            _s.reconfigure(encoding="utf-8", errors="replace")
+        except Exception:
+            pass
 
 BASE = "https://www.unionarena-tcg.com/jp"
 UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
@@ -94,7 +103,9 @@ def card_numbers(series_id):
     arts = {}
     for no in re.findall(r"detail_iframe\.php\?card_no=([A-Za-z0-9/_-]+)", html):
         base = no.split("_p")[0]
-        arts[base] = arts.get(base, 0) + 1
+        arts.setdefault(base, [])
+        if no not in arts[base]:
+            arts[base].append(no)
     return arts, int(total.group(1)) if total else len(arts)
 
 
@@ -189,18 +200,33 @@ def build(only=None):
         time.sleep(DELAY)
 
         cards, hits = [], 0
-        for no, n in sorted(arts.items()):
+        for no, nos in sorted(arts.items()):
             try:
                 c, cached = card_detail(no)
             except Exception as e:
                 warn.append(f"{no}: {str(e)[:70]}")
                 continue
-            c["art_variants"] = n
-            cards.append(c)
+            c["art_variants"] = len(nos)
             if cached:
                 hits += 1
             else:
                 time.sleep(DELAY)
+            # ระดับของพาราเรลแต่ละใบ (SR★ / SR★★ / SR★★★) — หน้ารายละเอียดของ _pN บอกระดับของมันเอง
+            # ต้องมีไว้จัด "ส่อง 5 ใบเด็ด" และจับคู่ราคา TCGCSV (ฉบับอังกฤษเขียน SR*** ต่อท้ายชื่อ) · 22 ต.ค. 2026
+            pars = []
+            for pno in nos:
+                if pno == no:
+                    continue
+                try:
+                    pc, pcached = card_detail(pno)
+                    pars.append({"suffix": pno[len(no):], "rarity": pc.get("rarity")})
+                    if not pcached:
+                        time.sleep(DELAY)
+                except Exception as e:
+                    warn.append(f"{pno}: {str(e)[:70]}")
+            if pars:
+                c["parallels"] = sorted(pars, key=lambda x: x["suffix"])
+            cards.append(c)
 
         faq = []
         try:

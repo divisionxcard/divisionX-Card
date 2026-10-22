@@ -1033,18 +1033,23 @@ export default function MarketingOS() {
           </div>
 
           {/* ซีรีส์ประจำ — ไม่ต้องรอไอเดีย เลือกชุดแล้วกดได้เลย
-              ราคาดึงจาก card2price เฉพาะใบที่เขียนถึง (ดู lib/top5.js) */}
+              ราคา: One Piece = card2price · Pokémon/Dragon Ball/Solo Leveling = TCGCSV (ดอลลาร์)
+              · KAYOU จัดตามระดับความหายาก (ดู lib/top5.js · lib/top5Franchise.js · 22 ต.ค. 2026) */}
           {seriesSets?.length > 0 && (
             <div className="flex flex-wrap items-center gap-2 mb-3 p-3 rounded-2xl border border-cyan-200 bg-cyan-50/60">
               <span className="flex items-center gap-1.5 text-sm font-semibold text-cyan-800">
                 <Trophy size={15} /> ซีรีส์ ส่อง 5 ใบเด็ด
               </span>
-              <span className="text-xs text-cyan-700/80">5 การ์ดราคาตลาดสูงสุดของชุด พร้อมรูปการ์ดจริง</span>
+              <span className="text-xs text-cyan-700/80">5 การ์ดเด่นของชุด (มีแหล่งราคา = จัดตามราคาตลาด · KAYOU = ตามระดับความหายาก) พร้อมรูปการ์ดจริง</span>
               <select value={seriesSku} onChange={e => setSeriesSku(e.target.value)}
                 aria-label="เลือกชุดการ์ด"
                 className="ml-auto text-sm border border-cyan-200 rounded-xl px-2 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-cyan-200">
-                {seriesSets.map(s => (
-                  <option key={s.sku_id} value={s.sku_id}>{s.name}</option>
+                {[...new Set(seriesSets.map(s => s.franchise_label || s.franchise || ""))].map(fr => (
+                  <optgroup key={fr} label={fr || "อื่น ๆ"}>
+                    {seriesSets.filter(s => (s.franchise_label || s.franchise || "") === fr).map(s => (
+                      <option key={s.sku_id} value={s.sku_id}>{s.name}</option>
+                    ))}
+                  </optgroup>
                 ))}
               </select>
               <button onClick={createSeries} disabled={seriesBusy || !seriesSku}

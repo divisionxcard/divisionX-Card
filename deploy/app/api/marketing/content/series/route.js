@@ -14,6 +14,8 @@ import { createClient } from "@supabase/supabase-js"
 import { NextResponse } from "next/server"
 import { requireMarketing } from "../../../../../lib/apiAuth"
 import { loadCards, findSet } from "../../../../../lib/opcgKnowledge"
+import { hasTop5Data } from "../../../../../lib/top5Franchise"
+import { FRANCHISE_LABEL } from "../../../../../lib/franchiseDetect"
 
 const db = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -21,30 +23,40 @@ const db = createClient(
   { auth: { autoRefreshToken: false, persistSession: false } }
 )
 
+// ⚠️ 22 ต.ค. 2026 — เดิมทำได้แค่ One Piece · เจ้าของสั่งให้ทำได้ทุกค่าย (ดู lib/top5Franchise.js)
+//    Yu-Gi-Oh ยังไม่อยู่ในรายการ (ไม่มีแหล่งราคา/รูปที่ใช้ได้ · เหตุผลเต็มอยู่ใน top5Franchise.js)
 const SERIES = {
-  top5: { label: "ส่อง 5 ใบเด็ด", format: "top5", franchise: "OP" },
+  top5: { label: "ส่อง 5 ใบเด็ด", format: "top5", franchises: ["OP", "PKM", "DB", "SL", "NRT", "MLP", "MLBB", "TF"] },
 }
 
-// ชุดที่ทำซีรีส์ได้: SKU ที่ยังขาย + ค่ายตรง + มีชุดนี้ในคลังการ์ด (ไม่มีคลัง = ไม่มี 5 ใบให้เล่า)
+// ชุดที่ทำซีรีส์ได้: SKU ที่ยังขาย + ค่ายที่รองรับ + มีชุดนี้ในคลังการ์ด (ไม่มีคลัง = ไม่มี 5 ใบให้เล่า)
 async function eligibleSets(series) {
   const cfg = SERIES[series]
   const [{ data: skus, error }, cards] = await Promise.all([
     db.from("skus").select("sku_id,name,set_code,franchise")
-      .eq("is_active", true).eq("franchise", cfg.franchise),
+      .eq("is_active", true).in("franchise", cfg.franchises),
     loadCards(),
   ])
   if (error) throw error
   const out = []
   for (const s of skus || []) {
-    const set = findSet(cards, s.set_code || s.sku_id)
-    if (set) out.push({ sku_id: s.sku_id, name: s.name, set_code: set.code, label: set.label })
+    if (s.franchise === "OP") {
+      const set = findSet(cards, s.set_code || s.sku_id)
+      if (set) out.push({ sku_id: s.sku_id, name: s.name, set_code: set.code, label: set.label, franchise: "OP" })
+    } else if (await hasTop5Data(s.franchise, s.set_code)) {
+      out.push({ sku_id: s.sku_id, name: s.name, set_code: s.set_code, label: s.name, franchise: s.franchise })
+    }
   }
-  // ชุดใหม่ขึ้นก่อน — OP ตามเลข แล้วค่อย EB/PRB (คนมักอยากส่องชุดล่าสุด)
+  // เรียงตามค่าย (ลำดับใน SERIES) แล้วชุดใหม่ขึ้นก่อน — OP ตามเลข แล้วค่อย EB/PRB (คนมักอยากส่องชุดล่าสุด)
+  const frIdx = (f) => cfg.franchises.indexOf(f)
   const key = (x) => {
     const m = /^([A-Z]+)(\d+)/.exec(x.set_code || "")
     return m ? [{ OP: 0, EB: 1, PRB: 2 }[m[1]] ?? 3, -parseInt(m[2], 10)] : [9, 0]
   }
-  return out.sort((a, b) => key(a)[0] - key(b)[0] || key(a)[1] - key(b)[1])
+  return out
+    .map(x => ({ ...x, franchise_label: FRANCHISE_LABEL[x.franchise] || x.franchise }))
+    .sort((a, b) => frIdx(a.franchise) - frIdx(b.franchise) ||
+                    key(a)[0] - key(b)[0] || key(a)[1] - key(b)[1])
 }
 
 export async function GET(req) {
@@ -76,7 +88,7 @@ export async function POST(req) {
     if (!pick) {
       return NextResponse.json({
         error: `ทำซีรีส์ ${cfg.label} กับ ${skuId || "(ไม่ได้เลือก)"} ไม่ได้`,
-        hint: "เลือกได้เฉพาะซอง One Piece ที่ยังขายในตู้และมีในคลังการ์ด",
+        hint: "เลือกได้เฉพาะชุดที่ยังขายในตู้และมีในคลังการ์ด (Yu-Gi-Oh ยังทำซีรีส์นี้ไม่ได้)",
       }, { status: 400 })
     }
     // caption เป็น NOT NULL — ใส่ข้อความรอไว้ ตัวเขียนเขียนทับตอนสั่ง generate
