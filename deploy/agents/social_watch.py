@@ -209,13 +209,15 @@ FB_JS = r"""
     shares: [new RegExp('^' + N + '\\s+shares?$', 'i'), new RegExp('^(?:แชร์|การแชร์)\\s*' + N + '\\s*ครั้ง$')],
     views: [new RegExp('^' + N + '\\s+(?:views?|plays?)$', 'i'), new RegExp('^(?:การดู|ดู|ยอดดู)\\s*' + N + '\\s*ครั้ง$')],
   };
-  const UI = /^(See translation|See original|Rate this translation|See more|… ?See more|ดูคำแปล|ดูต้นฉบับ|ให้คะแนนคำแปลนี้|ดูเพิ่มเติม|Send message|ส่งข้อความ|Like|Comment|Share|ถูกใจ|แสดงความคิดเห็น|แชร์|Follow|ติดตาม|·)$/;
+  const UI = /^(?:·\s*)?(See translation|See original|Rate this translation|See more|… ?See more|ดูคำแปล|ดูต้นฉบับ|ให้คะแนนคำแปลนี้|ดูเพิ่มเติม|Send message|ส่งข้อความ|Like|Comment|Share|ถูกใจ|แสดงความคิดเห็น|แชร์|Follow|ติดตาม|·)$/;
   const STOP = /^(All reactions:?|ความรู้สึกทั้งหมด:?|Like|ถูกใจ)$/i;
   const posts = [];
   for (const a of document.querySelectorAll('div[aria-posinset]')) {
     const txt = clean(a.innerText).trim();
     if (!txt) continue;
-    const lines = txt.split('\n').map(s => s.trim()).filter(Boolean);
+    // ⚠️ 22 ต.ค. 2026 — บางโพสต์มีป้ายซ่อนคำว่า "Facebook" ซ้ำหลายสิบบรรทัดนำหน้า (เห็นใน innerText)
+    //    ไม่กรองแล้วแคปชั่นสำรองกลายเป็น "Facebook" 32 บรรทัด + ชื่อเพจ (เจอที่ Pokémon Trainers Thailand)
+    const lines = txt.split('\n').map(s => s.trim()).filter(l => l && l !== 'Facebook');
     const m = { reactions: null, comments: null, shares: null, views: null };
     for (let i = 0; i < lines.length; i++) {
       const l = lines[i];
@@ -417,17 +419,29 @@ def tags_of(caption):
     return sorted({t.lower() for t in re.findall(r"#[^\s#.,!?()\[\]\"']+", caption or "")})[:20]
 
 
+# ป้ายซ่อน "Facebook" + ปุ่มแปลภาษาที่หลุดเข้าแคปชั่น (ดู FB_JS) — ล้างของที่เก็บไว้ก่อนแก้ด้วย
+_FB_NOISE = re.compile(r"^(?:Facebook|·?\s*(?:See original|Rate this translation|ดูต้นฉบับ|ให้คะแนนคำแปลนี้))$")
+
+
+def clean_caption(c):
+    return "\n".join(ln for ln in (c or "").split("\n") if not _FB_NOISE.match(ln.strip())).strip()
+
+
 def merge(store, posts, today_iso):
     """อัปเดตคลังของเพจนั้น → รายการกุญแจที่เห็นรอบนี้ · เก็บประวัติตัวเลขรายวันไว้ดูว่าโพสต์โตเร็วแค่ไหน"""
     seen = []
     for p in posts:
+        cap = clean_caption(p["caption"])
         rec = store["posts"].get(p["key"])
         if rec is None:
             rec = store["posts"][p["key"]] = {
                 "first_seen": today_iso, "posted": p.get("posted"), "format": p["format"], "link": p["link"],
-                "caption": p["caption"], "tags": tags_of(p["caption"]), "m0": p["m"], "hist": []}
-        if len(p["caption"]) > len(rec.get("caption") or ""):
-            rec["caption"], rec["tags"] = p["caption"], tags_of(p["caption"])
+                "caption": cap, "tags": tags_of(cap), "m0": p["m"], "hist": []}
+        # เลือกแคปชั่นที่ยาวกว่าหลังล้างแล้ว — ของเก่าที่มีขยะยาวกว่าของใหม่ที่สะอาด ห้ามชนะเพราะขยะ
+        old = clean_caption(rec.get("caption"))
+        best = cap if len(cap) > len(old) else old
+        if best != rec.get("caption"):
+            rec["caption"], rec["tags"] = best, tags_of(best)
         rec.update(last_seen=today_iso, m=p["m"], link=p["link"] or rec.get("link"))
         row = [today_iso] + [p["m"].get(k) for k in ("reactions", "comments", "shares", "views")]
         hist = rec["hist"]
@@ -653,15 +667,28 @@ def main():
     run_log = {"at": datetime.now(TH).isoformat(timespec="seconds"), "dry_run": args.dry_run, "lanes": {}}
     try:
         for platform, targets in plan:
-            stats = {"pages": 0, "posts": 0, "new": 0, "hits": 0, "fails": []}
+            stats = {"pages": 0, "posts": 0, "new": 0, "hits": 0, "fails": [], "low": []}
             for n, t in enumerate(targets):
                 if n:
                     time.sleep(random.uniform(6, 14))     # เว้นจังหวะระหว่างเพจ ไม่รัว
                 tid = target_id(platform, t)
                 spath = STORE / platform / f"{tid}.json"
                 store = load_json(spath, {"target": t.get("name"), "posts": {}})
+                low = False
                 try:
                     posts = READERS[platform](t, cfg)
+                    # ⚠️ 22 ต.ค. 2026 — รอบ 07:00 ได้เพจละ 1 โพสต์ทั้ง 6 เพจ (เมื่อวาน ~12) แต่รายงานว่าสำเร็จ
+                    #    ตรวจแล้วเพจโหลดต่อได้ปกติเมื่ออ่านซ้ำ = หน้าต่างเบื้องหลังบางช่วงไม่โหลดโพสต์ถัดไปตอนเลื่อน
+                    #    (น่าจะตอนจอดับ/Chrome เพิ่งเปิด · ยังพิสูจน์ไม่ได้ 100%) → ได้น้อยผิดปกติให้เปิดใหม่ลองอีกรอบ
+                    #    ยังน้อยอยู่ = เตือนเข้ารายงาน และไม่นับว่าอ่านแล้ว รอบหน้าจะอ่านเพจนี้ก่อน
+                    #    (เพจที่โพสต์ไม่ถึง 3 โพสต์จริง ๆ จะโดนเตือนทุกรอบ — เจอแบบนั้นให้ถอดออกจากรายชื่อ)
+                    few = int(cfg.get("fb_low_posts", 3))
+                    if platform == "facebook" and len(posts) < few:
+                        log(f"[social] {t['name']}: อ่านได้ {len(posts)} โพสต์ — เปิดใหม่ลองอีกรอบ")
+                        time.sleep(random.uniform(8, 12))
+                        again = READERS[platform](t, cfg)
+                        posts = again if len(again) > len(posts) else posts
+                        low = len(posts) < few
                 except Blocked as e:
                     state["blocked"][platform] = {"at": today_iso, "why": str(e)}
                     log(f"⚠️ [social] {e} — หยุดเลน {PLATFORM_LABEL[platform]} ทันที")
@@ -687,14 +714,20 @@ def main():
                     rows.append((platform, t, tid, spath, h, idea_row(platform, t, rec, h, today_iso)))
                 if not posts:
                     log(f"⚠️ [social] {t['name']}: ไม่เจอโพสต์เลย (เพจย้าย/ปิด/โหลดไม่ขึ้น?)")
+                elif low:
+                    stats["low"].append(t["name"])
+                    log(f"⚠️ [social] {t['name']}: อ่านได้แค่ {len(posts)} โพสต์แม้ลองซ้ำแล้ว — "
+                        "หน้าเพจไม่ยอมโหลดต่อ · รอบหน้าอ่านเพจนี้ซ้ำ")
                 if not args.dry_run:
-                    state["visits"][tid] = today_iso
+                    if not low:                          # อ่านได้น้อยผิดปกติ = ยังไม่นับว่าอ่านแล้ว
+                        state["visits"][tid] = today_iso
                     store["target"] = t.get("name")
                     save_json(spath, store)
             run_log["lanes"][platform] = stats
             log(f"[social] {PLATFORM_LABEL[platform]}: อ่าน {stats['pages']} เพจ · โพสต์ {stats['posts']}"
                 f" (ใหม่ {stats['new']}) · แรงผิดปกติ {stats['hits']}"
-                + (f" · ล้ม {len(stats['fails'])}" if stats["fails"] else ""))
+                + (f" · ล้ม {len(stats['fails'])}" if stats["fails"] else "")
+                + (f" · ได้น้อยผิดปกติ {len(stats['low'])} เพจ" if stats["low"] else ""))
     finally:
         try:
             oc("browser", "close", "--session", SESSION, "--profile", cfg.get("bridge_profile", "research"), timeout=40)

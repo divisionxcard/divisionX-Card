@@ -160,5 +160,16 @@ check("AI ให้ high แต่เพดาน low = low", si.cap_confidence(
 check("AI ตอบค่าแปลก = low", si.cap_confidence("very high", "medium"), "low")
 check("AI ให้ medium เพดาน high = medium", si.cap_confidence("Medium", "high"), "medium")
 
+# ── ป้ายซ่อน "Facebook" ในแคปชั่น (22 ต.ค. 2026 · Pokémon Trainers Thailand ได้ "Facebook" 32 บรรทัด) ──
+junk = "\n".join(["Facebook"] * 32 + ["ประกาศปิดปรับปรุงเว็บไซต์", "· See original", "· Rate this translation"])
+check("ล้างป้าย Facebook + ปุ่มแปล", sw.clean_caption(junk), "ประกาศปิดปรับปรุงเว็บไซต์")
+check("แคปชั่นปกติไม่ถูกแตะ", sw.clean_caption("Facebook Gaming มาแล้ว\nเปิดซองสด"), "Facebook Gaming มาแล้ว\nเปิดซองสด")
+dirty = {"posts": {}}
+sw.merge(dirty, [dict(post("a", 4), caption=junk)], "2026-10-21")
+check("เก็บใหม่ = ล้างก่อนเก็บ", dirty["posts"]["a"]["caption"], "ประกาศปิดปรับปรุงเว็บไซต์")
+dirty["posts"]["a"]["caption"] = junk                     # ของที่เก็บไว้ก่อนแก้
+sw.merge(dirty, [dict(post("a", 5), caption="ประกาศปิดปรับปรุง")], iso)
+check("ของเก่าที่มีขยะ ห้ามชนะเพราะยาวกว่า", dirty["posts"]["a"]["caption"], "ประกาศปิดปรับปรุงเว็บไซต์")
+
 print(f"\n{'ผ่านครบ' if not fails else f'ไม่ผ่าน {fails} ข้อ'}")
 sys.exit(1 if fails else 0)

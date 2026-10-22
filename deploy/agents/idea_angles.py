@@ -149,7 +149,30 @@ def lane_of(idea):
     return idea.get("source") or ""
 
 
-def build_prompt(voice, idea, formats, patterns=None):
+# ── ค่ายที่ตู้เราขายจริง (22 ต.ค. 2026) ──
+# ⚠️ ไอเดียโซเชียลชุดแรก (21 ต.ค.) ได้มุม "ตู้ DivisionX มีการ์ดเวอร์ชันภาษาอังกฤษ ลุ้นได้ทั้ง 2 สาขา"
+#    — "2 สาขา" กับ "เวอร์ชัน Eng" เป็นของร้านคู่แข่งในโพสต์ต้นทาง และเราไม่ได้ขาย Lorcana เลย
+#    ตัวคิดมุมไม่เคยรู้ว่าเราขายอะไร จึงโยงทุกเรื่องเข้าตู้เราหมด · รายชื่อดึงจาก skus ที่เปิดขาย (ไม่ฮาร์ดโค้ด)
+#    ชื่อค่ายตรงกับ social_insight.py → OUR_FRANCHISE · รหัสที่ไม่มีในนี้ก็ยังขึ้น (ใช้รหัส + ชื่อสินค้าแทน)
+FRANCHISE_NAME = {"OP": "One Piece", "DB": "Dragon Ball", "PKM": "Pokémon", "YGH": "Yu-Gi-Oh!", "NRT": "Naruto",
+                  "SL": "Solo Leveling/Union Arena", "MLP": "My Little Pony", "MLBB": "Mobile Legends",
+                  "TF": "Transformers"}
+
+
+def our_products():
+    """→ ["One Piece (23 รายการ เช่น …)", …] จาก skus ที่เปิดขาย · อ่านไม่ได้ = [] (ตัวคิดมุมยังทำงานต่อได้)"""
+    try:
+        rows = sb("GET", "skus?select=name,franchise&is_active=eq.true&order=name")
+    except Exception:
+        return []
+    by = {}
+    for r in rows:
+        by.setdefault(r.get("franchise") or "?", []).append(r.get("name") or "")
+    return [f"{FRANCHISE_NAME.get(code, code)} ({len(names)} รายการ เช่น {', '.join(names[:3])})"
+            for code, names in sorted(by.items(), key=lambda kv: -len(kv[1]))]
+
+
+def build_prompt(voice, idea, formats, patterns=None, products=None):
     fmt_list = "\n".join(f"- {f['label']}: {f['brief']}" for f in formats)
     parts = [
         f"คุณเป็นนักวางแผนคอนเทนต์ให้ {voice.get('brand', 'ตู้กดการ์ดสะสม')}",
@@ -193,6 +216,25 @@ def build_prompt(voice, idea, formats, patterns=None):
         "- อ่านแล้วรู้ทันทีว่าจะโพสต์อะไร ไม่ใช่คำกว้าง ๆ",
         "- ยึดกับข้อมูลในข่าวจริง ห้ามแต่งตัวเลขหรือข้อเท็จจริงขึ้นเอง",
         "- เขียนเป็นภาษาไทย",
+        "",
+    ]
+    # ⚠️ 22 ต.ค. 2026 — มุมเล่าคือโจทย์ของตัวเขียนแคปชั่น มุมที่ผิดความจริงพาโพสต์ผิดตาม
+    #    และคนอ่านไอเดียบนหน้าเว็บเห็นข้อความผิดก่อนถึงด่านตรวจ · คำเว่อร์ใช้รายการเดียวกับตัวเขียน
+    #    (content_voice.json → overclaim.banned) ไม่เขียนซ้ำที่นี่ — แก้ที่ไฟล์นั้นที่เดียว
+    parts += [
+        "**ความจริงที่มุมเล่าห้ามพลาด** (โพสต์จะถูกเขียนตามมุมนี้ — มุมผิด โพสต์ผิดตาม)",
+        "- ข้อมูลในต้นทาง (สาขา ราคา โปร ของที่มี เวอร์ชันภาษา งาน/กิจกรรม) เป็นของเพจหรือร้านนั้นเสมอ "
+        "ห้ามเขียนว่าเป็นของเรา",
+    ]
+    if products:
+        parts += [
+            "- ตู้ DivisionX ขายเฉพาะค่ายเหล่านี้: " + " · ".join(products),
+            "  ถ้าเรื่องนี้เป็นค่ายอื่น ทำได้แค่มุมชวนคุย/ความรู้ทั่วไป ห้ามบอกหรือสื่อว่ามีที่ตู้เรา",
+        ]
+    banned = (voice.get("overclaim") or {}).get("banned") or []
+    if banned:
+        parts += ["- ห้ามพาไปทางคำเว่อร์เหล่านี้:", *[f"  · {b}" for b in banned]]
+    parts += [
         "",
         "ตอบเป็น JSON เท่านั้น ห้ามมีคำอธิบายอื่น:",
         '[{"label":"ชื่อมุมสั้นไม่เกิน 22 ตัวอักษร","brief":"อธิบายว่าจะเล่าอะไรยังไง 1-2 ประโยค"}]',
@@ -453,6 +495,7 @@ def main():
 
     router = Router([model] + [m for m in MODEL_CHAIN if m != model], voice)
     patterns = winning_patterns()          # ดึงครั้งเดียวต่อรอบ ใช้ซ้ำทุกชิ้น
+    products = our_products()              # ค่ายที่ตู้เราขายจริง — ดึงครั้งเดียวต่อรอบเหมือนกัน
     print(f"[angles] จะเติมมุมให้ {len(rows)} ไอเดีย · เริ่มที่ {router.label}"
           + (f" · เห็นโพสต์เด่นของเพจ {len(patterns)} ชิ้น" if patterns else " · ไม่มีข้อมูลโพสต์เด่น"))
     ok = fail = 0
@@ -463,10 +506,10 @@ def main():
         try:
             # ลองซ้ำ 1 รอบเมื่อ parse ไม่ออก — บางครั้งโมเดลตอบเป็นร้อยแก้วแทน JSON
             # (เจอจริง 1 ใน 3 ชิ้นตอนทดสอบ) · ยิงใหม่ทีเดียวมักได้ เพราะ temperature สูง
-            angles = parse_angles(router.ask(build_prompt(voice, it, formats, patterns)))
+            angles = parse_angles(router.ask(build_prompt(voice, it, formats, patterns, products)))
             if len(angles) < 2:
                 angles = parse_angles(router.ask(
-                    build_prompt(voice, it, formats, patterns)
+                    build_prompt(voice, it, formats, patterns, products)
                     + "\n\nย้ำ: ตอบเป็น JSON array ล้วน ๆ เท่านั้น ห้ามมีข้อความอื่นนำหน้าหรือต่อท้าย"))
         except urllib.error.HTTPError as e:
             msg = e.read().decode("utf-8", "ignore")[:120]
