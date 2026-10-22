@@ -1,0 +1,9 @@
+{
+  "_comment": "ตั้งค่าสกิล daily-log (~/.claude/skills/daily-log) ของโปรเจกต์นี้ · เจ้าของสั่ง 22 ต.ค. 2026 ให้สรุปทุกวัน",
+  "dir": "wiki/daily",
+  "lang": "th",
+  "link_style": "obsidian",
+  "worklog_dir": "wiki/worklog",
+  "public_repo": true,
+  "commit": true
+}
