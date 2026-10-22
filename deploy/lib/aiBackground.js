@@ -26,17 +26,27 @@ const readFranchiseStyle = () => readFile(path.join(process.cwd(), "tasks", "fra
 export async function top5BackgroundPrompt(franchise = "OP") {
   const fr = (await readFranchiseStyle())?.franchises?.[franchise]
   const decor = fr?.decor || "abstract deep-navy atmosphere with soft light"
+  // ⚠️ 22 ต.ค. 2026 — เจ้าของเลือกให้หน้าตาค่ายนำ · เดิมทุกค่ายได้พื้นกรมท่า+ฟ้า+ทองเหมือนกัน
+  //    ค่ายพื้นสว่าง (Pokémon/Naruto/MLP) ยังต้องให้กลางภาพ "เรียบและว่าง" เพื่อวางการ์ด แต่ไม่ต้องมืด
+  const pal = fr?.palette
+  const light = !!pal?.light
+  const ground = pal ? pal.ground : "deep-navy"
   // ⚠️ ห้ามบรรยาย "โซนที่จะวางของ" เป็นรูปทรง — ลองแล้ว 10 ต.ค. 2026 เขียนว่า
   //    "a 2x2 grid area on the right half" โมเดลวาดแผ่นกระจกเรืองแสง 2×2 ลงไปจริง ๆ
   //    (กับดักเดียวกับ skill dvx-image ข้อห้า: คำในบรีฟถูกวาดตรงตัว)
   //    บอกแค่ว่า "ลายอยู่ที่ขอบ ตรงกลางมืดและว่าง" พอ
   return [
     "Square 1:1 background artwork, used as the backdrop of a poster. Other elements will be placed on top later.",
-    "Composition: the decorative motifs live ONLY along the outer edges and in the four corners, and fade into darkness.",
-    "The whole middle of the picture is calm, nearly empty deep-navy space with only a soft, diffuse cyan glow.",
-    "The top edge stays especially dark.",
+    `Composition: the decorative motifs live ONLY along the outer edges and in the four corners, and fade into ${light ? "soft light" : "darkness"}.`,
+    pal
+      ? `The whole middle of the picture is calm, nearly empty ${ground} space with only a soft, diffuse glow of ${pal.main}.`
+      : "The whole middle of the picture is calm, nearly empty deep-navy space with only a soft, diffuse cyan glow.",
+    light ? "The top edge stays calm and plain." : "The top edge stays especially dark.",
     `Motifs for the edges and corners: ${decor}.`,
-    "Brand palette: deep navy (#0A1628) ground, electric cyan (#00D4FF) light accents and rim light, gold (#E0B457) as a secondary glow.",
+    pal
+      ? `Franchise look: ${fr.look} Palette: ground ${pal.ground}, lead colour ${pal.main}, accent ${pal.accent}, ` +
+        "plus one small electric-cyan (#00D4FF) glint."
+      : "Brand palette: deep navy (#0A1628) ground, electric cyan (#00D4FF) light accents and rim light, gold (#E0B457) as a secondary glow.",
     "Style: cinematic digital painting, depth, gentle light rays, subtle film grain.",
     "",
     "HARD RULES — never break:",

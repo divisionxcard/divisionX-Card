@@ -228,7 +228,7 @@ grep -rn "24 hours\|24-hour\|24/7\|round the clock" deploy/tasks/ deploy/app/ de
 |---|---|
 | `deploy/tasks/image_style.json` | สไตล์แบรนด์ · โมเดล · ขนาด · ข้อห้าม · กฎภาษาไทย |
 | `deploy/tasks/art_direction.json` | **กฎเหล็ก 10 ข้อ · ลายเซ็นแบรนด์ 3 ข้อ · แนวภาพหมุนเวียน 10 แนว** (กฎสไตล์เดิมอยู่ใน `retired_rules`) + คำถามที่ยังไม่มีคำตอบ |
-| `deploy/tasks/franchise_style.json` | ธีมตกแต่งแยกตามค่ายการ์ด |
+| `deploy/tasks/franchise_style.json` | **หน้าตาโปสเตอร์ตามค่าย** (look + palette นำสีและบรรยากาศ · decor เป็นตัวเลือก) + `brand_with_franchise` ที่ใช้แทนลายเซ็นแบรนด์เมื่อรู้ค่าย — เจ้าของเลือก "ค่ายเป็นหลัก แบรนด์เหลือโลโก้+แต้มฟ้า" 22 ต.ค. 2026 · ไม่รู้ค่าย = กรมท่า+ฟ้าตามเดิม |
 | `deploy/tasks/poster_concepts.json` | คอนเซปต์โปสเตอร์ (default = `treasure` ซึ่งผูกกับ One Piece) |
 | `wiki/knowledge-base/05-visual-identity.md` | ต้นฉบับที่คนอ่าน — **แก้ JSON แล้วต้องแก้ที่นี่ด้วย** |
 

@@ -200,9 +200,11 @@ function buildPrompt(style, concept, facts, mode, hasRefs = false, idea = null, 
     const conceptIsOnePiece = /one piece|ล่าสมบัติ/i.test(
       `${concept.label || ""} ${concept.mood || ""} ${(concept.decor || []).join(" ")}`)
     const conceptFits = !fr || !conceptIsOnePiece || fr.label === "One Piece"
-    const palette =
-      `Colour direction: background ${concept.palette?.bg}, primary accent ${concept.palette?.accent}, ` +
-      `secondary accent ${concept.palette?.accent2}.`
+    // มีหน้าตาของค่ายแล้ว สีของคอนเทนต์คอนเซปต์ (ส่วนใหญ่กรมท่า/ทอง) จะสั่งชนกับสีค่าย → ยกให้ค่ายนำ
+    const palette = fr?.look
+      ? "Colour direction: follow the FRANCHISE LOOK palette."
+      : `Colour direction: background ${concept.palette?.bg}, primary accent ${concept.palette?.accent}, ` +
+        `secondary accent ${concept.palette?.accent2}.`
     // ⚠️ ทุกคอนเซปต์มี layout กำหนดไว้ในไฟล์ตั้งแต่แรก แต่ไม่เคยมีใครอ่านเลย
     //    โปสเตอร์จึงถูกจัดวางแบบเดียวกันหมด ต่อให้เปลี่ยนคอนเซปต์
     //    ส่งเสมอแม้คอนเซปต์ไม่เข้ากับค่าย เพราะโครงจัดวางไม่ผูกกับธีมค่าย
@@ -280,7 +282,21 @@ function buildPrompt(style, concept, facts, mode, hasRefs = false, idea = null, 
   // ⚠️ 14 ก.ย. 2026 — เดิมสั่ง "set the mood, ornament and lighting of the whole poster" ทุกใบ
   //    โปสเตอร์ค่ายเดียวกันจึงได้ของตกแต่งชุดเดิมเสมอ (One Piece = คลื่น เชือก เข็มทิศทุกใบ)
   //    ส่วนที่ต้องคุมจริงคือ "ห้ามปนค่าย" ซึ่งยังเป็นคำสั่งเหมือนเดิม
-  if (fr?.decor) {
+  // ⚠️ 22 ต.ค. 2026 — เจ้าของเลือก "ค่ายเป็นหลัก แบรนด์เหลือโลโก้+แต้มฟ้า" · look/palette = ทิศทางหลัก
+  //    ของสีและบรรยากาศ (คนเห็นแล้วรู้ทันทีว่าค่ายไหน) · decor ยังเป็นตัวเลือก ไม่บังคับใส่ทุกอย่าง
+  //    ไม่งั้นค่ายเดียวกันจะได้ของตกแต่งชุดเดิมทุกใบอีก (บทเรียน 14 ก.ย. ข้างบน)
+  if (fr?.look) {
+    const pal = fr.palette
+      ? `\nPalette direction: ground ${fr.palette.ground}, lead colour ${fr.palette.main}, accent ${fr.palette.accent}.`
+      : ""
+    p.push(
+      `FRANCHISE LOOK — this post is about ${fr.label}. Its look leads the palette and atmosphere, ` +
+      `so a viewer recognises the franchise at a glance (layout, camera and rendering style stay free):\n` +
+      `${fr.look}${pal}\n` +
+      (fr.decor ? `Motifs you may draw on — pick a few or none, never all at once: ${fr.decor}.\n` : "") +
+      "Never mix in motifs belonging to a different franchise."
+    )
+  } else if (fr?.decor) {
     p.push(
       `FRANCHISE MOOD — this post is about ${fr.label}. Optional inspiration; use sparingly or not at all:\n` +
       `${fr.decor}\n` +
@@ -360,9 +376,12 @@ function buildPrompt(style, concept, facts, mode, hasRefs = false, idea = null, 
   //    brandRules เป็นกฎสไตล์ แต่ตอนนี้ตัวแปรเดียวกันคือกฎเหล็ก (ซองจริง ไทยถูก ห้ามแต่งตัวเลข)
   //    ถ้าไม่แยกให้ชัด = อนุญาตให้โมเดลแหกกฎเหล็กเพื่อไอเดีย
   if (idea) {
+    // ⚠️ 22 ต.ค. 2026 — หน้าตาค่ายไม่อยู่ในรายการที่ไอเดียชนะได้ (เจ้าของเลือกให้ค่ายนำ)
+    //    ไอเดียยังเลือกเลย์เอาต์/มุมกล้อง/สไตล์ได้อิสระ แต่สีและบรรยากาศต้องเป็นของค่ายนั้น
     p.push(idea + "\n\nThis idea outranks the brand signature, the suggested direction and every " +
       "stylistic habit above — if any of them would flatten it into a plain product shot or a " +
-      "template, follow the idea. The HARD RULES and FACTS still apply without exception.")
+      "template, follow the idea. The HARD RULES and FACTS still apply without exception" +
+      (fr?.look ? ", and the FRANCHISE LOOK still sets the palette and atmosphere." : "."))
   }
   return p.join("\n\n")
 }
@@ -997,6 +1016,9 @@ export async function POST(req) {
     const frCfg = await loadJson("franchise_style.json")
     const fr = wantFr ? (frCfg?.franchises || {})[wantFr] : null
     const frBlock = fr || (frCfg?.default ? { label: "แบรนด์กลาง", decor: frCfg.default } : null)
+    // รู้ค่ายแล้ว → ลายเซ็นแบรนด์ฉบับ "ค่ายนำ" (เหลือโลโก้แปะ + แต้มฟ้า · เจ้าของเลือก 22 ต.ค. 2026)
+    // ฉบับเดิมบังคับกรมท่า+ฟ้าทุกใบ ส่งคู่กับหน้าตาค่าย = สั่งสีชนกันเอง แล้วทุกค่ายออกมาโทนเดียวกัน
+    const brandSig = fr?.look && frCfg?.brand_with_franchise?.length ? frCfg.brand_with_franchise : signature
 
     // ── การ์ดจริงที่วาดในภาพได้ (โพสต์โปเกมอน) — ต้องหา *ก่อน* คิดไอเดีย ──
     //
@@ -1032,8 +1054,9 @@ export async function POST(req) {
       format: content.content_format,
       sku: sku?.name,
       franchise: fr?.label,
+      franchiseLook: fr?.look || null,
       rules: brandRules,
-      signature,
+      signature: brandSig,
       styleHint: hintForIdea,
       boxCharacters: useChars ? charSets : [],
       allowedCards: cardsForIdea.map(c => `${c.name} — ${c.stage} · HP ${c.hp}`),
@@ -1119,7 +1142,7 @@ export async function POST(req) {
     const prompt = buildPrompt(
       promptStyle, concept, facts, mode, refs.length > 0,
       idea ? ideaToPrompt(idea) : null,
-      brandRules, frBlock, wantsMachine, branch, signature,
+      brandRules, frBlock, wantsMachine, branch, brandSig,
     )
 
     // ── โหมดขอบรีฟอย่างเดียว — ไม่วาด ไม่เสียเครดิต ──

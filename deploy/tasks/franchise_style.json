@@ -1,11 +1,22 @@
 {
-  "_comment": "องค์ประกอบตกแต่งภาพแยกตามค่ายการ์ด · ผูกกับคอลัมน์ skus.franchise",
+  "_comment": "หน้าตาโปสเตอร์แยกตามค่ายการ์ด · ผูกกับคอลัมน์ skus.franchise · ใช้ทั้งโปสเตอร์ปกติ (image/route.js + lib/artDirector.js) และพื้นหลังซีรีส์ 5 ใบเด็ด (lib/aiBackground.js + agents/top5_poster.py)",
 
   "_why": "20 ส.ค. 2026 เจ้าของทักว่าโปสเตอร์ Dragonball FB-09 ออกมาเป็นธีมเดินเรือ (สมอ คลื่น เข็มทิศ นกนางนวล) ซึ่งเป็นธีม One Piece · สาเหตุมาจาก 2 ที่พร้อมกัน: route.js ฮาร์ดโค้ดคำว่า 'One Piece nautical theme' ไว้ในทุกพรอมต์ และ poster_concepts ตั้ง default เป็น treasure (ล่าสมบัติ One Piece) · คอลัมน์ franchise มีอยู่แล้วแต่ไม่เคยถูกใช้",
 
-  "_rule": "⚠️ ห้ามใส่ตัวละคร โลโก้ค่าย หรือสัญลักษณ์ลิขสิทธิ์ (โปเกบอล ดราก้อนบอล 7 ลูก ธงโจรสลัด ฯลฯ) ลงในลิสต์นี้เด็ดขาด — เราเป็นผู้ขายต่อ ใช้รูปถ่ายสินค้าจริงได้ แต่วาดงานลิขสิทธิ์ขึ้นเองไม่ได้ · ให้บรรยายเป็น 'บรรยากาศ/พื้นผิว/แสง' เท่านั้น",
+  "_owner_choice": "22 ต.ค. 2026 เจ้าของเลือก 'ค่ายเป็นหลัก แบรนด์เหลือโลโก้+แต้มฟ้า' — โปสเตอร์ต้องดูออกทันทีว่าเป็นค่ายไหน · เดิม (14 ก.ย.) ส่ง decor เป็น 'Optional inspiration; use sparingly or not at all' + ลายเซ็นแบรนด์บังคับกรมท่า/ฟ้าทุกใบ → ทุกค่ายออกมาโทนเดียวกัน · ตอนนี้ look + palette เป็นทิศทางหลักของสีและบรรยากาศ ส่วน decor ยังเป็นตัวเลือก (หยิบบางอย่างหรือไม่หยิบก็ได้ — กันภาพจำเจแบบที่เคยเจอ: One Piece ได้คลื่น เชือก เข็มทิศทุกใบ) · เลย์เอาต์ มุมกล้อง สไตล์การเรนเดอร์ยังเป็นอิสระตามไอเดียของใบนั้น (feedback_ai_design_freedom) · ไม่มีค่าย = ใช้ default + brand_signature เดิมใน art_direction.json",
+
+  "_rule": "⚠️ ห้ามใส่ตัวละคร โลโก้ค่าย หรือสัญลักษณ์ลิขสิทธิ์ (โปเกบอล ดราก้อนบอล 7 ลูก ธงโจรสลัด ตราฝ่ายจักรกล ฯลฯ) ลงในไฟล์นี้เด็ดขาด — เราเป็นผู้ขายต่อ ใช้รูปถ่ายสินค้าจริงได้ แต่วาดงานลิขสิทธิ์ขึ้นเองไม่ได้ · ให้บรรยายเป็น 'บรรยากาศ/พื้นผิว/แสง/สี' เท่านั้น · ข้อยกเว้นตัวละครจากกล่องอยู่ที่ art_direction.json → box_characters (เฉพาะใบที่ติ๊ก)",
 
   "_machine_note": "ตัวตู้จริงพิมพ์ลายเดินเรือ (คลื่นขาว สมอทอง ดาว นกนางนวล) อันนั้นเป็นของจริงบนตัวตู้ ไม่ใช่ธีมของโปสเตอร์ — ถ้าตู้อยู่ในเฟรมก็วาดตามจริงได้ แต่ห้ามลามไปเป็นกรอบหรือพื้นหลังของทั้งใบเวลาสินค้าไม่ใช่ One Piece",
+
+  "_palette_note": "palette = สีหลักของค่าย (ground พื้น · main สีนำ · accent สีแต้ม) · ใช้เป็นทิศทาง ไม่ใช่ค่าตายตัว · top5_poster.py เอาไปทำสีกรอบ/ป้ายบนเทมเพลต · light = ค่ายที่พื้นสว่าง (โลโก้แปะทับจะเลือกสีดำเองตามความสว่างของมุม)",
+
+  "_brand_note": "brand_with_franchise ใช้แทน art_direction.json → brand_signature เมื่อรู้ค่ายของโพสต์ (ตามที่เจ้าของเลือก 22 ต.ค.) · ไม่รู้ค่าย = ใช้ brand_signature เดิม (กรมท่า + ฟ้านีออนนำ)",
+
+  "brand_with_franchise": [
+    "Keep it ours, subtly: our real logo is stamped onto the finished image afterwards, and one small electric-cyan (#00D4FF) touch — a thin line, a rim light or a glint — is enough. Do not paint the poster in our navy-and-cyan; the FRANCHISE LOOK leads the palette and atmosphere.",
+    "Each poster should look clearly different from the last one. Inside the franchise look, vary the layout, camera, lighting setup and rendering style — the same pack in a hand on the same background fails even when it breaks no rule."
+  ],
 
   "default": "Clean electric-blue energy field, lightning arcs, brushed chrome edges, deep navy ground. No franchise-specific ornament.",
 
@@ -13,47 +24,65 @@
     "OP": {
       "label": "One Piece",
       "mood": "ผจญภัยทางทะเล ล่าสมบัติ",
-      "decor": "Ocean wave crests in white foam, weathered rope coils, a brass compass rose, distant seagulls, aged treasure-map parchment texture, warm gold accents against deep navy"
+      "look": "High-seas adventure: sun-drenched ocean blues against warm treasure gold, with a bold crimson accent. Bright tropical daylight or a blazing golden-hour sky, spray and wind in the air, weathered wood and sun-faded parchment textures. Bold, optimistic, larger-than-life.",
+      "palette": { "ground": "#0B3A5E", "main": "#F2B134", "accent": "#D7263D" },
+      "decor": "Ocean wave crests in white foam, weathered rope coils, a brass compass rose, distant seagulls, aged treasure-map parchment texture, warm gold accents against deep sea blue"
     },
     "DB": {
       "label": "Dragon Ball",
       "mood": "พลังระเบิด ต่อสู้ดุเดือด",
-      "decor": "Explosive energy aura radiating outward, streaking speed lines, crackling orange and electric-blue power flares, shattered rock fragments suspended mid-air, scorched battlefield ground, dramatic backlit dust"
+      "look": "Explosive power: blazing orange and hot yellow energy erupting against a deep blue-black sky. Radial bursts, a blinding backlight, heat haze and speed lines — everything pushed to maximum intensity. Raw, loud, kinetic.",
+      "palette": { "ground": "#101A3A", "main": "#FF7A00", "accent": "#FFD23F" },
+      "decor": "Explosive energy aura radiating outward, streaking speed lines, crackling orange power flares, shattered rock fragments suspended mid-air, scorched battlefield ground, dramatic backlit dust"
     },
     "PKM": {
       "label": "Pokemon",
       "mood": "สดใส ผจญภัย เป็นมิตร",
-      "decor": "Bright playful palette, elemental sparks of electricity and leaves, soft lens flares, rolling grass field bokeh, cheerful daylight tone — lighter and friendlier than the other franchises"
+      "look": "Bright, friendly adventure: clear sky blue, sunny yellow and fresh grass green under cheerful daylight, white clouds and soft lens flares. Clean, colourful and welcoming — the lightest, happiest franchise we carry; avoid dark or menacing moods.",
+      "palette": { "ground": "#E8F6FF", "main": "#FFCB05", "accent": "#2A75BB", "light": true },
+      "decor": "Elemental sparks of electricity and leaves, soft lens flares, rolling grass field bokeh, puffy white clouds, cheerful daylight tone"
     },
     "YGH": {
       "label": "Yu-Gi-Oh",
       "mood": "ลึกลับ ศาสตร์โบราณ ดวลไพ่",
-      "decor": "Ancient carved stone tablets, gold ornamental filigree, mystic glyph textures, purple-violet arcane glow, dueling arena spotlight from above, floating dust motes"
+      "look": "Ancient mystic duel: deep violet and indigo shadows lit by an arcane purple glow, with burnished antique gold. A single dramatic spotlight from above, drifting dust, carved stone and gilded filigree. Mysterious, ceremonial, high stakes.",
+      "palette": { "ground": "#1A0F2E", "main": "#8E44FF", "accent": "#D4AF37" },
+      "decor": "Ancient carved stone tablets, gold ornamental filigree, abstract mystic glyph textures, purple-violet arcane glow, dueling arena spotlight from above, floating dust motes"
     },
     "NRT": {
       "label": "Naruto",
       "mood": "นินจา ความเร็ว หมู่บ้านซ่อนใบไม้",
-      "decor": "Ink brush strokes on washi paper, swirling leaves caught in wind, paper talisman seals, shuriken silhouettes in motion blur, muted earth tones with a single hot accent"
+      "look": "Ninja ink and fire: warm cream washi paper and bold black sumi-e brushwork, cut by a single hot orange accent. Wind-swept leaves, scroll paper, traditional Japanese wave patterns, swift motion. Dynamic, handmade, spirited.",
+      "palette": { "ground": "#F3E9D6", "main": "#F47B20", "accent": "#1E1E1E", "light": true },
+      "decor": "Ink brush strokes on washi paper, swirling green leaves caught in wind, unrolled paper scrolls, blank paper talisman strips, traditional seigaiha wave pattern, motion-blurred streaks"
     },
     "SL": {
       "label": "Solo Leveling",
       "mood": "มืด ทรงพลัง เงาทหาร",
-      "decor": "Deep shadow gradients, a violet-black rift portal glow, cold blue rim light, monolithic gate architecture, drifting embers of dark energy"
+      "look": "Dark power awakening: near-black shadows with a violet rift glow and cold electric-blue light, like a floating game-system window in a dungeon. Thick shadow smoke, monolithic gate architecture, sharp rim light. Ominous, cool, overwhelming.",
+      "palette": { "ground": "#07070F", "main": "#6A2CFF", "accent": "#2FA8FF" },
+      "decor": "Deep shadow gradients, a violet-black rift portal glow, translucent blue game-interface panels with no readable text, monolithic stone gate, drifting embers of dark energy"
     },
     "MLBB": {
       "label": "Mobile Legends",
-      "mood": "อีสปอร์ต แข่งขัน",
-      "decor": "Esports arena atmosphere, neon HUD frame elements, hexagonal grid overlay, stage spotlights, competitive high-contrast glow"
+      "mood": "อีสปอร์ต แข่งขัน แฟนตาซี",
+      "look": "Esports fantasy arena: midnight blue stage lit by royal gold and electric magenta, glowing hexagon grids and sweeping spotlights over a battle-arena floor. Competitive, glossy, premium.",
+      "palette": { "ground": "#0B1030", "main": "#E6B450", "accent": "#E83E8C" },
+      "decor": "Esports arena atmosphere, neon HUD frame elements with no readable text, hexagonal grid overlay, stage spotlights and haze, glossy reflective arena floor"
     },
     "TF": {
       "label": "Transformers",
       "mood": "จักรกล โลหะ",
-      "decor": "Brushed metal plating with panel seams, exposed gears and pistons, circuit trace patterns, hard industrial rim light, sparks off steel"
+      "look": "Heavy machinery: gunmetal and polished chrome plating with panel seams, a hot signal-red accent and a cool blue energy glow. Hard industrial rim light, sparks off steel, hydraulic precision. Powerful, mechanical, cinematic.",
+      "palette": { "ground": "#15181D", "main": "#C8CDD3", "accent": "#E8432E" },
+      "decor": "Brushed metal plating with panel seams, exposed gears and pistons, circuit trace patterns, hard industrial rim light, sparks off steel, no emblems or insignia"
     },
     "MLP": {
       "label": "My Little Pony",
       "mood": "สดใส น่ารัก แฟนตาซี",
-      "decor": "Pastel rainbow gradients, soft cloud forms, glittering sparkle particles, gentle flower motifs, bright airy daylight — the softest palette in the set"
+      "look": "Sweet fantasy: soft pastel pink, lavender and sky blue with rainbow highlights, puffy clouds and glittering sparkles in bright airy daylight. Gentle, cute, magical — the softest palette we carry; no dark or harsh lighting.",
+      "palette": { "ground": "#FFF1F8", "main": "#F7A8D8", "accent": "#9AD8F5", "light": true },
+      "decor": "Pastel rainbow gradients, soft cloud forms, glittering sparkle particles, gentle flower motifs, bright airy daylight"
     }
   }
 }

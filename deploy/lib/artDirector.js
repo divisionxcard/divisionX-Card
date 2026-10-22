@@ -133,7 +133,7 @@ Reply as JSON with exactly these keys:
  * @param {string[]} [o.boxCharacters] ชื่อชุดที่เจ้าของติ๊กให้วาดตัวละครจากกล่องได้ (ใบนี้ใบเดียว)
  * @returns {Promise<object|null>} null = ล้มเหลว ให้ผู้เรียกไปต่อโดยไม่มีไอเดียภาพ
  */
-export async function planVisual({ caption, format, sku, franchise, rules = [], signature = [], styleHint = null, allowedCards = [], boxCharacters = [] }) {
+export async function planVisual({ caption, format, sku, franchise, franchiseLook = null, rules = [], signature = [], styleHint = null, allowedCards = [], boxCharacters = [] }) {
   const key = process.env.OPENAI_API_KEY
   if (!key || !caption?.trim()) return null
 
@@ -157,6 +157,12 @@ export async function planVisual({ caption, format, sku, franchise, rules = [], 
     // บอกค่ายให้ตัวคิดรู้ตั้งแต่แรก ไม่งั้นมันจะเสนอไอเดียกลาง ๆ ที่ไปได้กับทุกค่าย
     // แล้วตัววาดค่อยไปหยิบลายผิดค่ายมาใส่ทีหลัง (เคสจริง: Dragon Ball ได้สมอกับคลื่น)
     franchise ? `ค่ายการ์ด: ${franchise} — องค์ประกอบภาพต้องเข้ากับค่ายนี้ ห้ามหยิบสัญลักษณ์ของค่ายอื่นมาปน` : null,
+    // ⚠️ 22 ต.ค. 2026 — เจ้าของเลือกให้หน้าตาค่ายนำสีและบรรยากาศ ตัวคิดต้องรู้ตั้งแต่แรก
+    //    ไม่งั้นจะเสนอไอเดียโทนกรมท่า-ฟ้าแบบเดิม แล้วตัววาดได้สองคำสั่งที่ขัดกัน
+    franchiseLook
+      ? `FRANCHISE LOOK (owner's choice — it leads the palette and atmosphere so viewers recognise ` +
+        `the franchise at a glance; layout, camera and rendering style stay yours to choose):\n${franchiseLook}`
+      : null,
     styleHint ? `SUGGESTED STYLE for this poster: ${styleHint}` : null,
     // ⚠️ ต้องเห็นรายชื่อตั้งแต่ขั้นนี้ — ไม่งั้นมันเชื่อข้อห้ามวาดตัวละครแล้วเลี่ยงการ์ดไปเลย
     //    ภาพสอนกฎ #43 จึงเอาการ์ดพลังงานมาแทนโปเกมอน (15 ก.ย. 2026)
