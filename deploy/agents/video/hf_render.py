@@ -42,7 +42,7 @@ import time
 import urllib.parse
 import urllib.request
 
-from . import align, config, segments
+from . import align, config, segments, sound
 
 TEMPLATE = config.REPO / "hyperframes" / "templates" / "dvx-promo"
 TAIL = 0.9                    # ค้างฉากปิดหลังเสียงจบ (วินาที) ให้คนอ่านแท็ก/โลโก้ทัน
@@ -94,11 +94,21 @@ def prepare(plan, work):
     t0 = time.time()
     voice_mod.synth(segments.speech_text(segs), wav, voice=plan.get("voice"),
                     model=plan.get("tts_model"), style=plan.get("voice_style"))
+    # ย่อช่วงเงียบยาวกลางประโยค (23 ต.ค. 2026 · คลิปจริงเงียบสนิท 0.6–1.6 วิ ระหว่างบรรทัด) — ก่อน whisper จับเวลา
+    # ภาพทุกฉากจึงตามเสียงที่ย่อแล้ว · ปิดได้ด้วย plan["keep_pauses"] = true
+    if not plan.get("keep_pauses"):
+        try:
+            if sound.tighten_pauses(wav):
+                _log("1/4", "ย่อช่วงเงียบยาวในเสียงพากย์แล้ว")
+        except Exception as e:
+            _log("1/4", f"⚠️ ย่อช่วงเงียบไม่สำเร็จ ({str(e)[:80]}) — ใช้เสียงเดิม")
     total = voice_mod.duration(wav)
     _log("1/4", f"{len(segs)} ฉาก · เสียง {total:.1f} วิ ({time.time() - t0:.0f} วิ)")
 
     stamp_f = wav.with_suffix(".stamp.json")
-    stamp = stamp_f.read_text(encoding="utf-8") if stamp_f.exists() else ""
+    # เวลารายคำผูกกับเสียงหลังย่อช่วงเงียบ — แคชเดิม (ก่อนย่อ) ต้องไม่ถูกหยิบมาใช้
+    stamp = (stamp_f.read_text(encoding="utf-8") if stamp_f.exists() else "") + \
+        ("" if plan.get("keep_pauses") else f"|{sound.TIGHT_VERSION}:{sound.PAUSE_MAX}:{sound.PAUSE_KEEP}")
     words_f = work / "words.json"
     words = None
     try:
@@ -572,6 +582,7 @@ def write_project(proj, scenes, timing, chunks, words, total, voice_rel, look=No
     recount = {}                     # segment ของบรรทัดนับถอยหลัง → (เวลา 3, 2, 1) · ใช้ตอนวางซับ
     count, slots, hot, brand = {}, [], set(), {"DivisionX Card", "DivisionX", "@divisionxcard"}
     prev_vals = {}
+    sfx = []                         # (วินาทีในคลิป, ชนิด, ยาว) — sound.master ผสมหลังเรนเดอร์
     for i, sc in enumerate(scenes):
         kind = sc["type"]
         base, pre = _scene_base(sc)
@@ -633,6 +644,7 @@ def write_project(proj, scenes, timing, chunks, words, total, voice_rel, look=No
         elif kind == "map":
             vals.update(_map_vals(sc, _line_spans(timing, first[i], spans[i], lo, hi), chunks, words, lo, hi, onsets))
             hot.update(w for w in (sc.get("mall"), f"ชั้น {sc.get('floor')}" if sc.get("floor") else None) if w)
+        sfx += _sfx_events(kind, sc, vals, lo, hi, i > 0)
         if kind in QBASE:                            # หัวเรื่องจากคลังสำนวนยาวไม่เท่ากัน → ย่อให้พอดีจอ (วัดด้วย Kanit จริง)
             b1, b2 = QBASE[kind]
             vals["qs1"] = fit_px(vals.get("q1") or "", 900, 940, b1, 56)
@@ -689,7 +701,57 @@ def write_project(proj, scenes, timing, chunks, words, total, voice_rel, look=No
                         f'data-duration="{duration}" data-track-index="7" data-track-kind="captions" data-width="1080" data-height="1920"></div>')
                .replace("{{AUDIO}}", audio))
     (proj / "index.html").write_text(out, encoding="utf-8")
+    (proj.parent / "sfx.json").write_text(json.dumps([e for e in sfx if 0 <= e[0] < duration]), encoding="utf-8")
     return duration
+
+
+def _sfx_events(kind, sc, vals, lo, hi, cut_in):
+    """จุดเอฟเฟกต์เสียงของฉากหนึ่ง — เวลาเดียวกับที่ภาพเฉลย (ค่า at/rv/cd ชุดเดียวกับที่ส่งเข้าฉาก)
+
+    ทำไมผูกกับค่าเหล่านี้: ภาพในฉากเฉลยตรงเวลาพวกนี้อยู่แล้ว (snap กับจุดเริ่มพูด) เสียงจึงลงพร้อมภาพเป๊ะ
+    """
+    ev = []
+    if cut_in:                                               # รอยต่อฉาก — ลมวูบนำหน้านิดหนึ่ง
+        ev.append((max(0.0, lo - 0.2), "whoosh", None))
+    elif kind != "hook":                                     # เปิดคลิป: เสียงแรกตรงแสงวาบเปิด (hook มีตูมของตัวเอง)
+        ev.append((0.08, "impact", None))                    # วินาทีแรกเงียบ = เลื่อนผ่าน · ภาพเปิดด้วยสายฟ้า/แสงวาบอยู่แล้ว
+    g = lambda k: vals.get(k) if isinstance(vals.get(k), (int, float)) else None
+    if kind == "hook":
+        ev.append((lo + 0.40, "impact", None))               # ซองตกกระแทก (scene-hook ชนที่ 0.42 วิ)
+    elif kind == "pack":
+        ev += [(lo + g(k), "pop", None) for k in ("at1", "at2") if g(k) is not None]
+    elif kind == "machine":
+        ev += [(lo + g(f"at{j}"), "pop", None) for j in (1, 2, 3) if g(f"at{j}") is not None]
+    elif kind == "rank":
+        for r in (5, 4, 3, 2):
+            if g(f"at{r}") is not None:
+                ev.append((lo + g(f"at{r}"), "impact" if r <= 3 else "pop", None))
+        if g("at1") is not None:                             # อันดับหนึ่ง: ไต่ระดับ → ตูม + ประกาย
+            d = max(0.6, min(2.4, g("at1") - (g("ln1") or g("at1") - 1.2)))
+            ev += [(lo + g("at1") - d, "riser", round(d, 2)), (lo + g("at1"), "impact", None),
+                   (lo + g("at1") + 0.05, "shine", None)]
+    elif kind == "versus":
+        R = int(vals.get("rounds") or 0)
+        for k in range(1, R + 1):
+            if g(f"in{k}") is not None and k > 1:
+                ev.append((lo + g(f"in{k}"), "whoosh", None))
+            if g(f"rv{k}") is not None:
+                ev.append((lo + g(f"rv{k}"), "impact", None))
+        if R and g(f"rv{R}") is not None:
+            ev.append((lo + g(f"rv{R}") + 0.05, "shine", None))
+    elif kind == "quiz":
+        ev += [(lo + g(f"cd{k}"), "tick", None) for k in (3, 2, 1) if g(f"cd{k}") is not None]
+        if g("rv") is not None:
+            ev += [(lo + g("rv"), "impact", None), (lo + g("rv") + 0.05, "shine", None)]
+    elif kind == "map":
+        if g("zm") is not None:
+            ev.append((lo + g("zm"), "whoosh", None))
+        ev += [(lo + g(k), "pop", None) for k in ("nm", "fl", "lm") if g(k) is not None]
+        if g("ph") is not None and g("ph") < 900:
+            ev.append((lo + g("ph"), "impact", None))
+    elif kind == "cta":
+        ev.append((lo + 0.3, "pop", None))
+    return [(round(t, 3), k, d) for t, k, d in ev if lo - 0.3 <= t < hi]
 
 
 def _npx(args, cwd, timeout=1800):
@@ -707,7 +769,9 @@ def build_video(plan, out_mp4=None, check=True):
     project = plan.get("project") or "clip"
     work = config.work_dir(project)
     (work / "plan.json").write_text(json.dumps(plan, ensure_ascii=False, indent=2), encoding="utf-8")
-    out_mp4 = pathlib.Path(out_mp4 or (work / f"{project}.mp4"))
+    # resolve() — npx เรนเดอร์จากโฟลเดอร์โปรเจกต์ (cwd = work/hf) · path สัมพัทธ์จะไปลงในนั้นแทน
+    # แล้ว out_mp4.exists() เป็นเท็จทั้งที่เรนเดอร์สำเร็จ (เจอตอนทดสอบ 23 ต.ค. ด้วย --out แบบสัมพัทธ์)
+    out_mp4 = pathlib.Path(out_mp4 or (work / f"{project}.mp4")).resolve()
 
     segs, wav, total, timing, words, chunks = prepare(plan, work)
     scenes = [dict(s) for s in (plan.get("scenes") or [])] or scenes_from_plan(plan, segs)
@@ -762,8 +826,50 @@ def build_video(plan, out_mp4=None, check=True):
     if code != 0 or not out_mp4.exists():
         raise RuntimeError(f"hyperframes render ล้ม:\n{tail}")
     _log("4/4", f"เรนเดอร์เสร็จ {duration:.1f} วิ ({time.time() - t0:.0f} วิ) → {out_mp4}\n{tail}")
+    # ชั้นเสียง: เอฟเฟกต์ตามจังหวะเฉลย + ความดัง −14 LUFS ทุกคลิป (sound.py · 23 ต.ค. 2026)
+    # ล้มเมื่อไหร่ใช้ไฟล์ที่เรนเดอร์ได้ต่อ — คลิปเสียงเดิมยังดีกว่าไม่มีคลิป
+    if not plan.get("no_master"):
+        raw = out_mp4.with_name(out_mp4.stem + ".raw.mp4")
+        try:
+            events = [] if plan.get("no_sfx") else json.loads((work / "sfx.json").read_text(encoding="utf-8"))
+            track = _music_for(plan)
+            shutil.move(str(out_mp4), str(raw))
+            info = sound.master(raw, out_mp4, events, work, music=track)
+            if track:
+                _log("4/4", f"เพลงประกอบ: {pathlib.Path(track).name}")
+            raw.unlink(missing_ok=True)
+            _log("4/4", f"ชั้นเสียง: เอฟเฟกต์ {info['events']} จุด · ความดังเดิม {info['measured']} → "
+                        f"{sound.loudness(out_mp4)} LUFS")
+        except Exception as e:
+            if not out_mp4.exists() and raw.exists():
+                shutil.move(str(raw), str(out_mp4))
+            _log("4/4", f"⚠️ ชั้นเสียงไม่สำเร็จ ({str(e)[:120]}) — ใช้ไฟล์ที่เรนเดอร์ได้")
     # ความยาวไฟล์จริง = เสียง + TAIL (ไม่ใช่ total ของเสียง — เดิมบันทึก duration_seconds ขาดไป 0.9 วิ)
     return out_mp4, duration
+
+
+# รูปแบบคลิป → รูปแบบโพสต์ใน content_voice.json (คีย์ที่ tasks/video_music.json → format_mood ใช้เลือกอารมณ์เพลง)
+MUSIC_FORMAT = {"rank": "ranking", "versus": "compare", "quiz": "card_deep", "map": "behind"}
+
+
+def _music_for(plan):
+    """เพลงประกอบที่ใช้ได้จริง — ไม่มีเพลงที่กรอกใบอนุญาตในคลัง = None (คลิปมีแค่เสียงพากย์ + เอฟเฟกต์)
+
+    ⚠️ ห้ามรับ path เพลงจากหน้าเว็บ (route render ปฏิเสธ music อยู่แล้ว) — เลือกจากคลังที่มีใบอนุญาตเท่านั้น
+    (music.py: เพลงไม่มีสิทธิ์ = คลิปโดนปิดเสียง/ถอด ย้อนแก้ไม่ได้)
+    """
+    if plan.get("no_music"):
+        return None
+    try:
+        from . import music
+        p = music.pick_for(MUSIC_FORMAT.get(plan.get("format") or "", "ranking"))
+        if p:
+            path = pathlib.Path(p)
+            path = path if path.is_absolute() else config.REPO / "deploy" / path
+            return str(path) if path.exists() else None
+    except Exception as e:
+        _log("4/4", f"⚠️ เลือกเพลงไม่สำเร็จ ({str(e)[:80]}) — ไม่ใส่เพลง")
+    return None
 
 
 def write_demo(plan):

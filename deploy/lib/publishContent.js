@@ -56,6 +56,17 @@ export function blockReason(item, { requireSchedule = false } = {}) {
     }
   }
 
+  // 2b) ชิ้นที่แนบวิดีโอ — ระบบยังส่งได้แค่รูป (/photos) กับข้อความ (/feed)
+  //     ⚠️ 23 ต.ค. 2026 — เดิมส่ง media_url ไปเป็น "รูป" โดยไม่ดู media_type · ถ้าผูกคลิปจากโรงงานวิดีโอ
+  //     (publish.py → finish_job เขียน media_type='video') Facebook จะปฏิเสธ หรือโพสต์ข้อความเปล่าแทนคลิป
+  if (item.media_type === "video" || /\.(mp4|mov|webm|m4v)(\?|$)/i.test(item.media_url || "")) {
+    return {
+      error: "ชิ้นนี้แนบวิดีโอ — ระบบยังโพสต์วิดีโอ/Reels ให้อัตโนมัติไม่ได้",
+      hint: "ดาวน์โหลดคลิปจากหน้าโรงงานวิดีโอแล้วโพสต์เอง หรือรอระบบโพสต์ Reels",
+      status: 409,
+    }
+  }
+
   // 3) ต้องผ่านการอนุมัติจากคนก่อน — ไม่มีทางอ้อม
   if (!["approved", "scheduled"].includes(item.status)) {
     return { error: `ต้องอนุมัติก่อนถึงจะโพสต์ได้ (ตอนนี้สถานะ "${item.status}")`, status: 409 }
