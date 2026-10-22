@@ -1,0 +1,350 @@
+<title>ไดอารี่งาน DivisionX</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anuphan:wght@400;500;600&family=Bai+Jamjuree:wght@500;600;700&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+  /* Layout: สมุดสองหน้า — สันสมุดซ้ายเป็นรายการวัน หน้าขวาเป็นบันทึกของวันที่เลือก · มือถือ = แถบวันเลื่อนแนวนอนด้านบน */
+  :root {
+    --paper: #EDF1F6; --sheet: #FFFFFF; --ink: #111A2C; --muted: #566175; --line: #D5DCE7;
+    --volt: #0072B0; --volt-soft: #E1F1FA; --gold: #8F6511; --gold-soft: #F7EED9;
+    --pend: #A6530A; --done: #2B7A4B; --done-soft: #E3F2E8;
+    --f-display: "Bai Jamjuree", "Anuphan", "Leelawadee UI", "Thonburi", sans-serif;
+    --f-body: "Anuphan", "Leelawadee UI", "Thonburi", "Noto Sans Thai", sans-serif;
+    --f-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+    --r: 14px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper: #0A1020; --sheet: #111A2E; --ink: #E6EBF4; --muted: #93A0B9; --line: #243049;
+      --volt: #3FC7FF; --volt-soft: #0E2A40; --gold: #E3C06E; --gold-soft: #2A2414;
+      --pend: #F2A552; --done: #62C48F; --done-soft: #12301F; color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper: #0A1020; --sheet: #111A2E; --ink: #E6EBF4; --muted: #93A0B9; --line: #243049;
+    --volt: #3FC7FF; --volt-soft: #0E2A40; --gold: #E3C06E; --gold-soft: #2A2414;
+    --pend: #F2A552; --done: #62C48F; --done-soft: #12301F; color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+  body { background: var(--paper); color: var(--ink); font: 400 16px/1.7 var(--f-body); }
+  .wrap { max-width: 1160px; margin: 0 auto; padding-inline: 16px; padding-block: 28px 64px; display: grid; gap: 28px; }
+  a { color: var(--volt); text-underline-offset: 3px; }
+  :focus-visible { outline: 2px solid var(--volt); outline-offset: 2px; border-radius: 6px; }
+
+  /* ── หัวหน้า ── */
+  .top { display: grid; gap: 6px; }
+  .lock { justify-self: start; display: inline-flex; align-items: center; gap: 8px; font: 600 13px/1 var(--f-body);
+          letter-spacing: .02em; color: var(--muted); padding: 7px 12px; border: 1px solid var(--line); border-radius: 999px; background: var(--sheet); }
+  .lock svg { width: 13px; height: 13px; }
+  h1 { margin: 4px 0 0; font: 700 clamp(34px, 6vw, 52px)/1.1 var(--f-display); letter-spacing: -.01em; text-wrap: balance; }
+  h1 .spark { color: var(--volt); }
+  .lede { margin: 0; color: var(--muted); max-width: 62ch; }
+
+  /* ── ค้างรวมทุกวัน ── */
+  .owed { background: var(--sheet); border: 1px solid var(--line); border-radius: var(--r); padding: 18px 20px; display: grid; gap: 10px; }
+  .owed h2 { margin: 0; font: 600 18px/1.3 var(--f-display); display: flex; gap: 10px; align-items: baseline; }
+  .owed h2 .n { font: 600 13px/1 var(--f-body); color: var(--pend); background: color-mix(in srgb, var(--pend) 14%, transparent); padding: 4px 9px; border-radius: 999px; }
+  .more { justify-self: start; font: 500 14px/1 var(--f-body); color: var(--volt); background: transparent; border: 0; padding: 6px 0; cursor: pointer; }
+  .owed .from { color: var(--muted); font-size: 13px; white-space: nowrap; }
+
+  /* ── สมุด ── */
+  .book { display: grid; grid-template-columns: 260px minmax(0, 1fr); gap: 24px; align-items: start; }
+  .spine { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 16px); display: grid; gap: 12px; }
+  .search { width: 100%; font: 400 15px/1.4 var(--f-body); color: var(--ink); background: var(--sheet);
+            border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; }
+  .search::placeholder { color: var(--muted); }
+  .days { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; max-height: 70vh; overflow-y: auto; }
+  .month { font: 600 12px/1 var(--f-body); letter-spacing: .08em; color: var(--muted); padding: 14px 10px 6px; }
+  .day-btn { width: 100%; display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 10px; align-items: center; text-align: left;
+             background: transparent; border: 1px solid transparent; border-radius: 10px; padding: 8px 10px; color: var(--ink); cursor: pointer; font: inherit; }
+  .day-btn:hover { background: var(--sheet); border-color: var(--line); }
+  .day-btn[aria-current="true"] { background: var(--sheet); border-color: var(--volt); }
+  .day-btn .num { font: 700 24px/1 var(--f-display); font-variant-numeric: tabular-nums; color: var(--volt); text-align: center; }
+  .day-btn .meta { min-width: 0; display: grid; }
+  .day-btn .wd { font-size: 12px; color: var(--muted); line-height: 1.3; }
+  .day-btn .tt { font-size: 14px; line-height: 1.35; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+
+  .sheet { background: var(--sheet); border: 1px solid var(--line); border-radius: var(--r); padding: clamp(20px, 4vw, 40px); display: grid; gap: 26px; min-width: 0; }
+
+  /* ตราวันที่ — ตัวเลขใหญ่ + เส้นแสงบาง ๆ (ภาษาภาพสายฟ้าของแบรนด์) */
+  .stamp { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 18px; align-items: end; }
+  .stamp .big { grid-row: span 2; font: 700 clamp(64px, 12vw, 96px)/.85 var(--f-display); font-variant-numeric: tabular-nums; letter-spacing: -.03em; }
+  .stamp .wd { font: 600 15px/1.2 var(--f-display); color: var(--volt); }
+  .stamp .my { font: 500 15px/1.2 var(--f-body); color: var(--muted); }
+  .streak { height: 2px; border-radius: 2px; background: linear-gradient(90deg, var(--volt), color-mix(in srgb, var(--volt) 0%, transparent) 70%); }
+  .sheet h2 { margin: 0; font: 700 clamp(24px, 3.4vw, 32px)/1.25 var(--f-display); text-wrap: balance; }
+  .story { margin: 0; max-width: 66ch; font-size: 17px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip { font: 500 13px/1 var(--f-body); padding: 7px 11px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); font-variant-numeric: tabular-nums; }
+  .chip.area { color: var(--volt); border-color: color-mix(in srgb, var(--volt) 40%, var(--line)); }
+
+  .sec { display: grid; gap: 12px; }
+  .sec h3 { margin: 0; font: 600 13px/1 var(--f-body); letter-spacing: .1em; color: var(--muted); }
+  .high { margin: 0; padding-left: 1.2em; display: grid; gap: 6px; max-width: 70ch; }
+  .high li::marker { color: var(--volt); }
+
+  .works { list-style: none; counter-reset: w; margin: 0; padding: 0; display: grid; gap: 10px; }
+  .work { border-top: 1px solid var(--line); padding-top: 14px; display: grid; gap: 6px; }
+  .work:first-child { border-top: 0; padding-top: 0; }
+  .work h4 { margin: 0; font: 600 18px/1.4 var(--f-display); }
+  .work dl { margin: 0; display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 4px 14px; }
+  .work dt { color: var(--muted); font-size: 14px; }
+  .work dd { margin: 0; min-width: 0; }
+  .refs { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 2px; }
+  .ref { font: 500 12px/1 var(--f-mono); padding: 6px 8px; border-radius: 6px; background: var(--volt-soft); color: var(--volt); text-decoration: none; }
+  .ref.wl { font-family: var(--f-body); font-size: 12.5px; background: transparent; border: 1px solid var(--line); color: var(--muted); }
+  .ref:hover { text-decoration: underline; }
+  code { font: 500 .88em var(--f-mono); background: var(--volt-soft); color: var(--volt); padding: 1px 5px; border-radius: 5px; }
+
+  .dec { width: 100%; border-collapse: collapse; font-size: 15px; }
+  .dec th { text-align: left; font: 600 13px/1.3 var(--f-body); color: var(--muted); padding: 0 10px 8px 0; border-bottom: 1px solid var(--line); }
+  .dec td { padding: 10px 10px 10px 0; border-bottom: 1px solid var(--line); vertical-align: top; }
+  .dec .ch { color: var(--gold); font-weight: 600; }
+  .dec .no { color: var(--muted); }
+  .dec-wrap { overflow-x: auto; }
+
+  .todo { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+  .todo li { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 10px; align-items: start; }
+  .todo input { width: 18px; height: 18px; margin: 4px 0 0; accent-color: var(--done); }
+  .todo label { cursor: pointer; }
+  .todo li.done label { color: var(--muted); text-decoration: line-through; text-decoration-color: var(--line); }
+  .todo input:disabled + label { cursor: default; }
+
+  .note { color: var(--muted); font-size: 14px; }
+  .empty { background: var(--sheet); border: 1px dashed var(--line); border-radius: var(--r); padding: 40px 24px; display: grid; gap: 8px; justify-items: start; }
+  .empty h2 { margin: 0; font: 600 22px/1.3 var(--f-display); }
+  .empty p { margin: 0; color: var(--muted); max-width: 56ch; }
+  .err { color: var(--pend); font-size: 14px; }
+
+  @media (max-width: 860px) {
+    .book { grid-template-columns: minmax(0, 1fr); }
+    .spine { position: static; }
+    .days { display: flex; overflow-x: auto; overflow-y: hidden; max-height: none; gap: 6px; padding-bottom: 4px; scroll-snap-type: x proximity; }
+    .days .month { display: none; }
+    .days li { flex: 0 0 auto; scroll-snap-align: start; }
+    .day-btn { width: auto; grid-template-columns: auto; justify-items: center; gap: 2px; padding: 8px 12px; background: var(--sheet); border-color: var(--line); }
+    .day-btn .tt { display: none; }
+    .work dl { grid-template-columns: minmax(0, 1fr); gap: 0; }
+    .work dt { margin-top: 6px; }
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .sheet { animation: rise .25s ease-out; }
+    @keyframes rise { from { transform: translateY(6px); opacity: .6; } to { transform: none; opacity: 1; } }
+  }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <span class="lock" id="lock">
+      <svg viewBox="0 0 16 16" aria-hidden="true"><rect x="3" y="7" width="10" height="7" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
+      <span id="lock-text">ส่วนตัว · เปิดได้เฉพาะเจ้าของ</span>
+    </span>
+    <h1>ไดอารี่งาน <span class="spark">DivisionX</span></h1>
+    <p class="lede">เรื่องราวการทำงานแต่ละวันของ DivisionX Card — วันนั้นเปลี่ยนอะไร ทำไม ตัดสินใจอะไร และอะไรยังค้าง</p>
+  </header>
+
+  <section class="owed" id="owed" hidden aria-labelledby="owed-h">
+    <h2 id="owed-h">ยังค้างอยู่ <span class="n" id="owed-n"></span></h2>
+    <ul class="todo" id="owed-list"></ul>
+    <button class="more" id="owed-more" type="button" hidden></button>
+  </section>
+
+  <div id="main">
+    <div class="empty" id="state">
+      <h2>กำลังเปิดสมุด…</h2>
+      <p>บันทึกของแต่ละวันจะขึ้นที่นี่ — Claude เพิ่มหน้าใหม่ให้หลังจบงานของวันนั้น</p>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  const REPO = "https://github.com/divisionxcard/divisionX-Card"
+  const WD = ["อาทิตย์", "จันทร์", "อังคาร", "พุธ", "พฤหัสบดี", "ศุกร์", "เสาร์"]
+  const MON = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."]
+  const MON_FULL = ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"]
+
+  const S = { days: [], sel: null, q: "", db: null, owner: false, busy: new Set(), err: "", owedAll: false }
+  const OWED_SHOW = 4
+  const $ = (id) => document.getElementById(id)
+
+  const esc = (s) => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]))
+  // ข้อความในบันทึกเป็นข้อความธรรมดา — แปลงแค่ `โค้ด` กับ **ตัวหนา** หลัง escape แล้ว
+  const inline = (s) => esc(s).replace(/`([^`]+)`/g, "<code>$1</code>").replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
+  const parts = (iso) => { const [y, m, d] = String(iso).split("-").map(Number); return { y, m, d, wd: new Date(y, m - 1, d).getDay() } }
+  const fmtShort = (iso) => { const p = parts(iso); return `${p.d} ${MON[p.m - 1]}` }
+  const num = (n) => Number(n || 0).toLocaleString("en-US")
+
+  function setState(title, text, isErr) {
+    $("main").innerHTML = `<div class="empty" id="state"><h2>${esc(title)}</h2><p${isErr ? ' class="err"' : ""}>${esc(text)}</p></div>`
+  }
+
+  function visibleDays() {
+    const q = S.q.trim().toLowerCase()
+    if (!q) return S.days
+    return S.days.filter(d => JSON.stringify(d).toLowerCase().includes(q))
+  }
+
+  function renderOwed() {
+    const open = []
+    for (const d of S.days) for (const p of d.pending || []) if (!p.done) open.push({ d, p })
+    $("owed").hidden = open.length === 0
+    $("owed-n").textContent = `${open.length} เรื่อง`
+    const shown = S.owedAll ? open : open.slice(0, OWED_SHOW)
+    $("owed-list").innerHTML = shown.map(({ d, p }) => todoItem(d, p, "o")).join("")
+    const more = $("owed-more"), rest = open.length - OWED_SHOW
+    more.hidden = rest <= 0
+    more.textContent = S.owedAll ? "ย่อรายการ" : `ดูอีก ${rest} เรื่อง`
+  }
+
+  $("owed-more").addEventListener("click", () => { S.owedAll = !S.owedAll; renderOwed() })
+
+  function todoItem(d, p, pre) {
+    const id = `${pre}-${d.date}-${p.id}`
+    const dis = !S.owner || S.busy.has(d.date) ? " disabled" : ""
+    const from = pre === "o" ? ` <a class="from" href="#${esc(d.date)}" data-go="${esc(d.date)}">${esc(fmtShort(d.date))}</a>` : ""
+    return `<li class="${p.done ? "done" : ""}"><input type="checkbox" id="${esc(id)}" data-day="${esc(d.date)}" data-pid="${esc(p.id)}"${p.done ? " checked" : ""}${dis}>` +
+           `<label for="${esc(id)}">${inline(p.text)}${from}</label></li>`
+  }
+
+  function renderSpine(list) {
+    let html = "", lastMonth = ""
+    for (const d of list) {
+      const p = parts(d.date)
+      const mk = `${p.y}-${p.m}`
+      if (mk !== lastMonth) { html += `<li class="month">${esc(MON_FULL[p.m - 1])} ${p.y}</li>`; lastMonth = mk }
+      html += `<li><button class="day-btn" type="button" data-go="${esc(d.date)}" aria-current="${d.date === S.sel ? "true" : "false"}">` +
+              `<span class="num">${p.d}</span><span class="meta"><span class="wd">${esc(WD[p.wd])} · ${esc(MON[p.m - 1])}</span>` +
+              `<span class="tt">${esc(d.title || "")}</span></span></button></li>`
+    }
+    return html || `<li class="note">ไม่มีวันที่ตรงกับคำค้น</li>`
+  }
+
+  function refHtml(r) {
+    if (r.type === "commit") return `<a class="ref" href="${REPO}/commit/${encodeURIComponent(r.id)}" target="_blank" rel="noopener">${esc(r.id)}</a>`
+    if (r.type === "worklog") return `<a class="ref wl" href="${REPO}/blob/main/wiki/worklog/${encodeURIComponent(r.id)}.md" target="_blank" rel="noopener">${esc(r.id)}</a>`
+    return `<span class="ref wl">${esc(r.id)}</span>`
+  }
+
+  function renderDay(d) {
+    const p = parts(d.date), st = d.stats || {}
+    const chips = [
+      st.commits != null ? `<span class="chip">${num(st.commits)} commit</span>` : "",
+      st.files != null ? `<span class="chip">${num(st.files)} ไฟล์</span>` : "",
+      st.added != null ? `<span class="chip">+${num(st.added)} / −${num(st.deleted)} บรรทัด</span>` : "",
+      ...(d.areas || []).map(a => `<span class="chip area">${esc(a)}</span>`),
+    ].join("")
+    const works = (d.stories || []).map(w => {
+      const rows = [["เปลี่ยนอะไร", w.what], ["ทำไม", w.why], ["ผล", w.result], ["นอกรีโป", w.outside]]
+        .filter(([, v]) => v).map(([k, v]) => `<dt>${k}</dt><dd>${inline(v)}</dd>`).join("")
+      const refs = (w.refs || []).map(refHtml).join("")
+      return `<li class="work"><h4>${inline(w.title)}</h4>${rows ? `<dl>${rows}</dl>` : ""}${refs ? `<div class="refs">${refs}</div>` : ""}</li>`
+    }).join("")
+    const decs = (d.decisions || []).map(x =>
+      `<tr><td>${inline(x.topic)}</td><td class="ch">${inline(x.chose)}</td><td class="no">${inline(x.rejected || "—")}</td></tr>`).join("")
+    const todo = (d.pending || []).map(x => todoItem(d, x, "d")).join("")
+    return `<article class="sheet" aria-labelledby="day-h">
+      <div class="stamp"><span class="big">${p.d}</span><span class="wd">วัน${esc(WD[p.wd])}</span><span class="my">${esc(MON_FULL[p.m - 1])} ${p.y}</span></div>
+      <div class="streak" aria-hidden="true"></div>
+      <h2 id="day-h">${inline(d.title || fmtShort(d.date))}</h2>
+      ${d.story ? `<p class="story">${inline(d.story)}</p>` : ""}
+      ${chips ? `<div class="chips">${chips}</div>` : ""}
+      ${(d.highlights || []).length ? `<section class="sec"><h3>ภาพรวม</h3><ul class="high">${d.highlights.map(h => `<li>${inline(h)}</li>`).join("")}</ul></section>` : ""}
+      ${works ? `<section class="sec"><h3>งานที่ทำ</h3><ol class="works">${works}</ol></section>` : ""}
+      ${decs ? `<section class="sec"><h3>การตัดสินใจของเจ้าของ</h3><div class="dec-wrap"><table class="dec"><thead><tr><th>เรื่อง</th><th>เลือก</th><th>ไม่เลือก</th></tr></thead><tbody>${decs}</tbody></table></div></section>` : ""}
+      ${todo ? `<section class="sec"><h3>ค้าง / รอตัดสินใจ</h3><ul class="todo">${todo}</ul>${S.owner ? "" : `<p class="note">ติ๊กได้เฉพาะเจ้าของ</p>`}</section>` : ""}
+      ${S.err ? `<p class="err">${esc(S.err)}</p>` : ""}
+    </article>`
+  }
+
+  function render() {
+    if (!S.days.length) {
+      $("owed").hidden = true
+      setState("ยังไม่มีบันทึก", "หน้าของแต่ละวันจะขึ้นที่นี่หลังจบงาน — Claude เป็นคนเพิ่มให้จากสรุปประจำวันใน wiki/daily")
+      return
+    }
+    const list = visibleDays()
+    if (!S.sel || !S.days.some(d => d.date === S.sel)) S.sel = S.days[0].date
+    const day = S.days.find(d => d.date === S.sel)
+    const searchVal = S.q
+    $("main").innerHTML = `<div class="book">
+      <nav class="spine" aria-label="วันที่มีบันทึก">
+        <input class="search" id="q" type="search" placeholder="ค้นในบันทึก เช่น โปสเตอร์ · Pokémon" aria-label="ค้นในบันทึก">
+        <ul class="days" id="days">${renderSpine(list)}</ul>
+      </nav>
+      ${renderDay(day)}
+    </div>`
+    const q = $("q"); q.value = searchVal
+    renderOwed()
+  }
+
+  // พิมพ์ค้นแล้วไม่วาดทั้งหน้าใหม่ — วาดเฉพาะรายการวัน กันเคอร์เซอร์หลุด
+  document.addEventListener("input", (e) => {
+    if (e.target.id !== "q") return
+    S.q = e.target.value
+    const ul = $("days"); if (ul) ul.innerHTML = renderSpine(visibleDays())
+  })
+
+  document.addEventListener("click", (e) => {
+    const go = e.target.closest("[data-go]")
+    if (!go) return
+    e.preventDefault()
+    select(go.getAttribute("data-go"))
+  })
+
+  function select(date) {
+    if (!S.days.some(d => d.date === date)) return
+    S.sel = date
+    try { history.replaceState(null, "", "#" + date) } catch { location.hash = date }
+    render()
+    const sheet = document.querySelector(".sheet")
+    if (sheet && window.matchMedia("(max-width: 860px)").matches) sheet.scrollIntoView({ block: "start" })
+  }
+
+  document.addEventListener("change", async (e) => {
+    const box = e.target
+    if (!box.matches('input[type="checkbox"][data-day]') || !S.db || !S.owner) return
+    const date = box.getAttribute("data-day"), pid = box.getAttribute("data-pid")
+    const day = S.days.find(d => d.date === date)
+    if (!day || S.busy.has(date)) return
+    const pending = (day.pending || []).map(p => (p.id === pid ? { ...p, done: box.checked } : { ...p }))
+    S.busy.add(date); S.err = ""
+    try {
+      await S.db.doc("days/" + date).update({ pending })
+    } catch (err) {
+      S.err = "บันทึกการติ๊กไม่สำเร็จ ลองใหม่อีกครั้ง"
+      box.checked = !box.checked
+    } finally {
+      S.busy.delete(date)
+      render()
+    }
+  })
+
+  async function start() {
+    const h = decodeURIComponent((location.hash || "").slice(1))
+    if (/^\d{4}-\d{2}-\d{2}$/.test(h)) S.sel = h
+    if (!window.claude?.use) {
+      setState("เปิดหน้านี้จาก claude.ai", "บันทึกเก็บในฐานข้อมูลของหน้านี้ จะเห็นเมื่อเปิดผ่านลิงก์ claude.ai ด้วยบัญชีของเจ้าของ")
+      return
+    }
+    const [user, db] = await Promise.all([window.claude.use("user"), window.claude.use("db")])
+    S.owner = (await user?.isOwner?.()) ?? false
+    $("lock-text").textContent = S.owner ? "ส่วนตัว · เปิดได้เฉพาะคุณ" : "ส่วนตัว · เปิดได้เฉพาะเจ้าของ"
+    if (!db) {
+      setState("เปิดบันทึกไม่ได้ในหน้าต่างนี้", "ลองเปิดลิงก์ใหม่จาก claude.ai โดยล็อกอินบัญชีของเจ้าของ")
+      return
+    }
+    if (!S.owner) {
+      setState("หน้านี้เปิดได้เฉพาะเจ้าของ", "บันทึกในสมุดเล่มนี้อ่านได้เฉพาะบัญชีเจ้าของ")
+      return
+    }
+    S.db = db
+    db.collection("days").orderBy("date", "desc").onSnapshot(
+      (snap) => { S.days = snap.docs.map(d => d.data()).filter(d => d && d.date); render() },
+      () => setState("โหลดบันทึกไม่สำเร็จ", "ปิดแล้วเปิดหน้านี้ใหม่อีกครั้ง", true),
+    )
+  }
+  start()
+})()
+</script>

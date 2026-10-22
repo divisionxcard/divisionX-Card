@@ -5,5 +5,8 @@
   "link_style": "obsidian",
   "worklog_dir": "wiki/worklog",
   "public_repo": true,
-  "commit": true
+  "commit": true,
+  "diary_artifact": "https://claude.ai/artifact/CCxARso9Kk87Bu4oKmF2iY",
+  "diary_days_dir": "scripts/diary/days",
+  "_diary_note": "หน้าไดอารี่ส่วนตัวของเจ้าของ (Artifact บน claude.ai · ฐานข้อมูลอ่าน/เขียนได้เฉพาะเจ้าของ) · ซอร์สหน้า scripts/diary/diary.html · ลิงก์นี้เปิดได้เฉพาะบัญชีเจ้าของ"
 }

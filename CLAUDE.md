@@ -307,6 +307,8 @@ Hermes (agent ที่เจ้าของคุยผ่าน Telegram) ฝ�
 - **สรุปประจำวัน** → `wiki/daily/YYYY-MM-DD.md` + `wiki/daily/index.md` ด้วยสกิล `daily-log` (`~/.claude/skills/daily-log/`)
   · อัปเดตไฟล์ของวันนั้นทุกครั้งที่ commit งานชุดใหญ่เสร็จ (เจ้าของสั่ง 22 ต.ค. 2026) · เริ่มงาน → เปิดไฟล์ล่าสุดดู "ค้าง" ก่อน
   · ค่าตั้งของโปรเจกต์อยู่ `.claude/daily-log.json` · รีโปสาธารณะ: ห้ามตัวเลขยอดขาย/อีเมลทีม/token ในไฟล์นี้
+  · **หน้าไดอารี่ส่วนตัวของเจ้าของ** (Artifact บน claude.ai · ซอร์ส `scripts/diary/diary.html`) — เพิ่มวันใหม่ทุกครั้ง:
+    `scripts/diary/days/YYYY-MM-DD.json` → `ArtifactData set` คอลเลกชัน `days` (มีแล้ว = คง `done` ที่เจ้าของติ๊กไว้)
 
 ---
 
