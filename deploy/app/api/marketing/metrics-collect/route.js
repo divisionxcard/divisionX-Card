@@ -11,7 +11,7 @@
 // ไม่มี secret = 503 ไม่ทำอะไร
 import { createClient } from "@supabase/supabase-js"
 import { NextResponse } from "next/server"
-import { fbConfig } from "../../../../lib/facebook"
+import { fbConfig, mobilePermalink } from "../../../../lib/facebook"
 
 const db = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -108,6 +108,9 @@ export async function POST(req) {
   // ปัดชั่วโมงฝั่งเรา แล้วส่งเป็นคอลัมน์จริง — index ใช้ date_trunc() ไม่ได้
   // เพราะ date_trunc กับ timestamptz เป็น STABLE ไม่ใช่ IMMUTABLE (ดูคอมเมนต์ใน migration 067)
   const capturedHour = new Date(new Date(now).setMinutes(0, 0, 0)).toISOString()
+  // ลิงก์ที่ Hermes เอาไปส่งในรายงาน — แปลงให้แอปมือถือเปิดได้ (ดู lib/facebook.js → mobileLink)
+  const links = Object.fromEntries(await Promise.all(
+    posts.map(async p => [p.id, await mobilePermalink(p.permalink_url || null)])))
   const rows = posts.map(p => {
     const postedAt = p.created_time ? new Date(p.created_time) : null
     return {
@@ -116,7 +119,7 @@ export async function POST(req) {
       content_id: linked[p.id] ?? null,
       posted_at: postedAt?.toISOString() ?? null,
       message: (p.message || "").slice(0, 500),
-      permalink: p.permalink_url || null,
+      permalink: links[p.id] || null,
       likes: p.likes?.summary?.total_count ?? null,
       reactions: p.reactions?.summary?.total_count ?? null,
       comments: p.comments?.summary?.total_count ?? null,

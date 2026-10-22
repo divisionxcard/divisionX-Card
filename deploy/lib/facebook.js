@@ -136,12 +136,43 @@ export async function photoImage(photoId) {
   }
 }
 
+// ── ลิงก์ที่เปิดได้ทั้งคอมและแอปมือถือ ──
+//
+// ⚠️ 22 ต.ค. 2026 — permalink_url จาก Graph เป็นรูป facebook.com/<เลขโปรไฟล์เพจ>/posts/<เลขโพสต์>
+//    (เพจแบบใหม่มีเลขโปรไฟล์แยกจากเลขเพจ) · บนคอมเปิดได้ แต่แอป Facebook บนมือถือขึ้น
+//    "ไม่พร้อมให้ใช้งาน" — เจ้าของกดลิงก์ #63 จาก Telegram แล้วเจอ · ลองบนมือถือจริงแล้ว:
+//    facebook.com/<ชื่อเพจ>/posts/<เลขโพสต์> เปิดได้ · facebook.com/<เลขเพจ>_<เลขโพสต์> เปิดไม่ได้
+//    → สลับเลขโปรไฟล์เป็นชื่อเพจ (username) · ยังขอลิงก์จาก Graph เหมือนเดิม ไม่ประกอบ URL เองทั้งเส้น
+//    เพจไม่มีชื่อ / ขอชื่อไม่ได้ / รูปแบบลิงก์เปลี่ยน = ใช้ลิงก์เดิมของ Graph
+let _username
+async function pageUsername() {
+  if (_username !== undefined) return _username
+  try {
+    const r = await graph(fbConfig().pageId, { params: { fields: "username" } })
+    _username = r.username || ""
+  } catch {
+    return ""            // รอบนี้ขอไม่ได้ ไม่จำค่าว่างไว้ — รอบหน้าลองใหม่
+  }
+  return _username
+}
+
+/** สลับเลขโปรไฟล์ในลิงก์โพสต์เป็นชื่อเพจ (ฟังก์ชันล้วน — ทดสอบได้) */
+export function mobileLink(url, username) {
+  if (!url || !username) return url || null
+  return url.replace(/^(https:\/\/www\.facebook\.com\/)\d+(\/posts\/)/, `$1${username}$2`)
+}
+
+/** ลิงก์ของเพจเราที่แอปมือถือเปิดได้ — ใช้กับลิงก์ที่ได้จาก Graph ที่อื่นด้วย (เช่นตัวเก็บยอด) */
+export async function mobilePermalink(url) {
+  return mobileLink(url, url ? await pageUsername() : "")
+}
+
 /** ลิงก์เปิดโพสต์จริง — ขอจาก Graph API ไม่ประกอบ URL เอง เผื่อรูปแบบ facebook.com เปลี่ยน */
 export async function permalink(postId) {
   if (!postId) return null
   try {
     const r = await graph(postId, { params: { fields: "permalink_url" } })
-    return r.permalink_url || null
+    return await mobilePermalink(r.permalink_url || null)
   } catch {
     // ลิงก์เป็นของแถม — โพสต์สำเร็จไปแล้ว ไม่ควรทำให้ทั้งงานล้มเพราะขอลิงก์ไม่ได้
     return null
