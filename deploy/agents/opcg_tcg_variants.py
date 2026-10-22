@@ -52,8 +52,10 @@ MAX_PARALLEL = 10
 # จับคู่เฉพาะเวอร์ชันที่ราคาถึงเกณฑ์ — ใบราคาไม่กี่ดอลลาร์ไม่มีทางติด 5 อันดับ (รอบแรกไล่ทุกใบ ชุดเดียวกินหลายนาที)
 MIN_PRICE = 5.0
 
-# set_code ของเรา → ตัวย่อกลุ่มบน TCGplayer (EB04 ไม่มีกลุ่มของตัวเอง — ข้าม)
+# set_code ของเรา → ตัวย่อกลุ่มบน TCGplayer · OP14/OP15 ชื่อกลุ่ม "OP14-EB04"/"OP15-EB04" (ไม่มี "OP14" ตรง ๆ)
+# · EB04 เองไม่ใส่ — ฉบับเอเชียเป็นซองแยก ราคาคนละตลาด (ต้องตรงกับ lib/tcgcsv.js → TCGCSV_SETS.OP)
 GROUPS = {f"OP{i:02d}": f"OP{i:02d}" for i in range(1, 18)}
+GROUPS.update({"OP14": "OP14-EB04", "OP15": "OP15-EB04"})
 GROUPS.update({"EB01": "EB01", "EB02": "EB02", "EB03": "EB03", "PRB01": "PRB-01", "PRB02": "PRB-02"})
 
 
@@ -115,8 +117,10 @@ def dist(a, b):
 
 
 def tags_of(name):
-    """แท็กเวอร์ชันในวงเล็บ — ตัดวงเล็บที่เป็นเลขการ์ด (118) ทิ้ง"""
-    return [t.strip() for t in re.findall(r"\(([^)]+)\)", name) if not re.fullmatch(r"\d{3}", t.strip())]
+    """แท็กเวอร์ชันในวงเล็บ — ตัดวงเล็บที่เป็นเลขการ์ดทิ้ง: "(118)" และ "(OP01-016)" ของชุด PRB
+    (ต้องตรงกับ opTags ใน lib/top5.js)"""
+    return [t.strip() for t in re.findall(r"\(([^)]+)\)", name)
+            if not re.fullmatch(r"\d{3}", t.strip()) and not re.fullmatch(r"[A-Z]{2,4}\d{2}-\d{3}", t.strip())]
 
 
 def official_variants(code):

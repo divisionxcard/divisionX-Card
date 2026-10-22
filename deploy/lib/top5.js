@@ -197,7 +197,9 @@ const OP_TAG_TH = {
   "Red Super Alternate Art": "ซูเปอร์พาราเรลแดง", "Wanted Poster": "ใบประกาศจับ", "Manga": "มังงะ",
   "SP": "SP", "Gold": "ทอง", "Silver": "เงิน",
 }
-const opTags = (name) => [...String(name).matchAll(/\(([^)]+)\)/g)].map(m => m[1].trim()).filter(t => !/^\d{3}$/.test(t))
+// วงเล็บที่เป็นเลขการ์ด ("(118)" หรือ "(OP01-016)" ในชุด PRB) ไม่ใช่ชื่อเวอร์ชัน — ตัดทิ้ง
+const opTags = (name) => [...String(name).matchAll(/\(([^)]+)\)/g)].map(m => m[1].trim())
+  .filter(t => !/^\d{3}$/.test(t) && !/^[A-Z]{2,4}\d{2}-\d{3}$/.test(t))
 const opTagTh = (tags) => tags.map(t => OP_TAG_TH[t] || t).join(" ")
 
 async function opFromTcgcsv(set, { now, probe, staleAsOf }) {

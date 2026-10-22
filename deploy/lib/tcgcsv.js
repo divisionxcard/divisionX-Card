@@ -26,11 +26,13 @@ export const TCGCSV_SETS = {
   },
   SL: { cat: 81, groups: { UA51: "UE17BT", UA51BT: "UE17BT" }, market: "Union Arena Solo Leveling ฉบับอังกฤษ (UE17BT)", sameLanguage: false },
   // One Piece = ทางสำรองเมื่อ card2price เก่าเกิน 14 วัน (เจ้าของเลือก 22 ต.ค. 2026 · ดู lib/top5.js → opFromTcgcsv)
-  // EB04 ไม่มีกลุ่มของตัวเองบน TCGplayer (รวมอยู่ใน OP14-EB04 / OP15-EB04) — ไม่ใส่ ดีกว่าเอาราคาผิดชุดมา
+  // ⚠️ OP14 / OP15 บน TCGplayer ชื่อกลุ่ม "OP14-EB04" / "OP15-EB04" (ฉบับอังกฤษรวมการ์ด EB04 ไว้ในซองเดียวกัน)
+  //    ไม่มีกลุ่ม "OP14" ตรง ๆ — เจอตอนรันตัวจับคู่ 22 ต.ค. · EB04 เองไม่ใส่ (ฉบับเอเชียเป็นซองแยก ราคาคนละตลาด)
   OP: {
     cat: 68, market: "One Piece ฉบับอังกฤษ", sameLanguage: false,
     groups: {
       ...Object.fromEntries(Array.from({ length: 17 }, (_, i) => [`OP${String(i + 1).padStart(2, "0")}`, `OP${String(i + 1).padStart(2, "0")}`])),
+      OP14: "OP14-EB04", OP15: "OP15-EB04",
       EB01: "EB01", EB02: "EB02", EB03: "EB03", PRB01: "PRB-01", PRB02: "PRB-02",
     },
   },
