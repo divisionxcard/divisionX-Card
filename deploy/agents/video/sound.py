@@ -163,10 +163,11 @@ def build_bus(events, total, cache_dir, out_wav):
 MUSIC_VOL = 0.22          # เพลงเบากว่าเสียงพูดมาก แล้วหลบอัตโนมัติตอนมีเสียงพูด (ค่าเดียวกับ compose.py ทางเดิม)
 
 
-def master(mp4_in, mp4_out, events=None, work=None, music=None):
+def master(mp4_in, mp4_out, events=None, work=None, music=None, music_volume=None):
     """ผสมเอฟเฟกต์ (+ เพลงถ้ามี) เข้ากับเสียงพากย์ในคลิป แล้วปรับความดัง 2 รอบให้ได้ −14 LUFS · ภาพ copy
 
     music = path เพลงที่มีใบอนุญาต (music.pick_for) · วนให้ยาวเท่าคลิป · หลบเสียงพูดด้วย sidechaincompress
+    music_volume = ความดังเพลง 0–1 (ห้องตัดต่อให้ผู้ใช้ปรับเอง) · None = MUSIC_VOL
     คืน dict ผลวัด (ไว้ log) · ล้ม = โยน error (ผู้เรียกตัดสินว่าจะใช้ไฟล์เดิมต่อไหม)
     """
     mp4_in, mp4_out = pathlib.Path(mp4_in), pathlib.Path(mp4_out)
@@ -184,7 +185,8 @@ def master(mp4_in, mp4_out, events=None, work=None, music=None):
         inputs += ["-stream_loop", "-1", "-i", str(music)]
         k = len([x for x in inputs if x == "-i"]) - 1
         fade_out = max(0.0, total - 1.0)
-        parts.append(f"[{k}:a]aresample={SR},aformat=channel_layouts=stereo,volume={MUSIC_VOL},"
+        vol = MUSIC_VOL if music_volume is None else max(0.0, min(1.0, float(music_volume)))
+        parts.append(f"[{k}:a]aresample={SR},aformat=channel_layouts=stereo,volume={vol:.3f},"
                      f"afade=t=in:d=0.3,afade=t=out:st={fade_out:.2f}:d=1.0[mu0]")
         parts.append("[mu0][vk]sidechaincompress=threshold=0.03:ratio=12:attack=15:release=300[mu]")
         mix.append("[mu]")

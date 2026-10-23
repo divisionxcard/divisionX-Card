@@ -34,7 +34,9 @@
       /* ── ของทับ (ตัวหนังสือ/ภาพ/โลโก้) — กล่องนอกจับเวลา+ตำแหน่ง · กล่องใน (.ov-in) เคลื่อนไหว */
       .ov { position: absolute; z-index: 10; transform: translate(-50%, -50%); pointer-events: none; }
       .ov-in { display: block; will-change: transform, opacity; }
-      .ov-text .ov-in { font-weight: 900; line-height: 1.18; text-align: center; white-space: pre-wrap; max-width: 960px; }
+      /* width: max-content = กว้างตามข้อความ (ไม่เกิน 960) — ไม่ใส่ กล่องจะถูกบีบตามระยะจากจุดวางถึงขอบขวา
+         ตัวหนังสือกลางจอเลยขึ้นบรรทัดใหม่ที่ 540 px ทั้งที่พรีวิวบนเว็บเป็นบรรทัดเดียว (เจอ 23 ต.ค. 2026) */
+      .ov-text .ov-in { font-weight: 900; line-height: 1.18; text-align: center; white-space: pre-wrap; width: max-content; max-width: 960px; }
       .st-bold .ov-in { color: var(--c, #ffffff); -webkit-text-stroke: 12px #03102a; paint-order: stroke fill;
         text-shadow: 0 8px 0 #03102a, 0 0 30px rgba(3, 16, 42, 0.85); }
       .st-gold .ov-in { color: #ffc24a; -webkit-text-stroke: 12px #03102a; paint-order: stroke fill;

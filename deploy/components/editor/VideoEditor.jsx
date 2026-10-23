@@ -109,7 +109,7 @@ function ProjectPicker() {
         <div className={styles.cards}>
           {(list || []).map((p) => (
             <a key={p.name} className={styles.card}
-               href={`/video/editor?project=${encodeURIComponent(p.name)}`}>
+               href={`/video/local-editor?project=${encodeURIComponent(p.name)}`}>
               <div className={styles.cardName}>{p.name}</div>
               <div className={styles.cardMeta}>
                 <span>{p.duration != null ? fmtTime(p.duration) : "—"} นาที</span>
@@ -337,7 +337,7 @@ function EditorRoom({ project }) {
             (งานต้องเรนเดอร์จบอย่างน้อยหนึ่งรอบถึงจะตัดต่อได้)
           </p>
           <div className={styles.group}>
-            <a className="dx-btn dx-btn-secondary" href="/video/editor">← กลับไปเลือกงาน</a>
+            <a className="dx-btn dx-btn-secondary" href="/video/local-editor">← กลับไปเลือกงาน</a>
             <button className="dx-btn dx-btn-ghost" onClick={() => loadProject()}>ลองใหม่</button>
           </div>
         </div>

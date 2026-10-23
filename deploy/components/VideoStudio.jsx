@@ -23,7 +23,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react"
 import {
   Film, Type, Image as ImageIcon, Send, AlertTriangle, X, Lock, Download,
-  RefreshCw, Loader2, Check, Clock, Sparkles, Mic, LogOut,
+  RefreshCw, Loader2, Check, Clock, Sparkles, Mic, LogOut, Scissors,
 } from "lucide-react"
 import { supabase, getSkus, getProfile, signOutAndGoHome } from "../lib/supabase"
 
@@ -616,6 +616,10 @@ export default function VideoStudio() {
         <button className={`vs-mode-b ${mode === "manual" ? "vs-mode-on" : ""}`} onClick={() => setMode("manual")}>
           <Type size={14} /> เขียนสคริปต์เอง
         </button>
+        {/* ห้องตัดต่อบนเว็บ — อัปโหลดคลิป/รูปเอง ตัด ต่อ ใส่ตัวหนังสือ เสียงพากย์ เพลง (23 ต.ค. 2026) */}
+        <a className="vs-mode-b vs-mode-edit" href="/video/editor">
+          <Scissors size={14} /> ตัดต่อเอง
+        </a>
       </div>
 
       {mode === "auto" && (
@@ -1054,12 +1058,13 @@ function Frame({ children, onRefresh, onLogout }) {
             <h1>โรงงานวิดีโอ</h1>
             <p>DivisionX Card · สคริปต์ → คลิป 9:16 พร้อมโพสต์</p>
           </div>
-          {/* ห้องตัดต่อทำงานกับไฟล์ในเครื่อง (.video-work) จึงมีเฉพาะตอนรัน dev
-              บน Vercel ลิงก์นี้พาไปเจอ 404 ของ /api/video/local — ยอมรับได้:
-              คนที่ใช้ผ่าน Vercel คือคนสั่งงานผ่านคิว ไม่ใช่คนนั่งตัดต่อ */}
-          <a href="/video/editor" className="vs-back" title="แก้คลิปที่เรนเดอร์แล้วในเครื่องนี้">
-            ✂️ ห้องตัดต่อ
-          </a>
+          {/* ห้องแก้คลิปในเครื่อง (.video-work · /api/video/local) มีเฉพาะตอนรัน dev — บน Vercel ซ่อนไว้
+              ห้องตัดต่อบนเว็บ (/video/editor · 23 ต.ค. 2026) อยู่ในแถบเลือกโหมดด้านล่าง */}
+          {process.env.NODE_ENV === "development" && (
+            <a href="/video/local-editor" className="vs-back" title="แก้คลิปที่เรนเดอร์แล้วในเครื่องนี้ (dev)">
+              🛠 แก้ในเครื่อง
+            </a>
+          )}
           <a href="/" className="vs-back">← กลับหน้าหลัก</a>
           {onRefresh && (
             <button className="dx-btn dx-btn-ghost" onClick={onRefresh}>
@@ -1100,7 +1105,9 @@ const CSS = `
 .vs-mt{margin-top:12px;}
 
 /* ── โหมด ── */
-.vs-mode{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.vs-mode{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;}
+.vs-mode-edit{text-decoration:none;border-style:dashed;}
+@media (max-width:520px){.vs-mode{grid-template-columns:1fr 1fr;}.vs-mode-edit{grid-column:1/-1;}}
 .vs-mode-b{display:flex;align-items:center;justify-content:center;gap:7px;padding:11px 12px;border-radius:12px;cursor:pointer;
   background:var(--dx-bg-card);border:1px solid var(--dx-border);color:var(--dx-text-2);font-family:var(--dx-font);font-size:13px;transition:all .18s;}
 .vs-mode-b:hover{border-color:var(--dx-border-strong);color:var(--dx-text);}

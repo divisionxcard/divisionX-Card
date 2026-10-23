@@ -20,7 +20,9 @@ const BUCKET = "marketing"
 const UPLOADS = "video-uploads"
 // คลิป Google Flow ที่เจ้าของทำ (agents/video/broll_import.py) — โชว์ในคลังให้หยิบไปตัดต่อได้ด้วย
 const FOLDERS = [UPLOADS, "video-broll"]
-const MAX_BYTES = 1024 * 1024 * 1024           // 1 GB ต่อไฟล์ (เพดานของ Supabase อาจต่ำกว่านี้ — ตอบ error ให้เห็นเอง)
+// เพดานจริงของ Storage โปรเจกต์นี้ (แพ็กเกจฟรี) — ทดสอบ 23 ต.ค. 2026: 60 MB → 413 EntityTooLarge
+// วิดีโอที่ใหญ่กว่านี้ หน้าเว็บย่อเองก่อนส่ง (components/edit/compress.js) · อัปเกรดแพ็กเกจเมื่อไรค่อยขยับเลขนี้
+const MAX_BYTES = 50 * 1024 * 1024
 
 const KINDS = {
   video: ["mp4", "mov", "webm", "m4v"],
@@ -71,7 +73,7 @@ export async function POST(req) {
   }
   const size = Number(body.size) || 0
   if (size <= 0 || size > MAX_BYTES) {
-    return NextResponse.json({ error: `ไฟล์ใหญ่เกิน ${MAX_BYTES / 1024 / 1024 / 1024} GB` }, { status: 400 })
+    return NextResponse.json({ error: `ไฟล์ใหญ่เกิน ${MAX_BYTES / 1024 / 1024} MB — ย่อไฟล์ก่อน` }, { status: 400 })
   }
   // ชื่อใน Storage: วันที่ + เลขสุ่ม + ชื่อเดิมที่ล้างแล้ว (ไทย/ช่องว่างกลายเป็น URL ที่ต้อง encode — เก็บแค่ a-z0-9)
   const d = new Date(Date.now() + 7 * 3600 * 1000).toISOString().slice(0, 10).replace(/-/g, "")

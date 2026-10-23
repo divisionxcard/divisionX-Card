@@ -16,6 +16,7 @@ import html
 import json
 import pathlib
 import shutil
+import subprocess
 import sys
 import time
 import urllib.parse
@@ -142,6 +143,42 @@ def _clip_tags(clips, starts):
     return "\n".join(out)
 
 
+def _has_audio(path):
+    out = subprocess.run([config.ffmpeg_bin("ffprobe"), "-v", "error", "-select_streams", "a", "-show_entries",
+                          "stream=index", "-of", "csv=p=0", str(path)], capture_output=True, text=True).stdout.strip()
+    return bool(out)
+
+
+def _prep_video(proj, raw_rel, c, name):
+    """ตัดเฉพาะช่วงที่ใช้ + เข้ารหัสใหม่ก่อนประกอบ (23 ต.ค. 2026 · เจอตอนเรนเดอร์ไทม์ไลน์จากหน้าเว็บจริง)
+
+    - keyframe ทุก 1 วิ: ไฟล์จากมือถือ/Flow มี keyframe ห่าง 4–8 วิ → HyperFrames เตือนว่าข้ามช่วงแล้วภาพค้าง
+    - ย่อเท่าที่จอใช้จริง: ไม่เกินขนาดที่คลุมจอ 1080×1920 ได้ (ไม่ขยาย) · ไฟล์ 4K เหลือเล็กลงมาก
+    - ไม่มีแทร็กเสียง → ปิดเสียงคลิปนี้: data-has-audio บนไฟล์ที่ไม่มีเสียง ทำให้ HyperFrames ปฏิเสธทั้งงาน
+      ("composition asset(s) do not match their authored media element type (expected: audio)")
+    คืน path ใหม่ใน assets/ · แก้ c["in"]/c["out"] ให้นับจากต้นไฟล์ใหม่ · ล้ม = ใช้ไฟล์เดิมตามช่วงเดิม
+    """
+    src = proj / raw_rel
+    audio = _has_audio(src) and c["volume"] > 0.001
+    if not audio:
+        c["volume"] = 0.0
+    seg = round(c["out"] - c["in"], 3)
+    dst = proj / "assets" / f"{name}-seg.mp4"
+    k = "min(1\\,max(1080/iw\\,1920/ih))"
+    cmd = [config.ffmpeg_bin(), "-y", "-v", "error", "-ss", f"{c['in']:.3f}", "-i", str(src), "-t", f"{seg:.3f}",
+           "-vf", f"scale=trunc(iw*{k}/2)*2:trunc(ih*{k}/2)*2,fps=30",
+           "-c:v", "libx264", "-preset", "veryfast", "-crf", "20", "-pix_fmt", "yuv420p",
+           "-g", "30", "-keyint_min", "30", "-movflags", "+faststart"]
+    cmd += ["-c:a", "aac", "-b:a", "160k", "-ar", "48000"] if audio else ["-an"]
+    r = subprocess.run(cmd + [str(dst)], capture_output=True, text=True)
+    if r.returncode != 0 or not dst.exists():
+        _log(f"⚠️ เตรียมคลิป {name} ไม่สำเร็จ ({(r.stderr or '').strip()[-160:]}) — ใช้ไฟล์เดิม")
+        return raw_rel
+    got = R._media_seconds(dst)
+    c["in"], c["out"] = 0.0, round(min(seg, got) if got > 0.2 else seg, 3)
+    return f"assets/{dst.name}"
+
+
 def _bake_fill(proj, rel, name):
     """พื้นหลังเบลอของรูปนิ่งแบบ contain — เบลอ+หรี่ไว้ในไฟล์เลย (ไม่พึ่ง CSS filter)"""
     try:
@@ -247,8 +284,11 @@ def build_video(plan, out_mp4=None, check=True):
     shutil.copytree(R.TEMPLATE, proj, ignore=shutil.ignore_patterns(
         "renders", ".hyperframes", "node_modules", "index.html", "voice.wav", ".thumbnails", "captions.html"))
     t0 = time.time()
+    fetched = {}                                            # ไฟล์เดียวกันหลายชิ้น (หั่นคลิป) → โหลดครั้งเดียว
     for i, c in enumerate(tl["clips"]):
-        c["local"] = R.resolve_image(c["src"], proj, f"clip-{i}")
+        if c["src"] not in fetched:
+            fetched[c["src"]] = R.resolve_image(c["src"], proj, f"src-{len(fetched)}")
+        c["local"] = fetched[c["src"]]
         if c["kind"] == "image" and c["fit"] == "contain":
             c["fill"] = _bake_fill(proj, c["local"], f"clip-{i}")
         if c["kind"] == "video":
@@ -256,6 +296,11 @@ def build_video(plan, out_mp4=None, check=True):
             if secs > 0.3:                                  # ช่วงที่ตัดเกินความยาวไฟล์จริง → หดให้พอดี
                 c["out"] = min(c["out"], secs)
                 c["in"] = min(c["in"], max(0.0, c["out"] - 0.2))
+            c["local"] = _prep_video(proj, c["local"], c, f"clip-{i}")
+    used = {c["local"] for c in tl["clips"]}
+    for rel in set(fetched.values()) - used:                # ไฟล์ต้นฉบับที่ถูกหั่นใช้แล้ว (อาจหลายร้อย MB) — ไม่ต้องติดไปกับโปรเจกต์
+        if rel.startswith("assets/src-"):
+            (proj / rel).unlink(missing_ok=True)
     for i, o in enumerate(tl["overlays"]):
         if o["type"] == "image":
             o["local"] = R.resolve_image(o["src"], proj, f"ov-{i}")
@@ -322,7 +367,8 @@ def build_video(plan, out_mp4=None, check=True):
         try:
             track = _music_path(tl["music"], work)
             shutil.move(str(out_mp4), str(raw))
-            info = sound.master(raw, out_mp4, sfx, work, music=track)
+            info = sound.master(raw, out_mp4, sfx, work, music=track,
+                                music_volume=(tl["music"] or {}).get("volume") if track else None)
             raw.unlink(missing_ok=True)
             _log(f"ชั้นเสียง: เอฟเฟกต์ {info['events']} จุด · เพลง {'มี' if track else 'ไม่มี'} → {sound.loudness(out_mp4)} LUFS")
         except Exception as e:

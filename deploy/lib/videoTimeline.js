@@ -65,6 +65,9 @@ export function cleanTimeline(raw, base) {
       fx: num(c.fx, 0, 1, 0.5), fy: num(c.fy, 0, 1, 0.5), zoom: num(c.zoom, 1, 2, 1),
       transition: pick(c.transition, TRANSITIONS, "cut"),
     }
+    // ข้อมูลประกอบหน้าเว็บ (ชื่อไฟล์ · ความยาวไฟล์จริง) — ร่างงานต้องเก็บไว้ ไม่งั้นเปิดมาแก้ต่อแล้วไม่รู้ว่าตัดได้ถึงไหน
+    if (str(c.name, 80)) row.name = str(c.name, 80)
+    if (Number(c.seconds) > 0) row.seconds = num(c.seconds, 0.1, 36000, 0)
     if (kind === "video") {
       row.in = num(c.in, 0, 36000, 0)
       row.out = num(c.out, row.in + 0.2, 36000, row.in + 5)
