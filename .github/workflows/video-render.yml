@@ -136,15 +136,22 @@ jobs:
       # compose.py กับ voice.py เรียก ffmpeg/ffprobe ผ่าน subprocess ตรง ๆ
       # config.ffmpeg_bin() หาใน PATH ก่อน (ทางที่ apt ลงให้) แล้วค่อยตกไปดู
       # โฟลเดอร์บนเครื่องวินโดวส์ — บน runner จึงต้องมีใน PATH เท่านั้น
-      # 23 ต.ค. 2026: apt ค้าง 25 นาที (ปกติ ~1 นาที · mirror ของ runner) กินเวลาจนเกือบชนเพดาน 45 นาทีของทั้งงาน
-      # → จำกัดเวลาต่อรอบ + ลองซ้ำ 3 รอบ · ลงไม่ได้ทั้งสามรอบ ffmpeg -version ล้ม = งานล้มเร็วพร้อมเหตุผล
+      # 23 ต.ค. 2026: apt ค้าง 25 นาที แล้วรอบถัดไปก็ช้าอีก (mirror ของ runner) กินเวลาจนเกือบชนเพดาน 45 นาทีของทั้งงาน
+      # → โหลด ffmpeg สำเร็จรูปจาก GitHub Releases ก่อน (BtbN · ดาวน์โหลดภายใน GitHub เร็ว ไม่ผ่าน apt)
+      #   โหลดไม่ได้ค่อยถอยไป apt แบบจำกัดเวลาต่อรอบ + ลองซ้ำ · ไม่มีทั้งคู่ ffmpeg -version ล้ม = งานล้มเร็วพร้อมเหตุผล
       - name: Install ffmpeg
         timeout-minutes: 15
         run: |
-          for i in 1 2 3; do
-            if timeout 180 sudo apt-get update -qq && timeout 300 sudo apt-get install -y ffmpeg; then break; fi
-            echo "apt รอบ $i ไม่สำเร็จ — ลองใหม่"; sleep 10
-          done
+          URL=https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-n7.1-latest-linux64-gpl-7.1.tar.xz
+          if timeout 180 curl -fsSL "$URL" -o /tmp/ffmpeg.tar.xz && tar -xJf /tmp/ffmpeg.tar.xz -C /tmp; then
+            echo "$(ls -d /tmp/ffmpeg-n7.1-*/bin)" >> "$GITHUB_PATH"
+            export PATH="$(ls -d /tmp/ffmpeg-n7.1-*/bin):$PATH"
+          else
+            for i in 1 2 3; do
+              if timeout 180 sudo apt-get update -qq && timeout 300 sudo apt-get install -y ffmpeg; then break; fi
+              echo "apt รอบ $i ไม่สำเร็จ — ลองใหม่"; sleep 10
+            done
+          fi
           ffmpeg -version | head -1
           ffprobe -version | head -1
 
