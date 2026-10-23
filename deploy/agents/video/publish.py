@@ -31,6 +31,7 @@ if __package__ in (None, ""):                       # ให้รันไฟ�
     __package__ = "agents.video"
 
 from . import config                                # noqa: E402
+from .. import r2                                   # noqa: E402 — คลังไฟล์ Cloudflare R2
 
 # บังคับ stdout เป็น UTF-8 ก่อน print บรรทัดแรก — เหตุผลเต็มใน deploy/agents/_console.py
 # (รันผ่าน Git Bash หรือ pipe แล้ว Python เดา cp1252 → ตายตั้งแต่ print แรก ได้ log เปล่า)
@@ -152,7 +153,7 @@ def upload_video(mp4_path, project):
     **เรนเดอร์ชื่อเดิมซ้ำ = ทับคลิปเก่า** ซึ่งตั้งใจ (ไม่งั้นขยะสะสมทีละ 10-20 MB)
     แต่มีผลข้างเคียงสองข้อที่ต้องรู้:
       1. โพสต์เก่าที่แปะลิงก์นี้ไว้แล้ว จะกลายเป็นคลิปใหม่โดยไม่มีใครสั่ง
-      2. public URL ของ Supabase ผ่าน CDN — ทับไฟล์แล้วอาจยังได้ของเก่าอยู่พักหนึ่ง
+      2. เบราว์เซอร์/CDN อาจยังจำไฟล์เก่าอยู่พักหนึ่ง (ลิงก์ /media ชี้ไฟล์ล่าสุดเสมอ)
     ถ้าวันไหนต้องเก็บทุกเวอร์ชัน ให้เติม job id ลงใน path (ดู comment ใน migration 075)
     """
     p = pathlib.Path(mp4_path)
@@ -165,13 +166,11 @@ def upload_video(mp4_path, project):
         raise RuntimeError(f"ไฟล์วิดีโอเล็กผิดปกติ ({len(raw)} ไบต์) — ไม่อัปขึ้น storage")
 
     key = f"{STORAGE_DIR}/{_safe_name(project)}.mp4"
-    # timeout ยาวกว่า default มาก เพราะคลิป 9:16 ความยาว ~45 วิ หนักหลักสิบ MB
-    # (โปสเตอร์หนัก ~4 MB จึงใช้ 60 วิได้สบาย) เน็ตบ้านอัปช้ากว่านั้นเยอะ
-    sb("POST", f"{BUCKET}/{urllib.parse.quote(key)}", raw=raw, ctype="video/mp4",
-       base="storage/v1/object", timeout=600)
-    url, _ = _creds()
-    print(f"[publish] อัปโหลด {len(raw)/1024/1024:.1f} MB → {key}")
-    return f"{url}/storage/v1/object/public/{BUCKET}/{key}"
+    # 23 ต.ค. 2026: คลิปขึ้น Cloudflare R2 (ไม่ใช่ Supabase Storage) — ไฟล์หนักกินโควตาดาวน์โหลดร่วมกับฐานข้อมูล
+    # เกินแล้วโปรเจกต์โดนจำกัด ซิงค์รายวันตายตาม · ลิงก์ที่คืน = /media/<key> ของเว็บ (agents/r2.py)
+    url = r2.upload(raw, key, "video/mp4")
+    print(f"[publish] อัปโหลด {len(raw)/1024/1024:.1f} MB → R2 {key}")
+    return url
 
 
 # ── สถานะงานในคิว ────────────────────────────────────────────────────────

@@ -26,6 +26,7 @@ import sys
 import urllib.parse
 import urllib.request
 import _console  # noqa: F401 — บังคับ stdout เป็น UTF-8 ต้องมาก่อน print แรก
+import r2        # คลังไฟล์ Cloudflare R2 (23 ต.ค. 2026) — โปสเตอร์/ฉาก AI ไม่อยู่ Supabase Storage แล้ว
 
 HERE = pathlib.Path(__file__).resolve().parent
 ROOT = HERE.parent                      # deploy/
@@ -97,6 +98,9 @@ def fetch_image(url):
     if not url:
         return None
     try:
+        key = r2.key_of(url)                    # ไฟล์ของเรา → ลิงก์ลงชื่อ R2 ตรง (ไม่ต้องพึ่งเว็บ)
+        if key and r2.configured():
+            url = r2.presign("GET", key, 600)
         req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
         with urllib.request.urlopen(req, timeout=25) as r:
             raw = r.read()
@@ -300,7 +304,7 @@ def resolve_bg(content):
     รอขนาดนั้นตอนกดปุ่มไม่ไหว · สร้างไว้ก่อนแล้วหยิบใช้ ได้ผลเหมือนกันแต่รอ 2 วินาที
     """
     mu = content.get("media_url") or ""
-    if AI_BG_DIR in mu:
+    if AI_BG_DIR in mu or (r2.key_of(mu) or "").startswith("aibg/"):
         return fetch_image(mu)
 
     # หยิบจากคลัง — คลังว่างก็คืน None แล้วตกไปใช้รูปห้างจริง ไม่พัง
@@ -310,16 +314,14 @@ def resolve_bg(content):
     # ถ้าสุ่มจากทั้งคลัง ฉากที่ scene_for_content คิดมาให้เรื่องนี้จะถูกกลบด้วยของชิ้นอื่น
     # = เสียประโยชน์ทั้งหมดของการคิดฉากตามเนื้อหา
     try:
-        raw = sb("POST", f"list/{BUCKET}", {"prefix": "aibg/", "limit": 200},
-                 base="storage/v1/object")
-        pool = [x["name"] for x in (raw or []) if str(x.get("name", "")).endswith((".png", ".jpg"))]
+        pool = [k.split("/", 1)[1] for k, *_ in r2.list_keys("aibg/", 500) if k.endswith((".png", ".jpg"))]
         if not pool:
             return None
         mine = [n for n in pool if n.startswith(f"{content.get('id')}-")]
         pick = max(mine) if mine else random.choice(pool)   # ของตัวเอง เอาใบล่าสุด
         why = "คิดมาเพื่อคอนเทนต์นี้" if mine else f"สุ่มจากคลัง {len(pool)} ใบ"
         print(f"[poster] ฉาก AI: {pick} ({why})")
-        return fetch_image(f"{SB_URL}/storage/v1/object/public/{BUCKET}/aibg/{pick}")
+        return fetch_image(r2.media_url(f"aibg/{pick}"))
     except Exception as e:
         print(f"[poster] อ่านคลังฉากไม่ได้ ใช้รูปห้างจริงแทน: {str(e)[:80]}")
         return None
@@ -600,16 +602,15 @@ def main():
     # ใส่แนวคิดไว้ในชื่อไฟล์ด้วย — รอบหน้าจะได้อ่านกลับมาเพื่อ "ไม่สุ่มซ้ำตัวเดิม"
     # ทำแบบนี้แทนการเพิ่มคอลัมน์ใน DB เพราะไม่ต้องรัน migration และข้อมูลติดไปกับไฟล์เอง
     key = f"poster/{args.id}-{ckey or 'plain'}-{int(time.time())}.png"
-    sb("POST", f"{BUCKET}/{key}", raw=raw, ctype="image/png", base="storage/v1/object")
-    url = f"{SB_URL}/storage/v1/object/public/{BUCKET}/{key}"
+    url = r2.upload(raw, key, "image/png")
     sb("PATCH", f"marketing_content?id=eq.{args.id}", {"media_url": url, "media_type": "image"})
     print(f"[poster] อัปโหลดแล้ว → {url}")
 
     # ลบเฉพาะโปสเตอร์ที่ระบบสร้างเอง · ห้ามแตะรูปที่คนอัปเอง (/upload/) หรือรูปสินค้า
-    marker = f"/{BUCKET}/poster/{args.id}-"
-    if marker in old and old != url:
+    old_key = r2.key_of(old) or ""
+    if old_key.startswith(f"poster/{args.id}-") and old != url:
         try:
-            sb("DELETE", f"{BUCKET}/{old.split(f'/{BUCKET}/', 1)[1]}", base="storage/v1/object")
+            r2.delete(old_key)
             print("[poster] ลบโปสเตอร์เก่าแล้ว")
         except Exception as e:
             # ลบไม่ได้ไม่ใช่เรื่องคอขาดบาดตาย — โปสเตอร์ใหม่ขึ้นเรียบร้อยแล้ว

@@ -254,8 +254,13 @@ def _music_path(music, work):
     if src.startswith("https://"):
         ext = pathlib.Path(urllib.parse.urlparse(src).path).suffix or ".mp3"
         dst = work / f"music{ext}"
-        with urllib.request.urlopen(src, timeout=120) as r:
-            dst.write_bytes(r.read())
+        from .. import r2                                    # ไฟล์ของเรา → ดึงจาก R2 ตรง (23 ต.ค. 2026)
+        key = r2.key_of(src)
+        if key and r2.configured():
+            r2.download(key, dst)
+        else:
+            with urllib.request.urlopen(src, timeout=120) as r:
+                dst.write_bytes(r.read())
         return str(dst)
     return None
 

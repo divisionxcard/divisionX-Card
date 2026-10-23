@@ -77,17 +77,15 @@ def main(argv=None):
         print(f"+ {f.name} → {cid} · ค่าย {franchise or 'ทุกค่าย'}")
         if a.dry:
             continue
-        from .publish import BUCKET, _creds, sb
+        from .. import r2                       # คลังไฟล์ Cloudflare R2 (23 ต.ค. 2026)
         with tempfile.TemporaryDirectory() as td:
             out = pathlib.Path(td) / f"{cid}.mp4"
             _transcode(f, out)
             key = f"{STORAGE_DIR}/{cid}.mp4"
-            sb("POST", f"{BUCKET}/{urllib.parse.quote(key)}", raw=out.read_bytes(), ctype="video/mp4",
-               base="storage/v1/object", timeout=600)
+            url = r2.upload(str(out), key, "video/mp4")
             secs = _seconds(out)
-        url, _ = _creds()
         lib.setdefault("clips", []).append({
-            "id": cid, "url": f"{url}/storage/v1/object/public/{BUCKET}/{key}", "franchise": franchise,
+            "id": cid, "url": url, "franchise": franchise,
             "formats": [], "seconds": secs, "file": f.name, "prompt": prompt, "sha1": sha,
             "added": dt.date.today().isoformat()})
         added += 1

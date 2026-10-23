@@ -43,6 +43,7 @@ BUCKET = "marketing"
 sys.path.insert(0, str(HERE))
 from local_image import generate, load_env   # noqa: E402
 import _console  # noqa: F401 — บังคับ stdout เป็น UTF-8 ต้องมาก่อน print แรก
+import r2        # noqa: E402 — คลังไฟล์ Cloudflare R2 (23 ต.ค. 2026)
 
 GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta"
 # ไล่ตามโควตา — เหมือนที่ทำใน idea_angles.py (โควตาฟรีนับแยกตามโมเดล)
@@ -208,9 +209,7 @@ def main():
     generate(prompt, str(out), w, h, args.seed)
 
     key = f"aibg/{args.id}-{stamp}.png"
-    sb("POST", f"{BUCKET}/{key}", raw=out.read_bytes(), ctype="image/png",
-       base="storage/v1/object")
-    url = f"{os.environ['SUPABASE_URL']}/storage/v1/object/public/{BUCKET}/{key}"
+    url = r2.upload(str(out), key, "image/png")
     print(f"[scene] อัปเข้าคลังแล้ว → {url}")
     print("[scene] สั่งสร้างโปสเตอร์คอนเทนต์นี้ได้เลย ระบบจะหยิบฉากนี้ไปใช้")
 

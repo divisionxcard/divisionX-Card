@@ -33,6 +33,7 @@ AIBG_PREFIX = "aibg/"               # โฟลเดอร์ที่ poster_r
 sys.path.insert(0, str(HERE))
 from local_image import SCENES, generate, load_env   # noqa: E402
 import _console  # noqa: F401 — บังคับ stdout เป็น UTF-8 ต้องมาก่อน print แรก
+import r2        # noqa: E402 — คลังไฟล์ Cloudflare R2 (23 ต.ค. 2026)
 
 
 def sb_request(method, path, data=None, ctype=None, base="rest/v1"):
@@ -94,24 +95,17 @@ def do_upload(names):
             print(f"  ✗ ไม่เจอไฟล์ {f.name}")
             continue
         key = f"{AIBG_PREFIX}{f.name}"
-        sb_request("POST", f"{BUCKET}/{key}", data=f.read_bytes(),
-                   ctype="image/png", base="storage/v1/object")
-        print(f"  ✓ {f.name} → {BUCKET}/{key}")
+        r2.upload(str(f), key, "image/png")
+        print(f"  ✓ {f.name} → R2 {key}")
         ok += 1
     print(f"[scene] เข้าคลังแล้ว {ok} ใบ — เทมเพลตจะเริ่มหยิบไปใช้ทันที")
 
 
 def do_list():
-    if not env_supabase():
-        sys.exit("[scene] ไม่มี SUPABASE_URL / SERVICE KEY")
-    body = json.dumps({"prefix": AIBG_PREFIX, "limit": 200}).encode()
-    raw = sb_request("POST", f"list/{BUCKET}", data=body,
-                     ctype="application/json", base="storage/v1/object")
-    items = [x for x in json.loads(raw) if x.get("name", "").endswith(".png")]
+    items = [(k, size) for k, size, _ in r2.list_keys(AIBG_PREFIX, 500) if k.endswith(".png")]
     print(f"[scene] ในคลังมี {len(items)} ใบ")
-    for x in items:
-        mb = (x.get("metadata") or {}).get("size", 0) / 1024 / 1024
-        print(f"   {x['name']}  ({mb:.1f} MB)")
+    for k, size in items:
+        print(f"   {k[len(AIBG_PREFIX):]}  ({size / 1024 / 1024:.1f} MB)")
 
 
 def main():

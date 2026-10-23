@@ -14,7 +14,8 @@ import { requireMarketing } from "../../../../../lib/apiAuth"
 import { detectFranchise } from "../../../../../lib/franchiseDetect"
 import { topSkusByFranchise } from "../../../../../lib/skuPicker"
 import { generateBackground, top5BackgroundPrompt } from "../../../../../lib/aiBackground"
-import { TOP5_BUCKET, top5Path } from "../../../../../lib/top5"
+import { top5Path } from "../../../../../lib/top5"
+import { getObject, putObject } from "../../../../../lib/r2"
 
 export const runtime = "nodejs"
 // ซีรีส์ 5 ใบเด็ดวาดพื้นหลังด้วย AI ก่อนสั่ง workflow (~30 วิ ต่อภาพ) — เผื่อเวลาไว้
@@ -132,13 +133,10 @@ function dispatch(token, inputs) {
 // 3) สั่ง workflow เดิม (poster-render.yml) พร้อม template=top5
 // วาดพื้นหลังไม่สำเร็จไม่ใช่เหตุให้หยุด — เทมเพลตมีพื้นแบรนด์ของมันเอง แค่บอกผู้ใช้ให้รู้
 async function top5Poster(id, token) {
-  const SB_URL = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const SB_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
 
   // อ่านทั้งไฟล์ ไม่ใช่แค่ HEAD — ต้องรู้ค่ายของชุดเพื่อวาดพื้นหลังตามหน้าตาค่าย (เจ้าของเลือก 22 ต.ค. 2026)
   // ไฟล์เก่าก่อนวันนั้นไม่มี set.franchise = One Piece ทั้งหมด
-  const probe = await fetch(`${SB_URL}/storage/v1/object/public/${TOP5_BUCKET}/${top5Path(id)}`,
-                            { cache: "no-store" }).catch(() => null)
+  const probe = await getObject(top5Path(id)).catch(() => null)          // คลังไฟล์ R2 (23 ต.ค. 2026)
   const saved = probe?.ok ? await probe.json().catch(() => null) : null
   const franchise = saved?.set?.franchise || "OP"
   if (!probe?.ok || !saved) {
@@ -153,13 +151,7 @@ async function top5Poster(id, token) {
     const bg = await generateBackground(await top5BackgroundPrompt(franchise),
                                         { deadline: Date.now() + 200_000 })
     const key = `aibg/top5-${id}-${Date.now()}.png`
-    const up = await fetch(`${SB_URL}/storage/v1/object/${TOP5_BUCKET}/${key}`, {
-      method: "POST",
-      headers: { apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}`, "Content-Type": bg.mime, "x-upsert": "true" },
-      body: bg.buf,
-    })
-    if (!up.ok) throw new Error(`อัปพื้นหลังไม่สำเร็จ (${up.status})`)
-    bgUrl = `${SB_URL}/storage/v1/object/public/${TOP5_BUCKET}/${key}`
+    bgUrl = await putObject(key, bg.buf, bg.mime)
   } catch (e) {
     bgNote = ` · วาดพื้นหลังด้วย AI ไม่สำเร็จ (${String(e.message || e).slice(0, 80)}) ใช้พื้นแบรนด์แทน`
   }

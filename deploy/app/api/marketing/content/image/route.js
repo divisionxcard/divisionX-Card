@@ -18,6 +18,7 @@ import { NextResponse } from "next/server"
 import { readFile } from "fs/promises"
 import path from "path"
 import { requireMarketing } from "../../../../../lib/apiAuth"
+import { putObject } from "../../../../../lib/r2"
 import { planVisual, ideaToPrompt } from "../../../../../lib/artDirector"
 import { detectFranchise, FRANCHISE_LABEL } from "../../../../../lib/franchiseDetect"
 import { topSkusByFranchise, skusNamedIn } from "../../../../../lib/skuPicker"
@@ -1253,26 +1254,12 @@ export async function POST(req) {
       }
     }
 
-    // ── เก็บลง Storage ── ชื่อไฟล์มี timestamp กดสร้างใหม่ได้ไม่ติด CDN cache
+    // ── เก็บลงคลังไฟล์ (Cloudflare R2 · lib/r2.js · 23 ต.ค. 2026) ── ชื่อไฟล์มี timestamp กดสร้างใหม่ได้ไม่ติด CDN cache
     const ext = out.mime.includes("jpeg") ? "jpg" : out.mime.includes("webp") ? "webp" : "png"
-    const bucket = style.bucket || "marketing"
     // "-chars" = ใบนี้มีตัวละครที่ AI วาด (เจ้าของยอมรับความเสี่ยงลิขสิทธิ์รายใบ)
     // ถ้าวันไหนโดนแจ้ง จะไล่หาทุกโพสต์ได้จาก media_url ทันที ไม่ต้องนั่งเปิดดูทีละภาพ
     const key = `${style.path_prefix || "content"}/${id}${useChars ? "-chars" : ""}-${Date.now()}.${ext}`
-    const up = await fetch(`${SB_URL}/storage/v1/object/${bucket}/${key}`, {
-      method: "POST",
-      headers: {
-        apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}`,
-        "Content-Type": out.mime, "x-upsert": "true",
-      },
-      body: out.buf,
-    })
-    if (!up.ok) {
-      const t = await up.text().catch(() => "")
-      throw new Error(`อัปโหลดเข้า Storage ไม่สำเร็จ (${up.status}) ${t.slice(0, 150)}`)
-    }
-
-    const publicUrl = `${SB_URL}/storage/v1/object/public/${bucket}/${key}`
+    const publicUrl = await putObject(key, out.buf, out.mime)
     const { data: updated, error: e1 } = await db.from("marketing_content")
       .update({ media_url: publicUrl, media_type: "image" })
       .eq("id", id)

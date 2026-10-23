@@ -6,7 +6,8 @@ export const metadata = {
   description: "วิธีกดตู้ DivisionX Card ง่ายๆ 4 ขั้นตอน · ตู้กดการ์ดเกมอัตโนมัติในห้าง",
 }
 
-const VIDEO_URL = "https://xethnqqmpvlpmafvphky.supabase.co/storage/v1/object/public/marketing/how-to-buy.mp4"
+// คลังไฟล์ Cloudflare R2 ผ่านหน้า /media (23 ต.ค. 2026 · เดิมอยู่ Supabase Storage ซึ่งกินโควตาดาวน์โหลดร่วมกับฐานข้อมูล)
+const VIDEO_URL = "/media/how-to-buy.mp4"
 
 const STEPS = [
   { ic: "🃏", title: "เลือกการ์ด", desc: "แตะหน้าจอ เลื่อนเลือกชุด/การ์ดที่ต้องการ — ดูรูปและราคาได้ที่หน้าจอ" },

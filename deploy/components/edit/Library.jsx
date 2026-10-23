@@ -1,20 +1,19 @@
 "use client"
 // คลังของห้องตัดต่อ — 4 แท็บ: ไฟล์ของเรา (อัปโหลด + คลิป Flow) · ซองการ์ด · ตัวหนังสือ/โลโก้ · เสียง
 //
-// อัปโหลด: ขอลิงก์ลงชื่อจาก /api/video/assets แล้ว PUT ไฟล์ตรงเข้า Supabase Storage ด้วย XHR
+// อัปโหลด: ขอลิงก์ลงชื่อจาก /api/video/assets แล้ว PUT ไฟล์ดิบตรงเข้า Cloudflare R2 ด้วย XHR
 //   (ไม่ผ่าน Vercel ที่รับ body ได้แค่ 4.5 MB · XHR เพราะ fetch ไม่มีเปอร์เซ็นต์อัปโหลด)
-//   ท่าเดียวกับ supabase.storage.uploadToSignedUrl ทุกอย่าง: PUT FormData(cacheControl, ไฟล์) + apikey
-// ⚠️ Storage ของโปรเจกต์รับได้ไม่เกิน 50 MB ต่อไฟล์ (ทดสอบ 23 ต.ค. 2026: 60 MB → 413 EntityTooLarge)
-//    วิดีโอที่เกิน → ย่อในเบราว์เซอร์ก่อน (compress.js) · ไม่ต้องอัปเกรดแพ็กเกจ Supabase
+// 23 ต.ค. 2026: ย้ายจาก Supabase Storage (ไฟล์ละ ≤ 50 MB + โควตาดาวน์โหลดร่วมกับฐานข้อมูล) → R2 รับได้ถึง 2 GB
+//   วิดีโอเกิน SQUASH_OVER ย่อเป็น 1080p ในเบราว์เซอร์ก่อน (compress.js) — ไม่ใช่เพราะส่งไม่ได้ แต่ประหยัดคลังฟรี 10 GB
+//   (เจ้าของเลือกเก็บไฟล์ตลอด · คลิป 4K นาทีเดียว ~350 MB ย่อแล้วเหลือ ~60 MB · ภาพในคลิป 9:16 ใช้แค่ 1080 อยู่แล้ว)
 import { useMemo, useRef, useState } from "react"
 import { Film, Package, Type, Music, Upload, Plus, Mic, Search, Loader2, Layers } from "lucide-react"
 import { clipFromAsset, totals } from "./timelineState"
 import { canCompress, compressVideo } from "./compress"
 import s from "./edit.module.css"
 
-export const MAX_UPLOAD = 50 * 1024 * 1024
-const SB_URL = process.env.NEXT_PUBLIC_SUPABASE_URL
-const SB_ANON = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+export const MAX_UPLOAD = 2 * 1024 * 1024 * 1024        // ตรงกับ api/video/assets
+const SQUASH_OVER = 150 * 1024 * 1024
 const ACCEPT = "video/mp4,video/quicktime,video/webm,.mov,.m4v,image/jpeg,image/png,image/webp,audio/mpeg,audio/wav,audio/mp4,audio/aac,audio/ogg,.m4a"
 const mb = (n) => `${(n / 1024 / 1024).toFixed(n > 10 * 1024 * 1024 ? 0 : 1)} MB`
 
@@ -32,29 +31,19 @@ export function probeSeconds(url) {
   })
 }
 
-function putSigned(path, token, file, onProgress) {
+function putSigned(uploadUrl, file, contentType, onProgress) {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest()
-    xhr.open("PUT", `${SB_URL}/storage/v1/object/upload/sign/marketing/${path}?token=${encodeURIComponent(token)}`)
-    xhr.setRequestHeader("apikey", SB_ANON)
-    xhr.setRequestHeader("Authorization", `Bearer ${SB_ANON}`)
-    xhr.setRequestHeader("x-upsert", "false")
+    xhr.open("PUT", uploadUrl)
+    xhr.setRequestHeader("Content-Type", contentType || file.type || "application/octet-stream")
     xhr.upload.onprogress = (e) => { if (e.lengthComputable) onProgress(e.loaded / e.total) }
     xhr.onload = () => {
       if (xhr.status >= 200 && xhr.status < 300) return resolve()
-      let msg = `อัปโหลดไม่ผ่าน (HTTP ${xhr.status})`
-      try {
-        const j = JSON.parse(xhr.responseText)
-        if (String(j.statusCode) === "413" || j.error === "Payload too large") msg = "ไฟล์ใหญ่เกินที่ Storage รับ (50 MB)"
-        else if (j.message) msg = `อัปโหลดไม่ผ่าน: ${j.message}`
-      } catch { /* ไม่ใช่ JSON */ }
-      reject(new Error(msg))
+      const msg = (xhr.responseText.match(/<Message>([^<]+)<\/Message>/) || [])[1]
+      reject(new Error(xhr.status === 403 ? "ลิงก์อัปโหลดหมดอายุ — กดอัปใหม่อีกครั้ง" : `อัปโหลดไม่ผ่าน (HTTP ${xhr.status}${msg ? ` · ${msg}` : ""})`))
     }
     xhr.onerror = () => reject(new Error("เน็ตหลุดระหว่างอัปโหลด — ลองใหม่อีกครั้ง"))
-    const fd = new FormData()
-    fd.append("cacheControl", "3600")
-    fd.append("", file)
-    xhr.send(fd)
+    xhr.send(file)
   })
 }
 
@@ -99,29 +88,25 @@ export default function Library({ api, dispatch, state, assets, reloadAssets, sk
       const row = { key, name: f.name, size: f.size, p: 0, err: null, done: false, phase: "up" }
       setUps(u => [row, ...u])
       const set = (patch) => setUps(u => u.map(x => (x.key === key ? { ...x, ...patch } : x)))
-      // วิดีโอเกิน 50 MB → ย่อในเบราว์เซอร์ก่อน (compress.js) · รูป/เพลงเกิน = ให้ผู้ใช้ย่อเอง
-      if (f.size > MAX_UPLOAD) {
-        const isVideo = (f.type || "").startsWith("video/") || /\.(mp4|mov|m4v|webm)$/i.test(f.name)
-        if (!isVideo || !canCompress()) {
-          set({ err: `ไฟล์ ${mb(f.size)} ใหญ่เกิน 50 MB — ${isVideo ? "เบราว์เซอร์นี้ย่อเองไม่ได้ ใช้ Chrome/Edge หรือ" : ""}ย่อไฟล์ก่อนแล้วลองใหม่` })
-          continue
-        }
+      const isVideo = (f.type || "").startsWith("video/") || /\.(mp4|mov|m4v|webm)$/i.test(f.name)
+      // วิดีโอใหญ่ → ย่อเป็น 1080p ในเบราว์เซอร์ก่อน (ประหยัดคลัง) · ย่อไม่ได้ก็ส่งไฟล์เดิม ถ้าไม่เกินเพดาน
+      if (isVideo && f.size > SQUASH_OVER && canCompress()) {
         try {
           set({ phase: "squash", p: 0 })
-          f = await compressVideo(f0, (p) => set({ p }))
-          set({ phase: "up", p: 0, size: f.size, squashed: f0.size })
+          const small = await compressVideo(f0, (p) => set({ p }))
+          if (small.size < f0.size) { f = small; set({ squashed: f0.size, size: f.size }) }
+          set({ phase: "up", p: 0 })
         } catch (e) {
-          set({ err: e.message || String(e) })
-          continue
+          set({ phase: "up", p: 0, note: `ย่อไม่ได้ (${e.message || e}) — ส่งไฟล์เดิม` })
         }
-        if (f.size > MAX_UPLOAD) {
-          set({ err: `ย่อแล้วยังเหลือ ${mb(f.size)} — คลิปยาวเกินไป ตัดให้สั้นลงก่อน` })
-          continue
-        }
+      }
+      if (f.size > MAX_UPLOAD) {
+        set({ err: `ไฟล์ ${mb(f.size)} ใหญ่เกิน 2 GB — ตัดให้สั้นลง หรือส่งออกจากมือถือเป็น 1080p ก่อน` })
+        continue
       }
       try {
         const tk = await api("assets", { method: "POST", body: JSON.stringify({ name: f.name, type: f.type, size: f.size }) })
-        await putSigned(tk.path, tk.token, f, (p) => set({ p }))
+        await putSigned(tk.upload_url, f, tk.content_type, (p) => set({ p }))
         set({ p: 1, done: true })
         const asset = { url: tk.url, kind: tk.kind, name: f0.name }
         if (autoAdd) {
@@ -174,7 +159,7 @@ export default function Library({ api, dispatch, state, assets, reloadAssets, sk
                onDragOver={(e) => { e.preventDefault(); setOver(true) }} onDragLeave={() => setOver(false)} onDrop={onDrop}>
             <Upload size={20} style={{ marginBottom: 4 }} /><br />
             <b>ลากไฟล์มาวาง</b> หรือคลิกเพื่อเลือก<br />
-            วิดีโอ · รูป · เพลง · วิดีโอเกิน 50 MB ย่อให้อัตโนมัติ
+            วิดีโอ · รูป · เพลง · ไฟล์ละไม่เกิน 2 GB (คลิปใหญ่ย่อเป็น 1080p ให้)
             <input ref={pick} type="file" multiple accept={ACCEPT} hidden
                    onChange={(e) => { const f = [...e.target.files]; e.target.value = ""; if (f.length) upload(f) }} />
           </div>
@@ -185,6 +170,7 @@ export default function Library({ api, dispatch, state, assets, reloadAssets, sk
           {ups.slice(0, 6).map(u => (
             <div key={u.key} className={s.upRow}>
               <span>{u.done ? "✓ " : ""}{u.name} · {mb(u.size)}{u.squashed ? ` (ย่อจาก ${mb(u.squashed)})` : ""}</span>
+              {u.note && <span className={s.hint}>{u.note}</span>}
               {!u.err && !u.done && <span className={s.hint}>{u.phase === "squash" ? `กำลังย่อไฟล์ในเครื่อง ${Math.round(u.p * 100)}%` : `กำลังอัปโหลด ${Math.round(u.p * 100)}%`}</span>}
               {u.err ? <span className={s.upErr}>{u.err}</span>
                 : <div className={s.bar}><i style={{ width: `${Math.round(u.p * 100)}%` }} /></div>}

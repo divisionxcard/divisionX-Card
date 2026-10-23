@@ -16,6 +16,7 @@ import { askGeminiText } from "../../../../../lib/geminiText"
 import { fetchAll } from "../../../../../lib/fetchAll"
 import { readFile } from "fs/promises"
 import path from "path"
+import { mediaUrl } from "../../../../../lib/r2"
 
 const db = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -23,7 +24,6 @@ const db = createClient(
   { auth: { autoRefreshToken: false, persistSession: false } }
 )
 
-const PUBLIC = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public`
 
 async function loadJson(name) {
   try { return JSON.parse(await readFile(path.join(process.cwd(), "tasks", name), "utf-8")) }
@@ -162,7 +162,7 @@ ${soldOut.length ? `- ห้ามใส่ในภาพเพราะขอ�
   // ⚠️ ChatGPT เปิด URL เองไม่ได้ — ต้องเป็นไฟล์ที่ "อัปโหลดเข้าแชต" เท่านั้น
   // รอบแรกที่ทดสอบจริง มันปฏิเสธไม่ยอมสร้างภาพเลยเพราะได้มาแค่ลิงก์ (ซึ่งถูกต้องแล้ว)
   // บรีฟจึงต้องสั่งเป็นภาษาที่ตรงกับสิ่งที่คนต้องทำ ไม่ใช่แค่แปะลิงก์ไว้เฉย ๆ
-  const machineUrl = `${PUBLIC}/marketing/machine/machine-scene.jpg`
+  const machineUrl = mediaUrl("machine/machine-scene.jpg")          // คลังไฟล์ R2 (23 ต.ค. 2026)
   const refLines = refs.length
     ? refs.map((r, i) => `${i + 1}. ซอง ${r.sku}`).join("\n")
     : "1. (ไม่มีรูปซองในระบบสำหรับ SKU นี้ — ใช้รูปถ่ายเองแทน)"

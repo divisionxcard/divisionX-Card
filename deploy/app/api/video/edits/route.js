@@ -1,51 +1,52 @@
-// ร่างงานของห้องตัดต่อ — เก็บเป็น JSON ใน Storage (marketing/video-edits/<id>.json) · 23 ต.ค. 2026
+// ร่างงานของห้องตัดต่อ — เก็บเป็น JSON ในคลังไฟล์ R2 (video-edits/<id>.json) · 23 ต.ค. 2026
 //
 //   GET /api/video/edits          → { items: [{ id, name, updated_at, clips, seconds }] }   ร่างล่าสุด 40 ชิ้น
 //   GET /api/video/edits?id=…     → { id, name, timeline, updated_at, job_id? }
 //   PUT /api/video/edits { id?, name, timeline, job_id? } → { id, updated_at }
 //
 // ทำไมไม่ใช่ตาราง: ไม่ต้องรัน migration + RLS ใหม่ (กติกาโปรเจกต์) · ร่างเป็นของก้อนเดียวที่อ่าน/เขียนทั้งก้อนอยู่แล้ว
-// ⚠️ bucket marketing อ่านได้สาธารณะ — ร่างมีแค่ลิงก์ไฟล์สาธารณะกับข้อความบนคลิป ห้ามใส่ข้อมูลลับ/อีเมลลงร่าง
+// R2 bucket เป็นส่วนตัว และหน้า /media ไม่เปิด video-edits/ (PRIVATE_PREFIXES ใน lib/r2.js) — อ่านได้ทาง route นี้เท่านั้น
 import { NextResponse } from "next/server"
-import { createClient } from "@supabase/supabase-js"
 import { requireMarketing } from "../../../../lib/apiAuth"
 import { cleanTimeline, layout } from "../../../../lib/videoTimeline"
+import { getObject, listObjects, putObject } from "../../../../lib/r2"
 
 export const dynamic = "force-dynamic"
 
-const db = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY,
-  { auth: { autoRefreshToken: false, persistSession: false } })
-const BUCKET = "marketing"
 const DIR = "video-edits"
 const ID_RE = /^e-[a-z0-9-]{4,40}$/
 
 async function readEdit(id) {
-  const { data, error } = await db.storage.from(BUCKET).download(`${DIR}/${id}.json`)
-  if (error || !data) return null
-  try { return JSON.parse(await data.text()) } catch { return null }
+  const res = await getObject(`${DIR}/${id}.json`)
+  if (!res) return null
+  try { return await res.json() } catch { return null }
 }
 
 export async function GET(req) {
   const gate = await requireMarketing(req)
   if (gate.error) return gate.error
   const id = new URL(req.url).searchParams.get("id")
-  if (id) {
-    if (!ID_RE.test(id)) return NextResponse.json({ error: "id ไม่ถูกรูปแบบ" }, { status: 400 })
-    const e = await readEdit(id)
-    return e ? NextResponse.json(e) : NextResponse.json({ error: "ไม่พบร่างนี้" }, { status: 404 })
+  try {
+    if (id) {
+      if (!ID_RE.test(id)) return NextResponse.json({ error: "id ไม่ถูกรูปแบบ" }, { status: 400 })
+      const e = await readEdit(id)
+      return e ? NextResponse.json(e) : NextResponse.json({ error: "ไม่พบร่างนี้" }, { status: 404 })
+    }
+    const files = (await listObjects(`${DIR}/`, 1000))
+      .filter(f => f.key.endsWith(".json"))
+      .sort((a, b) => String(b.modified).localeCompare(String(a.modified)))
+      .slice(0, 40)
+    const items = (await Promise.all(files.map(async f => {
+      const e = await readEdit(f.key.slice(DIR.length + 1, -5)).catch(() => null)
+      if (!e) return null
+      const clips = e.timeline?.clips || []
+      return { id: e.id, name: e.name, updated_at: e.updated_at, job_id: e.job_id || null,
+               clips: clips.length, seconds: Math.round(layout(clips).total) }
+    }))).filter(Boolean)
+    return NextResponse.json({ items })
+  } catch (e) {
+    return NextResponse.json({ error: `อ่านร่างไม่ได้: ${e.message}` }, { status: 500 })
   }
-  const { data, error } = await db.storage.from(BUCKET)
-    .list(DIR, { limit: 40, sortBy: { column: "updated_at", order: "desc" } })
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  const files = (data || []).filter(f => f.id && f.name.endsWith(".json"))
-  const items = (await Promise.all(files.map(async f => {
-    const e = await readEdit(f.name.slice(0, -5))
-    if (!e) return null
-    const clips = e.timeline?.clips || []
-    return { id: e.id, name: e.name, updated_at: e.updated_at, job_id: e.job_id || null,
-             clips: clips.length, seconds: Math.round(layout(clips).total) }
-  }))).filter(Boolean)
-  return NextResponse.json({ items })
 }
 
 export async function PUT(req) {
@@ -68,8 +69,10 @@ export async function PUT(req) {
     updated_at: new Date().toISOString(),
     updated_by: gate.user.id,
   }
-  const { error } = await db.storage.from(BUCKET).upload(`${DIR}/${id}.json`,
-    new Blob([JSON.stringify(doc)], { type: "application/json" }), { upsert: true, contentType: "application/json" })
-  if (error) return NextResponse.json({ error: `บันทึกร่างไม่ได้: ${error.message}` }, { status: 500 })
+  try {
+    await putObject(`${DIR}/${id}.json`, JSON.stringify(doc), "application/json")
+  } catch (e) {
+    return NextResponse.json({ error: `บันทึกร่างไม่ได้: ${e.message}` }, { status: 500 })
+  }
   return NextResponse.json({ id, updated_at: doc.updated_at })
 }

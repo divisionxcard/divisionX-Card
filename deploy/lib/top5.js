@@ -20,7 +20,8 @@ export const TOP_N = 5
 // ไม่คำนวณใหม่ตอนทำโปสเตอร์ เพราะราคาใน card2price ขยับได้ระหว่างเขียนกับทำภาพ → อันดับไม่ตรงกัน
 // เก็บเป็นไฟล์ใน Storage แทนคอลัมน์ใหม่ — ไม่ต้องรอใครรัน migration (คอลัมน์ variants ใช้ไม่ได้:
 // route variants เขียนทับทั้งคอลัมน์) · ⚠️ deploy/agents/poster_render.py อ่าน path เดียวกันนี้
-export const TOP5_BUCKET = "marketing"
+// ไฟล์ชุด 5 ใบอยู่คลังไฟล์ R2 (lib/r2.js · 23 ต.ค. 2026) — key เดิม series/top5-<id>.json
+export const TOP5_BUCKET = "marketing"   // ชื่อเดิม ยังไม่มีใครอ่านแล้ว (คงไว้กันโค้ดนอกที่ import)
 export const top5Path = (contentId) => `series/top5-${contentId}.json`
 const CANDIDATE_RARITY = ["SEC", "L", "SR"]     // ลำดับนี้ใช้เติมตอนราคาไม่พอด้วย
 const MAX_PER_CARD = 2                          // ใบเดียวกันไม่เกิน 2 เวอร์ชัน ไม่งั้น 5 อันดับเป็นลูฟี่ทั้งหมด

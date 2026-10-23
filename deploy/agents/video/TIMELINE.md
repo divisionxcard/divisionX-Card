@@ -11,7 +11,7 @@
   "project": "edit-20261023-ab12",        // a-z0-9-_ ≤ 64
   "engine": "timeline",
   "script": "…",                          // ตาราง video_jobs บังคับไม่ว่าง — ใช้บทพากย์ หรือข้อความแทนที่ถ้าไม่มีเสียงพากย์
-  "edit_id": "e-…",                       // ร่างใน Storage marketing/video-edits/<edit_id>.json (เปิดมาแก้ต่อได้)
+  "edit_id": "e-…",                       // ร่างในคลัง R2 video-edits/<edit_id>.json (เปิดมาแก้ต่อได้)
   "timeline": {
     "version": 1,
     "clips": [                            // แทร็กหลัก เล่นต่อกันตามลำดับ (ไม่มีช่องว่าง)
@@ -45,7 +45,7 @@
 ## กติกา
 
 - **ความยาวคลิป** = max(ผลรวมแทร็กหลัก, เสียงพากย์ + 0.6 วิ) · แทร็กหลักสั้นกว่า = ท้ายคลิปเป็นพื้นกรมท่า (หน้าเว็บเตือน)
-- **แหล่งไฟล์ที่รับ**: `https://<supabase>/storage/v1/object/public/marketing/…` (ของเราเท่านั้น) · `sku:<รหัส>` (รูปซอง) · `assets/…` ในเทมเพลต
+- **แหล่งไฟล์ที่รับ**: `https://division-x-card.vercel.app/media/…` (คลังไฟล์ R2 ของเรา · ลิงก์ Supabase เดิมก็รับ) · `sku:<รหัส>` (รูปซอง) · `assets/…` ในเทมเพลต
   — route ปฏิเสธลิงก์ภายนอก (กันใช้เครื่องเรนเดอร์ดาวน์โหลดของจากที่อื่น)
 - เสียงพากย์ผ่าน `voice.pronounce` (`tasks/tts_pronounce.json`) และย่อช่วงเงียบแบบเดียวกับคลิปรูปแบบ
 - ชั้นเสียงหลังเรนเดอร์ (`sound.master`): เพลง + เอฟเฟกต์ + −14 LUFS · ล้ม = ใช้ไฟล์ที่เรนเดอร์ได้
@@ -53,8 +53,8 @@
 - **ก่อนประกอบ runner เตรียมคลิปวิดีโอทุกชิ้น** (`hf_timeline._prep_video`): ตัดเฉพาะช่วง in–out · 30 fps keyframe ทุก 1 วิ
   · ย่อไม่เกินขนาดที่คลุมจอ 1080×1920 · ไฟล์ไม่มีแทร็กเสียง = บังคับ `volume 0`
   — `data-has-audio` บนไฟล์ไม่มีเสียงทำ HyperFrames ปฏิเสธทั้งงาน ("do not match their authored media element type")
-- **อัปโหลด**: Storage รับ ≤ 50 MB/ไฟล์ (แพ็กเกจฟรีของ Supabase · 60 MB → 413) · วิดีโอที่เกิน หน้าเว็บย่อเองก่อนส่ง
-  (`components/edit/compress.js` · mediabunny + WebCodecs · เป้า ≤ 44 MB) · ไฟล์ไม่ผ่าน Vercel (ลิงก์อัปโหลดลงชื่อ)
+- **คลังไฟล์ = Cloudflare R2** (23 ต.ค. 2026 · `lib/r2.js` + `agents/r2.py`) — เดิม Supabase Storage รับ ≤ 50 MB/ไฟล์ และกินโควตาดาวน์โหลดร่วมกับฐานข้อมูล · ตอนนี้ ≤ 2 GB/ไฟล์ · วิดีโอเกิน 150 MB หน้าเว็บย่อเป็น 1080p ก่อน (ประหยัดคลังฟรี 10 GB)
+  (`components/edit/compress.js` · mediabunny + WebCodecs · ≤ 8 Mbps) · ไฟล์ไม่ผ่าน Vercel (ลิงก์อัปโหลดลงชื่อของ R2) · runner ดึงไฟล์จาก R2 ตรงด้วยคีย์
 - พรีวิวบนเว็บใช้ CSS ชุดเดียวกับเทมเพลตเรนเดอร์ (ฟอนต์ Kanit ใน `public/fonts`) — **แก้สไตล์ของทับต้องแก้สองที่**:
   `timeline.template.html` + `components/edit/edit.module.css` (เคยต่างกันแค่ `width: max-content` → ตัวหนังสือในคลิปตัดบรรทัดเร็วกว่าพรีวิว)
 - เพดาน: คลิปหลัก ≤ 40 ชิ้น · ของทับ ≤ 40 · ความยาวรวม ≤ 180 วิ

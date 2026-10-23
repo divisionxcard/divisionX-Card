@@ -9,6 +9,7 @@
 import { createClient } from "@supabase/supabase-js"
 import { NextResponse } from "next/server"
 import { requireMarketing } from "../../../../../lib/apiAuth"
+import { putObject } from "../../../../../lib/r2"
 
 const SB_URL = process.env.NEXT_PUBLIC_SUPABASE_URL
 const SB_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -16,7 +17,7 @@ const db = createClient(SB_URL, SB_KEY, {
   auth: { autoRefreshToken: false, persistSession: false },
 })
 
-const BUCKET = "marketing"
+// ไฟล์เก็บที่ Cloudflare R2 (lib/r2.js · 23 ต.ค. 2026) — ไม่กินโควตา Supabase ที่ใช้ร่วมกับฐานข้อมูล
 const MAX_BYTES = 12 * 1024 * 1024
 const OK_TYPES = ["image/png", "image/jpeg", "image/webp", "image/gif"]
 
@@ -64,20 +65,7 @@ export async function POST(req) {
     // timestamp ในชื่อไฟล์ — อัปทับใหม่แล้วได้ URL ใหม่ ไม่ต้องสู้กับ CDN cache
     const key = `upload/${id}-${Date.now()}.${ext}`
 
-    const up = await fetch(`${SB_URL}/storage/v1/object/${BUCKET}/${key}`, {
-      method: "POST",
-      headers: {
-        apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}`,
-        "Content-Type": type, "x-upsert": "true",
-      },
-      body: buf,
-    })
-    if (!up.ok) {
-      const t = await up.text().catch(() => "")
-      throw new Error(`อัปโหลดเข้า Storage ไม่สำเร็จ (${up.status}) ${t.slice(0, 150)}`)
-    }
-
-    const publicUrl = `${SB_URL}/storage/v1/object/public/${BUCKET}/${key}`
+    const publicUrl = await putObject(key, buf, type)
     const { data: updated, error } = await db.from("marketing_content")
       .update({ media_url: publicUrl, media_type: "image" })
       .eq("id", id)

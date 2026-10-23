@@ -1,17 +1,17 @@
-// ย่อวิดีโอในเบราว์เซอร์ก่อนอัปโหลด — Storage ของโปรเจกต์รับไม่เกิน 50 MB ต่อไฟล์ (ทดสอบ 23 ต.ค. 2026: 60 MB → 413)
-// คลิปมือถือ 1 นาทีมัก 100–400 MB → ย่อเหลือ ≤ ~44 MB ด้วย WebCodecs (การ์ดจอของเครื่องผู้ใช้ทำ ไม่ต้องส่งไฟล์ใหญ่ออกไปไหน)
+// ย่อวิดีโอในเบราว์เซอร์ก่อนอัปโหลด — เป็น 1080p ≤ 8 Mbps ด้วย WebCodecs (การ์ดจอของเครื่องผู้ใช้ทำ)
+// เดิม (ช่วงที่ไฟล์อยู่ Supabase) ใช้บีบให้ต่ำกว่า 50 MB · ตั้งแต่ย้ายไป R2 (23 ต.ค. 2026) ใช้ประหยัดคลังฟรี 10 GB
+// คลิป 4K นาทีเดียว ~350 MB → ~60 MB · ภาพในคลิป 9:16 ใช้แค่ 1080 อยู่แล้ว จึงไม่เสียคุณภาพที่เห็นจริง
 //
 // mediabunny@1.61.2 (MPL-2.0) · โหลดเฉพาะตอนต้องย่อ (dynamic import) — หน้าห้องตัดต่อไม่หนักขึ้นตอนเปิด
 // ขนาดภาพ: ไม่เกินที่คลุมจอ 1080×1920 ได้ (ไม่ขยาย) — เท่ากับที่เครื่องเรนเดอร์ย่ออยู่แล้ว (hf_timeline._prep_video)
 // ล้ม (เบราว์เซอร์เก่า / ไฟล์ HEVC ที่เครื่องถอดรหัสไม่ได้) = โยน error ภาษาไทยให้ผู้ใช้ย่อเองจากมือถือ
 
-export const TARGET_BYTES = 44 * 1024 * 1024
 
 export function canCompress() {
   return typeof window !== "undefined" && typeof window.VideoEncoder === "function" && typeof window.VideoDecoder === "function"
 }
 
-export async function compressVideo(file, onProgress = () => {}) {
+export async function compressVideo(file, onProgress = () => {}, { maxBytes = Infinity } = {}) {
   if (!canCompress()) throw new Error("เบราว์เซอร์นี้ย่อวิดีโอเองไม่ได้ — ใช้ Chrome/Edge รุ่นใหม่ หรือย่อไฟล์จากมือถือก่อน")
   const M = await import("mediabunny")
   const input = new M.Input({ source: new M.BlobSource(file), formats: M.ALL_FORMATS })
@@ -24,9 +24,9 @@ export async function compressVideo(file, onProgress = () => {}) {
   const k = Math.min(1, Math.max(1080 / w0, 1920 / h0))
   const width = Math.max(2, Math.round((w0 * k) / 2) * 2)
   const height = Math.max(2, Math.round((h0 * k) / 2) * 2)
-  // งบบิต: ขนาดเป้าหมาย ÷ ความยาว (เผื่อหัวไฟล์ 6%) − เสียง · เพดาน 8 Mbps · ต่ำสุด 0.8 Mbps (คลิปยาวมาก = ภาพหยาบลง)
+  // งบบิต: เพดาน 8 Mbps · ถ้าระบุ maxBytes = ขนาดเป้าหมาย ÷ ความยาว (เผื่อหัวไฟล์ 6%) − เสียง · ต่ำสุด 0.8 Mbps
   const audioBits = 128_000
-  const videoBits = Math.max(800_000, Math.min(8_000_000, Math.floor((TARGET_BYTES * 8 * 0.94) / dur - audioBits)))
+  const videoBits = Math.max(800_000, Math.min(8_000_000, Math.floor((maxBytes * 8 * 0.94) / dur - audioBits)))
 
   const output = new M.Output({ format: new M.Mp4OutputFormat({ fastStart: "in-memory" }), target: new M.BufferTarget() })
   const conv = await M.Conversion.init({

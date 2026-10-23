@@ -311,13 +311,12 @@ def _prep_footage(src_url, dst):
 
 
 def _upload_file(path, project, tag, ctype):
-    from .publish import BUCKET, _creds, _safe_name, sb
+    # คลังไฟล์ = Cloudflare R2 (23 ต.ค. 2026 · agents/r2.py) — ไม่กินโควตา Supabase ที่ใช้ร่วมกับฐานข้อมูล
+    from .publish import _safe_name
+    from .. import r2
     import pathlib
-    raw = pathlib.Path(path).read_bytes()
     key = f"{STORAGE_DIR}/{_safe_name(project)}-{tag}{pathlib.Path(path).suffix}"
-    sb("POST", f"{BUCKET}/{urllib.parse.quote(key)}", raw=raw, ctype=ctype, base="storage/v1/object", timeout=300)
-    url, _ = _creds()
-    return f"{url}/storage/v1/object/public/{BUCKET}/{key}"
+    return r2.upload(str(path), key, ctype)
 
 
 def footage(sig, rng, hist, plan, upload=True):
@@ -346,11 +345,10 @@ def footage(sig, rng, hist, plan, upload=True):
 
 
 def _upload(png, project):
-    from .publish import BUCKET, _creds, _safe_name, sb
+    from .publish import _safe_name
+    from .. import r2
     key = f"{STORAGE_DIR}/{_safe_name(project)}-{hashlib.sha1(png).hexdigest()[:8]}.png"
-    sb("POST", f"{BUCKET}/{urllib.parse.quote(key)}", raw=png, ctype="image/png", base="storage/v1/object", timeout=120)
-    url, _ = _creds()
-    return f"{url}/storage/v1/object/public/{BUCKET}/{key}"
+    return r2.upload(png, key, "image/png")
 
 
 def _broll(sig, rng, hist):

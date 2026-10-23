@@ -53,6 +53,11 @@ jobs:
       OPENAI_API_KEY:             ${{ secrets.OPENAI_API_KEY }}
       # ฟุตเทจจริงฟรีจาก Pixabay (hf_bg · 23 ต.ค. 2026) — ไม่มี = ข้ามไปวาดภาพ
       PIXABAY_API_KEY:            ${{ secrets.PIXABAY_API_KEY }}
+      # คลังไฟล์ Cloudflare R2 (agents/r2.py · 23 ต.ค. 2026) — คลิป/ภาพพื้นหลัง/ไฟล์ที่อัปจากห้องตัดต่ออยู่ที่นี่ ไม่ใช่ Supabase Storage
+      R2_ACCOUNT_ID:              ${{ secrets.R2_ACCOUNT_ID }}
+      R2_ACCESS_KEY_ID:           ${{ secrets.R2_ACCESS_KEY_ID }}
+      R2_SECRET_ACCESS_KEY:       ${{ secrets.R2_SECRET_ACCESS_KEY }}
+      R2_BUCKET:                  ${{ secrets.R2_BUCKET }}
       JOB_ID:                     ${{ inputs.job_id }}
       ENGINE:                     classic   # Preflight เขียนทับจาก plan.engine ผ่าน $GITHUB_ENV
 

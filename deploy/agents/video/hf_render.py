@@ -216,11 +216,17 @@ def resolve_image(spec, proj, name):
         dst = proj / "assets" / f"{name}{src.suffix}"
         shutil.copyfile(src, dst)
         return f"assets/{dst.name}"
-    if spec.startswith("https://"):                           # ภาพที่สร้างไว้แล้วใน Storage (พื้นหลังจาก AI)
+    if spec.startswith("https://"):                           # ไฟล์ในคลังของเรา (ภาพพื้นหลัง AI · คลิปที่อัป · คลิป Flow)
         ext = pathlib.Path(urllib.parse.urlparse(spec).path).suffix or ".png"
         dst = proj / "assets" / f"{name}{ext}"
-        with urllib.request.urlopen(spec, timeout=60) as r:
-            dst.write_bytes(r.read())
+        # ไฟล์ของเรา (/media/… หรือลิงก์ Supabase เดิม) → ดึงจาก R2 ตรงด้วยคีย์ (ไม่ผ่านเว็บ · ไฟล์ใหญ่ได้) · 23 ต.ค. 2026
+        from .. import r2
+        key = r2.key_of(spec)
+        if key and r2.configured():
+            r2.download(key, dst)
+            return f"assets/{dst.name}"
+        with urllib.request.urlopen(spec, timeout=600) as r, open(dst, "wb") as f:
+            shutil.copyfileobj(r, f, 1 << 20)
         return f"assets/{dst.name}"
     raise ValueError(f"ไม่รู้จักแหล่งรูป '{spec}' (ใช้ได้: sku:… · machine:hero|scene · file:… · https://… · assets/…)")
 

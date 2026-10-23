@@ -21,15 +21,18 @@ const num = (v, lo, hi, d) => {
 const pick = (v, opts, d) => (opts.includes(v) ? v : d)
 const str = (v, max) => (typeof v === "string" ? v.trim().slice(0, max) : "")
 
-// แหล่งไฟล์ที่ยอมให้เครื่องเรนเดอร์โหลด — Storage ของเรา (bucket marketing) · รูปซอง (sku:) · ไฟล์ในเทมเพลต
+// แหล่งไฟล์ที่ยอมให้เครื่องเรนเดอร์โหลด — คลังไฟล์ของเรา · รูปซอง (sku:) · ไฟล์ในเทมเพลต
 // ห้ามลิงก์ภายนอก: ไม่งั้นใครก็ใช้ runner ของเราดาวน์โหลดอะไรก็ได้
+// คลังไฟล์ = Cloudflare R2 ผ่านหน้า /media/ ของเว็บ (23 ต.ค. 2026 · lib/r2.js) · ลิงก์ Supabase เดิมยังรับ (ร่างงานเก่า)
+export const MEDIA_PREFIX = `${(process.env.NEXT_PUBLIC_SITE_URL || "https://division-x-card.vercel.app").replace(/\/+$/, "")}/media/`
 export function storagePrefix(base) {
   const b = (base || process.env.NEXT_PUBLIC_SUPABASE_URL || "").replace(/\/+$/, "")
   return `${b}/storage/v1/object/public/marketing/`
 }
+const ours = (s, base) => s.startsWith(MEDIA_PREFIX) || s.startsWith(storagePrefix(base))
 export function okSrc(s, base) {
   if (typeof s !== "string" || !s || s.length > 600 || s.includes("..")) return false
-  if (s.startsWith(storagePrefix(base))) return true
+  if (ours(s, base)) return !s.slice(s.indexOf("/media/") + 7).startsWith("video-edits/")
   if (/^sku:[A-Za-z0-9][A-Za-z0-9 ._-]{0,39}$/.test(s)) return true
   return /^assets\/[A-Za-z0-9._/-]{1,120}$/.test(s)
 }
@@ -116,7 +119,7 @@ export function cleanTimeline(raw, base) {
   let music = null
   if (raw.music && typeof raw.music === "object" && typeof raw.music.src === "string") {
     const src = raw.music.src
-    if (!(/^lib:[a-z0-9_-]{1,40}$/.test(src) || src.startsWith(storagePrefix(base)))) {
+    if (!(/^lib:[a-z0-9_-]{1,40}$/.test(src) || ours(src, base))) {
       return { error: "เพลง: ใช้ได้เฉพาะเพลงในคลังที่มีใบอนุญาต หรือไฟล์ที่อัปโหลดเข้าคลัง" }
     }
     music = { src, volume: num(raw.music.volume, 0, 1, 0.22) }

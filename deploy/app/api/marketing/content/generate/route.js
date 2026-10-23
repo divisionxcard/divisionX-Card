@@ -31,8 +31,9 @@ import { detectFranchise } from "../../../../../lib/franchiseDetect"
 import { checkThaiCaption } from "../../../../../lib/thaiText"
 import { detectSku } from "../../../../../lib/skuDetect"
 import { careBlock } from "../../../../../lib/careKnowledge"
-import { pickTop5, top5Knowledge, TOP5_BUCKET, top5Path } from "../../../../../lib/top5"
+import { pickTop5, top5Knowledge, top5Path } from "../../../../../lib/top5"
 import { ensureBrandTag } from "../../../../../lib/brandTag"
+import { putObject } from "../../../../../lib/r2"
 
 const db = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -992,10 +993,9 @@ export async function POST(req) {
     let top5Saved = null
     if (top5) {
       try {
-        const { error: eUp } = await db.storage.from(TOP5_BUCKET)
-          .upload(top5Path(id), JSON.stringify({ content_id: id, ...top5 }),
-                  { contentType: "application/json", upsert: true })
-        top5Saved = !eUp
+        // คลังไฟล์ R2 (lib/r2.js · 23 ต.ค. 2026)
+        await putObject(top5Path(id), JSON.stringify({ content_id: id, ...top5 }), "application/json")
+        top5Saved = true
       } catch { top5Saved = false }
     }
 

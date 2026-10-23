@@ -7,6 +7,7 @@
 // (บทเรียนเดิมของโปรเจกต์นี้: ตรรกะซ้ำสองชุดพังแบบเงียบ ๆ — ดู project_sku_mapping_two_scraper_maps)
 import { publishToPage, permalink, photoImage } from "./facebook"
 import { ensureBrandTag } from "./brandTag"
+import { directUrl } from "./r2"
 
 const TABLE = "marketing_content"
 // ช่องว่างที่ AI ทิ้งไว้ให้คนเติม เช่น {ชื่อสาขา} — regex เดียวกับ holesIn() ในหน้าเว็บ
@@ -140,7 +141,8 @@ export async function publishOne(db, item, { dryRun = false, requireSchedule = f
   try {
     result = await publishToPage({
       caption,
-      imageUrl: item.media_url || null,
+      // ไฟล์ในคลัง R2 → ลิงก์ลงชื่อตรง (Facebook ดึงเองได้ทันที ไม่ต้องตาม redirect ของหน้า /media · 23 ต.ค. 2026)
+      imageUrl: item.media_url ? directUrl(item.media_url) : null,
       publish: !dryRun,
     })
   } catch (err) {

@@ -34,6 +34,7 @@ for _s in (sys.stdout, sys.stderr):
             pass
 
 import poster_render as pr   # ใช้ของที่มีแล้ว: ต่อ DB/Storage · ดึงรูป · ฟอนต์ · ลบโปสเตอร์เก่า
+import r2                    # คลังไฟล์ Cloudflare R2 (23 ต.ค. 2026)
 
 TEMPLATE = pr.ROOT / "tasks" / "poster_tpl_top5.html"
 SIZE = 1080
@@ -336,11 +337,8 @@ def render(html, out_path):
 def load_top5(content_id, local_json=None):
     if local_json:
         return json.loads(pathlib.Path(local_json).read_text(encoding="utf-8"))
-    url = f"{pr.SB_URL}/storage/v1/object/public/{pr.BUCKET}/series/top5-{content_id}.json"
-    import urllib.request
     try:
-        with urllib.request.urlopen(urllib.request.Request(url, headers={"User-Agent": "DivisionXCard/1.0"}), timeout=30) as r:
-            return json.loads(r.read().decode("utf-8"))
+        return json.loads(r2.get_bytes(f"series/top5-{content_id}.json").decode("utf-8"))
     except Exception as e:
         raise SystemExit(f"[top5] ไม่มีข้อมูล 5 ใบของโพสต์ #{content_id} ({str(e)[:80]}) — "
                          f"กด 'เขียนใหม่' ให้ระบบเก็บข้อมูลก่อน แล้วค่อยทำโปสเตอร์")
@@ -349,7 +347,7 @@ def load_top5(content_id, local_json=None):
 def main():
     ap = argparse.ArgumentParser(description="โปสเตอร์ซีรีส์ ส่อง 5 ใบเด็ด")
     ap.add_argument("--id", type=int, required=True, help="id ของ marketing_content")
-    ap.add_argument("--bg", help="url พื้นหลังจาก AI (ต้องอยู่ใน /marketing/aibg/)")
+    ap.add_argument("--bg", help="url พื้นหลังจาก AI (ต้องอยู่ในคลังไฟล์ของเรา โฟลเดอร์ aibg/)")
     ap.add_argument("--bg-file", help="ไฟล์พื้นหลังในเครื่อง (ลองดีไซน์เท่านั้น)")
     ap.add_argument("--top5-json", help="ไฟล์ข้อมูล 5 ใบในเครื่อง (ลองดีไซน์โดยไม่ต้องมีใน Storage)")
     ap.add_argument("--dry-run", action="store_true", help="เซฟลงเครื่องอย่างเดียว ไม่อัป ไม่แก้ DB")
@@ -370,10 +368,10 @@ def main():
     if args.bg_file:
         bg_uri = pr.data_uri(pathlib.Path(args.bg_file).read_bytes(), "image/png")
     elif args.bg:
-        if pr.AI_BG_DIR in args.bg:
+        if (r2.key_of(args.bg) or "").startswith("aibg/"):        # คลังไฟล์ของเรา โฟลเดอร์ aibg/ เท่านั้น (R2 · ลิงก์เดิมก็รับ)
             bg_uri = pr.fetch_image(args.bg)
         else:
-            print(f"[top5] ไม่รับพื้นหลังนอก {pr.AI_BG_DIR} — ใช้พื้นแบรนด์แทน")
+            print("[top5] ไม่รับพื้นหลังนอกคลัง aibg/ — ใช้พื้นแบรนด์แทน")
 
     html = build_html(top5, bg_uri)
     out = args.out or str(pr.HERE / f"poster-{args.id}.png")
@@ -394,16 +392,14 @@ def main():
 
     # อัปตัวใหม่ให้สำเร็จก่อน แล้วค่อยลบตัวเก่า (เหตุผลเดียวกับ poster_render.main)
     key = f"poster/{args.id}-top5-{int(time.time())}.png"
-    pr.sb("POST", f"{pr.BUCKET}/{key}", raw=pathlib.Path(out).read_bytes(), ctype="image/png",
-          base="storage/v1/object")
-    url = f"{pr.SB_URL}/storage/v1/object/public/{pr.BUCKET}/{key}"
+    url = r2.upload(str(out), key, "image/png")
     pr.sb("PATCH", f"marketing_content?id=eq.{args.id}", {"media_url": url, "media_type": "image"})
     print(f"[top5] อัปโหลดแล้ว → {url}")
 
-    marker = f"/{pr.BUCKET}/poster/{args.id}-"
-    if marker in old and old != url:
+    old_key = r2.key_of(old) or ""
+    if old_key.startswith(f"poster/{args.id}-") and old != url:
         try:
-            pr.sb("DELETE", f"{pr.BUCKET}/{old.split('/' + pr.BUCKET + '/', 1)[1]}", base="storage/v1/object")
+            r2.delete(old_key)
             print("[top5] ลบโปสเตอร์เก่าแล้ว")
         except Exception as e:
             print(f"[top5] ลบของเก่าไม่สำเร็จ (ข้ามไป): {str(e)[:80]}")
