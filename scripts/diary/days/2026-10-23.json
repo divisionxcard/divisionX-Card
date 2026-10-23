@@ -90,7 +90,7 @@
       "title": "ภาพวิดีโอ: พื้นหลังภาพฉากจาก AI (ต้นแบบ 3 แนว) + ค้นเครื่องมือทั้งระบบ",
       "what": "วิดีโอรองรับพื้นหลังเป็นภาพฉาก พร้อมกล้องซูม/แพนช้า ฝุ่นแสง แสงกวาด และชั้นหรี่ให้อ่านกระดานออก · ทำต้นแบบ 3 แนวกับคลิปจัดอันดับ: ภาพถ่ายห้องนักสะสม · ภาพวาดทะเลบนเรือ · เวทีรางวัล 3D (ภาพละ ~1.5 บาท) · ต่อ: ผู้กำกับภาพอ่านเนื้อหาคลิปแล้วออกแบบฉากเอง · ภาพสว่างหรี่อัตโนมัติ · ใช้คลิปจาก Google Flow เป็นพื้นหลังได้",
       "why": "เจ้าของบอกภาพยังไม่สวย อยากได้สมจริง/หลากหลาย · พื้นหลังเดิมเป็นลาย CSS 4 แบบ ทุกคลิปจึงคล้ายกัน",
-      "result": "Sora 2 ปิด API แล้ว (24 ก.ย.) · Veo ใน Gemini API ปิดแล้ว (22 ต.ค.) → Omni Flash ต้องเปิด billing · Google Flow ไม่มี API ใช้มือในเว็บ · สรุปองค์ประกอบระบบ 14 ส่วน + เครื่องมือเสริมไว้ใน wiki/marketing/video-system-components-tools.md",
+      "result": "Sora 2 ปิด API แล้ว (24 ก.ย.) · Veo ใน Gemini API ปิดแล้ว (22 ต.ค.) → Omni Flash ต้องเปิด billing · Google Flow ไม่มี API ใช้มือในเว็บ · สรุปองค์ประกอบระบบ 14 ส่วน + เครื่องมือเสริมไว้ใน wiki/marketing/video-system-components-tools.md · ต่อ: ตั้งคีย์ OpenAI + Pixabay บน GitHub · เพิ่มฟุตเทจจริงฟรีจาก Pixabay · แก้ขั้นติดตั้ง ffmpeg ที่ค้าง 15–25 นาที → 11 วิ · คลิปแรกบน GitHub ผ่านครบทั้งเส้น (พื้นหลัง AI ตามค่าย + ชั้นเสียง −13.9 LUFS)",
       "refs": [
         {
           "type": "commit",
@@ -103,6 +103,14 @@
         {
           "type": "commit",
           "id": "65f6fbd"
+        },
+        {
+          "type": "commit",
+          "id": "278fbb1"
+        },
+        {
+          "type": "commit",
+          "id": "830e4b0"
         },
         {
           "type": "worklog",
@@ -142,6 +150,11 @@
       "topic": "AI วิดีโอ",
       "chose": "ลอง Google Flow ก่อน (ทำมือ)",
       "rejected": "เปิด billing Omni Flash · ยังไม่เอา"
+    },
+    {
+      "topic": "คีย์บริการ",
+      "chose": "อนุญาตใส่คีย์ OpenAI ลง GitHub · สมัคร Pixabay เอง",
+      "rejected": "Pexels (ปิดออกคีย์ใหม่)"
     }
   ],
   "pending": [
@@ -187,8 +200,8 @@
     },
     {
       "id": "video-openai-secret",
-      "text": "ใส่คีย์ OpenAI ใน GitHub (secret OPENAI_API_KEY) ให้ระบบวาดพื้นหลังเองทุกคลิป — ยังไม่ได้รับอนุญาต",
-      "done": false
+      "text": "ใส่คีย์ OpenAI ใน GitHub — ตั้งแล้วพร้อม PIXABAY_API_KEY",
+      "done": true
     },
     {
       "id": "flow-first-clips",
@@ -202,15 +215,20 @@
     },
     {
       "id": "video-first-live-render",
-      "text": "คลิปจริงคลิปถัดไป: ดูว่าชั้นเสียงทำงานบน GitHub Actions และอันดับแรกโผล่เร็วขึ้นจริง",
+      "text": "คลิปจริงบน GitHub: ชั้นเสียง + พื้นหลัง AI ทำงานครบ (งาน d54bb84b)",
+      "done": true
+    },
+    {
+      "id": "watch-test-clips",
+      "text": "ดูคลิปทดสอบ: รันจริงบน GitHub (พื้นหลัง AI) และฟุตเทจทะเลจริงจาก Pixabay ใน research/video-tests/",
       "done": false
     }
   ],
   "stats": {
-    "commits": 14,
-    "files": 32,
-    "added": 8321,
-    "deleted": 393
+    "commits": 19,
+    "files": 33,
+    "added": 8646,
+    "deleted": 431
   },
   "areas": [
     "วิดีโอ",
