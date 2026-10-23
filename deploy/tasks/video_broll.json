@@ -1,5 +1,19 @@
 {
   "_comment": "คลังคลิปพื้นหลังวิดีโอที่เจ้าของทำจาก Google Flow (agents/video/hf_bg.py หยิบไปใช้ก่อนให้ AI วาดภาพนิ่ง) · คู่มือทำคลิป: wiki/marketing/flow-prompt-pack.md",
   "_fields": "id ชื่อสั้น · url ไฟล์ใน Storage (marketing/video-broll/…) · franchise รหัสค่าย [OP, PKM, DB, YGH, NRT, SL, MLBB, TF, MLP] — ว่าง = ใช้ได้ทุกค่าย · formats [rank, versus, quiz, map] — ว่าง = ทุกรูปแบบ · seconds ความยาว · prompt คำสั่งที่ใช้ใน Flow (ไว้ทำซ้ำ/แก้) · added วันที่",
-  "clips": []
+  "clips": [
+    {
+      "id": "op-227a479a",
+      "url": "https://xethnqqmpvlpmafvphky.supabase.co/storage/v1/object/public/marketing/video-broll/op-227a479a.mp4",
+      "franchise": [
+        "OP"
+      ],
+      "formats": [],
+      "seconds": 8.0,
+      "file": "OP-หัวเรือคลื่นซัด-01.mp4",
+      "prompt": "Animate this image as a single continuous shot, no scene cuts: slow push-in toward the bow, waves roll and crash, sea spray glitters, clouds drift, sun rays shimmer, ropes sway gently in the wind. Keep everything else the same. No people, no text, no logos. No dialogue.\n(Google Flow · Omni 1.1 Flash · 9:16 · 8s · 720p · 23 Oct 2026)",
+      "sha1": "227a479ad1f2c5731450380d40ca9dbc7ea31964",
+      "added": "2026-10-23"
+    }
+  ]
 }
