@@ -307,9 +307,13 @@ Hermes (agent ที่เจ้าของคุยผ่าน Telegram) ฝ�
 - **สรุปประจำวัน** → `wiki/daily/YYYY-MM-DD.md` + `wiki/daily/index.md` ด้วยสกิล `daily-log` (`~/.claude/skills/daily-log/`)
   · อัปเดตไฟล์ของวันนั้นทุกครั้งที่ commit งานชุดใหญ่เสร็จ (เจ้าของสั่ง 22 ต.ค. 2026) · เริ่มงาน → เปิดไฟล์ล่าสุดดู "ค้าง" ก่อน
   · ค่าตั้งของโปรเจกต์อยู่ `.claude/daily-log.json` · รีโปสาธารณะ: ห้ามตัวเลขยอดขาย/อีเมลทีม/token ในไฟล์นี้
-  · **หน้าไดอารี่ส่วนตัวของเจ้าของ** (Artifact บน claude.ai · ซอร์ส `scripts/diary/diary.html`) — เพิ่มวันใหม่ทุกครั้ง:
-    `scripts/diary/days/YYYY-MM-DD.json` → `ArtifactData set` คอลเลกชัน `days` (มีแล้ว = คง `done` ที่เจ้าของติ๊กไว้)
-  · **เริ่ม session → `ArtifactData list days` ก่อน** ดู `pending[].done` ที่เจ้าของติ๊กจากเว็บ → ติ๊ก `- [x]` ใน wiki/daily ให้ตรงกัน
+  · **หน้าไดอารี่ส่วนตัวของเจ้าของ มี 2 ที่** — เจ้าของติ๊กได้ทั้งสองที่ (24 ต.ค. 2026 ขอเปิดได้โดยไม่ผ่าน claude.ai):
+    1. **เว็บเรา `/diary`** (เฉพาะแอดมิน · ข้อมูลอยู่คลัง R2 `diary/days/` · `app/diary` + `/api/diary`)
+    2. Artifact บน claude.ai (ซอร์ส `scripts/diary/diary.html` · ArtifactData คอลเลกชัน `days`)
+    เพิ่มวันใหม่: เขียน `scripts/diary/days/YYYY-MM-DD.json` → `ArtifactData set` (มีแล้ว = คง `done`) → `python scripts/diary/sync_r2.py --artifact-dir <export>`
+  · **เริ่ม session → `ArtifactData list days` (ใส่ `out_dir`) → `python scripts/diary/sync_r2.py --artifact-dir <out_dir>`**
+    สคริปต์รวมติ๊กจากรีโป + เว็บ + claude.ai แบบ "ติ๊กที่ไหนก็นับ" แล้วเขียนกลับรีโปกับเว็บ · วันที่มีติ๊กเพิ่ม → `ArtifactData set` ให้ claude.ai ตรงด้วย
+    → ติ๊ก `- [x]` ใน wiki/daily ให้ตรงกัน
     · ข้อที่ต้องเลือกทาง (เช่น รอ/สลับแหล่งราคา) ติ๊กอย่างเดียวไม่บอกว่าเลือกทางไหน — ถามเจ้าของก่อนลงมือ
 
 ---
