@@ -51,6 +51,8 @@ jobs:
       GEMINI_API_KEY:             ${{ secrets.GEMINI_API_KEY }}
       # พื้นหลังตามเนื้อหา (agents/video/hf_bg.py · 23 ต.ค. 2026) — ไม่ได้ตั้ง secret = ว่าง = คลิปใช้ลายกราฟิกเดิม ไม่ล้ม
       OPENAI_API_KEY:             ${{ secrets.OPENAI_API_KEY }}
+      # ฟุตเทจจริงฟรีจาก Pixabay (hf_bg · 23 ต.ค. 2026) — ไม่มี = ข้ามไปวาดภาพ
+      PIXABAY_API_KEY:            ${{ secrets.PIXABAY_API_KEY }}
       JOB_ID:                     ${{ inputs.job_id }}
       ENGINE:                     classic   # Preflight เขียนทับจาก plan.engine ผ่าน $GITHUB_ENV
 
