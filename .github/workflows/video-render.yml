@@ -141,11 +141,19 @@ jobs:
       #   โหลดไม่ได้ค่อยถอยไป apt แบบจำกัดเวลาต่อรอบ + ลองซ้ำ · ไม่มีทั้งคู่ ffmpeg -version ล้ม = งานล้มเร็วพร้อมเหตุผล
       - name: Install ffmpeg
         timeout-minutes: 15
+        # ⚠️ ชื่อไฟล์รุ่นเลข (ffmpeg-n7.1-…) ถูกลบเมื่อออกรุ่นใหม่ → 404 (เจอจริงรอบที่สาม) · ใช้ชื่อ master ที่คงที่ + johnvansickle สำรอง
         run: |
-          URL=https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-n7.1-latest-linux64-gpl-7.1.tar.xz
-          if timeout 180 curl -fsSL "$URL" -o /tmp/ffmpeg.tar.xz && tar -xJf /tmp/ffmpeg.tar.xz -C /tmp; then
-            echo "$(ls -d /tmp/ffmpeg-n7.1-*/bin)" >> "$GITHUB_PATH"
-            export PATH="$(ls -d /tmp/ffmpeg-n7.1-*/bin):$PATH"
+          FF=""
+          if timeout 240 curl -fsSL https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-linux64-gpl.tar.xz -o /tmp/ff.tar.xz \
+             && tar -xJf /tmp/ff.tar.xz -C /tmp; then
+            FF=/tmp/ffmpeg-master-latest-linux64-gpl/bin
+          elif timeout 240 curl -fsSL https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz -o /tmp/ff2.tar.xz \
+             && tar -xJf /tmp/ff2.tar.xz -C /tmp; then
+            FF=$(ls -d /tmp/ffmpeg-*-amd64-static | head -1)
+          fi
+          if [ -n "$FF" ]; then
+            echo "$FF" >> "$GITHUB_PATH"
+            export PATH="$FF:$PATH"
           else
             for i in 1 2 3; do
               if timeout 180 sudo apt-get update -qq && timeout 300 sudo apt-get install -y ffmpeg; then break; fi
