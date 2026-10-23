@@ -1,0 +1,120 @@
+<!doctype html>
+<!--
+  scaffold/timeline.template.html — โครงหลักของ "ห้องตัดต่อ" (plan.engine = "timeline" · deploy/agents/video/hf_timeline.py เติม {{...}})
+  23 ต.ค. 2026 · เจ้าของ: "ทำหน้าโรงงานวิดีโอให้ใช้งานง่าย รองรับการตัดต่อได้ทุกรูปแบบ + อัปโหลดไฟล์วิดีโอจากภายนอกมาตัดต่อ"
+  สัญญาข้อมูล: deploy/agents/video/TIMELINE.md
+
+  ชั้นภาพ (ล่าง → บน):
+    พื้นกรมท่า (เผื่อคลิปสั้นกว่าเสียง) → แทร็กหลัก (คลิป/รูปเรียงต่อกัน · พอดีจอ cover หรือ contain + พื้นเบลอ)
+    → ตัวหนังสือ/ภาพทับ/โลโก้ (ช่วงเวลาอิสระ) → แสงวาบรอยตัด → ซับไทย (Chromium วาด — สระ/วรรณยุกต์ถูกเสมอ)
+  เสียง: เสียงในคลิป (ตามระดับที่ตั้ง) + เสียงพากย์ · เพลง/เอฟเฟกต์/ความดัง ใส่หลังเรนเดอร์ใน sound.master
+  ⚠️ <video> ที่มี data-start ห้ามอยู่ใต้กล่องที่มี data-start (กติกา HyperFrames) — กล่องห่อคลิปจึงไม่จับเวลา
+     และขยับ/ซูมที่กล่องห่อ ไม่ tween ตัว video
+-->
+<html lang="th" data-resolution="portrait">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1080, height=1920" />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <style>
+      @font-face { font-family: "Kanit"; src: url("assets/fonts/Kanit-Black.ttf"); font-weight: 900; }
+      @font-face { font-family: "Kanit"; src: url("assets/fonts/Kanit-ExtraBold.ttf"); font-weight: 800; }
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { margin: 0; width: 1080px; height: 1920px; overflow: hidden; background: #03102a; }
+      #root { position: relative; width: 100%; height: 100%; overflow: hidden; font-family: "Kanit", sans-serif; }
+      #tl-bg { position: absolute; inset: 0; z-index: 0;
+        background: radial-gradient(ellipse 90% 60% at 50% 40%, #0a2a6b 0%, #03102a 70%); }
+      /* ── แทร็กหลัก */
+      .tl-clip { position: absolute; inset: 0; overflow: hidden; z-index: 1; will-change: transform; }
+      .tl-media { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+      .tl-fill { position: absolute; inset: -80px; width: calc(100% + 160px); height: calc(100% + 160px); object-fit: cover;
+        filter: blur(46px) brightness(0.55) saturate(1.2); }
+      /* รูปนิ่ง: พื้นเบลอทำไว้ในไฟล์แล้ว — ห้ามใส่ filter (ทำให้โลโก้ที่ทับอยู่หายตอนเรนเดอร์จริง) */
+      .tl-fill-baked { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+      /* ── ของทับ (ตัวหนังสือ/ภาพ/โลโก้) — กล่องนอกจับเวลา+ตำแหน่ง · กล่องใน (.ov-in) เคลื่อนไหว */
+      .ov { position: absolute; z-index: 10; transform: translate(-50%, -50%); pointer-events: none; }
+      .ov-in { display: block; will-change: transform, opacity; }
+      .ov-text .ov-in { font-weight: 900; line-height: 1.18; text-align: center; white-space: pre-wrap; max-width: 960px; }
+      .st-bold .ov-in { color: var(--c, #ffffff); -webkit-text-stroke: 12px #03102a; paint-order: stroke fill;
+        text-shadow: 0 8px 0 #03102a, 0 0 30px rgba(3, 16, 42, 0.85); }
+      .st-gold .ov-in { color: #ffc24a; -webkit-text-stroke: 12px #03102a; paint-order: stroke fill;
+        text-shadow: 0 8px 0 #03102a, 0 0 34px rgba(255, 194, 74, 0.45); }
+      .st-neon .ov-in { color: #f2fbff; text-shadow: 0 0 10px #59d2ff, 0 0 28px #1b8dff, 0 0 60px rgba(27, 141, 255, 0.85);
+        -webkit-text-stroke: 4px #03102a; paint-order: stroke fill; }
+      .st-box .ov-in { color: var(--c, #ffffff); background: rgba(3, 16, 42, 0.86); border: 4px solid #59d2ff;
+        border-radius: 28px; padding: 18px 34px 24px; box-shadow: 0 0 40px rgba(27, 141, 255, 0.45); }
+      /* ภาพทับ = กล่องพื้นหลังภาพ (ไม่ใช้ <img> — หายตอนเรนเดอร์จริงเมื่อแทร็กหลักเป็นรูปนิ่ง) */
+      .ov-pic { width: 100%; background-position: center; background-size: contain; background-repeat: no-repeat; }
+      .ov-img .ov-in { filter: drop-shadow(0 18px 30px rgba(0, 0, 0, 0.55)); }
+      .ov-logo .ov-in { opacity: 0.92; filter: drop-shadow(0 0 14px rgba(27, 141, 255, 0.6)); }
+      #fx-flash { position: absolute; inset: 0; z-index: 20; opacity: 0; pointer-events: none;
+        background: radial-gradient(circle at 50% 40%, rgba(235, 248, 255, 0.95), rgba(89, 210, 255, 0.55) 45%, rgba(27, 141, 255, 0) 80%); }
+      #captions-slot { position: absolute; inset: 0; z-index: 40; pointer-events: none; }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-duration="{{DURATION}}" data-width="1080" data-height="1920">
+      <div id="tl-bg" aria-hidden="true" data-layout-ignore></div>
+
+{{CLIPS}}
+
+{{OVERLAYS}}
+
+      <div id="fx-flash" aria-hidden="true" data-layout-ignore></div>
+
+{{CAPTIONS_SLOT}}
+
+{{AUDIO}}
+    </div>
+
+    <script>
+      (function () {
+        const DUR = {{DURATION}};
+        const TL = JSON.parse('{{TL_JSON}}');
+        const tl = gsap.timeline({ paused: true });
+
+        // ── แทร็กหลัก: ซูมคงที่ · รูปนิ่งซูมช้า (ken burns) · รอยตัด แสงวาบ/ซูมเข้า
+        TL.clips.forEach((c) => {
+          const sel = "#c-" + c.i;
+          const z = c.zoom || 1;
+          if (c.kind === "image" && c.motion === "zoomin") {
+            tl.fromTo(sel, { scale: z }, { scale: z * 1.08, duration: c.dur, ease: "sine.inOut", immediateRender: false }, c.start);
+          } else if (c.kind === "image" && c.motion === "zoomout") {
+            tl.fromTo(sel, { scale: z * 1.08 }, { scale: z, duration: c.dur, ease: "sine.inOut", immediateRender: false }, c.start);
+          } else {
+            tl.set(sel, { scale: z }, 0);
+          }
+          if (c.start > 0.01 && c.transition === "flash") {
+            tl.fromTo("#fx-flash", { opacity: 0 }, { opacity: 0.85, duration: 0.05, ease: "none", immediateRender: false }, c.start - 0.05);
+            tl.to("#fx-flash", { opacity: 0, duration: 0.3, ease: "power2.out" }, c.start);
+          } else if (c.start > 0.01 && c.transition === "zoom") {
+            tl.fromTo(sel, { scale: z * 1.14 }, { scale: z, duration: 0.38, ease: "power3.out", immediateRender: false }, c.start);
+          }
+        });
+
+        // ── ของทับ: เข้า (pop/slide/fade) · ออกจาง 0.2 วิสุดท้าย · ลอย (float) ระหว่างแสดง
+        TL.overlays.forEach((o) => {
+          const sel = "#o-" + o.i + " .ov-in";
+          const d = Math.max(0.3, o.end - o.start);
+          if (o.anim === "pop") {
+            tl.fromTo(sel, { scale: 0.55, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.34, ease: "back.out(2.2)", immediateRender: false }, o.start);
+          } else if (o.anim === "slide") {
+            tl.fromTo(sel, { y: 80, opacity: 0 }, { y: 0, opacity: 1, duration: 0.36, ease: "power3.out", immediateRender: false }, o.start);
+          } else if (o.anim === "fade") {
+            tl.fromTo(sel, { opacity: 0 }, { opacity: 1, duration: 0.4, ease: "none", immediateRender: false }, o.start);
+          }
+          if (o.anim === "float" || o.float) {
+            // จำนวนครึ่งรอบต้องเป็นเลขคู่ — จบที่ตำแหน่งเดิมพอดี (ไม่ค้างลอยตอนหาย)
+            const half = 0.9, n = Math.floor((d - 0.4) / half), h = n - (n % 2);
+            if (h >= 2) tl.fromTo(sel, { y: 0 }, { y: -14, duration: half, ease: "sine.inOut", yoyo: true, repeat: h - 1, immediateRender: false }, o.start + 0.2);
+          }
+          if (o.end < DUR - 0.05 && d > 0.6) {
+            tl.to(sel, { opacity: 0, duration: 0.2, ease: "power1.in" }, o.end - 0.2);
+          }
+        });
+
+        window.__timelines["main"] = tl;
+      })();
+    </script>
+  </body>
+</html>

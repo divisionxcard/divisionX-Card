@@ -207,7 +207,7 @@ jobs:
       # อุ่น npx cache ล่วงหน้า + พิมพ์ผลตรวจเครื่องลง log (ไม่ล้มงานถ้าตัวเสริมบางตัวไม่มี)
       # รุ่น CLI อ่านจาก package.json ของเทมเพลต — แก้รุ่นที่เดียว ไม่ต้องตามแก้ไฟล์นี้
       - name: Warm HyperFrames CLI
-        if: env.ENGINE == 'hyperframes'
+        if: env.ENGINE == 'hyperframes' || env.ENGINE == 'timeline'
         working-directory: hyperframes/templates/dvx-promo
         run: |
           V=$(node -p "require('./package.json').scripts.render.match(/hyperframes@([\d.]+)/)[1]")

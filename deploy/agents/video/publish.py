@@ -350,6 +350,7 @@ def main():
         # ── พื้นหลังตามเนื้อหา (23 ต.ค. 2026 · เจ้าของ: "สร้างตามแนวคอนเทนต์ ไม่ยึดแบบใดแบบหนึ่ง") ──
         #   คลิป Flow ที่ตรงค่าย (tasks/video_broll.json) ก่อน · ไม่มี → AI วาดฉากใหม่ · เก็บ URL ลงแผน เรนเดอร์ซ้ำไม่วาดใหม่
         #   ไม่มีคีย์/ล้ม = คลิปใช้ลายกราฟิกเดิม ไม่ทำให้งานล้ม
+        # งานห้องตัดต่อ (engine = timeline) คนจัดเองทั้งหมด — ไม่ผ่านผู้กำกับคลิป/ผู้กำกับภาพ
         if (plan.get("engine") or "").lower() == "hyperframes" and not (plan.get("bg_image") or plan.get("bg_video")):
             try:
                 from .hf_bg import ensure

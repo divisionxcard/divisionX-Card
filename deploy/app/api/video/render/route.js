@@ -23,6 +23,7 @@
 import { NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
 import { requireMarketing } from "../../../../lib/apiAuth"
+import { cleanTimeline } from "../../../../lib/videoTimeline"
 
 const db = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -55,6 +56,7 @@ const MAX_SCRIPT_CHARS = 4000
 const VOICES = ["Aoede", "Kore", "Puck", "Charon"]
 const STYLES = ["brand", "plain", "punch"]
 const ENGINES = ["classic", "hyperframes"]
+const TIMELINE_SCRIPT_PLACEHOLDER = "[ห้องตัดต่อ — ไม่มีเสียงพากย์]"
 // รูปแบบที่ผู้กำกับอัตโนมัติทำได้ — ต้องตรงกับ FORMATS ใน agents/video/hf_director.py (+ auto = ให้ระบบเลือกเอง)
 const AUTO_FORMATS = ["auto", "rank", "versus", "quiz", "map"]
 const AUTO_SCRIPT_PLACEHOLDER = "[ให้ระบบออกแบบ — ผู้กำกับเขียนสคริปต์จริงตอนเรนเดอร์]"
@@ -83,6 +85,23 @@ function validatePlan(raw) {
   if (!project) return { error: "ต้องระบุ project" }
   if (!PROJECT_RE.test(project)) {
     return { error: "project ใช้ได้แค่ a-z 0-9 - _ (พิมพ์เล็ก) ยาวไม่เกิน 64 ตัว ห้ามมี / หรือ .." }
+  }
+
+  // ── ห้องตัดต่อ (23 ต.ค. 2026) — ไทม์ไลน์ที่คนจัดเอง · สัญญา agents/video/TIMELINE.md ──
+  //   ตรวจ/ประกอบใหม่ทั้งก้อนใน lib/videoTimeline.cleanTimeline (รับเฉพาะไฟล์ใน Storage ของเรา/รูปซอง)
+  if (raw.engine === "timeline") {
+    const { timeline, error } = cleanTimeline(raw.timeline)
+    if (error) return { error }
+    const editId = typeof raw.edit_id === "string" && /^[a-z0-9-]{1,48}$/.test(raw.edit_id) ? raw.edit_id : null
+    return {
+      plan: {
+        project, engine: "timeline",
+        // ⚠️ CHECK ของตาราง video_jobs บังคับ plan.script ไม่ว่าง — ไม่มีเสียงพากย์ใช้ข้อความแทนที่
+        script: timeline.voice?.script || TIMELINE_SCRIPT_PLACEHOLDER,
+        timeline,
+        ...(editId ? { edit_id: editId } : {}),
+      },
+    }
   }
 
   // ── โหมด "ให้ระบบออกแบบ" (16 ต.ค. 2026) — ส่งมาแค่รูปแบบ ไม่มีสคริปต์ ──

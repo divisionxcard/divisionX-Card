@@ -88,6 +88,10 @@ def build_video(plan, out_mp4=None, skip_align=False):
     if (plan.get("engine") or "").lower() == "hyperframes":
         from . import hf_render
         return hf_render.build_video(plan, out_mp4)
+    # ห้องตัดต่อบนเว็บ (23 ต.ค. 2026) — ไทม์ไลน์ที่คนจัดเอง (คลิปที่อัปโหลด · ตัวหนังสือ · เสียงพากย์ · ของทับ) · TIMELINE.md
+    if (plan.get("engine") or "").lower() == "timeline":
+        from . import hf_timeline
+        return hf_timeline.build_video(plan, out_mp4)
 
     project = plan.get("project") or "clip"
     work = config.work_dir(project)
