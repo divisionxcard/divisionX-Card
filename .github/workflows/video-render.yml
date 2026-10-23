@@ -134,10 +134,15 @@ jobs:
       # compose.py กับ voice.py เรียก ffmpeg/ffprobe ผ่าน subprocess ตรง ๆ
       # config.ffmpeg_bin() หาใน PATH ก่อน (ทางที่ apt ลงให้) แล้วค่อยตกไปดู
       # โฟลเดอร์บนเครื่องวินโดวส์ — บน runner จึงต้องมีใน PATH เท่านั้น
+      # 23 ต.ค. 2026: apt ค้าง 25 นาที (ปกติ ~1 นาที · mirror ของ runner) กินเวลาจนเกือบชนเพดาน 45 นาทีของทั้งงาน
+      # → จำกัดเวลาต่อรอบ + ลองซ้ำ 3 รอบ · ลงไม่ได้ทั้งสามรอบ ffmpeg -version ล้ม = งานล้มเร็วพร้อมเหตุผล
       - name: Install ffmpeg
+        timeout-minutes: 15
         run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y ffmpeg
+          for i in 1 2 3; do
+            if timeout 180 sudo apt-get update -qq && timeout 300 sudo apt-get install -y ffmpeg; then break; fi
+            echo "apt รอบ $i ไม่สำเร็จ — ลองใหม่"; sleep 10
+          done
           ffmpeg -version | head -1
           ffprobe -version | head -1
 
