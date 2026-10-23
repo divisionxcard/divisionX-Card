@@ -63,6 +63,7 @@ HOT = {"gold": "#ffc24a", "cyan": "#59d2ff", "orange": "#ff9d2a"}
 QBASE = {"rank": (104, 128), "versus": (104, 128), "quiz": (104, 118), "map": (104, 124)}   # ขนาดหัวเรื่องปกติ (px)
 EXTEND = {"rank": 0.9, "versus": 0.9, "quiz": 1.2, "map": 1.0}   # วินาทีที่ฉากรูปแบบค้างเข้าบรรทัดถัดไป (write_project)
 MACHINE_PHOTOS = {"machine:hero": "machine-hero.jpg", "machine:scene": "machine-scene.jpg"}
+BLANK_IMG = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"   # ชั้น photo ที่ไม่ได้ใช้ (src ว่าง = ขอหน้าเดิมซ้ำ)
 
 
 def _log(step, msg):
@@ -215,7 +216,13 @@ def resolve_image(spec, proj, name):
         dst = proj / "assets" / f"{name}{src.suffix}"
         shutil.copyfile(src, dst)
         return f"assets/{dst.name}"
-    raise ValueError(f"ไม่รู้จักแหล่งรูป '{spec}' (ใช้ได้: sku:… · machine:hero|scene · file:… · assets/…)")
+    if spec.startswith("https://"):                           # ภาพที่สร้างไว้แล้วใน Storage (พื้นหลังจาก AI)
+        ext = pathlib.Path(urllib.parse.urlparse(spec).path).suffix or ".png"
+        dst = proj / "assets" / f"{name}{ext}"
+        with urllib.request.urlopen(spec, timeout=60) as r:
+            dst.write_bytes(r.read())
+        return f"assets/{dst.name}"
+    raise ValueError(f"ไม่รู้จักแหล่งรูป '{spec}' (ใช้ได้: sku:… · machine:hero|scene · file:… · https://… · assets/…)")
 
 
 # ── 4. ประกอบ index.html ────────────────────────────────────────────────────────
@@ -697,6 +704,7 @@ def write_project(proj, scenes, timing, chunks, words, total, voice_rel, look=No
     hot_css = HOT[look["hot"]]
     _log("3/4", "ชุดหน้าตา: พื้นหลัง {bg} · ฉากเปลี่ยน {cut} · หัวเรื่อง {ts} · สีเน้น {hot}".format(**look))
     out = (host.replace("{{DURATION}}", str(duration))
+               .replace("{{BG_PHOTO}}", html.escape(look.get("photo") or BLANK_IMG, quote=True))
                .replace("{{BG}}", look["bg"])
                .replace("{{CUT}}", look["cut"])
                .replace("{{CUTS}}", json.dumps(starts))
@@ -816,6 +824,14 @@ def build_video(plan, out_mp4=None, check=True):
     shutil.copyfile(wav, proj / "assets" / "voice.wav")
     # ชุดหน้าตา: แผนระบุมา (hf_director เลือกแบบเลี่ยงของที่เพิ่งใช้) หรือสุ่มตาม project · เก็บค่าจริงกลับลงแผน
     look = resolve_look(plan.get("look"), project)
+    # พื้นหลังภาพฉาก (23 ต.ค. 2026) — plan["bg_image"] = แหล่งรูปแบบเดียวกับรูปฉาก (file:… · assets/… · https://…)
+    # มีรูป = ลายพื้นหลังเป็น photo เสมอ (LOOK_SPACE ไม่มี photo ให้สุ่ม — ไม่มีรูปแล้วได้จอเปล่า)
+    if plan.get("bg_image"):
+        try:
+            look["photo"] = resolve_image(plan["bg_image"], proj, "bg-photo")
+            look["bg"] = "photo"
+        except Exception as e:
+            _log("3/4", f"⚠️ โหลดภาพพื้นหลังไม่ได้ ({str(e)[:80]}) — ใช้ลาย {look['bg']} แทน")
     plan["look"] = look
     (work / "look.json").write_text(json.dumps(look), encoding="utf-8")
     duration = write_project(proj, scenes, timing, chunks, words, total, "assets/voice.wav", look)

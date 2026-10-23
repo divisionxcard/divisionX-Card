@@ -12,6 +12,8 @@
 
   ชุดหน้าตา (look · 16 ต.ค. 2026 — เจ้าของ: "อยากให้ระบบออกแบบได้อิสระ ไม่จำเจ"):
     {{BG}}   ลายพื้นหลัง   grid ตาราง · dots จุดฮาล์ฟโทน · rays ลำแสงหมุน · speed เส้นสปีดแบบมังงะ
+                          · photo ภาพฉากจาก AI ({{BG_PHOTO}} · 23 ต.ค. 2026 — เจ้าของ: "ภาพยังไม่สวย อยากได้สมจริง/หลากหลาย")
+                            กล้องเคลื่อนช้า (ซูม+แพน) · ฝุ่นแสงลอยหน้าภาพ (เคลื่อนเร็วกว่า = มีมิติ) · แสงกวาด · ชั้นหรี่กลางจอให้อ่านกระดานออก
     {{CUT}}  ฉากเปลี่ยน     bolt สายฟ้า · flash แสงวาบ+วงคลื่น · glitch แถบสัญญาณกระตุก · wipe แถบนีออนกวาด
     ts-*     หัวเรื่อง       stroke ขอบหนา (เดิม) · chrome โครเมียม · neon นีออน — คลาสอยู่ที่ slot ของแต่ละฉาก
     --hot    สีเน้น         ตั้งที่ slot (คำถามบรรทัด 2 + คำเด็ดในซับ) — ฉากย่อยอยู่ใน DOM เดียวกัน CSS/ตัวแปรจึงไหลถึง
@@ -56,6 +58,20 @@
         background: repeating-conic-gradient(from 0deg, rgba(232, 247, 255, 0.17) 0deg 0.9deg, rgba(3, 16, 42, 0) 0.9deg 5.2deg);
         -webkit-mask-image: radial-gradient(circle, rgba(0, 0, 0, 0) 17%, rgba(0, 0, 0, 0.85) 42%, rgba(0, 0, 0, 1) 60%);
       }
+      /* ── พื้นหลังภาพฉาก (photo) — ภาพเต็มจอ + ชั้นหรี่ + ฝุ่นแสง + แสงกวาด · ลายกราฟิก/ตัวหนังสือจาง/วงเรืองปิดหมด */
+      #bg[data-bg="photo"] .bgv-photo { display: block; }
+      #bg[data-bg="photo"] .bg-glow, #bg[data-bg="photo"] #bg-ghost { display: none; }
+      #bg-photo { inset: 0; overflow: hidden; }
+      #bg-photo-img { position: absolute; left: -60px; top: -100px; width: 1200px; height: 2120px; object-fit: cover; will-change: transform; }
+      /* หรี่กลางจอ (กระดาน/ซองอยู่ตรงนั้น) + ขอบมืด — ภาพยังเห็นชัดที่ขอบบน/ล่าง */
+      #bg-photo-scrim { position: absolute; inset: 0;
+        background:
+          radial-gradient(ellipse 78% 46% at 50% 47%, rgba(3, 16, 42, 0.62), rgba(3, 16, 42, 0.18) 72%, rgba(3, 16, 42, 0) 100%),
+          linear-gradient(180deg, rgba(3, 16, 42, 0.35) 0%, rgba(3, 16, 42, 0) 22%, rgba(3, 16, 42, 0) 70%, rgba(3, 16, 42, 0.7) 100%); }
+      #bg-photo-sweep { position: absolute; left: -900px; top: -400px; width: 700px; height: 2800px; opacity: 0; mix-blend-mode: screen;
+        background: linear-gradient(90deg, rgba(89, 210, 255, 0), rgba(190, 236, 255, 0.22) 50%, rgba(89, 210, 255, 0)); will-change: transform, opacity; }
+      .bg-mote { position: absolute; border-radius: 50%; background: radial-gradient(circle, rgba(232, 247, 255, 0.95), rgba(89, 210, 255, 0.35) 45%, rgba(89, 210, 255, 0) 70%);
+        mix-blend-mode: screen; will-change: transform, opacity; }
       #bg-ghost {
         position: absolute; left: -40px; top: 700px; width: 2400px;
         font-weight: 900; font-size: 330px; line-height: 1; letter-spacing: 0.04em;
@@ -121,6 +137,12 @@
         <div id="bg-rays" class="bgv bgv-rays" aria-hidden="true" data-layout-ignore></div>
         <div id="bg-speed" class="bgv bgv-speed" aria-hidden="true" data-layout-ignore></div>
         <div data-hf-id="hf-5sl0" id="bg-ghost" aria-hidden="true" data-layout-ignore></div>
+        <div id="bg-photo" class="bgv bgv-photo" aria-hidden="true" data-layout-ignore>
+          <img id="bg-photo-img" src="{{BG_PHOTO}}" alt="" />
+          <div id="bg-photo-scrim"></div>
+          <div id="bg-photo-sweep"></div>
+          <div id="bg-motes"></div>
+        </div>
       </div>
 
 {{SCENES}}
@@ -164,6 +186,35 @@
         if (BG === "grid") tl.fromTo("#bg-grid", { y: 0 }, { y: 120, duration: DUR, ease: "none" }, 0);
         if (BG === "dots") tl.fromTo("#bg-dots", { x: 0, y: 0 }, { x: -44, y: 88, duration: DUR, ease: "none" }, 0);
         if (BG === "rays") tl.fromTo("#bg-rays", { rotation: 0 }, { rotation: 24, duration: DUR, ease: "none" }, 0);
+        if (BG === "photo") {
+          // กล้อง: ซูมเข้าช้า ๆ ตลอดคลิป + แพนทแยงเล็กน้อย (ภาพกว้างกว่าจอ 120 px สูงกว่า 200 px — ขยับได้โดยขอบไม่โผล่)
+          tl.fromTo("#bg-photo-img", { scale: 1.0, x: 30, y: 40, transformOrigin: "50% 45%" },
+            { scale: 1.1, x: -30, y: -40, duration: DUR, ease: "sine.inOut" }, 0);
+          // ฝุ่นแสง: ตำแหน่ง/ขนาด/ความเร็วสุ่มแบบมี seed · ลอยขึ้นและเลื่อนข้าง เร็วกว่าภาพหลัง = ชั้นหน้า (มีมิติ)
+          const box = document.getElementById("bg-motes");
+          for (let i = 0; i < 26; i++) {
+            const el = document.createElement("div");
+            el.className = "bg-mote";
+            const sz = 6 + prand(i * 3 + 1) * 22;
+            el.style.width = el.style.height = sz.toFixed(1) + "px";
+            el.style.left = (prand(i * 3 + 2) * 1080).toFixed(0) + "px";
+            el.style.top = (200 + prand(i * 3 + 3) * 1700).toFixed(0) + "px";
+            box.appendChild(el);
+            const rise = 180 + prand(i + 40) * 420, drift = (prand(i + 70) - 0.5) * 160;
+            tl.fromTo(el, { x: 0, y: 0, opacity: 0 }, { x: drift, y: -rise, opacity: 0, duration: DUR, ease: "none" }, 0);
+            const pk = 0.25 + prand(i + 90) * 0.6, ph = prand(i + 110) * 2.4;
+            const cyc = 2.4 + prand(i + 130) * 1.8;
+            for (let t = ph; t + cyc <= DUR; t += cyc) {
+              tl.to(el, { opacity: pk, duration: cyc * 0.5, ease: "sine.inOut" }, t);
+              tl.to(el, { opacity: 0.05, duration: cyc * 0.5, ease: "sine.inOut" }, t + cyc * 0.5);
+            }
+          }
+          // แสงกวาดทแยงทุก ~5.5 วิ (จบก่อนท้ายคลิป)
+          for (let t = 1.2; t + 1.6 <= DUR; t += 5.5) {
+            tl.fromTo("#bg-photo-sweep", { x: 0, rotation: 14, opacity: 0.9 }, { x: 2300, rotation: 14, opacity: 0.9, duration: 1.6, ease: "power1.inOut", immediateRender: false }, t);
+            tl.set("#bg-photo-sweep", { opacity: 0 }, t + 1.6);
+          }
+        }
         if (BG === "speed") {
           // เส้นสปีดกระตุกเป็นจังหวะ (stepped) แบบหน้าการ์ตูน — หมุนทีละนิดทุก 0.12 วิ
           const n = Math.max(1, Math.floor(DUR / 0.12));
