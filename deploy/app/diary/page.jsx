@@ -1,5 +1,6 @@
 "use client"
 // /diary — ไดอารี่งาน DivisionX บนเว็บของเราเอง (24 ต.ค. 2026 · เจ้าของ: "ทำให้ดูได้โดยไม่ต้องผ่าน claude.ai")
+// เปิดได้เฉพาะบัญชีเจ้าของ (ด่านจริงอยู่ที่ /api/diary · หน้านี้แค่บอกผลให้คนอ่านเข้าใจ)
 // หน้าตา/ข้อมูลชุดเดียวกับ Artifact เดิม (scripts/diary/diary.html) · ข้อมูลมาจาก /api/diary (คลัง R2 · เฉพาะแอดมิน)
 // ติ๊กข้อค้างที่นี่ = บันทึกลง R2 · Claude รวมติ๊กจากหน้านี้กับหน้า claude.ai ทุกต้น session (scripts/diary/sync_r2.py)
 import { useCallback, useEffect, useMemo, useState } from "react"
@@ -50,7 +51,7 @@ function Login({ onDone }) {
   return (
     <form className="empty login" onSubmit={submit}>
       <h2>เข้าสู่ระบบก่อนเปิดสมุด</h2>
-      <p>ใช้ชื่อผู้ใช้และรหัสผ่านเดียวกับเว็บหลังบ้าน · เปิดได้เฉพาะบัญชีแอดมิน</p>
+      <p>ใช้ชื่อผู้ใช้และรหัสผ่านเดียวกับเว็บหลังบ้าน · เปิดได้เฉพาะบัญชีเจ้าของ</p>
       <input className="search" autoComplete="username" placeholder="ชื่อผู้ใช้" value={u} onChange={(e) => setU(e.target.value)} />
       <input className="search" type="password" autoComplete="current-password" placeholder="รหัสผ่าน" value={pw} onChange={(e) => setPw(e.target.value)} />
       <button className="go" type="submit" disabled={busy || !u || !pw}>{busy ? "กำลังเข้า…" : "เปิดสมุด"}</button>
@@ -139,7 +140,10 @@ export default function DiaryPage() {
   } else if (auth === "anon") {
     main = <Login onDone={check} />
   } else if (auth === "forbidden") {
-    main = <div className="empty"><h2>หน้านี้เปิดได้เฉพาะแอดมิน</h2><p>บัญชีที่ล็อกอินอยู่ไม่มีสิทธิ์เปิดสมุดเล่มนี้</p></div>
+    main = (
+      <div className="empty"><h2>หน้านี้เปิดได้เฉพาะบัญชีเจ้าของ</h2><p>บัญชีที่ล็อกอินอยู่ไม่มีสิทธิ์เปิดสมุดเล่มนี้</p>
+        <button className="go" type="button" onClick={async () => { try { await supabase.auth.signOut({ scope: "local" }) } catch {} setAuth("anon") }}>เข้าด้วยบัญชีอื่น</button>
+      </div>)
   } else if (!days.length) {
     main = <div className="empty"><h2>ยังไม่มีบันทึก</h2><p className={err ? "err" : ""}>{err || "หน้าของแต่ละวันจะขึ้นที่นี่หลังจบงาน — Claude เป็นคนเพิ่มให้จากสรุปประจำวันใน wiki/daily"}</p></div>
   } else {
@@ -219,7 +223,7 @@ export default function DiaryPage() {
         <header className="top">
           <span className="lock">
             <svg viewBox="0 0 16 16" aria-hidden="true"><rect x="3" y="7" width="10" height="7" rx="1.5" fill="none" stroke="currentColor" strokeWidth="1.5" /><path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2" fill="none" stroke="currentColor" strokeWidth="1.5" /></svg>
-            <span>ส่วนตัว · เปิดได้เฉพาะแอดมิน</span>
+            <span>ส่วนตัว · เปิดได้เฉพาะเจ้าของ</span>
           </span>
           <h1>ไดอารี่งาน <span className="spark">DivisionX</span></h1>
           <p className="lede">เรื่องราวการทำงานแต่ละวันของ DivisionX Card — วันนั้นเปลี่ยนอะไร ทำไม ตัดสินใจอะไร และอะไรยังค้าง</p>

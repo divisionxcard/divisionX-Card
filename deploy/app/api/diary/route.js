@@ -6,7 +6,9 @@
 // เจ้าของขอเปิดดูได้โดยไม่ต้องผ่าน claude.ai — หน้าเดิมเป็น Artifact บน claude.ai (ArtifactData คอลเลกชัน days)
 // ตัวจริงของแต่ละวันอยู่ scripts/diary/days/<date>.json ในรีโป · ส่งขึ้นที่นี่ด้วย scripts/diary/sync_r2.py
 // (รวมติ๊กจากทั้งสองที่แบบ "ติ๊กที่ไหนก็นับ") · เก็บในคลัง R2 diary/days/ ซึ่งหน้า /media ไม่เปิดให้ (PRIVATE_PREFIXES)
-// เฉพาะแอดมิน — ไม่ใช่ข้อมูลลับ (ไฟล์ต้นฉบับอยู่ในรีโปสาธารณะ ซึ่งห้ามมียอดขาย/อีเมล/คีย์อยู่แล้ว) แต่เป็นสมุดส่วนตัวของเจ้าของ
+// เฉพาะบัญชีเจ้าของ (เจ้าของสั่ง 24 ต.ค. 2026: เปิดได้เฉพาะบัญชี "DivisionX Card" = ชื่อผู้ใช้ divisionxcard)
+//   ล็อกด้วยรหัสบัญชี ไม่ใช่ชื่อ (ชื่อแสดงแก้ได้) · เพิ่มบัญชีอื่นได้ทาง env DIARY_OWNER_IDS (คั่นจุลภาค)
+// ไม่ใช่ข้อมูลลับ (ไฟล์ต้นฉบับอยู่ในรีโปสาธารณะ ซึ่งห้ามมียอดขาย/อีเมล/คีย์อยู่แล้ว) แต่เป็นสมุดส่วนตัวของเจ้าของ
 import { NextResponse } from "next/server"
 import { requireAdmin } from "../../../lib/apiAuth"
 import { getObject, listObjects, putObject } from "../../../lib/r2"
@@ -14,6 +16,14 @@ import { getObject, listObjects, putObject } from "../../../lib/r2"
 export const dynamic = "force-dynamic"
 
 const DIR = "diary/days/"
+const OWNER_IDS = (process.env.DIARY_OWNER_IDS || "8aa9bab8-d92f-4d80-9871-5159b0fd618f").split(",").map(s => s.trim()).filter(Boolean)
+
+async function requireOwner(req) {
+  const gate = await requireAdmin(req)
+  if (gate.error) return gate
+  if (!OWNER_IDS.includes(gate.user.id)) return { error: NextResponse.json({ error: "owner_only" }, { status: 403 }) }
+  return gate
+}
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/
 
 async function readDay(date) {
@@ -23,7 +33,7 @@ async function readDay(date) {
 }
 
 export async function GET(req) {
-  const gate = await requireAdmin(req)
+  const gate = await requireOwner(req)
   if (gate.error) return gate.error
   try {
     const keys = (await listObjects(DIR, 2000)).map(f => f.key).filter(k => DATE_RE.test(k.slice(DIR.length, -5)))
@@ -41,7 +51,7 @@ export async function GET(req) {
 }
 
 export async function PATCH(req) {
-  const gate = await requireAdmin(req)
+  const gate = await requireOwner(req)
   if (gate.error) return gate.error
   let body
   try { body = await req.json() } catch { return NextResponse.json({ error: "bad json" }, { status: 400 }) }
