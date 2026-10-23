@@ -104,6 +104,9 @@ IDEA_ANGLES = ROOT / "deploy" / "agents" / "idea_angles.py"
 SOCIAL_WATCH = ROOT / "deploy" / "agents" / "social_watch.py"
 # รายงานบทเรียนรายสัปดาห์จากคลังของตัวเฝ้าเพจ — เรียกทุกรอบ ตัวสคริปต์เงียบเองถ้าสัปดาห์นี้ส่งไปแล้ว
 SOCIAL_INSIGHT = ROOT / "deploy" / "agents" / "social_insight.py"
+# อ่านต้นฉบับก่อนคิดมุม (23 ต.ค. 2026) — ถอดคำบรรยายคลิป YouTube → summary 📌 + มุมที่อิงเนื้อหาจริง
+# เจ้าของ: AI เขียนโดยไม่อ้างอิงต้นฉบับ (#69 คลิปล้อโฆษณาในเกม → โพสต์กติกาสลับเบนช์) · ต้องมี yt-dlp (~/.agent-reach-venv)
+SOURCE_NOTES = ROOT / "deploy" / "agents" / "source_notes.py"
 
 BTN_STOCK = "🔄 ซิงค์สต็อกหน้าตู้"
 BTN_ALL = "📊 ซิงค์ทั้งหมด (ยอดขาย+สต็อก)"
@@ -1018,6 +1021,11 @@ def run_ideas(manual=False):
             if s is None or s.returncode != 0:
                 soc_note = ("\n⚠️ เฝ้าเพจโซเชียลไม่สำเร็จ — ไอเดียจากแหล่งอื่นเข้าครบ · "
                             + _esc((s_err if s is None else (s.stderr or "").strip()[-300:]) or "ไม่มีรายละเอียด"))
+            # อ่านต้นฉบับก่อนคิดมุม — มุมจะอิงเนื้อหาจริง ไม่เดาจากชื่อคลิป · ล้มไม่นับว่ารอบนี้ล้ม (ตัวคิดมุมยังทำงานต่อ)
+            n, n_err = _run_py(SOURCE_NOTES, ["--pending", "--limit", "15"], timeout=1500)
+            if n is None or n.returncode != 0:
+                soc_note += ("\n⚠️ อ่านต้นฉบับคลิปไม่สำเร็จ — มุมของคลิปรอบนี้คิดจากชื่ออย่างเดียว · "
+                             + _esc((n_err if n is None else (n.stderr or "").strip()[-200:]) or "ไม่มีรายละเอียด"))
             a, a_err = _run_py(IDEA_ANGLES, ["--limit", IDEAS_ANGLE_LIMIT], timeout=2700)
             if a is None or a.returncode != 0:
                 ang_note = "\n⚠️ ขั้นคิดมุมไม่สำเร็จ — ไอเดียยังอยู่ครบ ใช้มุมจาก template ไปก่อน"

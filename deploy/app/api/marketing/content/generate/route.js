@@ -194,6 +194,27 @@ function readFormatLine(text, voice, fallback) {
   return { format: hit || fallback, text: raw.replace(m[0], "") }
 }
 
+// ── ต้นฉบับของไอเดีย (deploy/agents/source_notes.py · 23 ต.ค. 2026) ──
+// เจ้าของ: "เอไอเขียนคอนเทนต์ออกมาไม่ได้อ้างอิงจากข้อมูลแหล่งต้นฉบับ … ระบบรวบรวมข้อมูลจากโซเชียลไม่มีประโยชน์"
+// #69 มาจากคลิป "Scammer ในโลกโปเกมอน ภาค 1" แต่โพสต์พูดเรื่องสลับเบนช์ — เพราะ (1) ไม่เคยมีเนื้อหาคลิป
+// (summary = ลิงก์สมัครสมาชิกใต้คลิป) (2) มุมที่เจ้าของเลือกไม่ถูกส่งมาที่นี่เลย (3) ได้คลังกติกาโปเกมอนแนบไป
+// source_notes.py ถอดคำบรรยายแล้วเขียน summary ขึ้นต้นด้วยเครื่องหมายสองแบบนี้
+const SRC_OK = "📌 จากต้นฉบับ"
+const SRC_NONE = "⚠️ ยังไม่รู้เนื้อหาจริงของต้นฉบับ"
+function sourceOf(idea) {
+  const notes = String(idea?.summary || "")
+  const angles = Array.isArray(idea?.angles) ? idea.angles : []
+  // มุมที่เลือกใช้ได้เฉพาะเมื่อยังอยู่ในรายการมุมปัจจุบัน — มุมเก่าที่คิดจากชื่อคลิปอย่างเดียวถูกแทนแล้ว
+  const chosen = idea?.chosen_angle ? angles.find(a => a?.label === idea.chosen_angle) || null : null
+  return {
+    grounded: notes.startsWith(SRC_OK),
+    unknown: notes.startsWith(SRC_NONE),
+    offCards: notes.startsWith(SRC_OK) && notes.includes("ไม่ได้พูดเรื่องการ์ดโดยตรง"),
+    notes, chosen,
+    credit: String(idea?.source_label || "ต้นฉบับ").replace(/^(YouTube|Facebook|TikTok|Instagram)\s*·\s*/i, ""),
+  }
+}
+
 function buildPrompt(voice, idea, content, sku, recent = [], format = null, craft = null, knowledge = "", altFormat = null) {
   // รูปแบบที่กำหนดความยาวเอง (เช่น "ส่อง 5 ใบเด็ด") ต้องไม่โดนกฎกลาง "3-6 บรรทัด/ตามเนื้อหา" ทับ
   // ไม่งั้นโมเดลได้สองคำสั่งขัดกัน แล้วตัดเนื้อ 5 อันดับทิ้งเหลือ 3 บรรทัด
@@ -249,13 +270,20 @@ ${rules}
 ${overclaimPart}${craftPart}${example}
 ตอบกลับเป็น "ตัวแคปชั่นล้วน ๆ" เท่านั้น ห้ามมีคำอธิบาย ห้ามมีหัวข้อ ห้ามครอบด้วยเครื่องหมายคำพูด`
 
+  const src = sourceOf(idea)
   const facts = [
-    `หัวข้อ/ที่มา: ${idea?.title || content.source_reason || "-"}`,
+    `หัวข้อ/ที่มา: ${idea?.title || content.source_reason || "-"}${idea?.source_label ? ` (${idea.source_label})` : ""}`,
+    src.chosen ? `มุมที่เจ้าของเลือก — เขียนตามมุมนี้: ${src.chosen.label} — ${src.chosen.brief}` : null,
     // angle จากตัวเก็บไอเดียเป็น template ซ้ำ ๆ (ข่าว One Piece 8 ชิ้นได้ข้อความเดียวกัน)
     // ใส่ไว้เป็นบริบทได้ แต่ต้องบอกชัดว่าห้ามลอก ไม่งั้นโมเดลจะคายมันกลับมาเป็นแคปชั่น
     // (เกิดจริงกับ #13 — แคปชั่นที่บันทึกไว้คือข้อความ angle เป๊ะ ๆ)
-    idea?.angle ? `ทิศทางคร่าว ๆ (เป็นแค่บริบท ห้ามลอกข้อความนี้ไปใช้): ${idea.angle}` : null,
-    cleanSummary(idea?.summary) ? `รายละเอียดเพิ่ม: ${cleanSummary(idea.summary)}` : null,
+    // ⚠️ เลน YouTube เดิมเขียน "(ห้ามสรุปเนื้อหาของเขา)" → ตัดทิ้ง เจ้าของต้องการให้อิงต้นฉบับ (23 ต.ค.)
+    !src.chosen && !src.grounded && idea?.angle
+      ? `ทิศทางคร่าว ๆ (เป็นแค่บริบท ห้ามลอกข้อความนี้ไปใช้): ${idea.angle.replace(/\s*\(ห้ามสรุปเนื้อหาของเขา\)/, "")}`
+      : null,
+    src.grounded
+      ? `เนื้อหาจริงจากต้นฉบับ (ถอดจากคลิป — ข้อเท็จจริงหลักของโพสต์นี้):\n${src.notes}`
+      : !src.unknown && cleanSummary(idea?.summary) ? `รายละเอียดเพิ่ม (จากต้นฉบับ): ${cleanSummary(idea.summary)}` : null,
     sku ? `สินค้าที่โยงถึง: ${sku.name} (${sku.sku_id})` : null,
     `แพลตฟอร์ม: ${content.platform === "line" ? "LINE OA" : "Facebook เพจ"}`,
   ].filter(Boolean).join("\n")
@@ -313,10 +341,25 @@ ${overclaimPart}${craftPart}${example}
   // ข้อมูลอ้างอิงจากเว็บทางการ — อยู่ใน user ไม่ใช่ system เพราะเป็น "ข้อมูลของงานชิ้นนี้"
   // ไม่ใช่ตัวตนของคนเขียน · วางท้าย ๆ เพราะโมเดลให้น้ำหนักกับสิ่งที่อยู่ท้ายมากกว่า
   // แต่ยังต้องอยู่ก่อนคำสั่งภาษา ไม่งั้นคำสั่งสุดท้ายจะถูกกลบ
+  const ground = src.grounded
+    ? `\nกติกาอ้างอิงต้นฉบับ (สำคัญที่สุด):\n` +
+      `- เรื่องของโพสต์ต้องตรงกับ "เนื้อหาจริงจากต้นฉบับ"${src.chosen ? " และมุมที่เจ้าของเลือก" : ""} — ห้ามเปลี่ยนไปเล่าเรื่องอื่น\n` +
+      `- ข้อเท็จจริงเกี่ยวกับเรื่องนี้ต้องมาจากต้นฉบับข้างบนเท่านั้น ห้ามเติมรายละเอียดที่ต้นฉบับไม่ได้พูด\n` +
+      // ทดสอบ #69 (23 ต.ค.): ต้นฉบับบอกโพชั่น "ฮีลเท่าเดิม" แต่โพสต์เขียน "ฮีลแรงขึ้นหลายเท่า" — มุกของคลิปกลับด้านหมด
+      `- ตัวเลข ราคา สรรพคุณ และ "มุก" ของเรื่อง ต้องตรงตามต้นฉบับทุกคำ — ถ้าไม่แน่ใจ ให้ตัดรายละเอียดนั้นทิ้ง อย่าเดา\n` +
+      `- เล่าใหม่ด้วยภาษาของเรา ห้ามลอกประโยค · ใส่เครดิต 1 บรรทัด เช่น "ไอเดียจากคลิปของ ${src.credit}" (ไม่ต้องใส่ลิงก์)\n` +
+      (src.offCards
+        ? `- ต้นฉบับไม่ได้พูดเรื่องการ์ด — ห้ามบิดเนื้อหาให้กลายเป็นความรู้/กติกาการ์ด · โยงเข้าซองที่ตู้ได้แค่ช่วงท้าย\n`
+        : `- ข้อมูลอ้างอิงด้านล่าง (ถ้ามี) ใช้เสริมได้เฉพาะส่วนที่เกี่ยวกับเรื่องนี้\n`)
+    : src.unknown
+    ? `\n⚠️ ยังไม่รู้เนื้อหาจริงของต้นฉบับ (ดึงคำบรรยายไม่ได้) — ห้ามเดาเนื้อหาจากชื่อ · ห้ามอ้างว่าต้นฉบับพูดอะไร\n` +
+      `เขียนเป็นโพสต์ชวนคุยจากหัวข้อ หรือใช้ข้อมูลอ้างอิงด้านล่างเท่านั้น\n`
+    : ""
+
   const user = `เขียนแคปชั่น 1 ชิ้นจากข้อมูลนี้:
 
 ${facts}
-${fmt}${avoid}
+${ground}${fmt}${avoid}
 อย่าลอกหัวข้อข่าวมาตรง ๆ ให้เอาแก่นของเรื่องมาเล่าใหม่ในมุมของตู้ DivisionX
 ${knowledge}${check}
 ⚠️ เขียนเป็นภาษาไทยเท่านั้น`
@@ -629,7 +672,7 @@ export async function POST(req) {
 
   try {
     const { data: content, error: e0 } = await db.from("marketing_content")
-      .select("*, idea:marketing_ideas!marketing_content_idea_id_fkey(id,title,angle,summary,url,related_sku)")
+      .select("*, idea:marketing_ideas!marketing_content_idea_id_fkey(id,title,angle,summary,url,related_sku,chosen_angle,angles,source,source_label)")
       .eq("id", id).maybeSingle()
     if (e0) throw e0
     if (!content) return NextResponse.json({ error: `ไม่พบรายการ id=${id}` }, { status: 404 })
@@ -737,7 +780,9 @@ export async function POST(req) {
       }
     }
 
-    const knowledge = top5 ? top5Knowledge(top5) : await buildKnowledge([format, formatAlt])
+    // ต้นฉบับไม่ได้พูดเรื่องการ์ด (เช่นคลิปล้อเกม) → ไม่แนบคลังกติกา/การ์ด · #69 ได้คลังกติกาแล้วเขียนเรื่องสลับเบนช์
+    const offCards = sourceOf(idea).offCards
+    const knowledge = top5 ? top5Knowledge(top5) : offCards ? "" : await buildKnowledge([format, formatAlt])
 
     // รายการสินค้าจริงทั้งหมด — กันตัวเขียนแต่งสินค้าที่เราไม่มีขึ้นมาเปรียบเทียบ
     // (เคสจริง: แคปชั่นโปเกมอนพูดถึง "ซองคอลเลกชันคลาสสิก" ทั้งที่เรามีแต่ชุดใหม่ 3 ชุด)
@@ -867,7 +912,7 @@ export async function POST(req) {
       // ⚠️ ต้องสร้างคลังใหม่ตามรูปแบบของรอบนี้ ไม่ใช่ใช้ก้อนของรอบแรก
       //    รอบนี้เป็นคนละคู่รูปแบบ ถ้าได้ card_care/card_deep มาแล้วคลังไม่ตาม
       //    โมเดลจะถูกสั่งให้เล่าเรื่องที่ไม่มีข้อมูลรองรับ แล้วมันจะแต่งเอา
-      const knowledge2 = top5 ? knowledge : await buildKnowledge([altFormat, altFormat2])
+      const knowledge2 = top5 ? knowledge : offCards ? "" : await buildKnowledge([altFormat, altFormat2])
       const harder = buildPrompt(voice, idea, content, sku, recent, altFormat, craft,
                                  catalogue + knowledge2, altFormat2)
       harder.user +=
