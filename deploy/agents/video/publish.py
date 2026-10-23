@@ -347,6 +347,19 @@ def main():
             plan["look"] = Director(job_id, history(exclude_id=job_id)).look()
             save_plan(job_id, plan)
 
+        # ── พื้นหลังตามเนื้อหา (23 ต.ค. 2026 · เจ้าของ: "สร้างตามแนวคอนเทนต์ ไม่ยึดแบบใดแบบหนึ่ง") ──
+        #   คลิป Flow ที่ตรงค่าย (tasks/video_broll.json) ก่อน · ไม่มี → AI วาดฉากใหม่ · เก็บ URL ลงแผน เรนเดอร์ซ้ำไม่วาดใหม่
+        #   ไม่มีคีย์/ล้ม = คลิปใช้ลายกราฟิกเดิม ไม่ทำให้งานล้ม
+        if (plan.get("engine") or "").lower() == "hyperframes" and not (plan.get("bg_image") or plan.get("bg_video")):
+            try:
+                from .hf_bg import ensure
+                from .hf_director import history
+                ensure(plan, seed=job_id, hist=history(exclude_id=job_id))
+                if plan.get("bg_image") or plan.get("bg_video"):
+                    save_plan(job_id, plan)
+            except Exception as e:
+                print(f"[publish] ⚠️ พื้นหลังตามเนื้อหาไม่สำเร็จ ({str(e)[:120]}) — ใช้ลายกราฟิกเดิม")
+
         t0 = time.time()
         mp4, duration = build_video(plan, skip_align=a.no_align)
         print(f"[publish] เรนเดอร์เสร็จ {mp4} · ยาว {duration:.1f} วินาที "

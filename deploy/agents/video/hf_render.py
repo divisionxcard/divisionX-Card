@@ -225,6 +225,57 @@ def resolve_image(spec, proj, name):
     raise ValueError(f"ไม่รู้จักแหล่งรูป '{spec}' (ใช้ได้: sku:… · machine:hero|scene · file:… · https://… · assets/…)")
 
 
+def _media_seconds(path):
+    out = subprocess.run([config.ffmpeg_bin("ffprobe"), "-v", "error", "-show_entries", "format=duration",
+                          "-of", "csv=p=0", str(path)], capture_output=True, text=True).stdout.strip()
+    return float(out or 0)
+
+
+def _scrim(path):
+    """ความหรี่กลางจอตามความสว่างของภาพ (0.62 ภาพมืด → 0.82 ภาพสว่างจ้า)
+
+    23 ต.ค. 2026: ฉากโปเกมอน (ฟ้าใส ทุ่งหญ้า) สว่างกว่าฉากทะเลยามเย็นมาก — หรี่เท่ากัน ตัวหนังสือกลางจอจมได้
+    """
+    try:
+        from PIL import Image, ImageStat
+        if str(path).lower().endswith((".mp4", ".mov", ".webm", ".m4v")):
+            import io as _io
+            raw = subprocess.run([config.ffmpeg_bin(), "-v", "error", "-ss", "1", "-i", str(path), "-frames:v", "1",
+                                  "-f", "image2pipe", "-vcodec", "png", "-"], capture_output=True).stdout
+            im = Image.open(_io.BytesIO(raw))
+        else:
+            im = Image.open(path)
+        im = im.convert("L")
+        w, h = im.size
+        lum = ImageStat.Stat(im.crop((int(w * 0.12), int(h * 0.25), int(w * 0.88), int(h * 0.7)))).mean[0] / 255
+    except Exception:
+        return 0.62
+    return round(min(0.82, max(0.62, 0.62 + (lum - 0.32) * 0.75)), 2)
+
+
+def _bg_video_tags(videos, starts, ends):
+    """<video> พื้นหลังต่อฉาก — คลิปที่ i%n · สั้นกว่าฉาก = ช้าลง (ไม่ต่ำกว่า 0.5x) แล้ววนซ้ำ · เงียบ (เสียงพากย์คือเสียงหลัก)"""
+    if not videos:
+        return ""
+    tags, k = [], 0
+    for i, (lo, hi) in enumerate(zip(starts, ends)):
+        src, secs = videos[i % len(videos)]
+        seg = hi - lo
+        if seg <= 0.05 or secs <= 0.2:
+            continue
+        rate = 1.0 if secs >= seg else max(0.5, round(secs / seg, 3))
+        span = secs / rate
+        t = lo
+        while t < hi - 0.02:
+            d = min(span, hi - t)
+            tags.append(f'            <video id="bgv-{k}" src="{html.escape(src, quote=True)}" muted playsinline '
+                        f'data-start="{round(t, 3)}" data-duration="{round(d, 3)}" data-track-index="5" '
+                        f'data-playback-rate="{rate}"></video>')
+            k += 1
+            t += d
+    return "\n".join(tags)
+
+
 # ── 4. ประกอบ index.html ────────────────────────────────────────────────────────
 
 def gloss_box(img_path, inset=2.0):
@@ -704,7 +755,9 @@ def write_project(proj, scenes, timing, chunks, words, total, voice_rel, look=No
     hot_css = HOT[look["hot"]]
     _log("3/4", "ชุดหน้าตา: พื้นหลัง {bg} · ฉากเปลี่ยน {cut} · หัวเรื่อง {ts} · สีเน้น {hot}".format(**look))
     out = (host.replace("{{DURATION}}", str(duration))
-               .replace("{{BG_PHOTO}}", html.escape(look.get("photo") or BLANK_IMG, quote=True))
+               .replace("{{BG_PHOTO}}", html.escape(BLANK_IMG if look.get("videos") else (look.get("photo") or BLANK_IMG), quote=True))
+               .replace("{{BG_SCRIM}}", str(look.get("scrim", 0.62)))
+               .replace("{{BG_VIDEOS}}", _bg_video_tags(look.get("videos") or [], starts, ends))
                .replace("{{BG}}", look["bg"])
                .replace("{{CUT}}", look["cut"])
                .replace("{{CUTS}}", json.dumps(starts))
@@ -826,10 +879,23 @@ def build_video(plan, out_mp4=None, check=True):
     look = resolve_look(plan.get("look"), project)
     # พื้นหลังภาพฉาก (23 ต.ค. 2026) — plan["bg_image"] = แหล่งรูปแบบเดียวกับรูปฉาก (file:… · assets/… · https://…)
     # มีรูป = ลายพื้นหลังเป็น photo เสมอ (LOOK_SPACE ไม่มี photo ให้สุ่ม — ไม่มีรูปแล้วได้จอเปล่า)
-    if plan.get("bg_image"):
+    # plan["bg_video"] = รายการคลิป (Google Flow) — มาก่อนภาพนิ่ง · สลับคลิปตรงรอยตัดฉาก
+    for k in ("photo", "videos", "scrim"):
+        look.pop(k, None)
+    if plan.get("bg_video"):
+        try:
+            vids = [resolve_image(v, proj, f"bg-video-{k}") for k, v in enumerate(plan["bg_video"])]
+            look["videos"] = [(v, _media_seconds(proj / v)) for v in vids]
+            look["bg"] = "photo"
+            look["scrim"] = _scrim(proj / vids[0])
+        except Exception as e:
+            _log("3/4", f"⚠️ โหลดคลิปพื้นหลังไม่ได้ ({str(e)[:80]}) — ลองภาพนิ่ง/ลายเดิม")
+            look.pop("videos", None)
+    if plan.get("bg_image") and not look.get("videos"):
         try:
             look["photo"] = resolve_image(plan["bg_image"], proj, "bg-photo")
             look["bg"] = "photo"
+            look["scrim"] = _scrim(proj / look["photo"])
         except Exception as e:
             _log("3/4", f"⚠️ โหลดภาพพื้นหลังไม่ได้ ({str(e)[:80]}) — ใช้ลาย {look['bg']} แทน")
     plan["look"] = look

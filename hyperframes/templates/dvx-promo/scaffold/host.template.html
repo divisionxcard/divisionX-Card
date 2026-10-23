@@ -12,7 +12,8 @@
 
   ชุดหน้าตา (look · 16 ต.ค. 2026 — เจ้าของ: "อยากให้ระบบออกแบบได้อิสระ ไม่จำเจ"):
     {{BG}}   ลายพื้นหลัง   grid ตาราง · dots จุดฮาล์ฟโทน · rays ลำแสงหมุน · speed เส้นสปีดแบบมังงะ
-                          · photo ภาพฉากจาก AI ({{BG_PHOTO}} · 23 ต.ค. 2026 — เจ้าของ: "ภาพยังไม่สวย อยากได้สมจริง/หลากหลาย")
+                          · photo ภาพฉากจาก AI ({{BG_PHOTO}}) หรือคลิปจาก Google Flow ({{BG_VIDEOS}}) · 23 ต.ค. 2026 — เจ้าของ:
+                            "ภาพยังไม่สวย อยากได้สมจริง/หลากหลาย" · {{BG_SCRIM}} = ความหรี่กลางจอ (ภาพสว่างหรี่มากขึ้น)
                             กล้องเคลื่อนช้า (ซูม+แพน) · ฝุ่นแสงลอยหน้าภาพ (เคลื่อนเร็วกว่า = มีมิติ) · แสงกวาด · ชั้นหรี่กลางจอให้อ่านกระดานออก
     {{CUT}}  ฉากเปลี่ยน     bolt สายฟ้า · flash แสงวาบ+วงคลื่น · glitch แถบสัญญาณกระตุก · wipe แถบนีออนกวาด
     ts-*     หัวเรื่อง       stroke ขอบหนา (เดิม) · chrome โครเมียม · neon นีออน — คลาสอยู่ที่ slot ของแต่ละฉาก
@@ -62,12 +63,14 @@
       #bg[data-bg="photo"] .bgv-photo { display: block; }
       #bg[data-bg="photo"] .bg-glow, #bg[data-bg="photo"] #bg-ghost { display: none; }
       #bg-photo { inset: 0; overflow: hidden; }
-      #bg-photo-img { position: absolute; left: -60px; top: -100px; width: 1200px; height: 2120px; object-fit: cover; will-change: transform; }
+      #bg-photo-img, #bg-photo-vids { position: absolute; left: -60px; top: -100px; width: 1200px; height: 2120px; will-change: transform; }
+      #bg-photo-img { object-fit: cover; }
+      #bg-photo-vids video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
       /* หรี่กลางจอ (กระดาน/ซองอยู่ตรงนั้น) + ขอบมืด — ภาพยังเห็นชัดที่ขอบบน/ล่าง */
       #bg-photo-scrim { position: absolute; inset: 0;
         background:
-          radial-gradient(ellipse 78% 46% at 50% 47%, rgba(3, 16, 42, 0.62), rgba(3, 16, 42, 0.18) 72%, rgba(3, 16, 42, 0) 100%),
-          linear-gradient(180deg, rgba(3, 16, 42, 0.35) 0%, rgba(3, 16, 42, 0) 22%, rgba(3, 16, 42, 0) 70%, rgba(3, 16, 42, 0.7) 100%); }
+          radial-gradient(ellipse 78% 46% at 50% 47%, rgba(3, 16, 42, var(--scrim, 0.62)), rgba(3, 16, 42, calc(var(--scrim, 0.62) * 0.3)) 72%, rgba(3, 16, 42, 0) 100%),
+          linear-gradient(180deg, rgba(3, 16, 42, calc(var(--scrim, 0.62) * 0.56)) 0%, rgba(3, 16, 42, 0) 22%, rgba(3, 16, 42, 0) 70%, rgba(3, 16, 42, 0.7) 100%); }
       #bg-photo-sweep { position: absolute; left: -900px; top: -400px; width: 700px; height: 2800px; opacity: 0; mix-blend-mode: screen;
         background: linear-gradient(90deg, rgba(89, 210, 255, 0), rgba(190, 236, 255, 0.22) 50%, rgba(89, 210, 255, 0)); will-change: transform, opacity; }
       .bg-mote { position: absolute; border-radius: 50%; background: radial-gradient(circle, rgba(232, 247, 255, 0.95), rgba(89, 210, 255, 0.35) 45%, rgba(89, 210, 255, 0) 70%);
@@ -137,8 +140,11 @@
         <div id="bg-rays" class="bgv bgv-rays" aria-hidden="true" data-layout-ignore></div>
         <div id="bg-speed" class="bgv bgv-speed" aria-hidden="true" data-layout-ignore></div>
         <div data-hf-id="hf-5sl0" id="bg-ghost" aria-hidden="true" data-layout-ignore></div>
-        <div id="bg-photo" class="bgv bgv-photo" aria-hidden="true" data-layout-ignore>
+        <div id="bg-photo" class="bgv bgv-photo" style="--scrim: {{BG_SCRIM}}" aria-hidden="true" data-layout-ignore>
           <img id="bg-photo-img" src="{{BG_PHOTO}}" alt="" />
+          <div id="bg-photo-vids">
+{{BG_VIDEOS}}
+          </div>
           <div id="bg-photo-scrim"></div>
           <div id="bg-photo-sweep"></div>
           <div id="bg-motes"></div>
@@ -188,7 +194,8 @@
         if (BG === "rays") tl.fromTo("#bg-rays", { rotation: 0 }, { rotation: 24, duration: DUR, ease: "none" }, 0);
         if (BG === "photo") {
           // กล้อง: ซูมเข้าช้า ๆ ตลอดคลิป + แพนทแยงเล็กน้อย (ภาพกว้างกว่าจอ 120 px สูงกว่า 200 px — ขยับได้โดยขอบไม่โผล่)
-          tl.fromTo("#bg-photo-img", { scale: 1.0, x: 30, y: 40, transformOrigin: "50% 45%" },
+          // คลิปวิดีโอ (Flow) ขยับที่กล่องห่อ — ห้าม tween ขนาด <video> ที่มี data-start เอง (กติกา HyperFrames)
+          tl.fromTo(["#bg-photo-img", "#bg-photo-vids"], { scale: 1.0, x: 30, y: 40, transformOrigin: "50% 45%" },
             { scale: 1.1, x: -30, y: -40, duration: DUR, ease: "sine.inOut" }, 0);
           // ฝุ่นแสง: ตำแหน่ง/ขนาด/ความเร็วสุ่มแบบมี seed · ลอยขึ้นและเลื่อนข้าง เร็วกว่าภาพหลัง = ชั้นหน้า (มีมิติ)
           const box = document.getElementById("bg-motes");
