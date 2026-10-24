@@ -108,6 +108,13 @@
   .todo li { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 10px; align-items: start; }
   .todo input { width: 18px; height: 18px; margin: 4px 0 0; accent-color: var(--done); }
   .todo label { cursor: pointer; }
+  /* ป้ายข้อค้าง (24 ต.ค. 2026): รอคุณเลือก · คุณทำ · Claude ทำ */
+  .tag { display: inline-block; font: 600 11.5px/1 var(--f-body); padding: 4px 7px; border-radius: 6px; margin-right: 7px; vertical-align: 2px; white-space: nowrap; }
+  .tag-decide { color: var(--gold); background: var(--gold-soft); }
+  .tag-you { color: var(--volt); background: var(--volt-soft); }
+  .tag-claude { color: var(--done); background: var(--done-soft); }
+  .todo li.done .tag { opacity: .7; }
+  .legend { margin: -2px 0 2px; font-size: 13px; color: var(--muted); line-height: 2; }
   .todo li.done label { color: var(--muted); text-decoration: line-through; text-decoration-color: var(--line); }
   .todo input:disabled + label { cursor: default; }
 
@@ -146,6 +153,7 @@
 
   <section class="owed" id="owed" hidden aria-labelledby="owed-h">
     <h2 id="owed-h">ยังค้างอยู่ <span class="n" id="owed-n"></span></h2>
+    <p class="legend"><span class="tag tag-decide">รอคุณเลือก</span> บอกทางที่เลือกในแชท · <span class="tag tag-you">คุณทำ</span> ทำเสร็จแล้วติ๊ก · <span class="tag tag-claude">Claude ทำ</span> Claude ติ๊กเองเมื่อเสร็จ</p>
     <ul class="todo" id="owed-list"></ul>
     <button class="more" id="owed-more" type="button" hidden></button>
   </section>
@@ -167,6 +175,9 @@
 
   const S = { days: [], sel: null, q: "", db: null, owner: false, busy: new Set(), err: "", owedAll: false }
   const OWED_SHOW = 4
+  // ติ๊ก = "จบแล้ว" ไม่ใช่สั่งงาน → ป้ายบอกว่าข้อไหนเป็นของใคร (เจ้าของขอ 24 ต.ค. 2026)
+  const OWNERS = { decide: "รอคุณเลือก", you: "คุณทำ", claude: "Claude ทำ" }
+  const ORDER = { decide: 0, you: 1, claude: 2 }
   const $ = (id) => document.getElementById(id)
 
   const esc = (s) => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]))
@@ -188,7 +199,9 @@
 
   function renderOwed() {
     const open = []
-    for (const d of S.days) for (const p of d.pending || []) if (!p.done) open.push({ d, p })
+    for (const d of S.days) for (const p of d.pending || []) if (!p.done) open.push({ d, p, i: open.length })
+    // "รอคุณเลือก" ขึ้นก่อน (ขวางงานอื่นอยู่) · ต่อด้วย "คุณทำ" · "Claude ทำ" ท้ายสุด
+    open.sort((a, b) => (ORDER[a.p.owner] ?? 1) - (ORDER[b.p.owner] ?? 1) || a.i - b.i)
     $("owed").hidden = open.length === 0
     $("owed-n").textContent = `${open.length} เรื่อง`
     const shown = S.owedAll ? open : open.slice(0, OWED_SHOW)
@@ -205,7 +218,7 @@
     const dis = !S.owner || S.busy.has(d.date) ? " disabled" : ""
     const from = pre === "o" ? ` <a class="from" href="#${esc(d.date)}" data-go="${esc(d.date)}">${esc(fmtShort(d.date))}</a>` : ""
     return `<li class="${p.done ? "done" : ""}"><input type="checkbox" id="${esc(id)}" data-day="${esc(d.date)}" data-pid="${esc(p.id)}"${p.done ? " checked" : ""}${dis}>` +
-           `<label for="${esc(id)}">${inline(p.text)}${from}</label></li>`
+           `<label for="${esc(id)}">${OWNERS[p.owner] ? `<span class="tag tag-${esc(p.owner)}">${OWNERS[p.owner]}</span>` : ""}${inline(p.text)}${from}</label></li>`
   }
 
   function renderSpine(list) {

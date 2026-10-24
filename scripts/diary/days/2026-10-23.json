@@ -76,92 +76,110 @@
     {
       "done": false,
       "id": "video-music-source",
-      "text": "เพลงประกอบคลิป — เลือกทาง: ซื้อใบอนุญาต (Epidemic/Artlist) · เพลงฟรีที่ให้ใช้เชิงพาณิชย์ (เสี่ยงโดนอ้างสิทธิ์) · ให้ระบบแต่งจังหวะเอง"
+      "text": "เพลงประกอบคลิป — เลือกทาง: ซื้อใบอนุญาต (Epidemic/Artlist) · เพลงฟรีที่ให้ใช้เชิงพาณิชย์ (เสี่ยงโดนอ้างสิทธิ์) · ให้ระบบแต่งจังหวะเอง",
+      "owner": "decide"
     },
     {
       "done": false,
       "id": "video-footage-shoot",
-      "text": "ฟุตเทจจริง — ถ่ายตาม wiki/marketing/video-footage-shotlist.md (ช็อตแกะซองต้องอนุมัติก่อน)"
+      "text": "ฟุตเทจจริง — ถ่ายตาม wiki/marketing/video-footage-shotlist.md (ช็อตแกะซองต้องอนุมัติก่อน)",
+      "owner": "you"
     },
     {
       "done": false,
       "id": "video-reels-autopost",
-      "text": "โพสต์ Reels/วิดีโออัตโนมัติ — ต้องได้อนุญาตทดสอบโพสต์จริงบนเพจก่อนสร้าง"
+      "text": "โพสต์ Reels/วิดีโออัตโนมัติ — ต้องได้อนุญาตทดสอบโพสต์จริงบนเพจก่อนสร้าง",
+      "owner": "decide"
     },
     {
       "done": false,
       "id": "video-tts-migrate",
-      "text": "สลับเสียงพากย์เป็นรุ่น 3.8 — ต่อระบบไว้แล้ว ฟังเทียบที่ research/video-tests/voice-ab/ · รุ่นเดิมปิด 17 พ.ย."
+      "text": "สลับเสียงพากย์เป็นรุ่น 3.8 — ต่อระบบไว้แล้ว ฟังเทียบที่ research/video-tests/voice-ab/ · รุ่นเดิมปิด 17 พ.ย.",
+      "owner": "decide"
     },
     {
       "done": false,
       "id": "video-listen-ab",
-      "text": "ฟังคลิปเทียบก่อน/หลัง research/video-tests/2026-10-23-rank-{before,after-audio}.mp4 (อยู่ในเครื่อง ไม่ขึ้น git)"
+      "text": "ฟังคลิปเทียบก่อน/หลัง research/video-tests/2026-10-23-rank-{before,after-audio}.mp4 (อยู่ในเครื่อง ไม่ขึ้น git)",
+      "owner": "you"
     },
     {
       "done": false,
       "id": "video-pronounce-words",
-      "text": "คำที่ยังได้ยินอ่านผิด → เพิ่มใน deploy/tasks/tts_pronounce.json (เช่น SEC อ่านว่าอะไร)"
+      "text": "คำที่ยังได้ยินอ่านผิด → เพิ่มใน deploy/tasks/tts_pronounce.json (เช่น SEC อ่านว่าอะไร)",
+      "owner": "you"
     },
     {
       "done": true,
       "id": "video-bg-style",
-      "text": "เลือกแนวพื้นหลังวิดีโอ — ดู research/video-tests/bg-proto/ (ภาพถ่าย · ภาพวาด · 3D หรือให้ AI หมุนเวียนอิสระ)"
+      "text": "เลือกแนวพื้นหลังวิดีโอ — ดู research/video-tests/bg-proto/ (ภาพถ่าย · ภาพวาด · 3D หรือให้ AI หมุนเวียนอิสระ)",
+      "owner": "decide"
     },
     {
       "done": true,
       "id": "video-ai-motion",
-      "text": "AI วิดีโอ — เปิด billing Gemini (Omni Flash ~3.5 บาท/วินาที อัตโนมัติได้) หรือสมัคร Google AI Pro ใช้ Flow ด้วยมือ"
+      "text": "AI วิดีโอ — เปิด billing Gemini (Omni Flash ~3.5 บาท/วินาที อัตโนมัติได้) หรือสมัคร Google AI Pro ใช้ Flow ด้วยมือ",
+      "owner": "decide"
     },
     {
       "done": true,
       "id": "video-openai-secret",
-      "text": "ใส่คีย์ OpenAI ใน GitHub — ตั้งแล้วพร้อม PIXABAY_API_KEY"
+      "text": "ใส่คีย์ OpenAI ใน GitHub — ตั้งแล้วพร้อม PIXABAY_API_KEY",
+      "owner": "decide"
     },
     {
       "done": true,
       "id": "flow-first-clips",
-      "text": "ลองทำคลิปพื้นหลังใน Flow — คลิปแรกเข้าคลังแล้ว (ทำเพิ่มได้วันละ ~4 คลิป)"
+      "text": "ลองทำคลิปพื้นหลังใน Flow — คลิปแรกเข้าคลังแล้ว (ทำเพิ่มได้วันละ ~4 คลิป)",
+      "owner": "you"
     },
     {
       "done": false,
       "id": "regen-69",
-      "text": "กด \"เขียนใหม่\" คอนเทนต์ #69 หลังเว็บอัปเดต (ตัวเขียนอิงต้นฉบับแล้ว)"
+      "text": "กด \"เขียนใหม่\" คอนเทนต์ #69 หลังเว็บอัปเดต (ตัวเขียนอิงต้นฉบับแล้ว)",
+      "owner": "you"
     },
     {
       "done": true,
       "id": "video-first-live-render",
-      "text": "คลิปจริงบน GitHub: ชั้นเสียง + พื้นหลัง AI ทำงานครบ (งาน d54bb84b)"
+      "text": "คลิปจริงบน GitHub: ชั้นเสียง + พื้นหลัง AI ทำงานครบ (งาน d54bb84b)",
+      "owner": "claude"
     },
     {
       "done": false,
       "id": "watch-test-clips",
-      "text": "ดูคลิปทดสอบ: รันจริงบน GitHub (พื้นหลัง AI) และฟุตเทจทะเลจริงจาก Pixabay ใน research/video-tests/"
+      "text": "ดูคลิปทดสอบ: รันจริงบน GitHub (พื้นหลัง AI) และฟุตเทจทะเลจริงจาก Pixabay ใน research/video-tests/",
+      "owner": "you"
     },
     {
       "done": false,
       "id": "caption-check-web",
-      "text": "แคปชั่นโพสต์/โปสเตอร์ยังใช้ \"เช็กหน้าตู้\" — เปลี่ยนเป็น \"เช็กหน้าเว็บ\" ตามวิดีโอด้วยไหม"
+      "text": "แคปชั่นโพสต์/โปสเตอร์ยังใช้ \"เช็กหน้าตู้\" — เปลี่ยนเป็น \"เช็กหน้าเว็บ\" ตามวิดีโอด้วยไหม",
+      "owner": "decide"
     },
     {
       "done": true,
       "id": "web-editor",
-      "text": "ห้องตัดต่อบนเว็บ (อัปโหลดไฟล์ · ตัดต่อ · ซับ · เสียง · ซอง/แม่แบบ) — ใช้ได้แล้วที่ /video/editor"
+      "text": "ห้องตัดต่อบนเว็บ (อัปโหลดไฟล์ · ตัดต่อ · ซับ · เสียง · ซอง/แม่แบบ) — ใช้ได้แล้วที่ /video/editor",
+      "owner": "claude"
     },
     {
       "done": false,
       "id": "editor-first-render",
-      "text": "ลองตัดคลิปแรกในห้องตัดต่อ (/video/editor) แล้วกด \"สร้างคลิป\" — รอบแรกบน production · ติดตรงไหนบอกได้เลย"
+      "text": "ลองตัดคลิปแรกในห้องตัดต่อ (/video/editor) แล้วกด \"สร้างคลิป\" — รอบแรกบน production · ติดตรงไหนบอกได้เลย",
+      "owner": "you"
     },
     {
       "done": true,
       "id": "purge-supabase-media",
-      "text": "ลบต้นฉบับ 290.9 MB ใน Supabase — เจ้าของให้เก็บไว้ก่อน ไม่ลบ (ไม่มีอะไรอ่านแล้ว ไม่กินโควตาดาวน์โหลด)"
+      "text": "ลบต้นฉบับ 290.9 MB ใน Supabase — เจ้าของให้เก็บไว้ก่อน ไม่ลบ (ไม่มีอะไรอ่านแล้ว ไม่กินโควตาดาวน์โหลด)",
+      "owner": "decide"
     },
     {
       "done": true,
       "id": "r2-budget-alert",
-      "text": "ตั้ง Budget Alert ในหน้า Cloudflare — เจ้าของตั้งแล้ว"
+      "text": "ตั้ง Budget Alert ในหน้า Cloudflare — เจ้าของตั้งแล้ว",
+      "owner": "you"
     }
   ],
   "source": "wiki/daily/2026-10-23.md",

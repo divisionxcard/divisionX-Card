@@ -11,6 +11,10 @@ const WD = ["อาทิตย์", "จันทร์", "อังคาร",
 const MON = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."]
 const MON_FULL = ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"]
 const OWED_SHOW = 4
+// ป้ายข้อค้าง (เจ้าของขอ 24 ต.ค. 2026 — ติ๊ก = "จบแล้ว" ไม่ใช่สั่งงาน จึงต้องบอกว่าข้อไหนเป็นของใคร)
+//   you = คุณทำ (ทำเสร็จแล้วติ๊ก) · decide = รอคุณเลือก (บอกทางที่เลือกในแชท) · claude = Claude ทำ (Claude ติ๊กเองเมื่อเสร็จ)
+const OWNERS = { decide: "รอคุณเลือก", you: "คุณทำ", claude: "Claude ทำ" }
+const ORDER = { decide: 0, you: 1, claude: 2 }
 
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]))
 // ข้อความในบันทึกเป็นข้อความธรรมดา — แปลงแค่ `โค้ด` กับ **ตัวหนา** หลัง escape แล้ว
@@ -31,6 +35,7 @@ function Todo({ d, p, pre, busy, onTick, onGo }) {
     <li className={p.done ? "done" : ""}>
       <input type="checkbox" id={id} checked={!!p.done} disabled={busy} onChange={(e) => onTick(d.date, p.id, e.target.checked)} />
       <label htmlFor={id}>
+        {OWNERS[p.owner] && <span className={`tag tag-${p.owner}`}>{OWNERS[p.owner]}</span>}
         <span dangerouslySetInnerHTML={inline(p.text)} />
         {pre === "o" && <> <a className="from" href={`#${d.date}`} onClick={(e) => { e.preventDefault(); onGo(d.date) }}>{fmtShort(d.date)}</a></>}
       </label>
@@ -132,7 +137,9 @@ export default function DiaryPage() {
     return k ? days.filter(d => JSON.stringify(d).toLowerCase().includes(k)) : days
   }, [days, q])
   const day = days?.find(d => d.date === sel) || days?.[0]
-  const open = useMemo(() => (days || []).flatMap(d => (d.pending || []).filter(p => !p.done).map(p => ({ d, p }))), [days])
+  // ค้างรวมทุกวัน — "รอคุณเลือก" ขึ้นก่อน (ขวางงานอื่นอยู่) · ต่อด้วย "คุณทำ" · "Claude ทำ" ท้ายสุด · ในกลุ่มเดียวกันวันใหม่ก่อน
+  const open = useMemo(() => (days || []).flatMap(d => (d.pending || []).filter(p => !p.done).map(p => ({ d, p })))
+    .map((x, i) => ({ ...x, i })).sort((a, b) => (ORDER[a.p.owner] ?? 1) - (ORDER[b.p.owner] ?? 1) || a.i - b.i), [days])
 
   let main
   if (auth === "checking" || (auth === "ok" && days === null)) {
@@ -231,6 +238,11 @@ export default function DiaryPage() {
         {auth === "ok" && !!open.length && (
           <section className="owed" aria-labelledby="owed-h">
             <h2 id="owed-h">ยังค้างอยู่ <span className="n">{open.length} เรื่อง</span></h2>
+            <p className="legend">
+              <span className="tag tag-decide">รอคุณเลือก</span> บอกทางที่เลือกในแชท ·
+              {" "}<span className="tag tag-you">คุณทำ</span> ทำเสร็จแล้วติ๊ก ·
+              {" "}<span className="tag tag-claude">Claude ทำ</span> Claude ติ๊กเองเมื่อเสร็จ
+            </p>
             <ul className="todo">{(owedAll ? open : open.slice(0, OWED_SHOW)).map(({ d, p }) => (
               <Todo key={d.date + p.id} d={d} p={p} pre="o" busy={busy.has(d.date)} onTick={tick} onGo={go} />
             ))}</ul>
@@ -319,6 +331,12 @@ const CSS = `
 .diary .todo li{display:grid;grid-template-columns:22px minmax(0,1fr);gap:10px;align-items:start}
 .diary .todo input{width:18px;height:18px;margin:4px 0 0;accent-color:var(--done)}
 .diary .todo label{cursor:pointer}
+.diary .tag{display:inline-block;font:600 11.5px/1 var(--f-body);padding:4px 7px;border-radius:6px;margin-right:7px;vertical-align:2px;white-space:nowrap;text-decoration:none}
+.diary .tag-decide{color:var(--gold);background:var(--gold-soft)}
+.diary .tag-you{color:var(--volt);background:var(--volt-soft)}
+.diary .tag-claude{color:var(--done);background:var(--done-soft)}
+.diary .todo li.done .tag{opacity:.7}
+.diary .legend{margin:-2px 0 2px;font-size:13px;color:var(--muted);line-height:2}
 .diary .todo li.done label{color:var(--muted);text-decoration:line-through;text-decoration-color:var(--line)}
 .diary .todo input:disabled+label{cursor:default}
 .diary .note{color:var(--muted);font-size:14px}
