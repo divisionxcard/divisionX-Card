@@ -1,8 +1,8 @@
 ---
 type: worklog
 date: 2026-10-24
-tags: [content, ideas, youtube, grounding, caption]
-commits: [e95e92b]
+tags: [content, ideas, youtube, grounding, caption, off-cards]
+commits: [e95e92b, 47c70f6]
 status: ✅ ไอเดียที่อ่านต้นฉบับแล้ว เขียนเป็นคอนเทนต์ของเราเอง ไม่อ้างคลิป/ช่อง/เครดิต · ข้อเท็จจริงยังต้องตรงต้นฉบับเหมือนเดิม
 ---
 
