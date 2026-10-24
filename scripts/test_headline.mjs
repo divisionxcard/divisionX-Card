@@ -8,7 +8,7 @@ import { pathToFileURL, fileURLToPath } from "node:url"
 const ROOT = fileURLToPath(new URL("..", import.meta.url))
 const load = (p) => import(pathToFileURL(`${ROOT}${p}`).href)
 const { createClient } = await load("deploy/node_modules/@supabase/supabase-js/dist/index.cjs")
-const { splitHeadline, HEAD_MAX, SUB_MAX, HEAD_HARD } = await load("deploy/lib/headline.js")
+const { splitHeadline, HEAD_MAX, SUB_MAX, SUB_HARD, HEAD_HARD } = await load("deploy/lib/headline.js")
 
 const env = Object.fromEntries(
   readFileSync(`${ROOT}deploy/.env.local`, "utf8").split(/\r?\n/)
@@ -37,7 +37,10 @@ for (const r of rows) {
   const issues = []
   // เกินเป้าได้ถ้าจำเป็น แต่ห้ามเกินเพดานแข็ง — ยอมยาวดีกว่าตัดกลางคำไทย
   if (headline.length > HEAD_HARD) issues.push(`พาดหัวยาวเกินเพดาน ${headline.length}`)
-  if (sub.length > SUB_MAX) issues.push(`บรรทัดรองยาว ${sub.length}`)
+  // บรรทัดรองใช้ทั้งประโยคได้ถึง SUB_HARD (24 ต.ค. 2026 · #69 เดิมถูกตัดเหลือ "…มีของอยู่ 3")
+  if (sub.length > (SUB_HARD || SUB_MAX)) issues.push(`บรรทัดรองยาว ${sub.length}`)
+  // ตัดระหว่างเลขกับหน่วย ("…อยู่ 3" + "ชิ้น…") = เลขลอยบนโปสเตอร์
+  if (/(^|\s)[\d.,]+$/.test(sub) && sub.length < (SUB_HARD || SUB_MAX)) issues.push(`บรรทัดรองจบด้วยตัวเลขลอย`)
   if (!headline) issues.push("พาดหัวว่าง")
   if (LEADING_VOWEL.test(headline)) issues.push(`พาดหัวจบด้วยสระหน้า "${headline.slice(-1)}"`)
   if (COMBINING_HEAD.test(sub)) issues.push(`บรรทัดรองขึ้นต้นด้วยตัวเกาะ "${sub[0]}"`)

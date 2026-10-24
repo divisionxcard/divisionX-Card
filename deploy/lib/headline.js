@@ -19,6 +19,10 @@ export const SUB_MAX = 62
 
 // ยอมยาวเกินเพดานได้ถึงตรงนี้ ถ้าการตัดตรงเพดานจะทำให้คำขาดกลาง
 export const HEAD_HARD = 46
+// บรรทัดรอง: ทั้งประโยคยาวไม่เกินนี้ = ใช้ทั้งประโยค ไม่ตัด (24 ต.ค. 2026)
+//   #69 "🎮 ในโลกโปเกมอนยุค Gen 5 มีของอยู่ 3 ชิ้นที่ฟังแล้วต้องขยี้ตาอีกรอบ" ยาว 66 > SUB_MAX
+//   ถูกตัดเหลือ "…มีของอยู่ 3" ขึ้นโปสเตอร์ — ประโยคครบยาวกว่านิดหน่อยอ่านง่ายกว่าเศษประโยคเสมอ
+export const SUB_HARD = 80
 
 // สระบน/ล่าง วรรณยุกต์ และตัวการันต์ — พวกนี้เกาะตัวพยัญชนะข้างหน้า
 // ตัดตรงหน้าตัวพวกนี้เมื่อไหร่ คำจะขาดครึ่งทันที ("อื่น" → "อื" + "่น")
@@ -38,7 +42,17 @@ const CONJ = ["แต่", "เพราะ", "จนกว่า", "จนถ�
 
 const SEP = /[—–·:|…]/
 
-function cut(s, limit) {
+// ช่องว่างระหว่าง "เลขล้วน" กับ "หน่วย" ไม่ใช่ขอบวลี — "3 ชิ้น" "20 เท่า" "3.55 ล้าน" คือก้อนเดียวกัน
+// ⚠️ เฉพาะเลขล้วนตามด้วยหน่วยเท่านั้น — รหัสชุด "FB-09 Dragonball" / "OP16 ที่…" / "HP 350 พร้อม…" ตัดได้ตามเดิม
+//    (รอบแรกห้ามทุกช่องว่างหลังตัวเลข → พาดหัว "ฟิวชั่นดวลมังกร! 🌋 FB-09" เสียรหัสชุด)
+const UNIT = /^(ชิ้น|ใบ|ซอง|กล่อง|เท่า|ล้าน|แสน|หมื่น|พัน|ร้อย|บาท|ดอลลาร์|ตัว|คน|วัน|วินาที|นาที|ชั่วโมง|เดือน|ปี|ครั้ง|อันดับ|แบบ|ชุด|อย่าง|ข้อ|รอบ|เปอร์เซ็นต์|%|ตู้|สาขา|ห้าง|แห่ง)/
+const okSpace = (t, i) => {
+  if (i <= 0) return false
+  const left = t.slice(0, i).split(/\s/).pop()
+  return !(/^[\d.,]+$/.test(left) && UNIT.test(t.slice(i + 1)))
+}
+
+function cut(s, limit, hard = HEAD_HARD) {
   const t = s.trim()
   if (t.length <= limit) return { head: t, rest: "" }
 
@@ -62,8 +76,9 @@ function cut(s, limit) {
   }
   if (best > 0) return { head: t.slice(0, best).trim(), rest: t.slice(best).trim() }
 
-  // 3) ช่องว่างธรรมดา — ในภาษาไทยคือขอบวลี
-  const sp = t.lastIndexOf(" ", limit)
+  // 3) ช่องว่างธรรมดา — ในภาษาไทยคือขอบวลี (ข้ามช่องว่างหลังตัวเลข)
+  let sp = t.lastIndexOf(" ", limit)
+  while (sp > 0 && !okSpace(t, sp)) sp = t.lastIndexOf(" ", sp - 1)
   if (sp > limit * 0.35) return { head: t.slice(0, sp).trim(), rest: t.slice(sp).trim() }
 
   // 4) ไม่มีจุดตัดในเพดาน — ยืดไปหาช่องว่างถัดไปแทนการตัดตรง ๆ
@@ -71,13 +86,14 @@ function cut(s, limit) {
   // ⚠️ ห้ามตัดกลางคำไทยเด็ดขาด พาดหัวยาวเกินไปหน่อยยังอ่านรู้เรื่อง
   //    แต่ "ถึงกับ" ที่ขาดเป็น "ถึงก" + "ับ" อ่านไม่ออกเลย
   //    เจอจริงตอนทดสอบกับคิว 34 ชิ้น: #22 #26 #32 #34 #36 ขาดกลางคำหมด
-  const next = t.indexOf(" ", limit)
-  if (next > 0 && next <= HEAD_HARD) {
+  let next = t.indexOf(" ", limit)
+  while (next > 0 && !okSpace(t, next)) next = t.indexOf(" ", next + 1)
+  if (next > 0 && next <= hard) {
     return { head: t.slice(0, next).trim(), rest: t.slice(next).trim() }
   }
   // 4b) ท้ายย่อหน้าก็เป็นจุดตัดที่ปลอดภัย — ทั้งก้อนยาวไม่เกินเพดานแข็ง ใช้ทั้งก้อน
   //     (21 ต.ค. 2026 ตอนเปลี่ยนเป็นตัดเฉพาะย่อหน้าแรก: #36 #47 เคยรอดเพราะช่องว่างที่ต่อย่อหน้าถัดไป)
-  if (t.length <= HEAD_HARD) return { head: t, rest: "" }
+  if (t.length <= hard) return { head: t, rest: "" }
 
   // 5) ยาวทั้งดุ้นไม่มีช่องว่างเลย — ถอยจนจุดตัดไม่ผ่ากลางคำ
   //
@@ -133,9 +149,11 @@ export function splitHeadline(caption) {
 
   // บรรทัดรองมาจากส่วนที่เหลือของประโยคแรก ถ้าไม่มีค่อยไปเอาย่อหน้าถัดไป
   const subSource = first.rest || paras[1] || ""
-  const sub = subSource ? cut(subSource, SUB_MAX).head : ""
+  // ทั้งประโยคไม่เกิน SUB_HARD = ใช้ทั้งประโยค · ยาวกว่านั้นค่อยตัด (เพดานแข็งของบรรทัดรอง = SUB_HARD)
+  const subText = subSource.trim()
+  const sub = !subText ? "" : subText.length <= SUB_HARD ? subText : cut(subText, SUB_MAX, SUB_HARD).head
 
   return { headline, sub }
 }
 
-export default { splitHeadline, dropCountClauses, HEAD_MAX, SUB_MAX }
+export default { splitHeadline, dropCountClauses, HEAD_MAX, SUB_MAX, SUB_HARD }
