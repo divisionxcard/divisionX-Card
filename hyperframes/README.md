@@ -27,7 +27,7 @@ cd deploy
   {"type": "hook",    "sku": "OP 17", "title": "OP-17", "kicker": "มาถึงตู้แล้ว"},
   {"type": "pack",    "sku": "OP 17", "words": ["SEC", "Leader"], "tag": "OP-17 · BOOSTER PACK"},
   {"type": "machine", "photo": "machine:hero", "steps": ["เลือกช่อง", "กดซื้อ", "เปิดดวง"]},
-  {"type": "cta",     "photo": "machine:scene", "title": "เช็กหน้าตู้ก่อนไป", "tag": "#DivisionXCard"}
+  {"type": "cta",     "photo": "machine:scene", "title": "เช็กหน้าเว็บก่อนไป", "tag": "#DivisionXCard"}
 ]
 ```
 

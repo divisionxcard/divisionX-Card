@@ -227,7 +227,7 @@ def parse_op_products(html, today, horizon_days=45):
             url=href.group(1), event_date=d.isoformat(),
             score=round(5.0 if 0 <= left <= 21 else 4.2, 2),
             summary=f"หมวด {_clean(cat.group(1)) if cat else '-'} · อีก {left} วัน" if left >= 0 else "เพิ่งวางขาย",
-            angle="นับถอยหลังวันวางขาย — โชว์การ์ดเด่นที่ประกาศแล้ว แล้วบอกว่าเช็กหน้าตู้ได้วันไหน",
+            angle="นับถอยหลังวันวางขาย — โชว์การ์ดเด่นที่ประกาศแล้ว แล้วชวนเช็กหน้าเว็บว่าเข้าตู้หรือยัง",
             relevance="ปฏิทินวางขายทางการ · วันที่แน่นอน",
             external_key=f"release:op:{code.group(1) if code else href.group(1)[-40:]}",
         ))
@@ -315,7 +315,7 @@ def parse_dbs_products(html, today, horizon_days=45):
             title=f"{name} วางขาย {d.strftime('%d/%m/%Y')}", url=href.group(1),
             event_date=d.isoformat(), score=round(4.6 if 0 <= left <= 21 else 3.8, 2),
             summary=f"อีก {left} วัน" if left >= 0 else "เพิ่งวางขาย",
-            angle="นับถอยหลังวันวางขาย Dragon Ball — บอกว่าชุดนี้จะเข้าตู้ไหม เช็กหน้าตู้",
+            angle="นับถอยหลังวันวางขาย Dragon Ball — บอกว่าชุดนี้จะเข้าตู้ไหม ชวนเช็กหน้าเว็บ",
             relevance="ปฏิทินวางขายทางการ",
             external_key=f"release:dbs:{code.group(1) if code else href.group(1)[-40:]}",
         ))

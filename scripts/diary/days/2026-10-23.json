@@ -101,7 +101,10 @@
         }
       ],
       "recommended": "b",
-      "done_at": "2026-10-24T05:35:30.219Z"
+      "done_at": "2026-10-24T05:58:04.567Z",
+      "choice": "b",
+      "choice_note": null,
+      "chose_at": "2026-10-24T05:58:04.567Z"
     },
     {
       "done": false,
@@ -195,13 +198,14 @@
       "owner": "claude"
     },
     {
-      "done": false,
+      "done": true,
       "id": "watch-test-clips",
       "text": "ดูคลิปทดสอบ: รันจริงบน GitHub (พื้นหลัง AI) และฟุตเทจทะเลจริงจาก Pixabay ใน research/video-tests/",
-      "owner": "you"
+      "owner": "you",
+      "done_at": "2026-10-24T06:01:55.701Z"
     },
     {
-      "done": false,
+      "done": true,
       "id": "caption-check-web",
       "text": "แคปชั่นโพสต์/โปสเตอร์ยังใช้คำว่า \"เช็กหน้าตู้\" — เปลี่ยนตามวิดีโอไหม",
       "owner": "decide",
@@ -216,7 +220,12 @@
           "label": "คงคำว่า \"เช็กหน้าตู้\" ไว้"
         }
       ],
-      "recommended": "a"
+      "recommended": "a",
+      "choice": "a",
+      "choice_note": null,
+      "chose_at": "2026-10-24T06:01:31.409Z",
+      "done_at": "2026-10-24T06:01:31.409Z",
+      "acted": true
     },
     {
       "done": true,
