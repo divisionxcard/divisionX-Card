@@ -8,7 +8,7 @@ import { pathToFileURL, fileURLToPath } from "node:url"
 const ROOT = fileURLToPath(new URL("..", import.meta.url))
 const load = (p) => import(pathToFileURL(`${ROOT}${p}`).href)
 const { createClient } = await load("deploy/node_modules/@supabase/supabase-js/dist/index.cjs")
-const { splitHeadline, HEAD_MAX, SUB_MAX, SUB_HARD, HEAD_HARD } = await load("deploy/lib/headline.js")
+const { splitHeadline, dropCountClauses, HEAD_MAX, SUB_MAX, SUB_HARD, HEAD_HARD } = await load("deploy/lib/headline.js")
 
 const env = Object.fromEntries(
   readFileSync(`${ROOT}deploy/.env.local`, "utf8").split(/\r?\n/)
@@ -29,6 +29,22 @@ const KEEP = ["One Piece", "Dragon Ball", "Pokémon", "Pokemon", "DivisionX", "A
 const LEADING_VOWEL = /[เ-ไ]$/
 const COMBINING_HEAD = /^[ัิ-ฺ็-๎]/
 
+// ตัดกลางคำไทยที่ขอบเป็นพยัญชนะทั้งสองฝั่ง ("ก่อ|นเลย") ดูจากตัวอักษรไม่ออก — เทียบกับตัวตัดคำของ ICU
+// (25 ต.ค. 2026 #71 หลุดชุดทดสอบนี้ทั้งที่ผ่านครบ 61 ชิ้น)
+const WORDS = new Intl.Segmenter("th", { granularity: "word" })
+const firstPara = (cap) => dropCountClauses(cap).split("\n")
+  .map(s => s.replace(/#\S+/g, " ").replace(/\s+/g, " ").trim()).filter(Boolean)[0] || ""
+function midWord(text, head) {
+  if (!head || !text.startsWith(head) || head.length >= text.length) return false
+  const at = head.length
+  if (/[\s—–·:|…]/.test(text[at]) || /\s/.test(text[at - 1])) return false
+  for (const { index } of WORDS.segment(text)) {
+    if (index === at) return false
+    if (index > at) break
+  }
+  return true
+}
+
 let bad = 0
 console.log(`${"id".padEnd(5)}${"พาดหัว".padEnd(34)}ยาว  บรรทัดรอง`)
 console.log("─".repeat(96))
@@ -44,6 +60,7 @@ for (const r of rows) {
   if (!headline) issues.push("พาดหัวว่าง")
   if (LEADING_VOWEL.test(headline)) issues.push(`พาดหัวจบด้วยสระหน้า "${headline.slice(-1)}"`)
   if (COMBINING_HEAD.test(sub)) issues.push(`บรรทัดรองขึ้นต้นด้วยตัวเกาะ "${sub[0]}"`)
+  if (midWord(firstPara(r.caption), headline)) issues.push(`ตัดกลางคำไทย "${headline.slice(-3)}|${sub.slice(0, 3)}"`)
   // ตัดกลางชื่อเฉพาะไหม — ชื่อโผล่ในต้นฉบับแต่หายไปครึ่งหนึ่งในผลลัพธ์
   for (const k of KEEP) {
     if (r.caption.includes(k)) {
@@ -67,6 +84,8 @@ const SYNTH = [
   "คนไทยชอบสะสมการ์ดกันมากขึ้นเรื่อยๆจนตอนนี้กลายเป็นงานอดิเรกที่ใครก็เล่นได้",
   "ตู้การ์ดเปิดใหม่แล้วนะทุกคนแวะมาลองกดกันได้เลยไม่ต้องรอคิวเลยแม้แต่นิดเดียว",
   "ซองการ์ดโปเกมอนชุดใหม่มาแล้วที่ตู้ดิวิชั่นเอ็กซ์เล่นได้ทุกวันไม่มีวันหยุดนะจ๊ะ",
+  // #71 (25 ต.ค. 2026): "—" อยู่เลยเพดานนิดเดียว ช่องว่างถัดไปเกินเพดานแข็ง → เคยออก "…การ์ดก่อ" + "นเลย…"
+  "🎴 หยิบซองแล้วพลิกหลังการ์ดก่อนเลย—อ่านออกทันที มันต่างจริง",
 ]
 console.log("\n" + "─".repeat(96))
 console.log("เคสสังเคราะห์ (ไทยยาวไม่มีช่องว่าง)")
@@ -75,6 +94,7 @@ for (const s of SYNTH) {
   const issues = []
   if (LEADING_VOWEL.test(headline)) issues.push(`จบด้วยสระหน้า "${headline.slice(-1)}"`)
   if (COMBINING_HEAD.test(sub)) issues.push(`บรรทัดรองขึ้นต้นด้วยตัวเกาะ "${sub[0]}"`)
+  if (midWord(firstPara(s), headline)) issues.push(`ตัดกลางคำไทย "${headline.slice(-3)}|${sub.slice(0, 3)}"`)
   if (headline.length > HEAD_HARD) issues.push(`ยาวเกินเพดาน ${headline.length}`)
   if (issues.length) bad++
   console.log(`${issues.length ? "❌" : "  "}   ${headline.padEnd(34)}${String(headline.length).padStart(3)}  ${sub.slice(0, 40)}`)
