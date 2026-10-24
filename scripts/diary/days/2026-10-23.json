@@ -104,7 +104,8 @@
       "done_at": "2026-10-24T05:58:04.567Z",
       "choice": "b",
       "choice_note": null,
-      "chose_at": "2026-10-24T05:58:04.567Z"
+      "chose_at": "2026-10-24T05:58:04.567Z",
+      "acted": true
     },
     {
       "done": false,
