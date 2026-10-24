@@ -320,7 +320,7 @@
     {
       "id": "queue-emoji",
       "text": "แคปชั่นเก่าที่ค้างในคิวยังไม่มีอีโมจิ",
-      "done": false,
+      "done": true,
       "owner": "decide",
       "options": [
         {
@@ -334,7 +334,12 @@
           "note": "แคปชั่นใหม่ใส่อีโมจิ 4–6 ตัวเองอยู่แล้ว"
         }
       ],
-      "recommended": "b"
+      "recommended": "b",
+      "choice": "b",
+      "choice_note": null,
+      "chose_at": "2026-10-24T08:35:58.556Z",
+      "done_at": "2026-10-24T08:35:58.556Z",
+      "acted": true
     },
     {
       "id": "meta-icon",
