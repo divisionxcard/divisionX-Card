@@ -13,7 +13,7 @@ const TRANS_TH = { cut: "ตัดตรง", flash: "แฟลช", zoom: "ซ�
 const MOTION_TH = { none: "นิ่ง", zoomin: "ค่อย ๆ ซูมเข้า", zoomout: "ค่อย ๆ ซูมออก" }
 const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 2]
 const VOICE_TH = { Puck: "Puck · ชายสดใส", Kore: "Kore · หญิงหนักแน่น", Aoede: "Aoede · หญิงนุ่ม", Charon: "Charon · ชายทุ้ม" }
-const MODEL_TH = { "gemini-2.5-flash-preview-tts": "2.5 (ค่าเดิม · ปิดบริการ 17 พ.ย.)", "gemini-3.8-flash-tts": "3.8 (ใหม่ · เป็นธรรมชาติกว่า)" }
+const MODEL_TH = { "gemini-2.5-flash-preview-tts": "2.5 (รุ่นเก่า · ปิดบริการ 17 พ.ย.)", "gemini-3.8-flash-tts": "3.8 (ค่าเริ่มต้น)" }
 const COLORS = ["#ffffff", "#3ddcff", "#ffc24a", "#ff5277", "#3ee08f"]
 
 function Chips({ value, options, labels, onPick }) {
@@ -262,7 +262,7 @@ export default function Inspector({ state, dispatch }) {
         <div className={s.field}>
           <label>รุ่นเสียง</label>
           <select className={s.select} value={v.tts_model || ""} onChange={(e) => set({ tts_model: e.target.value || null }, "model")}>
-            <option value="">ค่าเริ่มต้นของระบบ</option>
+            <option value="">ค่าเริ่มต้นของระบบ (3.8)</option>
             {TTS_MODELS.map(x => <option key={x} value={x}>{MODEL_TH[x] || x}</option>)}
           </select>
         </div>

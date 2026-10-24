@@ -23,6 +23,7 @@ import datetime as dt
 import html as H
 import json
 import pathlib
+import sys
 import re
 import time
 import urllib.error
@@ -185,6 +186,11 @@ def build(only=None):
 
 
 def main():
+    # ⛔ เลิกใช้ 24 ต.ค. 2026 — ข้อตกลง Konami (第2条6項(22)) ห้ามใช้เครื่องมืออัตโนมัติกับฐานข้อมูลการ์ด
+    #    เจ้าของเลือก (ไดอารี่): "เลิกใช้สคริปต์ดึงอัตโนมัติ เก็บข้อมูลที่มีไว้ใช้ต่อ" → tasks/ygo_cards.json ยังใช้เขียนคอนเทนต์ได้
+    #    ชุดใหม่ = กรอกรายชื่อการ์ดเองลง tasks/ygo_cards.json (ดูรูปแบบจากชุดที่มีอยู่) · ห้ามเปิดสคริปต์นี้กลับมาใช้โดยไม่ถามเจ้าของ
+    sys.exit("⛔ ygo_kb.py เลิกใช้แล้ว (ข้อตกลง Konami ห้ามเครื่องมืออัตโนมัติ · 24 ต.ค. 2026) — "
+             "ข้อมูลเดิมใน tasks/ygo_cards.json ยังใช้ได้ · ชุดใหม่กรอกเอง")
     ap = argparse.ArgumentParser(description="สร้างคลังความรู้ Yu-Gi-Oh OCG")
     ap.add_argument("--set", help="เจาะเฉพาะชุดเดียว เช่น UT01")
     a = ap.parse_args()

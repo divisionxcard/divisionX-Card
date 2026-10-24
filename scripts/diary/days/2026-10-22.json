@@ -290,7 +290,7 @@
     {
       "id": "konami-tou",
       "text": "ข้อตกลง Konami ห้ามเครื่องมืออัตโนมัติ — สคริปต์ดึงรายชื่อการ์ด Yu-Gi-Oh ที่มีอยู่อาจขัดข้อนี้",
-      "done": false,
+      "done": true,
       "owner": "decide",
       "options": [
         {
@@ -309,7 +309,12 @@
           "note": "ยอมรับความเสี่ยงขัดข้อตกลง"
         }
       ],
-      "recommended": "a"
+      "recommended": "a",
+      "choice": "a",
+      "choice_note": null,
+      "chose_at": "2026-10-24T08:50:51.600Z",
+      "done_at": "2026-10-24T08:50:51.600Z",
+      "acted": true
     },
     {
       "id": "top5-live-test",

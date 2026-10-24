@@ -7,7 +7,7 @@
 // ไฟล์ข้อมูลสร้างด้วย (snapshot รันเดือนละครั้งพอ):
 //   py -3 deploy/agents/dbfw_kb.py     → dbfw_cards.json · dbfw_faq.json
 //   py -3 deploy/agents/kayou_kb.py    → kayou_cards.json
-//   py -3 deploy/agents/ygo_kb.py      → ygo_cards.json
+//   ygo_cards.json — ⛔ ygo_kb.py เลิกใช้ 24 ต.ค. 2026 (ข้อตกลง Konami ห้ามเครื่องมืออัตโนมัติ) · ข้อมูลเดิมใช้ต่อ · ชุดใหม่กรอกเอง
 //
 // ⚠️ แต่ละค่ายมีข้อห้ามคนละแบบ ฝังไว้ท้ายบล็อกแล้ว **ห้ามตัดออกเพื่อประหยัดที่ใน prompt**
 //   Dragon Ball  ข้อความเป็นไทยทางการ ใช้ได้เต็มที่ · ซองในตู้เป็นฉบับญี่ปุ่น
