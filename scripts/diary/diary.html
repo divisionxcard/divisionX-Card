@@ -247,7 +247,7 @@
       const showOther = p.choice === "other" || otherOpen.has(key)
       const other = `<button type="button" role="radio" aria-checked="${p.choice === "other"}" class="opt ${showOther ? "on" : ""}" data-other="1" ${at}${dis}><b>อื่น ๆ</b> พิมพ์ทางของคุณเอง</button>` +
         (showOther ? `<form class="other-box" data-save="1" ${at}><input class="search" id="note-${esc(pre)}-${esc(d.date)}-${esc(p.id)}" maxlength="300" placeholder="เช่น เอา B แต่ขอดูรายชื่อเพลงก่อน" value="${esc(p.choice_note || "")}"><button class="go" type="submit"${dis}>บันทึก</button></form>` : "")
-      const chosen = p.choice ? `<p class="chosen">เลือกแล้ว — Claude จะทำตามนี้ในรอบถัดไป · เปลี่ยนใจกดตัวเลือกอื่นได้${p.acted ? " (Claude ลงมือแล้ว)" : ""}</p>` : ""
+      const chosen = p.choice ? `<p class="chosen">${p.acted ? "เลือกแล้ว — Claude ลงมือแล้ว" : "เลือกแล้ว — Claude จะเห็นเมื่อคุณเริ่มคุยครั้งถัดไป · เปลี่ยนใจกดตัวเลือกอื่นได้"}</p>` : ""
       return `<li class="decide ${p.choice ? "done" : ""}"><span class="dot" aria-hidden="true">${p.choice ? "✓" : "?"}</span>` +
              `<div class="dtext"><span class="tag tag-decide">${OWNERS.decide}</span>${inline(p.text)}${from}` +
              `<div class="choices" role="radiogroup" aria-label="เลือกทาง">${opts}${other}${chosen}</div></div></li>`

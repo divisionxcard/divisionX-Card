@@ -49,7 +49,8 @@ function Choices({ d, p, busy, onChoose }) {
           <button className="go" type="submit" disabled={busy || !note.trim()}>บันทึก</button>
         </form>
       )}
-      {p.choice && <p className="chosen">เลือกแล้ว — Claude จะทำตามนี้ในรอบถัดไป · เปลี่ยนใจกดตัวเลือกอื่นได้{p.acted ? " (Claude ลงมือแล้ว)" : ""}</p>}
+      {/* Claude ไม่ได้รันค้าง — เห็นทางที่เลือกเมื่อเจ้าของเริ่มคุยครั้งถัดไป (เจ้าของเลือกข้อความนี้ 24 ต.ค. 2026) */}
+      {p.choice && <p className="chosen">{p.acted ? "เลือกแล้ว — Claude ลงมือแล้ว" : "เลือกแล้ว — Claude จะเห็นเมื่อคุณเริ่มคุยครั้งถัดไป · เปลี่ยนใจกดตัวเลือกอื่นได้"}</p>}
     </div>
   )
 }
