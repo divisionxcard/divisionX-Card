@@ -15,6 +15,44 @@ const OWED_SHOW = 4
 //   you = คุณทำ (ทำเสร็จแล้วติ๊ก) · decide = รอคุณเลือก (บอกทางที่เลือกในแชท) · claude = Claude ทำ (Claude ติ๊กเองเมื่อเสร็จ)
 const OWNERS = { decide: "รอคุณเลือก", you: "คุณทำ", claude: "Claude ทำ" }
 const ORDER = { decide: 0, you: 1, claude: 2 }
+// ข้อ "รอคุณเลือก" ที่มีตัวเลือก (options) → กดเลือกในหน้าได้เลย ไม่ต้องพิมพ์ในแชท (เจ้าของขอ 24 ต.ค. 2026)
+//   เลือกแล้ว = choice (+ choice_note ถ้าเลือก "อื่น ๆ") · ค้างอยู่จนกว่าจะเลือก (ติ๊กเดิมที่ไม่มี choice ไม่นับ)
+const hasOptions = (p) => p.owner === "decide" && Array.isArray(p.options) && p.options.length > 0
+const isOpen = (p) => (hasOptions(p) ? !p.choice : !p.done)
+const letter = (i) => String.fromCharCode(65 + i)
+
+function Choices({ d, p, busy, onChoose }) {
+  const [other, setOther] = useState(p.choice === "other")
+  const [note, setNote] = useState(p.choice_note || "")
+  const pick = (cid) => {
+    if (busy) return
+    if (cid === "other") { setOther(true); return }
+    setOther(false)
+    onChoose(d.date, p.id, p.choice === cid ? null : cid, "")
+  }
+  return (
+    <div className="choices" role="radiogroup" aria-label="เลือกทาง">
+      {p.options.map((o, i) => (
+        <button key={o.id} type="button" role="radio" aria-checked={p.choice === o.id} disabled={busy}
+                className={`opt ${p.choice === o.id ? "on" : ""}`} onClick={() => pick(o.id)}>
+          <b>{letter(i)}</b> {o.label}{o.id === p.recommended && <span className="rec">⭐ แนะนำ</span>}
+          {o.note && <small>{o.note}</small>}
+        </button>
+      ))}
+      <button type="button" role="radio" aria-checked={p.choice === "other"} disabled={busy}
+              className={`opt other ${p.choice === "other" || other ? "on" : ""}`} onClick={() => pick("other")}>
+        <b>อื่น ๆ</b> พิมพ์ทางของคุณเอง
+      </button>
+      {other && (
+        <form className="other-box" onSubmit={(e) => { e.preventDefault(); if (note.trim()) onChoose(d.date, p.id, "other", note.trim()) }}>
+          <input className="search" value={note} maxLength={300} placeholder="เช่น เอา B แต่ขอดูรายชื่อเพลงก่อน" onChange={(e) => setNote(e.target.value)} />
+          <button className="go" type="submit" disabled={busy || !note.trim()}>บันทึก</button>
+        </form>
+      )}
+      {p.choice && <p className="chosen">เลือกแล้ว — Claude จะทำตามนี้ในรอบถัดไป · เปลี่ยนใจกดตัวเลือกอื่นได้{p.acted ? " (Claude ลงมือแล้ว)" : ""}</p>}
+    </div>
+  )
+}
 
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]))
 // ข้อความในบันทึกเป็นข้อความธรรมดา — แปลงแค่ `โค้ด` กับ **ตัวหนา** หลัง escape แล้ว
@@ -29,8 +67,21 @@ function Ref({ r }) {
   return <span className="ref wl">{r.id}</span>
 }
 
-function Todo({ d, p, pre, busy, onTick, onGo }) {
+function Todo({ d, p, pre, busy, onTick, onChoose, onGo }) {
   const id = `${pre}-${d.date}-${p.id}`
+  if (hasOptions(p)) {
+    return (
+      <li className={`decide ${p.choice ? "done" : ""}`}>
+        <span className="dot" aria-hidden="true">{p.choice ? "✓" : "?"}</span>
+        <div className="dtext">
+          <span className="tag tag-decide">{OWNERS.decide}</span>
+          <span dangerouslySetInnerHTML={inline(p.text)} />
+          {pre === "o" && <> <a className="from" href={`#${d.date}`} onClick={(e) => { e.preventDefault(); onGo(d.date) }}>{fmtShort(d.date)}</a></>}
+          <Choices d={d} p={p} busy={busy} onChoose={onChoose} />
+        </div>
+      </li>
+    )
+  }
   return (
     <li className={p.done ? "done" : ""}>
       <input type="checkbox" id={id} checked={!!p.done} disabled={busy} onChange={(e) => onTick(d.date, p.id, e.target.checked)} />
@@ -131,6 +182,26 @@ export default function DiaryPage() {
     }
   }
 
+  const choose = async (date, pid, choice, note) => {
+    if (busy.has(date)) return
+    setBusy(b => new Set(b).add(date)); setErr("")
+    const before = days.find(d => d.date === date)
+    setDays(ds => ds.map(d => (d.date !== date ? d : { ...d, pending: d.pending.map(p => (p.id === pid ? { ...p, choice, choice_note: note || null, done: !!choice } : p)) })))
+    try {
+      const t = await token()
+      const res = await fetch("/api/diary", { method: "PATCH", headers: { "Content-Type": "application/json", Authorization: `Bearer ${t}` },
+                                              body: JSON.stringify({ date, pid, choice, note }) })
+      const j = await res.json().catch(() => ({}))
+      if (!res.ok || !j.day) throw new Error(j.error || res.status)
+      setDays(ds => ds.map(d => (d.date === date ? j.day : d)))
+    } catch {
+      setErr("บันทึกทางที่เลือกไม่สำเร็จ ลองใหม่อีกครั้ง")
+      setDays(ds => ds.map(d => (d.date === date ? before : d)))
+    } finally {
+      setBusy(b => { const n = new Set(b); n.delete(date); return n })
+    }
+  }
+
   const list = useMemo(() => {
     if (!days) return []
     const k = q.trim().toLowerCase()
@@ -138,7 +209,7 @@ export default function DiaryPage() {
   }, [days, q])
   const day = days?.find(d => d.date === sel) || days?.[0]
   // ค้างรวมทุกวัน — "รอคุณเลือก" ขึ้นก่อน (ขวางงานอื่นอยู่) · ต่อด้วย "คุณทำ" · "Claude ทำ" ท้ายสุด · ในกลุ่มเดียวกันวันใหม่ก่อน
-  const open = useMemo(() => (days || []).flatMap(d => (d.pending || []).filter(p => !p.done).map(p => ({ d, p })))
+  const open = useMemo(() => (days || []).flatMap(d => (d.pending || []).filter(isOpen).map(p => ({ d, p })))
     .map((x, i) => ({ ...x, i })).sort((a, b) => (ORDER[a.p.owner] ?? 1) - (ORDER[b.p.owner] ?? 1) || a.i - b.i), [days])
 
   let main
@@ -214,7 +285,7 @@ export default function DiaryPage() {
           )}
           {!!(day.pending || []).length && (
             <section className="sec"><h3>ค้าง / รอตัดสินใจ</h3>
-              <ul className="todo">{day.pending.map(x => <Todo key={x.id} d={day} p={x} pre="d" busy={busy.has(day.date)} onTick={tick} onGo={go} />)}</ul>
+              <ul className="todo">{day.pending.map(x => <Todo key={x.id} d={day} p={x} pre="d" busy={busy.has(day.date)} onTick={tick} onChoose={choose} onGo={go} />)}</ul>
             </section>
           )}
           {err && <p className="err">{err}</p>}
@@ -239,12 +310,12 @@ export default function DiaryPage() {
           <section className="owed" aria-labelledby="owed-h">
             <h2 id="owed-h">ยังค้างอยู่ <span className="n">{open.length} เรื่อง</span></h2>
             <p className="legend">
-              <span className="tag tag-decide">รอคุณเลือก</span> บอกทางที่เลือกในแชท ·
+              <span className="tag tag-decide">รอคุณเลือก</span> กดเลือกทางในหน้านี้ได้เลย ·
               {" "}<span className="tag tag-you">คุณทำ</span> ทำเสร็จแล้วติ๊ก ·
               {" "}<span className="tag tag-claude">Claude ทำ</span> Claude ติ๊กเองเมื่อเสร็จ
             </p>
             <ul className="todo">{(owedAll ? open : open.slice(0, OWED_SHOW)).map(({ d, p }) => (
-              <Todo key={d.date + p.id} d={d} p={p} pre="o" busy={busy.has(d.date)} onTick={tick} onGo={go} />
+              <Todo key={d.date + p.id} d={d} p={p} pre="o" busy={busy.has(d.date)} onTick={tick} onChoose={choose} onGo={go} />
             ))}</ul>
             {open.length > OWED_SHOW && (
               <button className="more" type="button" onClick={() => setOwedAll(!owedAll)}>{owedAll ? "ย่อรายการ" : `ดูอีก ${open.length - OWED_SHOW} เรื่อง`}</button>
@@ -336,6 +407,22 @@ const CSS = `
 .diary .tag-you{color:var(--volt);background:var(--volt-soft)}
 .diary .tag-claude{color:var(--done);background:var(--done-soft)}
 .diary .todo li.done .tag{opacity:.7}
+.diary .dot{width:18px;height:18px;margin-top:4px;border-radius:50%;display:grid;place-items:center;font:700 11px/1 var(--f-body);color:var(--gold);border:1.5px solid var(--gold)}
+.diary li.decide.done .dot{color:var(--sheet);background:var(--done);border-color:var(--done)}
+.diary .dtext{min-width:0}
+.diary .choices{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.diary .opt{display:inline-flex;flex-wrap:wrap;align-items:baseline;gap:4px 6px;text-align:left;max-width:100%;font:500 14px/1.45 var(--f-body);color:var(--ink);background:var(--sheet);border:1px solid var(--line);border-radius:10px;padding:8px 12px;cursor:pointer}
+.diary .opt b{color:var(--volt);font-weight:700}
+.diary .opt small{flex-basis:100%;color:var(--muted);font-size:12.5px;line-height:1.4}
+.diary .opt:hover:not(:disabled){border-color:var(--volt)}
+.diary .opt.on{border-color:var(--done);background:var(--done-soft)}
+.diary .opt.on b{color:var(--done)}
+.diary .opt:disabled{opacity:.6;cursor:default}
+.diary .opt .rec{font-size:12px;color:var(--gold);font-weight:600}
+.diary .other-box{flex-basis:100%;display:flex;gap:8px}
+.diary .other-box .search{flex:1;min-width:0}
+.diary .chosen{flex-basis:100%;margin:0;font-size:13px;color:var(--done)}
+.diary li.decide.done .dtext > span:not(.tag){color:var(--muted)}
 .diary .legend{margin:-2px 0 2px;font-size:13px;color:var(--muted);line-height:2}
 .diary .todo li.done label{color:var(--muted);text-decoration:line-through;text-decoration-color:var(--line)}
 .diary .todo input:disabled+label{cursor:default}

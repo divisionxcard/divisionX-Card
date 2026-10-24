@@ -2,6 +2,7 @@
 //
 //   GET   /api/diary                          → { days: [ {date, title, story, stories, decisions, pending, …} ] } ใหม่สุดก่อน
 //   PATCH /api/diary { date, pid, done }      → { day }   ติ๊ก/เอาติ๊กออกข้อค้างข้อเดียว
+//   PATCH /api/diary { date, pid, choice, note? } → { day } เลือกทางของข้อ "รอคุณเลือก" (choice = id ตัวเลือก · "other" + note · null = ยกเลิก)
 //
 // เจ้าของขอเปิดดูได้โดยไม่ต้องผ่าน claude.ai — หน้าเดิมเป็น Artifact บน claude.ai (ArtifactData คอลเลกชัน days)
 // ตัวจริงของแต่ละวันอยู่ scripts/diary/days/<date>.json ในรีโป · ส่งขึ้นที่นี่ด้วย scripts/diary/sync_r2.py
@@ -64,8 +65,25 @@ export async function PATCH(req) {
     if (!day) return NextResponse.json({ error: "ไม่พบวันนี้ในสมุด" }, { status: 404 })
     const hit = (day.pending || []).find(p => p.id === pid)
     if (!hit) return NextResponse.json({ error: "ไม่พบข้อนี้" }, { status: 404 })
-    hit.done = !!body.done
-    hit.done_at = hit.done ? new Date().toISOString() : null
+    const now = new Date().toISOString()
+    if ("choice" in body) {
+      // เลือกทาง — ต้องเป็น id ในตัวเลือกของข้อนั้น หรือ "other" พร้อมข้อความ · เลือกแล้ว = จบเรื่องนี้ (done)
+      const ids = (hit.options || []).map(o => o.id)
+      const choice = body.choice === null ? null : String(body.choice || "")
+      const note = typeof body.note === "string" ? body.note.trim().slice(0, 300) : ""
+      if (choice !== null && !ids.includes(choice) && !(choice === "other" && note)) {
+        return NextResponse.json({ error: "ตัวเลือกไม่ถูกต้อง" }, { status: 400 })
+      }
+      hit.choice = choice
+      hit.choice_note = choice === "other" ? note : null
+      hit.chose_at = choice ? now : null
+      hit.done = !!choice
+      hit.done_at = choice ? now : null
+      delete hit.acted                       // เปลี่ยนทาง = Claude ต้องดูใหม่
+    } else {
+      hit.done = !!body.done
+      hit.done_at = hit.done ? now : null
+    }
     await putObject(`${DIR}${date}.json`, JSON.stringify(day), "application/json")
     return NextResponse.json({ day })
   } catch (e) {

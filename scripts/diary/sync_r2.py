@@ -5,6 +5,8 @@
 หน้า Artifact เดิมบน claude.ai ยังใช้ได้ (ArtifactData คอลเลกชัน days) — เจ้าของติ๊กได้ทั้งสองที่
 
 กติการวมติ๊ก: "ติ๊กที่ไหนก็นับ" — ข้อค้างเป็นเสร็จ ถ้าที่ใดที่หนึ่งติ๊กไว้ (รีโป · R2 · ไฟล์ที่ export จาก ArtifactData)
+ทางที่เลือก (choice ของข้อ "รอคุณเลือก" · 24 ต.ค. 2026): เอาอันที่เลือกล่าสุด (chose_at) · เปลี่ยนทาง = ล้าง acted
+ท้ายสคริปต์พิมพ์ "เจ้าของเลือกแล้ว รอลงมือ" — ทำตามนั้น แล้วตั้ง acted: true + ลงตารางการตัดสินใจของวันนั้น
 เนื้อหาวัน (เรื่องเล่า/งาน/การตัดสินใจ) ยึดไฟล์ในรีโปเป็นตัวจริง · ข้อค้างที่มีแค่ในเว็บ (ไม่น่ามี) เก็บไว้ไม่ทิ้ง
 
 รัน:
@@ -45,6 +47,14 @@ def merge(local, others):
         t = _ticks(o)
         for p in out.get("pending", []):
             q = t.get(p.get("id"))
+            if q and q.get("choice") and (q.get("chose_at") or "") > (p.get("chose_at") or ""):
+                if q["choice"] != p.get("choice"):
+                    p.pop("acted", None)
+                for k in ("choice", "choice_note", "chose_at", "done", "done_at"):
+                    if k in q:
+                        p[k] = q[k]
+                changed.append(p["id"])
+                continue
             if q and q.get("done") and not p.get("done"):
                 p["done"] = True
                 if q.get("done_at"):
@@ -90,6 +100,14 @@ def main():
         print(f"{date}: มีบนเว็บแต่ไม่มีในรีโป — ดึงลงมา")
         if not a.dry:
             (DAYS / f"{date}.json").write_bytes(r2.get_bytes(f"{PREFIX}{date}.json"))
+    todo = []
+    for f in sorted(DAYS.glob("*.json")):
+        for p in json.loads(f.read_text(encoding="utf-8")).get("pending", []):
+            if p.get("choice") and not p.get("acted"):
+                opt = next((o for o in p.get("options", []) if o.get("id") == p["choice"]), None)
+                todo.append(f"  {f.stem} · {p['id']}: {opt['label'] if opt else p['choice']}" + (f" — \"{p.get('choice_note')}\"" if p.get("choice_note") else ""))
+    if todo:
+        print("\n🟨 เจ้าของเลือกแล้ว รอ Claude ลงมือ (ทำแล้วตั้ง acted: true):", *todo, sep="\n")
     if more:
         print("\n⚠️ วันที่มีติ๊กเพิ่ม — set ไฟล์ในรีโปขึ้น ArtifactData ให้หน้า claude.ai ตรงกันด้วย:", [d for d, _ in more])
     print("(dry) ไม่ได้เขียน" if a.dry else "ซิงค์แล้ว")

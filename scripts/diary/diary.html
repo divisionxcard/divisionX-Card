@@ -115,6 +115,24 @@
   .tag-claude { color: var(--done); background: var(--done-soft); }
   .todo li.done .tag { opacity: .7; }
   .legend { margin: -2px 0 2px; font-size: 13px; color: var(--muted); line-height: 2; }
+  /* ตัวเลือกของข้อ "รอคุณเลือก" — กดเลือกในหน้าได้เลย (24 ต.ค. 2026) */
+  .dot { width: 18px; height: 18px; margin-top: 4px; border-radius: 50%; display: grid; place-items: center; font: 700 11px/1 var(--f-body); color: var(--gold); border: 1.5px solid var(--gold); }
+  li.decide.done .dot { color: var(--sheet); background: var(--done); border-color: var(--done); }
+  .dtext { min-width: 0; }
+  .choices { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+  .opt { display: inline-flex; flex-wrap: wrap; align-items: baseline; gap: 4px 6px; text-align: left; max-width: 100%; font: 500 14px/1.45 var(--f-body); color: var(--ink); background: var(--sheet); border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; cursor: pointer; }
+  .opt b { color: var(--volt); font-weight: 700; }
+  .opt small { flex-basis: 100%; color: var(--muted); font-size: 12.5px; line-height: 1.4; }
+  .opt:hover:not(:disabled) { border-color: var(--volt); }
+  .opt.on { border-color: var(--done); background: var(--done-soft); }
+  .opt.on b { color: var(--done); }
+  .opt:disabled { opacity: .6; cursor: default; }
+  .opt .rec { font-size: 12px; color: var(--gold); font-weight: 600; }
+  .other-box { flex-basis: 100%; display: flex; gap: 8px; }
+  .other-box .search { flex: 1; min-width: 0; }
+  .go { font: 600 15px/1 var(--f-body); color: var(--sheet); background: var(--volt); border: 0; border-radius: 10px; padding: 10px 16px; cursor: pointer; }
+  .chosen { flex-basis: 100%; margin: 0; font-size: 13px; color: var(--done); }
+  li.decide.done .dtext > span:not(.tag) { color: var(--muted); }
   .todo li.done label { color: var(--muted); text-decoration: line-through; text-decoration-color: var(--line); }
   .todo input:disabled + label { cursor: default; }
 
@@ -153,7 +171,7 @@
 
   <section class="owed" id="owed" hidden aria-labelledby="owed-h">
     <h2 id="owed-h">ยังค้างอยู่ <span class="n" id="owed-n"></span></h2>
-    <p class="legend"><span class="tag tag-decide">รอคุณเลือก</span> บอกทางที่เลือกในแชท · <span class="tag tag-you">คุณทำ</span> ทำเสร็จแล้วติ๊ก · <span class="tag tag-claude">Claude ทำ</span> Claude ติ๊กเองเมื่อเสร็จ</p>
+    <p class="legend"><span class="tag tag-decide">รอคุณเลือก</span> กดเลือกทางในหน้านี้ได้เลย · <span class="tag tag-you">คุณทำ</span> ทำเสร็จแล้วติ๊ก · <span class="tag tag-claude">Claude ทำ</span> Claude ติ๊กเองเมื่อเสร็จ</p>
     <ul class="todo" id="owed-list"></ul>
     <button class="more" id="owed-more" type="button" hidden></button>
   </section>
@@ -178,6 +196,10 @@
   // ติ๊ก = "จบแล้ว" ไม่ใช่สั่งงาน → ป้ายบอกว่าข้อไหนเป็นของใคร (เจ้าของขอ 24 ต.ค. 2026)
   const OWNERS = { decide: "รอคุณเลือก", you: "คุณทำ", claude: "Claude ทำ" }
   const ORDER = { decide: 0, you: 1, claude: 2 }
+  // ข้อ "รอคุณเลือก" ที่มีตัวเลือก → กดเลือกในหน้า (choice · "other" + choice_note) · ค้างจนกว่าจะเลือก
+  const hasOptions = (p) => p.owner === "decide" && Array.isArray(p.options) && p.options.length > 0
+  const isOpen = (p) => (hasOptions(p) ? !p.choice : !p.done)
+  const otherOpen = new Set()
   const $ = (id) => document.getElementById(id)
 
   const esc = (s) => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]))
@@ -199,7 +221,7 @@
 
   function renderOwed() {
     const open = []
-    for (const d of S.days) for (const p of d.pending || []) if (!p.done) open.push({ d, p, i: open.length })
+    for (const d of S.days) for (const p of d.pending || []) if (isOpen(p)) open.push({ d, p, i: open.length })
     // "รอคุณเลือก" ขึ้นก่อน (ขวางงานอื่นอยู่) · ต่อด้วย "คุณทำ" · "Claude ทำ" ท้ายสุด
     open.sort((a, b) => (ORDER[a.p.owner] ?? 1) - (ORDER[b.p.owner] ?? 1) || a.i - b.i)
     $("owed").hidden = open.length === 0
@@ -217,6 +239,19 @@
     const id = `${pre}-${d.date}-${p.id}`
     const dis = !S.owner || S.busy.has(d.date) ? " disabled" : ""
     const from = pre === "o" ? ` <a class="from" href="#${esc(d.date)}" data-go="${esc(d.date)}">${esc(fmtShort(d.date))}</a>` : ""
+    if (hasOptions(p)) {
+      const key = `${d.date}|${p.id}`, at = `data-day="${esc(d.date)}" data-pid="${esc(p.id)}"`
+      const opts = p.options.map((o, i) =>
+        `<button type="button" role="radio" aria-checked="${p.choice === o.id}" class="opt ${p.choice === o.id ? "on" : ""}" data-choose="${esc(o.id)}" ${at}${dis}>` +
+        `<b>${String.fromCharCode(65 + i)}</b> ${esc(o.label)}${o.id === p.recommended ? `<span class="rec">⭐ แนะนำ</span>` : ""}${o.note ? `<small>${esc(o.note)}</small>` : ""}</button>`).join("")
+      const showOther = p.choice === "other" || otherOpen.has(key)
+      const other = `<button type="button" role="radio" aria-checked="${p.choice === "other"}" class="opt ${showOther ? "on" : ""}" data-other="1" ${at}${dis}><b>อื่น ๆ</b> พิมพ์ทางของคุณเอง</button>` +
+        (showOther ? `<form class="other-box" data-save="1" ${at}><input class="search" id="note-${esc(pre)}-${esc(d.date)}-${esc(p.id)}" maxlength="300" placeholder="เช่น เอา B แต่ขอดูรายชื่อเพลงก่อน" value="${esc(p.choice_note || "")}"><button class="go" type="submit"${dis}>บันทึก</button></form>` : "")
+      const chosen = p.choice ? `<p class="chosen">เลือกแล้ว — Claude จะทำตามนี้ในรอบถัดไป · เปลี่ยนใจกดตัวเลือกอื่นได้${p.acted ? " (Claude ลงมือแล้ว)" : ""}</p>` : ""
+      return `<li class="decide ${p.choice ? "done" : ""}"><span class="dot" aria-hidden="true">${p.choice ? "✓" : "?"}</span>` +
+             `<div class="dtext"><span class="tag tag-decide">${OWNERS.decide}</span>${inline(p.text)}${from}` +
+             `<div class="choices" role="radiogroup" aria-label="เลือกทาง">${opts}${other}${chosen}</div></div></li>`
+    }
     return `<li class="${p.done ? "done" : ""}"><input type="checkbox" id="${esc(id)}" data-day="${esc(d.date)}" data-pid="${esc(p.id)}"${p.done ? " checked" : ""}${dis}>` +
            `<label for="${esc(id)}">${OWNERS[p.owner] ? `<span class="tag tag-${esc(p.owner)}">${OWNERS[p.owner]}</span>` : ""}${inline(p.text)}${from}</label></li>`
   }
@@ -314,6 +349,42 @@
     const sheet = document.querySelector(".sheet")
     if (sheet && window.matchMedia("(max-width: 860px)").matches) sheet.scrollIntoView({ block: "start" })
   }
+
+  async function saveChoice(date, pid, choice, note) {
+    const day = S.days.find(d => d.date === date)
+    if (!day || S.busy.has(date) || !S.db || !S.owner) return
+    const now = new Date().toISOString()
+    const pending = (day.pending || []).map(p => {
+      if (p.id !== pid) return { ...p }
+      const q = { ...p, choice, choice_note: choice === "other" ? note : null, chose_at: choice ? now : null, done: !!choice, done_at: choice ? now : null }
+      delete q.acted
+      return q
+    })
+    S.busy.add(date); S.err = ""
+    try { await S.db.doc("days/" + date).update({ pending }) }
+    catch (err) { S.err = "บันทึกทางที่เลือกไม่สำเร็จ ลองใหม่อีกครั้ง" }
+    finally { S.busy.delete(date); render() }
+  }
+
+  document.addEventListener("click", (e) => {
+    const b = e.target.closest("[data-choose],[data-other]")
+    if (!b || b.disabled) return
+    const date = b.getAttribute("data-day"), pid = b.getAttribute("data-pid")
+    const p = (S.days.find(d => d.date === date)?.pending || []).find(x => x.id === pid)
+    if (!p) return
+    if (b.hasAttribute("data-other")) { otherOpen.add(`${date}|${pid}`); render(); return }
+    const cid = b.getAttribute("data-choose")
+    otherOpen.delete(`${date}|${pid}`)
+    saveChoice(date, pid, p.choice === cid ? null : cid, "")
+  })
+
+  document.addEventListener("submit", (e) => {
+    const f = e.target.closest("form[data-save]")
+    if (!f) return
+    e.preventDefault()
+    const note = (f.querySelector("input")?.value || "").trim().slice(0, 300)
+    if (note) saveChoice(f.getAttribute("data-day"), f.getAttribute("data-pid"), "other", note)
+  })
 
   document.addEventListener("change", async (e) => {
     const box = e.target
