@@ -13,7 +13,7 @@ import { readFile } from "node:fs/promises"
 import path from "node:path"
 import { requireMarketing } from "../../../../lib/apiAuth"
 import { askGeminiText } from "../../../../lib/geminiText"
-import { listObjects, mediaUrl, putObject } from "../../../../lib/r2"
+import { getObject, listObjects, mediaUrl, putObject } from "../../../../lib/r2"
 import { cleanTimeline, VOICES } from "../../../../lib/videoTimeline"
 import { detectFranchise, FRANCHISE_LABEL } from "../../../../lib/franchiseDetect"
 import {
@@ -32,6 +32,17 @@ const LOG_DIR = "research/storyboards"          // ประวัติกา�
 const LANG_TH = { JA: "ญี่ปุ่น", EN: "อังกฤษ", TH: "ไทย", CN: "จีน" }
 
 const task = async (name) => JSON.parse(await readFile(path.join(process.cwd(), "tasks", name), "utf-8"))
+
+// คลังรูปแบบ = ไฟล์ในรีโป (tasks/video_patterns.json) + รูปแบบที่ทีมเพิ่มจากกล่องส่งแอด (R2 · /api/video/ads adopt)
+async function allPatterns() {
+  const base = await task("video_patterns.json")
+  let extra = []
+  try {
+    const res = await getObject("research/video-patterns-extra.json")
+    if (res) extra = (await res.json()).filter(p => p?.id && Array.isArray(p.beats) && !base.patterns.some(b => b.id === p.id))
+  } catch { /* ยังไม่มีรูปแบบจากแอด */ }
+  return { ...base, patterns: [...base.patterns, ...extra] }
+}
 
 // ภาพฉากในคลัง R2 + ค่ายของแต่ละภาพ — ใช้ได้เฉพาะภาพของค่ายเดียวกับไอเดีย
 // ทดสอบ 26 ต.ค.: คลิปทัวร์นาเมนต์ One Piece ได้ภาพฟ้าชมพูพาสเทลที่วาดให้โพสต์โปเกมอน
@@ -74,9 +85,10 @@ export async function GET(req) {
   const gate = await requireMarketing(req)
   if (gate.error) return gate.error
   try {
-    const { patterns } = await task("video_patterns.json")
+    const { patterns } = await allPatterns()
     return NextResponse.json({
-      patterns: patterns.map(p => ({ id: p.id, name: p.name, why: p.why, length: p.length, evidence: p.evidence, needs_sku: !!p.fits?.needs_sku })),
+      patterns: patterns.map(p => ({ id: p.id, name: p.name, why: p.why, length: p.length, evidence: p.evidence,
+        needs_sku: !!p.fits?.needs_sku, from_ad: p.from_ad || null })),
       recent: await recentPatterns(),
     })
   } catch (e) {
@@ -141,7 +153,7 @@ export async function POST(req) {
     const assets = buildAssets({ sku, siblings, branches, backgrounds, broll, haveAt })
 
     // ── เลือกรูปแบบ (เลี่ยงที่เพิ่งใช้) ──
-    const { patterns, trust_facts: trustFacts } = await task("video_patterns.json")
+    const { patterns, trust_facts: trustFacts } = await allPatterns()
     const recent = await recentPatterns()
     const pattern = choosePattern(patterns, {
       idea, hasSku: !!sku, recent, forced: typeof body?.pattern === "string" ? body.pattern : null,

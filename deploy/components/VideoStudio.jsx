@@ -772,6 +772,11 @@ export default function VideoStudio() {
           pattern={sbPattern} setPattern={setSbPattern} voice={sbVoice} setVoice={setSbVoice}
           result={sbResult} busy={sending} onWrite={writeStoryboard} />
       )}
+      {mode === "story" && (
+        <AdBox api={api} onAdopted={async (pid) => {
+          try { const r = await api("storyboard"); if (alive.current) { setSbPatterns(r.patterns || []); setSbPattern(pid) } } catch { /* โหลดใหม่ตอนเปิดหน้า */ }
+        }} />
+      )}
 
       {mode === "manual" && <>
       {/* ── สามขั้นบนสุด ── */}
@@ -1158,7 +1163,8 @@ const SOURCE_TH = {
   internal: "ยอดขายในตู้", official: "เว็บทางการ", news: "ข่าว", youtube: "YouTube", global: "ต่างประเทศ",
   price: "ราคาการ์ด", manual: "เพจที่ติดตาม", radar: "เรดาร์", social: "โซเชียล",
 }
-const evidenceText = (e) => e?.lift ? `แรงกว่าปกติ ${e.lift} เท่า` : e?.views_per_hour ? `${Number(e.views_per_hour).toLocaleString("th-TH")} วิว/ชม.` : ""
+const evidenceText = (e) => e?.lift ? `แรงกว่าปกติ ${e.lift} เท่า` : e?.views_per_hour ? `${Number(e.views_per_hour).toLocaleString("th-TH")} วิว/ชม.`
+  : e?.src === "ad_box" ? (e.days != null ? `แอดวิ่งมา ${e.days} วัน` : "จากกล่องส่งแอด") : ""
 
 function StoryPanel({ ideas, patterns, query, setQuery, idea, setIdea, pattern, setPattern, voice, setVoice, result, busy, onWrite }) {
   const q = query.trim().toLowerCase()
@@ -1230,6 +1236,140 @@ function StoryPanel({ ideas, patterns, query, setQuery, idea, setIdea, pattern, 
             </a>
             <span className="vs-dim vs-fine">ในห้องตัดต่อ: ดูภาพ/ข้อความ แก้ได้ทุกชิ้น แล้วกดทำคลิป · ภาพกับข้อความตั้งเวลาตามเสียงพากย์จริงตอนทำ</span>
           </div>
+        </div>
+      )}
+    </section>
+  )
+}
+
+// ── กล่องส่งแอด (26 ต.ค. 2026) — แอดที่คนยิงจริง → ถอดโครง → รูปแบบในคลัง ───────────────
+// Ad Library API ไม่ให้แอดขายของที่ยิงเฉพาะไทย → ทีมเจอแอดแล้วส่งเข้ามาเอง (เจ้าของเลือก)
+const AD_PLATFORMS = [["facebook", "Facebook"], ["instagram", "Instagram"], ["tiktok", "TikTok"], ["youtube", "YouTube"], ["other", "อื่น ๆ"]]
+const adDays = (d) => { const t = Date.parse(d); return Number.isFinite(t) ? Math.max(0, Math.round((Date.now() - t) / 86400000)) : null }
+
+function AdBox({ api, onAdopted }) {
+  const [items, setItems] = useState(null)
+  const [form, setForm] = useState({ platform: "facebook", page: "", link: "", active_since: "", note: "" })
+  const [files, setFiles] = useState([])
+  const [busy, setBusy] = useState("")
+  const [msg, setMsg] = useState(null)
+  const [open, setOpen] = useState(null)        // แอดที่เปิดดูผลถอด
+  const set = (k) => (e) => setForm(f => ({ ...f, [k]: e.target.value }))
+
+  const load = useCallback(async () => {
+    try { const r = await api("ads"); setItems(r.items || []) } catch (e) { setItems([]); setMsg({ bad: true, t: `โหลดกล่องแอดไม่สำเร็จ: ${e.message}` }) }
+  }, [api])
+  useEffect(() => { load() }, [load])
+
+  async function submit() {
+    if (busy) return
+    setMsg(null)
+    try {
+      const keys = []
+      for (const [i, f] of files.entries()) {
+        setBusy(`อัปโหลดไฟล์ ${i + 1}/${files.length}…`)
+        const u = await api("ads", { method: "POST", body: JSON.stringify({ action: "upload", name: f.name, size: f.size }) })
+        const put = await fetch(u.upload_url, { method: "PUT", body: f, headers: { "Content-Type": u.content_type } })
+        if (!put.ok) throw new Error(`อัปโหลด ${f.name} ไม่สำเร็จ (${put.status})`)
+        keys.push(u.key)
+      }
+      setBusy("ให้ AI ถอดโครงแอด… (~15–40 วิ)")
+      const ad = await api("ads", { method: "POST", body: JSON.stringify({ action: "submit", ...form, files: keys }) })
+      setOpen(ad); setFiles([]); setForm(f => ({ ...f, link: "", note: "", page: "" }))
+      setMsg(ad.analysis_error ? { bad: true, t: `ส่งแล้ว แต่ถอดโครงไม่สำเร็จ: ${ad.analysis_error}` } : { t: "ถอดโครงเสร็จแล้ว — ดูผลข้างล่าง" })
+      load()
+    } catch (e) { setMsg({ bad: true, t: e.message }) } finally { setBusy("") }
+  }
+
+  async function act(action, ad) {
+    if (busy) return
+    setBusy(action === "adopt" ? "เพิ่มเข้าคลังรูปแบบ…" : "ถอดโครงใหม่…"); setMsg(null)
+    try {
+      const r = await api("ads", { method: "POST", body: JSON.stringify({ action, id: ad.id }) })
+      if (action === "adopt") {
+        setOpen(r.ad); setMsg({ t: `เพิ่มรูปแบบ "${r.pattern.name}" เข้าคลังแล้ว — เลือกใช้ได้ในช่องรูปแบบคลิปข้างบน` }); onAdopted?.(r.pattern.id)
+      } else setOpen(r)
+      load()
+    } catch (e) { setMsg({ bad: true, t: e.message }) } finally { setBusy("") }
+  }
+
+  const a = open?.analysis
+  return (
+    <section className="dx-card vs-card">
+      <h2 className="vs-h"><Download size={16} /> กล่องส่งแอด</h2>
+      <p className="vs-dim vs-lead">
+        เจอแอดหรือคลิปที่น่าสนใจใน Facebook Ad Library / ฟีด / TikTok → แนบภาพแคปหรือคลิปอัดจอ (≤ 18 MB) แล้วกดส่ง ·
+        ระบบถอดโครงว่าเปิดยังไง เล่ากี่จังหวะ ปิดยังไง แล้วเสนอเป็นรูปแบบคลิปสำหรับตู้เรา ·
+        ใส่วันที่ &ldquo;เริ่มวิ่ง&rdquo; จาก Ad Library ด้วย — แอดที่วิ่งนานคือแอดที่น่าจะคุ้ม
+      </p>
+      <div className="vs-two">
+        <label className="vs-field"><span>แพลตฟอร์ม</span>
+          <select className="dx-input" value={form.platform} onChange={set("platform")}>
+            {AD_PLATFORMS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+          </select>
+        </label>
+        <label className="vs-field"><span>เพจ/แบรนด์ (ใส่หรือไม่ใส่ก็ได้)</span>
+          <input className="dx-input" value={form.page} onChange={set("page")} maxLength={80} />
+        </label>
+        <label className="vs-field"><span>ลิงก์แอด</span>
+          <input className="dx-input" value={form.link} onChange={set("link")} placeholder="https://www.facebook.com/ads/library/?id=…" />
+        </label>
+        <label className="vs-field"><span>เริ่มวิ่งวันที่ (จาก Ad Library)</span>
+          <input className="dx-input" type="date" value={form.active_since} onChange={set("active_since")} />
+        </label>
+      </div>
+      <label className="vs-field vs-mt"><span>หมายเหตุ (ทำไมสนใจแอดนี้)</span>
+        <input className="dx-input" value={form.note} onChange={set("note")} maxLength={300} />
+      </label>
+      <label className="vs-field vs-mt"><span>ภาพแคป/คลิปของแอด (ได้สูงสุด 6 ไฟล์)</span>
+        <input className="dx-input" type="file" multiple accept="image/jpeg,image/png,image/webp,video/mp4,video/quicktime,video/webm"
+          onChange={e => setFiles([...e.target.files].slice(0, 6))} />
+      </label>
+      <div className="vs-actions">
+        <button className="dx-btn dx-btn-primary" disabled={!!busy || (!files.length && !form.link)} onClick={submit}>
+          {busy ? <><Loader2 size={14} className="vs-spin" /> {busy}</> : <><Send size={14} /> ส่งเข้ากล่อง + ถอดโครง</>}
+        </button>
+        {msg && <span className={msg.bad ? "vs-note" : "vs-dim vs-fine"}>{msg.t}</span>}
+      </div>
+
+      {a && (
+        <div className="vs-plan vs-story">
+          <b className="vs-plan-t"><ListChecks size={14} /> {open.page || "แอด"} · {open.platform}
+            {adDays(open.active_since) != null ? ` · วิ่งมา ${adDays(open.active_since)} วัน` : ""}</b>
+          <p className="vs-fine">{a.summary}</p>
+          <ol className="vs-beats">
+            <li><span className="vs-beat-role">เปิด</span><span className="vs-beat-vo">{a.hook}</span></li>
+            {(a.beats || []).map((b, i) => <li key={i}><span className="vs-beat-role">{b.role} {b.seconds || ""}</span><span className="vs-beat-vo">{b.what}</span></li>)}
+            <li><span className="vs-beat-role">ปิด</span><span className="vs-beat-vo">{a.cta}</span></li>
+          </ol>
+          <p className="vs-dim vs-fine">ทำไมน่าจะได้ผล: {a.why_it_works}</p>
+          <p className="vs-dim vs-fine">ร้านเราทำได้ไหม: {a.can_we_do}</p>
+          {a.pattern?.beats?.length > 0 && (
+            <div className="vs-plan-bg">
+              <span className="vs-dim vs-fine">รูปแบบที่เสนอสำหรับตู้เรา</span>
+              <b>{a.pattern.name}</b>
+              {a.pattern.beats.map((b, i) => <span key={i} className="vs-fine">{i + 1}. [{b.role}] {b.say}</span>)}
+            </div>
+          )}
+          <div className="vs-actions">
+            {open.status !== "adopted"
+              ? <button className="dx-btn dx-btn-primary" disabled={!!busy} onClick={() => act("adopt", open)}><Check size={14} /> เพิ่มเข้าคลังรูปแบบ</button>
+              : <span className="vs-chip">อยู่ในคลังแล้ว</span>}
+            <button className="dx-btn dx-btn-ghost" disabled={!!busy} onClick={() => act("analyze", open)}><RefreshCw size={14} /> ถอดใหม่</button>
+          </div>
+        </div>
+      )}
+
+      {items?.length > 0 && (
+        <div className="vs-jobs vs-mt">
+          {items.map(x => (
+            <button key={x.id} className={`vs-job ${open?.id === x.id ? "vs-job-on" : ""}`} onClick={() => setOpen(x)}>
+              <span className={`vs-st ${x.status === "adopted" ? "vs-st-ok" : x.analysis ? "vs-st-run" : "vs-st-wait"}`}>
+                {x.status === "adopted" ? "อยู่ในคลัง" : x.analysis ? "ถอดแล้ว" : "ยังไม่ถอด"}</span>
+              <span className="vs-job-name">{x.page || x.link || "แอด"} · {x.platform}</span>
+              <span className="vs-dim vs-fine">{adDays(x.active_since) != null ? `วิ่ง ${adDays(x.active_since)} วัน` : thaiAgo(x.created_at)}</span>
+            </button>
+          ))}
         </div>
       )}
     </section>
