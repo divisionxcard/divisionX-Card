@@ -2,7 +2,7 @@
 type: worklog
 date: 2026-10-26
 tags: [video, hyperframes, storyboard, motion, background, prompt-kit]
-commits: [e9efbe3]
+commits: [e9efbe3, 8aee57a, 19975b8]
 status: ✅ ภาพเคลื่อนไหวทุกฉาก · ✅ AI ออกแบบภาพฉากตามเนื้อหา (≤ 3 ภาพวาด/คลิป) · ✅ พร้อมต์ให้ AI ฟรีตัวอื่น + อัปไฟล์มาแทน
 ---
 
