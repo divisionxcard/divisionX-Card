@@ -17,7 +17,9 @@ const BASE = "https://generativelanguage.googleapis.com/v1beta"
 
 // ⚠ ตรวจของจริงก่อนใส่ชื่อ — 2026-08-17 ยิงแล้วพบว่า gemini-2.0-flash-lite /
 // 2.5-flash / 2.5-flash-lite ตายหมด (404) เหลือสองตัวนี้ที่ใช้ได้
-export const GEMINI_CHAIN = ["gemini-flash-latest", "gemini-flash-lite-latest"]
+// 26 ต.ค. 2026: เติม gemini-3-flash-preview ไว้ก่อนรุ่น lite (ยิงทดสอบแล้ว 200) — วันที่ flash-latest โควตาหมด
+// ตกไป lite ตรง ๆ แล้วงานเขียนยาก (สตอรี่บอร์ด) คุณภาพตกชัด: สะกดตัวเลขเป็นคำผิด · ไม่ทำตามกฎ (generate/route.js มีรุ่นนี้ในสายอยู่แล้ว)
+export const GEMINI_CHAIN = ["gemini-flash-latest", "gemini-3-flash-preview", "gemini-flash-lite-latest"]
 
 const sleep = ms => new Promise(r => setTimeout(r, ms))
 

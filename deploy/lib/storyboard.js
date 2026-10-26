@@ -62,9 +62,28 @@ export function scrubSource(text, sourceLabel) {
   return t.replace(/เรื่องจริงของคลิป/g, "เรื่อง").replace(/(ถอดคำบรรยายคลิป[^·)]*·\s*)/g, "").replace(/[ \t]{2,}/g, " ").trim()
 }
 
+// ชื่อร้าน/ช่อง/เพจอื่น — ลบออกจากข้อมูลก่อนส่ง AI และตัดฉากที่ยังมีชื่อพวกนี้ทิ้ง
+// (ทดสอบ 26 ต.ค.: หัวข้อไอเดีย "…ด้วยเด็คที่กายหงิดแนะนำ" → บทพูด "เล่นตามกายหงิด" — ชื่ออยู่ในหัวข้อ ตัวล้างที่มาไม่ได้แตะ)
+const esc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+export function nameRegex(names) {
+  const list = [...new Set((names || []).map(n => String(n || "").trim()).filter(n => n.length >= 3))]
+    .sort((a, b) => b.length - a.length)
+  return list.length ? new RegExp(list.map(esc).join("|"), "gi") : null
+}
+export const scrubNames = (text, re) => (re ? String(text || "").replace(re, "").replace(/[ \t]{2,}/g, " ").trim() : String(text || ""))
+
 export const offCards = (idea) => {
   const s = String(idea?.summary || "")
   return s.startsWith("📌") && s.includes("ไม่ได้พูดเรื่องการ์ดโดยตรง")
+}
+
+// ── "AI คิดเองอิสระ" (26 ต.ค. 2026 · เจ้าของ: "อยากให้หลากหลายและอิสระในการทำมากกว่านี้") ──
+// ไม่มีลำดับฉากบังคับ — AI ออกแบบโครงเอง โดยดูรูปแบบในคลังเป็นแรงบันดาลใจ (memory: AI ออกแบบต้องมีอิสระ
+// บังคับแค่ความจริง/กฎหมาย/ภาษาไทย · สไตล์เป็นข้อเสนอ)
+export const FREE = {
+  id: "free", name: "AI คิดเองอิสระ", free: true, length: [15, 35],
+  why: "ให้ AI ออกแบบโครงคลิปเองทั้งหมดจากเนื้อเรื่อง โดยดูรูปแบบที่ได้ผลในคลังเป็นแรงบันดาลใจ",
+  evidence: [], beats: [], guard: ["trust_facts_only"],
 }
 
 // ── เลือกรูปแบบ ──
@@ -72,6 +91,7 @@ export const offCards = (idea) => {
 // คะแนนเท่ากัน = สุ่มแบบกำหนดได้ (seed) — กดเขียนใหม่ได้แบบอื่น เพราะ seed เปลี่ยน
 export function choosePattern(patterns, { idea, hasSku, recent = [], forced = null, seed = 0 }) {
   const all = (patterns || []).filter(p => p?.id && Array.isArray(p.beats))
+  if (forced === "free") return FREE
   if (forced) {
     const f = all.find(p => p.id === forced)
     if (f) return f
@@ -92,6 +112,8 @@ export function choosePattern(patterns, { idea, hasSku, recent = [], forced = nu
   })
   const top = Math.max(...scored.map(x => x.s))
   const pool = scored.filter(x => x.s >= top - 1).map(x => x.p)
+  // แบบอิสระอยู่ในวงสุ่มเสมอ (ยกเว้นเพิ่งใช้) — ไม่งั้นได้แต่รูปแบบในคลังวนไปมา
+  if (!recent3.includes("free")) pool.push(FREE)
   return pool[Math.abs(Math.trunc(seed)) % pool.length]
 }
 
@@ -126,7 +148,7 @@ export function buildAssets({ sku = null, siblings = [], branches = [], backgrou
 }
 
 // ── คำสั่งให้ AI ──
-export function buildPrompt({ pattern, idea, facts, assets, voice, trustFacts }) {
+export function buildPrompt({ pattern, idea, facts, assets, voice, trustFacts, library = [] }) {
   const off = offCards(idea)
   const guard = pattern.guard || []
   const system = [
@@ -135,15 +157,25 @@ export function buildPrompt({ pattern, idea, facts, assets, voice, trustFacts })
     "งาน: เขียนสตอรี่บอร์ดเป็น JSON ล้วน ตามรูปแบบที่กำหนด ใช้ข้อมูลที่ให้เท่านั้น",
   ].join("\n")
   const assetLines = Object.entries(assets).map(([k, v]) => `- ${k} : ${v.label}`).join("\n")
-  const beatLines = pattern.beats.map((b, i) =>
-    `${i + 1}. [${b.role}] พูด: ${b.say}${b.screen ? ` · บนจอ: ${b.screen}` : ""} · ภาพ: ${b.visual}`).join("\n")
+  const beatLines = pattern.free
+    ? "ออกแบบโครงเองทั้งหมด 3–8 ฉาก — เลือกจังหวะที่เข้ากับเรื่องที่สุด · รูปแบบที่ได้ผลจริงในข้อมูลของเรา (แรงบันดาลใจ ไม่บังคับ ผสมกันได้):\n" +
+      library.slice(0, 12).map(p => `- ${p.name}: ${p.why}`).join("\n")
+    : pattern.beats.map((b, i) =>
+      `${i + 1}. [${b.role}] พูด: ${b.say}${b.screen ? ` · บนจอ: ${b.screen}` : ""} · ภาพ: ${b.visual}`).join("\n") +
+      "\n(เป็นแนวทาง — สลับลำดับ รวม เพิ่ม หรือตัดฉากได้ถ้าทำให้คลิปดีขึ้น)"
   const rules = [
     "ภาษาไทยเท่านั้น (ชื่อชุด/การ์ดภาษาอังกฤษได้) · เขียนเป็นคอนเทนต์ของเราเอง ห้ามพูดถึงคลิป ช่อง ผู้สร้าง หรือที่มาของไอเดีย",
     `vo = คำพูดของเสียงพากย์ 1 บรรทัดต่อฉาก ยาวไม่เกิน ${MAX_VO - 10} ตัวอักษร · ห้ามอีโมจิ แฮชแท็ก วงเล็บ ลิงก์`,
     "screen = ข้อความบนจอสั้น ๆ ไม่เกิน 28 ตัวอักษร (คำเด่นของฉาก ไม่ต้องซ้ำทั้งประโยค เพราะมีซับอยู่แล้ว) · ไม่มีก็ใส่ \"\"",
     "visual = ต้องเป็น key จากรายการภาพเท่านั้น (ห้ามคิดเอง) · ฉากติดกันพยายามไม่ใช้ภาพซ้ำ",
     "ข้อเท็จจริง ตัวเลข ราคา ชื่อการ์ด ชื่อสาขา อันดับ ต้องมาจากข้อมูลข้างล่างเท่านั้น — ไม่มีข้อมูลสำหรับฉากไหน ให้ข้ามฉากนั้น · ห้ามจัดอันดับเองถ้าข้อมูลไม่ได้บอกอันดับ",
-    "ตัวเลขใน vo เขียนเป็นตัวเลข (96 งาน · 3 ล้าน) ไม่ต้องสะกดเป็นคำ — เสียงพากย์อ่านเอง",
+    "ตัวเลขทุกตัวทั้งใน vo และ screen เขียนเป็นเลขอารบิก (96 งาน · 8 ซอง · 45 นาที · 3 ล้าน) ห้ามสะกดเป็นคำ — เสียงพากย์อ่านเอง",
+    "เรื่องที่มาจากร้าน/ช่อง/คนอื่น (เช่น คลิปร้านการ์ดจัดแข่ง · คนรีวิว) ห้ามเล่าเหมือนเป็นของเรา: ห้ามใช้ \"ผม/เรา\" เล่าประสบการณ์ของเขา · ห้ามบอกราคา ค่าสมัคร โปร หรือกิจกรรมของที่อื่นเหมือนเป็นของเรา — เล่าเป็นเรื่องน่าสนใจในวงการ หรือดึงความรู้/กติกาที่ใช้ได้ทั่วไปมาเล่าแทน",
+    "ห้ามบอกว่าเป็นชุดใหม่/เพิ่งเข้าตู้/มาแล้ว ถ้าข้อมูลไม่ได้บอก (\"มาแรง\" ≠ \"มาใหม่\")",
+    "รูปซอง (pack:…) ใช้เฉพาะฉากที่พูดถึงชุดนั้นจริง — ฉากที่ไม่ได้พูดถึงชุดไหน ใช้ภาพฉาก รูปตู้ หรือรูปสาขา",
+    "พูดถึงสาขารวมไว้ฉากเดียว ไม่เกิน 3 สาขา · ชวนมาตู้/บอกของแท้/บอกสาขา รวมแล้วไม่เกิน 2 ฉาก (ไม่รวมฉากปิด)",
+    `บทพูดทั้งคลิปรวมไม่เกิน ${Math.round((pattern.length?.[1] || 30) * CHARS_PER_SEC)} ตัวอักษร (≈ ${pattern.length?.[1] || 30} วินาที) — ยาวกว่านี้ระบบตัดฉากท้ายทิ้ง`,
+    "screen เขียนภาษาไทย (ชื่อชุด/การ์ดภาษาอังกฤษได้ · ชื่อห้าง/สาขาเขียนไทย)",
     "ห้ามเอ่ยชื่อร้าน เพจ หรือแบรนด์อื่น (ร้านการ์ด/ตู้กดเจ้าอื่น) — ใช้ได้แค่ชื่อค่ายการ์ด ชื่อชุด และชื่องานทางการ",
     "ฉากที่พูดถึงสาขา ใช้รูปตู้ของสาขาที่พูดถึงจริง (รูปที่มีป้าย \"มีชุดที่เกี่ยวข้อง\" เมื่อพูดว่ามีของ)",
     "ห้ามตัวเลขยอดขาย/เปอร์เซ็นต์ · ห้ามบอกว่ามีของแน่นอน · ห้ามสื่อว่าซองในตู้เราพิเศษ/หายากกว่าที่อื่น · ห้ามเขียน \"เช็กหน้าตู้\"",
@@ -157,8 +189,18 @@ export function buildPrompt({ pattern, idea, facts, assets, voice, trustFacts })
   const user = `รูปแบบคลิป: ${pattern.name}
 ทำไมรูปแบบนี้ได้ผล: ${pattern.why}
 ความยาวเป้าหมาย: ${pattern.length?.[0] || 18}–${pattern.length?.[1] || 30} วินาที (ราว ${CHARS_PER_SEC} ตัวอักษร/วินาที)
-ลำดับฉาก (ปรับถ้อยคำได้ · ข้ามฉากที่ไม่มีข้อมูลได้ · ห้ามเพิ่มเกิน 7 ฉาก):
+ลำดับฉาก (ไม่เกิน 8 ฉาก · ข้ามฉากที่ไม่มีข้อมูลได้):
 ${beatLines}
+
+ออกแบบหน้าตาแต่ละฉากได้อิสระ (ใส่หรือไม่ใส่ก็ได้ — ไม่ใส่ระบบเลือกให้):
+- style: ตัวหนังสือบนจอ bold (ขาวขอบหนา) · gold (ทอง) · neon (ฟ้าเรืองแสง) · box (กล่องกรมท่าขอบฟ้า)
+- pos: top · middle · low (เหนือซับ) — ซับอยู่ล่างจอเสมอ
+- size: S · M · L
+- anim: pop · slide · fade · float  (ตัวหนังสือโผล่)
+- cut: cut · flash · zoom  (ท่าเปลี่ยนเข้าฉากนี้)
+- motion: zoomin · zoomout · none  (ภาพนิ่งเคลื่อนช้า ๆ)
+- sticker: key ของรูปซอง (pack:…) ให้วางลอยทับบนภาพฉาก (bg:…) — ทำให้ภาพมีชั้น · ใช้เมื่อ visual ไม่ใช่รูปซองเดียวกัน
+สลับหน้าตาให้หลากหลาย อย่าให้ทุกฉากเหมือนกัน แต่คุมโทนทั้งคลิปให้เข้ากัน
 
 ข้อมูล (ใช้ได้เท่านี้):
 ${facts}
@@ -170,7 +212,7 @@ ${assetLines}
 ${rules}
 
 ตอบเป็น JSON ล้วน รูปแบบนี้เท่านั้น:
-{"title": "ชื่อร่างสั้น ๆ", "beats": [{"role": "hook", "vo": "…", "screen": "…", "visual": "<key>"}]}`
+{"title": "ชื่อร่างสั้น ๆ", "beats": [{"role": "hook", "vo": "…", "screen": "…", "visual": "<key>", "style": "gold", "pos": "top", "size": "L", "anim": "pop", "cut": "flash", "motion": "zoomin", "sticker": ""}]}`
   return { system, user }
 }
 
@@ -195,7 +237,7 @@ export function bannedIn(s) {
 // ── สตอรี่บอร์ด → ไทม์ไลน์ห้องตัดต่อ ──
 const TRANS = ["flash", "zoom", "cut"]
 const ANIMS = ["slide", "pop", "float"]
-export function compile(sb, assets, { voice = "Puck", pattern = null } = {}) {
+export function compile(sb, assets, { voice = "Puck", pattern = null, external = false, forbid = null } = {}) {
   const keys = Object.keys(assets)
   // AI เลือกภาพนอกรายการ → ฉากปิดใช้รูปตู้ (สาขาแรกที่มีรูป) · ฉากอื่นใช้รูปซองหลัก
   const fbFor = (role) => role === "cta"
@@ -206,12 +248,29 @@ export function compile(sb, assets, { voice = "Puck", pattern = null } = {}) {
   for (const raw of (sb?.beats || []).slice(0, 8)) {
     const vo = splitVo(raw?.vo)
     if (!vo.length) { dropped.push({ role: raw?.role, why: "ไม่มีบทพูด" }); continue }
-    const bad = bannedIn(`${raw?.vo} ${raw?.screen || ""}`)
+    // เรื่องจากร้าน/ช่องอื่น (YouTube · เพจที่ติดตาม): ราคาเป็นบาทคือราคา/ค่าสมัครของเขา — ไม่ใช่ของเรา (ทดสอบ 26 ต.ค.: "8 ซอง 800 บาท")
+    const bad = bannedIn(`${raw?.vo} ${raw?.screen || ""}`) ||
+      (external && /\d[\d,.]*\s*บาท/.test(`${raw?.vo} ${raw?.screen || ""}`) ? "ราคาของร้าน/ช่องอื่น" : null) ||
+      (forbid && new RegExp(forbid.source, "i").test(`${raw?.vo} ${raw?.screen || ""}`) ? "ชื่อร้าน/ช่องอื่น" : null)
     if (bad) { dropped.push({ role: raw?.role, why: `คำต้องห้าม (${bad})` }); continue }
     const visual = assets[raw?.visual] ? raw.visual : fbFor(raw?.role)
-    beats.push({ role: String(raw?.role || "beat").slice(0, 20), vo, screen: String(raw?.screen || "").trim().slice(0, 40), visual })
+    const one = (v, ok) => (ok.includes(v) ? v : null)
+    const sticker = typeof raw?.sticker === "string" && raw.sticker.startsWith("pack:") && assets[raw.sticker] && raw.sticker !== visual
+      ? raw.sticker : null
+    beats.push({ role: String(raw?.role || "beat").slice(0, 20), vo, screen: String(raw?.screen || "").trim().slice(0, 40), visual,
+      style: one(raw?.style, ["bold", "gold", "neon", "box"]), pos: one(raw?.pos, ["top", "middle", "low"]),
+      size: one(raw?.size, ["S", "M", "L"]), anim: one(raw?.anim, ["pop", "slide", "fade", "float"]),
+      cut: one(raw?.cut, ["cut", "flash", "zoom"]), motion: one(raw?.motion, ["zoomin", "zoomout", "none"]), sticker })
   }
   if (!beats.length) return { error: "สตอรี่บอร์ดไม่มีฉากที่ใช้ได้", dropped }
+  // งบความยาว — เกินเพดานของรูปแบบ +5 วิ: ตัดฉากท้ายก่อนฉากปิดทิ้งทีละฉาก (ส่วนใหญ่เป็นฉากชวนมาตู้ซ้ำ ๆ · ทดสอบ 26 ต.ค. ได้ 51 วิ)
+  const cap = (pattern?.length?.[1] || 30) + 5
+  const secOf = (b) => b.vo.reduce((s, l) => s + estSec(l), 0)
+  while (beats.length > 3 && beats.reduce((s, b) => s + secOf(b), 0) > cap) {
+    const ctaAt = beats.length - 1
+    const cut = beats.splice(ctaAt - 1, 1)[0]
+    dropped.push({ role: cut.role, why: `ยาวเกิน ${cap} วิ` })
+  }
   // ภาพฉาก/คลิปบรรยากาศซ้ำติดกัน → สลับเป็นอันอื่นที่ยังไม่ได้ใช้ (ความหลากหลายของภาพ)
   // ⚠️ ห้ามสลับรูปซอง/รูปสาขา — พูดถึง OP-17 แต่โชว์ OP-13 = ข้อมูลผิด (เจอตอนทดสอบ)
   for (let i = 1; i < beats.length; i++) {
@@ -226,28 +285,40 @@ export function compile(sb, assets, { voice = "Puck", pattern = null } = {}) {
   const clips = []
   const overlays = []
   const style = (b, i) => {
+    if (b.style) return b.style
     const pb = pattern?.beats?.find(x => x.role === b.role)
     return ["bold", "gold", "neon", "box"].includes(pb?.style) ? pb.style : (i === 0 ? "gold" : "bold")
   }
+  // ตำแหน่ง/ขนาดตัวหนังสือ — ซับอยู่ y ≈ 0.69–0.78 · มีรูปซองลอย = ตัวหนังสือขึ้นบนเสมอ
+  const Y = { top: 0.19, middle: 0.44, low: 0.6 }
+  const SIZE = { S: 72, M: 90, L: 110 }
   let t = 0
   beats.forEach((b, i) => {
     const first = lines.length
     lines.push(...b.vo)
     const dur = +b.vo.reduce((s, l) => s + estSec(l), 0).toFixed(2)
     const a = assets[b.visual]
-    const base = { id: `c${i + 1}`, src: a.src, fit: a.fit, transition: i === 0 ? "cut" : TRANS[i % TRANS.length], line: first }
+    const base = { id: `c${i + 1}`, src: a.src, fit: a.fit, transition: i === 0 ? "cut" : (b.cut || TRANS[i % TRANS.length]), line: first }
     clips.push(a.kind === "video"
       ? { ...base, kind: "video", in: 0, out: +Math.min(a.seconds || 8, dur).toFixed(2), speed: 1, volume: 0, fx: 0.5, fy: 0.5, zoom: 1 }
-      : { ...base, kind: "image", dur, motion: i % 2 ? "zoomout" : "zoomin", fx: 0.5, fy: 0.5, zoom: 1 })
+      : { ...base, kind: "image", dur, motion: b.motion || (i % 2 ? "zoomout" : "zoomin"), fx: 0.5, fy: 0.5, zoom: 1 })
+    if (b.sticker) {
+      overlays.push({ id: `s${i + 1}`, type: "image", src: assets[b.sticker].src, start: +t.toFixed(2), end: +(t + dur).toFixed(2),
+        x: 0.5, y: 0.47, w: 0.42, anim: "pop", line: first, ...(b.vo.length > 1 ? { span: b.vo.length } : {}) })
+    }
     const isCta = b.role === "cta" || i === beats.length - 1 && /หน้าเว็บ/.test(b.vo.join(" "))
     if (isCta) {
       overlays.push({ id: `t${i + 1}`, type: "text", text: END_CARD, start: +t.toFixed(2), end: -1, x: 0.5, y: 0.4,
         size: 76, style: "box", color: "#ffffff", anim: "pop", line: first })
     } else if (b.screen) {
       const long = b.screen.length > 16
+      const pos = b.sticker ? "top" : (b.pos || "top")
+      let size = b.size ? SIZE[b.size] : i === 0 ? (long ? 92 : 112) : (long ? 76 : 92)
+      if (long) size = Math.min(size, 92)
+      if (b.sticker) size = Math.min(size, 90)
       overlays.push({ id: `t${i + 1}`, type: "text", text: b.screen, start: +t.toFixed(2), end: +(t + dur).toFixed(2),
-        x: 0.5, y: i === 0 ? 0.22 : 0.18, size: i === 0 ? (long ? 92 : 112) : (long ? 76 : 92),
-        style: style(b, i), color: "#ffffff", anim: i === 0 ? "pop" : ANIMS[i % ANIMS.length], line: first,
+        x: 0.5, y: Y[pos] + (i === 0 && pos === "top" ? 0.03 : 0), size,
+        style: style(b, i), color: "#ffffff", anim: b.anim || (i === 0 ? "pop" : ANIMS[i % ANIMS.length]), line: first,
         ...(b.vo.length > 1 ? { span: b.vo.length } : {}) })
     }
     t += dur
@@ -264,4 +335,4 @@ export function compile(sb, assets, { voice = "Puck", pattern = null } = {}) {
   }
 }
 
-export default { BRANCH_PHOTOS, sanitizeLine, splitVo, scrubSource, offCards, choosePattern, buildAssets, buildPrompt, parseStoryboard, bannedIn, compile }
+export default { BRANCH_PHOTOS, FREE, nameRegex, scrubNames, sanitizeLine, splitVo, scrubSource, offCards, choosePattern, buildAssets, buildPrompt, parseStoryboard, bannedIn, compile }

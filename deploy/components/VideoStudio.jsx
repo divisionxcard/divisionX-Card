@@ -57,7 +57,7 @@ const ENGINES = [
 // ตรงกับ AUTO_FORMATS ใน app/api/video/render/route.js และ FORMATS ใน agents/video/hf_director.py
 // ผู้กำกับบนเครื่องเรนเดอร์เขียนสคริปต์+ฉาก+หน้าตาจากข้อมูลจริงเอง · เลี่ยงรูปแบบ/หน้าตา/สำนวนที่คลิปล่าสุดเพิ่งใช้
 const AUTO_FORMATS = [
-  { id: "auto",   label: "ให้ระบบเลือก",  desc: "สลับรูปแบบให้เอง ไม่ซ้ำคลิปล่าสุด" },
+  { id: "auto",   label: "ให้ระบบเลือก",  desc: "สุ่มจากทุกรูปแบบ (เคลื่อนไหว · ไวรัล · AI คิดเอง) ไม่ซ้ำคลิปล่าสุด" },
   { id: "rank",   label: "อันดับขายดี",   desc: "กระดาน 5 ช่อง · ยอดขายจริง (โชว์แค่อันดับ)" },
   { id: "versus", label: "เลือกข้าง",     desc: "ผู้ชนะอยู่ต่อ 3 รอบ · เฉลยจากยอดขายจริง" },
   { id: "quiz",   label: "ทายชุด",        desc: "ซูมลายบนซอง นับ 3-2-1 แล้วเฉลย" },
@@ -267,6 +267,7 @@ export default function VideoStudio() {
   const [sbPattern, setSbPattern] = useState("auto")
   const [sbVoice, setSbVoice] = useState("auto")
   const [sbResult, setSbResult] = useState(null)
+  const [autoStory, setAutoStory] = useState(null)   // แผนสตอรี่บอร์ดในโหมดให้ระบบออกแบบ (ไอเดียที่ระบบเลือก)
   const [fmt, setFmt] = useState("auto")
   const [autoMachine, setAutoMachine] = useState("")
   const [autoSku, setAutoSku] = useState("")
@@ -527,12 +528,28 @@ export default function VideoStudio() {
 
   async function submitAuto(preview = true) {
     if (sending) return
-    setSending(true); setErr(null)
+    // ให้ระบบเลือก = สุ่มจากทุกแบบ: เคลื่อนไหวจากยอดขาย (ผู้กำกับ) 1 ใน 3 · สตอรี่บอร์ด (ไวรัล 9 + AI คิดเอง) 2 ใน 3
+    const sb = fmt.startsWith("sb:") ? fmt.slice(3) : (fmt === "auto" && Math.random() < 2 / 3 ? "auto" : null)
+    if (sb) {
+      setSending(true); setErr(null); setAutoStory(null)
+      try {
+        const r = await api("storyboard", { method: "POST", body: JSON.stringify({
+          idea_id: "auto", pattern: sb, ...(autoVoice !== "auto" ? { voice: autoVoice } : {}) }) })
+        if (!alive.current) return
+        if (preview) { setAutoStory(r); setJob(null) } else { setSending(false); await renderStory(r); return }
+      } catch (e) {
+        setErr({ msg: e.message, hint: e.hint })
+      } finally {
+        setSending(false)
+      }
+      return
+    }
+    setSending(true); setErr(null); setAutoStory(null)
     try {
       const d = new Date(), p = (n) => String(n).padStart(2, "0")
       const name = `auto-${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}`
       const plan = {
-        project: name, format: fmt,
+        project: name, format: fmt.startsWith("sb:") ? "auto" : fmt,
         ...(fmt === "map" && autoMachine ? { machine: autoMachine } : {}),
         ...(fmt === "quiz" && autoSku ? { sku: autoSku } : {}),
         voice: autoVoice,
@@ -608,6 +625,34 @@ export default function VideoStudio() {
       }
     })()
   }, [authState, mode, sbIdeas, api])
+
+  // รูปแบบไวรัล (สตอรี่บอร์ด) ใช้ในโหมด "ให้ระบบออกแบบ" ด้วย — โหลดครั้งแรกที่เปิดหน้า
+  useEffect(() => {
+    if (authState !== "ok" || sbPatterns.length) return
+    api("storyboard").then(r => { if (alive.current) setSbPatterns(r.patterns || []) }).catch(() => {})
+  }, [authState, sbPatterns.length, api])
+
+  // ร่างสตอรี่บอร์ด → สั่งทำคลิปทันที (ไม่ต้องเข้าห้องตัดต่อ) · ติดตามงานด้วยพาเนลเดิม (ด่านตรวจ + ภาพรวมเฟรม)
+  async function renderStory(r) {
+    if (!r?.timeline) return            // ไม่เช็ก sending: ทาง "ทำเลย" เรียกต่อจากขั้นเขียนทันที (state ยังไม่ทันอัปเดต) · ปุ่มถูกปิดระหว่างทำอยู่แล้ว
+    setSending(true); setErr(null)
+    try {
+      const d = new Date(), p2 = (n) => String(n).padStart(2, "0")
+      const name = `sb-${d.getFullYear()}${p2(d.getMonth() + 1)}${p2(d.getDate())}-${p2(d.getHours())}${p2(d.getMinutes())}${p2(d.getSeconds())}`
+      const res = await api("render", { method: "POST", body: JSON.stringify({ plan: {
+        project: name, engine: "timeline", script: r.timeline.voice?.script || "", timeline: r.timeline, edit_id: r.edit_id,
+      } }) })
+      const n = normJob(res)
+      if (!n?.id) throw new Error("เซิร์ฟเวอร์ไม่ได้ส่งเลขงานกลับมา — ติดตามสถานะไม่ได้")
+      setJob({ ...n, project: n.project || name }); setSince(Date.now())
+      setAutoStory(null); setSbResult(null)
+      loadJobs()
+    } catch (e) {
+      setErr({ msg: e.message, hint: e.hint })
+    } finally {
+      setSending(false)
+    }
+  }
 
   async function writeStoryboard() {
     if (sending || !sbIdea) return
@@ -716,6 +761,7 @@ export default function VideoStudio() {
             ระบบเขียนสคริปต์ เลือกฉาก หน้าตา และสำนวนเองจากยอดขาย/สาขา/รูปซองจริง ·
             เลี่ยงรูปแบบ หน้าตา และสำนวนที่คลิปล่าสุดเพิ่งใช้ · ไม่โชว์ตัวเลขยอดขาย
           </p>
+          <p className="vs-fmt-h">คลิปเคลื่อนไหวจากยอดขาย/สาขาจริง</p>
           <div className="vs-fmts">
             {AUTO_FORMATS.map(f => (
               <button key={f.id} className={`vs-fmt ${fmt === f.id ? "vs-fmt-on" : ""}`} onClick={() => setFmt(f.id)}>
@@ -724,6 +770,18 @@ export default function VideoStudio() {
               </button>
             ))}
           </div>
+          {sbPatterns.length > 0 && <>
+            <p className="vs-fmt-h">รูปแบบไวรัลจากรีเสิร์ช — ระบบเลือกไอเดียเด็ดที่ยังไม่เคยทำให้ · AI ออกแบบหน้าตาแต่ละฉากเอง</p>
+            <div className="vs-fmts">
+              {sbPatterns.map(p => (
+                <button key={p.id} className={`vs-fmt ${fmt === `sb:${p.id}` ? "vs-fmt-on" : ""} ${p.free ? "vs-fmt-free" : ""}`}
+                  onClick={() => setFmt(`sb:${p.id}`)}>
+                  <b>{p.free ? "✨ " : ""}{p.name}</b>
+                  <span>{p.free ? "ไม่มีโครงบังคับ — AI คิดจังหวะ/หน้าตาเองจากเรื่อง" : (p.evidence?.[0] ? `หลักฐาน: ${evidenceText(p.evidence[0])}` : p.why)}</span>
+                </button>
+              ))}
+            </div>
+          </>}
           <div className="vs-two">
             {fmt === "map" && (
               <label className="vs-field">
@@ -760,8 +818,10 @@ export default function VideoStudio() {
             <button className="dx-btn dx-btn-ghost" disabled={sending} onClick={() => submitAuto(false)}>
               <Sparkles size={14} /> ทำเลย ไม่ดูแผน
             </button>
-            <span className="vs-dim vs-fine">ดูแผน ~1–2 นาที ยังไม่เสียเงิน · กดอนุมัติแล้วทำคลิป ~5–10 นาที · ปิดหน้านี้ไปก่อนได้</span>
+            <span className="vs-dim vs-fine">ดูแผน ~20 วิ–2 นาที ยังไม่เสียเงิน · กดอนุมัติแล้วทำคลิป ~5–10 นาที · ปิดหน้านี้ไปก่อนได้</span>
           </div>
+          {autoStory && <StoryResult result={autoStory} busy={sending} onRender={() => renderStory(autoStory)}
+            onRetry={() => submitAuto(true)} />}
           {job && <JobPanel job={job} waited={waited} busy={sending} onDecide={decidePlan} />}
         </section>
       )}
@@ -770,8 +830,9 @@ export default function VideoStudio() {
         <StoryPanel ideas={sbIdeas} patterns={sbPatterns} query={sbQuery} setQuery={setSbQuery}
           idea={sbIdea} setIdea={(id) => { setSbIdea(id); setSbResult(null) }}
           pattern={sbPattern} setPattern={setSbPattern} voice={sbVoice} setVoice={setSbVoice}
-          result={sbResult} busy={sending} onWrite={writeStoryboard} />
+          result={sbResult} busy={sending} onWrite={writeStoryboard} onRender={() => renderStory(sbResult)} />
       )}
+      {mode === "story" && job && !sbResult && <section className="dx-card vs-card"><JobPanel job={job} waited={waited} busy={sending} onDecide={decidePlan} /></section>}
       {mode === "story" && (
         <AdBox api={api} onAdopted={async (pid) => {
           try { const r = await api("storyboard"); if (alive.current) { setSbPatterns(r.patterns || []); setSbPattern(pid) } } catch { /* โหลดใหม่ตอนเปิดหน้า */ }
@@ -1166,7 +1227,7 @@ const SOURCE_TH = {
 const evidenceText = (e) => e?.lift ? `แรงกว่าปกติ ${e.lift} เท่า` : e?.views_per_hour ? `${Number(e.views_per_hour).toLocaleString("th-TH")} วิว/ชม.`
   : e?.src === "ad_box" ? (e.days != null ? `แอดวิ่งมา ${e.days} วัน` : "จากกล่องส่งแอด") : ""
 
-function StoryPanel({ ideas, patterns, query, setQuery, idea, setIdea, pattern, setPattern, voice, setVoice, result, busy, onWrite }) {
+function StoryPanel({ ideas, patterns, query, setQuery, idea, setIdea, pattern, setPattern, voice, setVoice, result, busy, onWrite, onRender }) {
   const q = query.trim().toLowerCase()
   const list = (ideas || []).filter(x => !q || `${x.title} ${x.subtype || ""} ${x.related_sku || ""}`.toLowerCase().includes(q)).slice(0, 60)
   const picked = (ideas || []).find(x => x.id === idea)
@@ -1194,7 +1255,7 @@ function StoryPanel({ ideas, patterns, query, setQuery, idea, setIdea, pattern, 
           <span>รูปแบบคลิป</span>
           <select className="dx-input" value={pattern} onChange={e => setPattern(e.target.value)}>
             <option value="auto">ให้ระบบเลือก (เข้ากับไอเดีย · ไม่ซ้ำร่างล่าสุด)</option>
-            {patterns.map(p => <option key={p.id} value={p.id}>{p.name}{p.evidence?.[0] ? ` — ${evidenceText(p.evidence[0])}` : ""}</option>)}
+            {patterns.map(p => <option key={p.id} value={p.id}>{p.free ? "✨ " : ""}{p.name}{p.evidence?.[0] ? ` — ${evidenceText(p.evidence[0])}` : ""}</option>)}
           </select>
         </label>
         <label className="vs-field">
@@ -1211,34 +1272,52 @@ function StoryPanel({ ideas, patterns, query, setQuery, idea, setIdea, pattern, 
         </button>
         <span className="vs-dim vs-fine">{picked ? `ไอเดีย: ${picked.title.slice(0, 60)}` : "เลือกไอเดียก่อน"}</span>
       </div>
-      {result && (
-        <div className="vs-plan vs-story">
-          <b className="vs-plan-t"><ListChecks size={14} /> {result.pattern?.name} · ยาวราว {mmss(result.seconds)} นาที · เสียง {result.voice}</b>
-          <p className="vs-dim vs-fine">{result.pattern?.why}</p>
-          <div className="vs-auto-chips">
-            {(result.pattern?.evidence || []).map((e, i) => <span key={i} className="vs-chip vs-chip-dim" title={e.what}>{evidenceText(e) || e.src}</span>)}
-          </div>
-          <ol className="vs-beats">
-            {(result.beats || []).map((b, i) => (
-              <li key={i}>
-                <span className="vs-beat-role">{b.role}</span>
-                <span className="vs-beat-vo">{b.vo.join(" ")}</span>
-                <span className="vs-dim vs-fine">{b.screen ? `บนจอ: ${b.screen} · ` : ""}ภาพ: {b.visual}</span>
-              </li>
-            ))}
-          </ol>
-          {result.dropped?.length > 0 && (
-            <p className="vs-note">ตัดฉากทิ้ง {result.dropped.length} ฉาก: {result.dropped.map(d => `${d.role} (${d.why})`).join(" · ")}</p>
-          )}
-          <div className="vs-actions">
-            <a className="dx-btn dx-btn-primary" href={`/video/editor?id=${encodeURIComponent(result.edit_id)}`}>
-              <ExternalLink size={14} /> เปิดในห้องตัดต่อ
-            </a>
-            <span className="vs-dim vs-fine">ในห้องตัดต่อ: ดูภาพ/ข้อความ แก้ได้ทุกชิ้น แล้วกดทำคลิป · ภาพกับข้อความตั้งเวลาตามเสียงพากย์จริงตอนทำ</span>
-          </div>
+      {result && <StoryResult result={result} busy={busy} onRender={onRender} />}
+    </section>
+  )
+}
+
+// การ์ดสตอรี่บอร์ด — ใช้ทั้งโหมดให้ระบบออกแบบ (ไอเดียที่ระบบเลือก) และโหมดจากไอเดีย
+const VIS_TH = (k) => k.startsWith("pack:") ? `ซอง ${k.slice(5)}` : k.startsWith("branch:") ? "รูปตู้สาขา" : k.startsWith("bg:") ? "ภาพฉาก"
+  : k.startsWith("broll:") ? "คลิปบรรยากาศ" : k === "machine" ? "รูปตู้" : k
+function StoryResult({ result, busy, onRender, onRetry }) {
+  return (
+    <div className="vs-plan vs-story">
+      <b className="vs-plan-t"><ListChecks size={14} /> {result.pattern?.name} · ยาวราว {mmss(result.seconds)} นาที · เสียง {result.voice} · ฟรี</b>
+      {result.idea?.title && <p className="vs-fine">ไอเดีย: {result.idea.title}</p>}
+      <p className="vs-dim vs-fine">{result.pattern?.why}</p>
+      {(result.pattern?.evidence || []).length > 0 && (
+        <div className="vs-auto-chips">
+          {result.pattern.evidence.map((e, i) => <span key={i} className="vs-chip vs-chip-dim" title={e.what}>{evidenceText(e) || e.src}</span>)}
         </div>
       )}
-    </section>
+      <ol className="vs-beats">
+        {(result.beats || []).map((b, i) => (
+          <li key={i}>
+            <span className="vs-beat-role">{b.role}</span>
+            <span className="vs-beat-vo">{b.vo.join(" ")}</span>
+            <span className="vs-dim vs-fine">{b.screen ? `บนจอ: ${b.screen} · ` : ""}ภาพ: {VIS_TH(b.visual)}{b.sticker ? ` + ${VIS_TH(b.sticker)} ลอย` : ""}{b.style ? ` · ${b.style}` : ""}</span>
+          </li>
+        ))}
+      </ol>
+      {result.dropped?.length > 0 && (
+        <p className="vs-dim vs-fine">ระบบตัดฉากทิ้ง {result.dropped.length} ฉาก: {result.dropped.map(d => `${d.role} (${d.why})`).join(" · ")}</p>
+      )}
+      <div className="vs-actions">
+        {onRender && (
+          <button className="dx-btn dx-btn-primary" disabled={busy} onClick={onRender}>
+            {busy ? <Loader2 size={14} className="vs-spin" /> : <Check size={14} />} อนุมัติ · เริ่มทำคลิป
+          </button>
+        )}
+        <a className="dx-btn dx-btn-ghost" href={`/video/editor?id=${encodeURIComponent(result.edit_id)}`}>
+          <ExternalLink size={14} /> เปิดแก้ในห้องตัดต่อ
+        </a>
+        {onRetry && (
+          <button className="dx-btn dx-btn-ghost" disabled={busy} onClick={onRetry}><RefreshCw size={14} /> คิดแบบใหม่</button>
+        )}
+        <span className="vs-dim vs-fine">ภาพกับตัวหนังสือตั้งเวลาตามเสียงพากย์จริงตอนทำ · ทำคลิป ~3–6 นาที</span>
+      </div>
+    </div>
   )
 }
 
@@ -1596,6 +1675,9 @@ const CSS = `
 .vs-st-bad{color:var(--dx-danger);background:rgba(255,68,102,.09);border-color:rgba(255,68,102,.3);}
 .vs-st-plan{color:#FFD27A;background:rgba(255,184,77,.12);border-color:rgba(255,184,77,.45);}
 .vs-ideas{display:flex;flex-direction:column;gap:6px;max-height:340px;overflow-y:auto;margin-top:10px;padding-right:2px;}
+.vs-fmt-h{margin:12px 0 6px;font-size:11.5px;color:var(--dx-text-muted);}
+.vs-fmt-free{border-style:dashed;}
+.vs-fmt-free b{color:#FFD27A;}
 .vs-idea{display:flex;align-items:center;flex-wrap:wrap;gap:6px;text-align:left;padding:8px 10px;border-radius:10px;cursor:pointer;
   background:var(--dx-bg-input);border:1px solid var(--dx-border);color:var(--dx-text);font-family:var(--dx-font);font-size:12.5px;min-width:0;}
 .vs-idea:hover{border-color:var(--dx-border-strong);}

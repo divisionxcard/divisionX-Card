@@ -1,7 +1,9 @@
 // ตัวเขียนสตอรี่บอร์ด — ไอเดียจากรีเสิร์ช → ร่างห้องตัดต่อ (26 ต.ค. 2026)
 //
 //   GET  /api/video/storyboard                         → { patterns: [...], recent: [pattern id ล่าสุด] }
-//   POST /api/video/storyboard { idea_id, pattern?, voice? } → { edit_id, name, seconds, pattern, beats, dropped }
+//   POST /api/video/storyboard { idea_id | "auto", pattern? ("auto" · "free" · id), voice? }
+//        → { edit_id, name, seconds, pattern, beats, dropped, idea, timeline }
+//   idea_id "auto" = ระบบเลือกไอเดียเด็ดที่ยังไม่เคยทำสตอรี่บอร์ด (โหมด "ให้ระบบออกแบบ" ในหน้า /video · 26 ต.ค. 2026)
 //
 // ลำดับ: ไอเดีย (marketing_ideas) + สินค้า/สต็อก/สาขาจริง (DB) + รูปแบบไวรัล (tasks/video_patterns.json)
 //        → Gemini เขียนสตอรี่บอร์ด JSON → lib/storyboard.compile → ร่าง R2 video-edits/<id>.json
@@ -17,7 +19,7 @@ import { getObject, listObjects, mediaUrl, putObject } from "../../../../lib/r2"
 import { cleanTimeline, VOICES } from "../../../../lib/videoTimeline"
 import { detectFranchise, FRANCHISE_LABEL } from "../../../../lib/franchiseDetect"
 import {
-  buildAssets, buildPrompt, choosePattern, compile, offCards, parseStoryboard, scrubSource,
+  buildAssets, buildPrompt, choosePattern, compile, FREE, nameRegex, offCards, parseStoryboard, scrubNames, scrubSource,
 } from "../../../../lib/storyboard"
 
 export const dynamic = "force-dynamic"
@@ -31,7 +33,22 @@ const db = createClient(
 const LOG_DIR = "research/storyboards"          // ประวัติการใช้รูปแบบ (ชื่อไฟล์มี id รูปแบบ — เลี่ยงซ้ำโดยไม่ต้องเปิดไฟล์)
 const LANG_TH = { JA: "ญี่ปุ่น", EN: "อังกฤษ", TH: "ไทย", CN: "จีน" }
 
-const task = async (name) => JSON.parse(await readFile(path.join(process.cwd(), "tasks", name), "utf-8"))
+const task = async (name) => JSON.parse((await readFile(path.join(process.cwd(), "tasks", name), "utf-8")).replace(/^\uFEFF/, ""))
+
+// ชื่อร้าน/ช่อง/เพจอื่นที่ห้ามเอ่ย — ช่อง YouTube ที่เก็บไอเดีย · เพจที่ตัวเฝ้าเพจติดตาม (ยกเว้นเพจทางการของค่าย) · คู่แข่งในเรดาร์
+// "Guy Ngid (กายหงิด)" → ทั้งชื่ออังกฤษและไทย
+async function otherNames(idea) {
+  const out = []
+  const split = (s) => String(s || "").replace(/^(YouTube|Facebook|TikTok|Instagram)\s*·\s*/i, "").split(/[()（）·|,]/).map(x => x.trim())
+  try { for (const c of (await task("idea_sources.json")).youtube_channels || []) out.push(...split(c.label)) } catch { /* ไม่มีไฟล์ */ }
+  try {
+    const sw = await task("social_watch.json")
+    for (const k of ["facebook", "instagram"]) for (const t of sw[k] || []) if (t.group !== "official") out.push(...split(t.name))
+  } catch { /* ไม่มีไฟล์ */ }
+  try { for (const c of (await task("competitor_watch.json")).competitors || []) out.push(...split(c.name)) } catch { /* ไม่มีไฟล์ */ }
+  out.push(...split(idea?.source_label))
+  return nameRegex(out)
+}
 
 // คลังรูปแบบ = ไฟล์ในรีโป (tasks/video_patterns.json) + รูปแบบที่ทีมเพิ่มจากกล่องส่งแอด (R2 · /api/video/ads adopt)
 async function allPatterns() {
@@ -73,12 +90,26 @@ async function backgroundsFor(franchise) {
     .slice(0, 6)
 }
 
-async function recentPatterns(n = 10) {
+async function recentLogs(n = 15) {
   try {
     const files = await listObjects(`${LOG_DIR}/`, 400)
-    return files.sort((a, b) => String(b.modified).localeCompare(String(a.modified))).slice(0, n)
-      .map(f => (f.key.slice(LOG_DIR.length + 1).match(/^[a-z0-9]+-([a-z0-9-]+?)--/) || [])[1]).filter(Boolean)
+    return files.sort((a, b) => String(b.modified).localeCompare(String(a.modified))).slice(0, n).map(f => f.key.slice(LOG_DIR.length + 1))
   } catch { return [] }
+}
+const recentPatterns = async (n = 10) =>
+  (await recentLogs(n)).map(k => (k.match(/^[a-z0-9]+-([a-z0-9-]+?)--/) || [])[1]).filter(Boolean)
+
+// ไอเดียเด็ดที่ยังไม่เคยทำ — คะแนนสูง · ถอดเนื้อหาแล้ว/ข้อมูลจริงของเรา/ทางการ/ราคา ได้แต้มเพิ่ม · ไม่ซ้ำ 15 สตอรี่บอร์ดล่าสุด
+async function pickIdea(seed) {
+  const used = new Set((await recentLogs(15)).map(k => Number((k.match(/--i(\d+)\.json$/) || [])[1])).filter(Boolean))
+  const { data } = await db.from("marketing_ideas").select("id,source,subtype,title,summary,score,related_sku")
+    .in("status", ["new", "picked"]).order("score", { ascending: false }).limit(80)
+  const pool = (data || []).filter(x => !used.has(x.id)).map(x => ({
+    id: x.id,
+    s: Number(x.score || 0) + (String(x.summary || "").startsWith("📌") ? 1 : 0) +
+       (["internal", "official", "price"].includes(x.source) ? 0.5 : 0) + (x.related_sku ? 0.3 : 0),
+  })).sort((a, b) => b.s - a.s).slice(0, 10)
+  return pool.length ? pool[Math.abs(seed) % pool.length].id : null
 }
 
 export async function GET(req) {
@@ -87,8 +118,8 @@ export async function GET(req) {
   try {
     const { patterns } = await allPatterns()
     return NextResponse.json({
-      patterns: patterns.map(p => ({ id: p.id, name: p.name, why: p.why, length: p.length, evidence: p.evidence,
-        needs_sku: !!p.fits?.needs_sku, from_ad: p.from_ad || null })),
+      patterns: [...patterns, FREE].map(p => ({ id: p.id, name: p.name, why: p.why, length: p.length, evidence: p.evidence,
+        needs_sku: !!p.fits?.needs_sku, from_ad: p.from_ad || null, free: !!p.free })),
       recent: await recentPatterns(),
     })
   } catch (e) {
@@ -101,7 +132,11 @@ export async function POST(req) {
   if (gate.error) return gate.error
   let body
   try { body = await req.json() } catch { return NextResponse.json({ error: "bad json" }, { status: 400 }) }
-  const ideaId = Number(body?.idea_id)
+  let ideaId = Number(body?.idea_id)
+  if (body?.idea_id === "auto") {
+    ideaId = await pickIdea(Math.floor(Date.now() / 1000))
+    if (!ideaId) return NextResponse.json({ error: "ไม่มีไอเดียใหม่ให้เลือก — รอตัวเก็บไอเดียรอบ 07:00 หรือเลือกไอเดียเองในโหมด \"จากไอเดีย\"" }, { status: 404 })
+  }
   if (!Number.isInteger(ideaId) || ideaId < 1) return NextResponse.json({ error: "ต้องระบุ idea_id" }, { status: 400 })
   const voice = VOICES.includes(body?.voice) ? body.voice : VOICES[Math.floor(Math.random() * VOICES.length)]
 
@@ -156,18 +191,19 @@ export async function POST(req) {
     const { patterns, trust_facts: trustFacts } = await allPatterns()
     const recent = await recentPatterns()
     const pattern = choosePattern(patterns, {
-      idea, hasSku: !!sku, recent, forced: typeof body?.pattern === "string" ? body.pattern : null,
+      idea, hasSku: !!sku, recent, forced: typeof body?.pattern === "string" && body.pattern !== "auto" ? body.pattern : null,
       seed: ideaId + recent.length + Math.floor(Date.now() / 60000),
     })
     if (!pattern) return NextResponse.json({ error: "ไม่มีรูปแบบในคลัง (tasks/video_patterns.json)" }, { status: 500 })
 
     // ── ข้อมูลที่ตัวเขียนใช้ได้ (ข้อเท็จจริงทั้งหมดต้องมาจากตรงนี้) ──
     const angle = (Array.isArray(idea.angles) ? idea.angles : []).find(a => a?.label === idea.chosen_angle)
-    const summary = scrubSource(idea.summary, idea.source_label).slice(0, 1800)
+    const forbid = await otherNames(idea)
+    const summary = scrubNames(scrubSource(idea.summary, idea.source_label), forbid).slice(0, 1800)
     const facts = [
-      `หัวข้อ: ${idea.title || "-"}`,
+      `หัวข้อ: ${scrubNames(idea.title, forbid) || "-"}`,
       summary ? `ข้อเท็จจริงของเรื่อง:\n${summary}` : null,
-      angle ? `มุมที่เลือกไว้: ${angle.label} — ${scrubSource(angle.brief, idea.source_label)}` : null,
+      angle ? `มุมที่เลือกไว้: ${angle.label} — ${scrubNames(scrubSource(angle.brief, idea.source_label), forbid)}` : null,
       sku ? `สินค้าในตู้ที่เกี่ยวข้อง: ${sku.name} (${sku.sku_id}) · ค่าย ${FRANCHISE_LABEL[sku.franchise] || sku.franchise}` +
             (sku.language ? ` · ฉบับภาษา${LANG_TH[sku.language] || sku.language}` : "") : null,
       siblings.length ? `ชุดอื่นของค่ายเดียวกันที่มีในตู้: ${siblings.map(s => s.name).join(" · ")}` : null,
@@ -180,7 +216,7 @@ export async function POST(req) {
 
     let voiceCfg = null
     try { voiceCfg = await task("content_voice.json") } catch { /* ใช้ค่ากลาง */ }
-    const { system, user } = buildPrompt({ pattern, idea, facts, assets, voice: voiceCfg, trustFacts })
+    const { system, user } = buildPrompt({ pattern, idea, facts, assets, voice: voiceCfg, trustFacts, library: patterns })
 
     let sb = null, model = null
     for (let i = 0; i < 2 && !sb; i++) {
@@ -190,7 +226,7 @@ export async function POST(req) {
     }
     if (!sb) return NextResponse.json({ error: "AI เขียนสตอรี่บอร์ดไม่สำเร็จ (ตอบไม่เป็น JSON) — กดใหม่อีกครั้ง" }, { status: 502 })
 
-    const out = compile(sb, assets, { voice, pattern })
+    const out = compile(sb, assets, { voice, pattern, forbid, external: ["youtube", "manual", "social", "radar"].includes(idea.source) })
     if (out.error) return NextResponse.json({ error: out.error, dropped: out.dropped }, { status: 422 })
     const cleaned = cleanTimeline(out.timeline)
     if (cleaned.error) return NextResponse.json({ error: `ไทม์ไลน์ไม่ผ่าน: ${cleaned.error}` }, { status: 422 })
@@ -208,13 +244,14 @@ export async function POST(req) {
     const doc = { id, name, timeline: cleaned.timeline, job_id: null, updated_at: story.created_at, updated_by: gate.user.id, story }
     await putObject(`video-edits/${id}.json`, JSON.stringify(doc), "application/json")
     try {
-      await putObject(`${LOG_DIR}/${stamp}-${pattern.id}--${id}.json`, JSON.stringify(story), "application/json")
+      await putObject(`${LOG_DIR}/${stamp}-${pattern.id}--${id}--i${idea.id}.json`, JSON.stringify(story), "application/json")
     } catch { /* ประวัติเป็นงานรอง — ร่างบันทึกแล้ว */ }
 
     return NextResponse.json({
       edit_id: id, name, seconds: out.seconds, voice,
-      pattern: { id: pattern.id, name: pattern.name, why: pattern.why, evidence: pattern.evidence },
-      beats: out.beats, dropped: out.dropped, model,
+      pattern: { id: pattern.id, name: pattern.name, why: pattern.why, evidence: pattern.evidence, free: !!pattern.free },
+      idea: { id: idea.id, title: idea.title, source: idea.source },
+      beats: out.beats, dropped: out.dropped, model, timeline: cleaned.timeline,
     })
   } catch (e) {
     return NextResponse.json({ error: e.message }, { status: 500 })
