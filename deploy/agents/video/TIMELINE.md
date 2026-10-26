@@ -54,6 +54,30 @@
   และตัวล้างบรรทัด `storyboard.sanitizeLine` ต้องตรงกับ `segments.sanitize` (บรรทัดว่างฝั่ง python ถูกข้าม = เลขเลื่อน)
 - รูปในเทมเพลตที่สตอรี่บอร์ดใช้: `assets/machine-hero.jpg` · `assets/branches/<id>.jpg` — หน้าตัวอย่างใช้รูปย่อใน `public/video-assets/` (`Preview.srcOf`)
 
+## ท่าเคลื่อนไหว + ฉากที่ AI ออกแบบ (26 ต.ค. 2026)
+
+เจ้าของ: "เหมือนเอาภาพนิ่งมาตัดเรียงต่อกัน อยากให้ออกแบบอนิเมชั่นและแบล็คกราวให้สวยงามตามเนื้อหา และขยับได้"
+— ชื่อท่าต้องตรงกัน 3 ที่: `hf_timeline.py` · `lib/videoTimeline.js` · `lib/storyboard.js` (`DESIGN`) + เทมเพลต
+
+```jsonc
+{ "id": "c1", "kind": "image", "src": "gen:paint",           // ฉากที่ AI ออกแบบ (gen:paint | gen:footage) — ยังไม่มีไฟล์
+  "dur": 4.2, "fit": "cover",
+  "motion": "push",      // none · zoomin · zoomout · panleft · panright · rise · drift · push · shake (วิดีโอใช้ได้ด้วย)
+  "transition": "bolt",  // cut · flash · zoom · whip · bolt · glitch · wipe · ring
+  "layer": "sparks",     // none · motes · sparks · stars · rays · speed · bolts · rings · sweep · bubbles · confetti · aurora
+  "tint": "gold",        // cyan · gold · purple · red · green · orange · pink · white
+  "gen": { "kind": "paint", "prompt": "<อังกฤษ>", "video": "<พร้อมต์วิดีโอ>", "query": "<คำค้นฟุตเทจ>",
+           "tags": ["ocean"], "note": "<ไทย>", "franchise": "OP" } }
+// ของทับ anim: + punch · type · words (ตัวหนังสือ) · slam · spin · tilt (ภาพทับ/ซอง)
+```
+
+- **runner หาไฟล์ของ `gen:` ตอนเรนเดอร์** (`hf_timeline._resolve_gen` · หลัง anchor): คลังภาพที่ตรงเรื่อง (ฟรี) → วาดใหม่ ≤ `PAINT_BUDGET` (3)
+  → ฟุตเทจ Pixabay → ภาพสำรอง · คลังภาพ = `video-bg/lib/` + `index.json` (`hf_bg.library_find` / `paint_scene`) · เขียนไฟล์กลับร่าง (`_writeback`)
+- **คนอัปไฟล์มาแทน** (การ์ดแผน/ห้องตัดต่อ): src เป็นไฟล์จริง · `gen` ยังอยู่ (คัดลอกพร้อมต์ได้) · ยังผูก `line` (`REPLACE_MEDIA`)
+  · วิดีโอสั้นกว่าบรรทัดที่ผูก → runner ลด `speed` ให้พอดี
+- ชั้นเอฟเฟกต์เป็นกล่องจับเวลา `#l-<i>` (track 3) · ชิ้นข้างในสร้างด้วยสคริปต์ · **สุ่มด้วย `prand` เท่านั้น** (ห้าม Math.random)
+- ⚠️ ท่าที่ "ซ่อนก่อนถึงคิว" ต้อง `tl.set(..., {opacity: 0}, 0)` — `immediateRender:false` ทำให้ชิ้นที่ยังไม่ถึงคิวโชว์สภาพปกติ
+
 ## กติกา
 
 - **ความยาวคลิป** = max(ผลรวมแทร็กหลัก, เสียงพากย์ + 0.6 วิ) · แทร็กหลักสั้นกว่า = ท้ายคลิปเป็นพื้นกรมท่า (หน้าเว็บเตือน)
