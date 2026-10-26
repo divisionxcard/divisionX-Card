@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
-  "gitCommitHash": "0c70fff709a066b2258bd8eb1d1674df3af26f41",
-  "generatedAt": "2026-10-24T18:50:00.503Z",
+  "gitCommitHash": "649f368c3654bc2d15134745ad954a725efef822",
+  "generatedAt": "2026-10-26T06:54:11.121Z",
   "files": {
     ".env.example": {
       "filePath": ".env.example",
@@ -8544,7 +8544,7 @@
     },
     "deploy/agents/video/hf_bg.py": {
       "filePath": "deploy/agents/video/hf_bg.py",
-      "contentHash": "9d381ba5bcfb07fd196064b09916e18863d1bba49e6cfb607702c983e623abbe",
+      "contentHash": "139be5c4d76c5e91fbb21afe1f9b2f8d9bbf00bff5512bb98c106b08ee4fcf9a",
       "functions": [
         {
           "name": "_log",
@@ -8675,7 +8675,8 @@
             "rng",
             "hist",
             "plan",
-            "upload"
+            "upload",
+            "query"
           ],
           "exported": true,
           "lineCount": 23
@@ -8700,6 +8701,42 @@
           "lineCount": 16
         },
         {
+          "name": "_paint_into",
+          "params": [
+            "plan",
+            "sig",
+            "medium",
+            "scene",
+            "by",
+            "upload"
+          ],
+          "exported": true,
+          "lineCount": 25
+        },
+        {
+          "name": "decide",
+          "params": [
+            "plan",
+            "seed",
+            "hist"
+          ],
+          "exported": true,
+          "lineCount": 34
+        },
+        {
+          "name": "_follow",
+          "params": [
+            "plan",
+            "bp",
+            "rng",
+            "sig",
+            "hist",
+            "upload"
+          ],
+          "exported": true,
+          "lineCount": 15
+        },
+        {
           "name": "ensure",
           "params": [
             "plan",
@@ -8708,7 +8745,7 @@
             "upload"
           ],
           "exported": true,
-          "lineCount": 52
+          "lineCount": 32
         },
         {
           "name": "main",
@@ -8812,10 +8849,13 @@
         "footage",
         "_upload",
         "_broll",
+        "_paint_into",
+        "decide",
+        "_follow",
         "ensure",
         "main"
       ],
-      "totalLines": 464,
+      "totalLines": 530,
       "hasStructuralAnalysis": true
     },
     "deploy/agents/video/hf_cta.py": {
@@ -9402,7 +9442,7 @@
     },
     "deploy/agents/video/hf_render.py": {
       "filePath": "deploy/agents/video/hf_render.py",
-      "contentHash": "edc71a98e7abc6d2a9aeafecaddb2ef74261d19c237c360205f373f384ffa88b",
+      "contentHash": "3078f3389618dae7cb0400db1b8d164524959659346f1b8ddef9b426896ef57f",
       "functions": [
         {
           "name": "_log",
@@ -9426,7 +9466,7 @@
             "work"
           ],
           "exported": true,
-          "lineCount": 52
+          "lineCount": 60
         },
         {
           "name": "_norm",
@@ -9776,6 +9816,12 @@
           ]
         },
         {
+          "source": "hashlib",
+          "specifiers": [
+            "hashlib"
+          ]
+        },
+        {
           "source": "html",
           "specifiers": [
             "html"
@@ -9889,7 +9935,7 @@
         "write_demo",
         "main"
       ],
-      "totalLines": 1002,
+      "totalLines": 1011,
       "hasStructuralAnalysis": true
     },
     "deploy/agents/video/hf_scene_dev.py": {
@@ -9980,7 +10026,7 @@
     },
     "deploy/agents/video/hf_timeline.py": {
       "filePath": "deploy/agents/video/hf_timeline.py",
-      "contentHash": "6e961136a4c456a0425f6ff14360a723fac50be4d554383b7205daf5675a28d8",
+      "contentHash": "edbfe0b445d8d62e1f4acd65fccb05f8a80101e5fab5b42a1d1d3512a9972145",
       "functions": [
         {
           "name": "_log",
@@ -10012,12 +10058,30 @@
           "lineCount": 2
         },
         {
+          "name": "_line",
+          "params": [
+            "v"
+          ],
+          "exported": true,
+          "lineCount": 3
+        },
+        {
+          "name": "anchor",
+          "params": [
+            "tl",
+            "timing",
+            "total"
+          ],
+          "exported": true,
+          "lineCount": 44
+        },
+        {
           "name": "normalize",
           "params": [
             "tl"
           ],
           "exported": true,
-          "lineCount": 58
+          "lineCount": 64
         },
         {
           "name": "clip_len",
@@ -10108,7 +10172,7 @@
             "check"
           ],
           "exported": true,
-          "lineCount": 116
+          "lineCount": 119
         },
         {
           "name": "main",
@@ -10199,6 +10263,8 @@
         "_log",
         "_num",
         "_pick",
+        "_line",
+        "anchor",
         "normalize",
         "clip_len",
         "_clip_tags",
@@ -10212,7 +10278,7 @@
         "build_video",
         "main"
       ],
-      "totalLines": 404,
+      "totalLines": 464,
       "hasStructuralAnalysis": true
     },
     "deploy/agents/video/make_video.py": {
@@ -10655,7 +10721,7 @@
     },
     "deploy/agents/video/publish.py": {
       "filePath": "deploy/agents/video/publish.py",
-      "contentHash": "36db0b9d1b7b3cfb87e00716ea02e39fba29519b93c416f0aa2dc2f5d8794ba7",
+      "contentHash": "9379fbe929af3cb2c4a7510ee50871175a6bcc63af5915d5802636b0bb8e09b6",
       "functions": [
         {
           "name": "_creds",
@@ -10703,6 +10769,16 @@
           "lineCount": 25
         },
         {
+          "name": "run_qa",
+          "params": [
+            "mp4",
+            "plan",
+            "duration"
+          ],
+          "exported": true,
+          "lineCount": 27
+        },
+        {
           "name": "claim_job",
           "params": [
             "job_id"
@@ -10720,14 +10796,32 @@
           "lineCount": 8
         },
         {
+          "name": "estimate",
+          "params": [
+            "plan"
+          ],
+          "exported": true,
+          "lineCount": 14
+        },
+        {
+          "name": "make_plan",
+          "params": [
+            "job_id",
+            "plan"
+          ],
+          "exported": true,
+          "lineCount": 32
+        },
+        {
           "name": "finish_job",
           "params": [
             "job_id",
             "video_url",
-            "duration_seconds"
+            "duration_seconds",
+            "qa"
           ],
           "exported": true,
-          "lineCount": 41
+          "lineCount": 59
         },
         {
           "name": "fail_job",
@@ -10742,7 +10836,7 @@
           "name": "main",
           "params": [],
           "exported": true,
-          "lineCount": 72
+          "lineCount": 83
         }
       ],
       "classes": [],
@@ -10832,13 +10926,16 @@
         "_q",
         "_safe_name",
         "upload_video",
+        "run_qa",
         "claim_job",
         "save_plan",
+        "estimate",
+        "make_plan",
         "finish_job",
         "fail_job",
         "main"
       ],
-      "totalLines": 386,
+      "totalLines": 500,
       "hasStructuralAnalysis": true
     },
     "deploy/agents/video/README.md": {
@@ -14057,15 +14154,23 @@
     },
     "deploy/app/api/video/jobs/route.js": {
       "filePath": "deploy/app/api/video/jobs/route.js",
-      "contentHash": "5240c10b44f271783620dca88cf51101102ef6a5831e08b78f9ccc14829d948b",
+      "contentHash": "aa792d4f7930244072340c7b3157a73ae7d8583d86cadb367a111b63b9a1075a",
       "functions": [
+        {
+          "name": "withQa",
+          "params": [
+            "build"
+          ],
+          "exported": false,
+          "lineCount": 5
+        },
         {
           "name": "GET",
           "params": [
             "req"
           ],
           "exported": true,
-          "lineCount": 63
+          "lineCount": 64
         }
       ],
       "classes": [],
@@ -14092,7 +14197,7 @@
       "exports": [
         "GET"
       ],
-      "totalLines": 107,
+      "totalLines": 117,
       "hasStructuralAnalysis": true
     },
     "deploy/app/api/video/local/_guard.js": {
@@ -14447,7 +14552,7 @@
     },
     "deploy/app/api/video/render/route.js": {
       "filePath": "deploy/app/api/video/render/route.js",
-      "contentHash": "f220548d1edfa27cc2ac3f613614ed232d5c2c139f493ec31ea8cc7e689faa53",
+      "contentHash": "fefb2179e06e5d0c7ca81e38a3b04891c233eb7de434d0d00439ed537c890d3d",
       "functions": [
         {
           "name": "validatePlan",
@@ -14471,7 +14576,34 @@
             "req"
           ],
           "exported": true,
-          "lineCount": 142
+          "lineCount": 109
+        },
+        {
+          "name": "dispatch",
+          "params": [
+            "token",
+            "jobId"
+          ],
+          "exported": false,
+          "lineCount": 59
+        },
+        {
+          "name": "approvePlan",
+          "params": [
+            "id",
+            "user",
+            "token"
+          ],
+          "exported": false,
+          "lineCount": 28
+        },
+        {
+          "name": "cancelPlan",
+          "params": [
+            "id"
+          ],
+          "exported": false,
+          "lineCount": 14
         },
         {
           "name": "markFailed",
@@ -14513,7 +14645,7 @@
       "exports": [
         "POST"
       ],
-      "totalLines": 417,
+      "totalLines": 496,
       "hasStructuralAnalysis": true
     },
     "deploy/app/api/vms-sync/route.js": {
@@ -16157,7 +16289,7 @@
     },
     "deploy/components/edit/Preview.jsx": {
       "filePath": "deploy/components/edit/Preview.jsx",
-      "contentHash": "1ea8cd6f56729906766edf74ea78675aa911f4fa498001f211c99973b976192c",
+      "contentHash": "2e695a9c565287b323f3166554b6efb8c8b3f9a047bc5617e4e54015be73ab87",
       "functions": [
         {
           "name": "srcOf",
@@ -16166,7 +16298,7 @@
             "skuImg"
           ],
           "exported": true,
-          "lineCount": 5
+          "lineCount": 8
         },
         {
           "name": "captionAt",
@@ -16228,12 +16360,12 @@
         "srcOf",
         "Preview"
       ],
-      "totalLines": 200,
+      "totalLines": 203,
       "hasStructuralAnalysis": true
     },
     "deploy/components/edit/timelineState.js": {
       "filePath": "deploy/components/edit/timelineState.js",
-      "contentHash": "a2267c818cd5750b162fb87a5ec12cef99759d2990e2cb0030f76d2a39c2847f",
+      "contentHash": "a82a882330dc01dfea5ff88556ae05e233b0838401366d24c2cf305d43a5994f",
       "functions": [
         {
           "name": "uid",
@@ -16321,13 +16453,23 @@
           "lineCount": 8
         },
         {
+          "name": "unanchor",
+          "params": [
+            "o",
+            "patch",
+            "keys"
+          ],
+          "exported": false,
+          "lineCount": 6
+        },
+        {
           "name": "reducer",
           "params": [
             "state",
             "a"
           ],
           "exported": true,
-          "lineCount": 98
+          "lineCount": 99
         },
         {
           "name": "selected",
@@ -16376,7 +16518,7 @@
         "timelineForRender",
         "fmt"
       ],
-      "totalLines": 189,
+      "totalLines": 202,
       "hasStructuralAnalysis": true
     },
     "deploy/components/edit/Tracks.jsx": {
@@ -19283,7 +19425,7 @@
     },
     "deploy/components/VideoStudio.jsx": {
       "filePath": "deploy/components/VideoStudio.jsx",
-      "contentHash": "c386dedbd107f6f2a5ad66da7e5f5a8fb7bbea89aca79b78e50116b942884d43",
+      "contentHash": "e1a037f7ea6a0915ee9b960b35e0e4fb26f7c189bdc72d9e24461cde053d1d1b",
       "functions": [
         {
           "name": "cpLen",
@@ -19354,7 +19496,7 @@
           "name": "VideoStudio",
           "params": [],
           "exported": true,
-          "lineCount": 663
+          "lineCount": 820
         },
         {
           "name": "StepTab",
@@ -19384,7 +19526,61 @@
           "name": "JobPanel",
           "params": [],
           "exported": false,
-          "lineCount": 73
+          "lineCount": 83
+        },
+        {
+          "name": "evidenceText",
+          "params": [
+            "e"
+          ],
+          "exported": false,
+          "lineCount": 2
+        },
+        {
+          "name": "StoryPanel",
+          "params": [],
+          "exported": false,
+          "lineCount": 49
+        },
+        {
+          "name": "VIS_TH",
+          "params": [
+            "k"
+          ],
+          "exported": false,
+          "lineCount": 2
+        },
+        {
+          "name": "StoryResult",
+          "params": [],
+          "exported": false,
+          "lineCount": 40
+        },
+        {
+          "name": "adDays",
+          "params": [
+            "d"
+          ],
+          "exported": false,
+          "lineCount": 1
+        },
+        {
+          "name": "AdBox",
+          "params": [],
+          "exported": false,
+          "lineCount": 128
+        },
+        {
+          "name": "PlanCard",
+          "params": [],
+          "exported": false,
+          "lineCount": 42
+        },
+        {
+          "name": "QaPanel",
+          "params": [],
+          "exported": false,
+          "lineCount": 22
         },
         {
           "name": "Frame",
@@ -19423,7 +19619,10 @@
             "Sparkles",
             "Mic",
             "LogOut",
-            "Scissors"
+            "Scissors",
+            "ListChecks",
+            "Lightbulb",
+            "ExternalLink"
           ]
         },
         {
@@ -19439,7 +19638,7 @@
       "exports": [
         "VideoStudio"
       ],
-      "totalLines": 1238,
+      "totalLines": 1755,
       "hasStructuralAnalysis": true
     },
     "deploy/DEPLOY_GUIDE.md": {
@@ -20046,7 +20245,7 @@
     },
     "deploy/lib/geminiText.js": {
       "filePath": "deploy/lib/geminiText.js",
-      "contentHash": "aaeae00f6ae7c89e4f8956e0314c1af659fe7e165fa31f72205ba19c99d038f6",
+      "contentHash": "d2e1280b8cfcc6fa8a05d44544a403abc2f6c0a273d994e6ea2641db1140c03e",
       "functions": [
         {
           "name": "sleep",
@@ -20094,12 +20293,12 @@
         "GEMINI_CHAIN",
         "askGeminiText"
       ],
-      "totalLines": 88,
+      "totalLines": 90,
       "hasStructuralAnalysis": true
     },
     "deploy/lib/headline.js": {
       "filePath": "deploy/lib/headline.js",
-      "contentHash": "5872880250baa5472b81cc4dbcc48cb76e4c9d04efd431fd89d0105dbf581ecb",
+      "contentHash": "7e2a886cf55345076a481d7b0ae97cf1392860bb288349bc8f1fe61a473f1d91",
       "functions": [
         {
           "name": "okSpace",
@@ -20117,7 +20316,7 @@
             "limit"
           ],
           "exported": false,
-          "lineCount": 52
+          "lineCount": 74
         },
         {
           "name": "dropCountClauses",
@@ -20146,7 +20345,7 @@
         "dropCountClauses",
         "splitHeadline"
       ],
-      "totalLines": 160,
+      "totalLines": 187,
       "hasStructuralAnalysis": true
     },
     "deploy/lib/ideaPlatform.js": {
@@ -20706,7 +20905,7 @@
     },
     "deploy/lib/r2.js": {
       "filePath": "deploy/lib/r2.js",
-      "contentHash": "6e758cceb19ce3402ca5038b74449de70bb7c023fc5f47f1f357165e544e11c0",
+      "contentHash": "62b3b8fdc1a8ee72a20c225366597a99278abc04f2d920a14d748eb34145def6",
       "functions": [
         {
           "name": "LEGACY",
@@ -22344,7 +22543,7 @@
     },
     "deploy/lib/videoTimeline.js": {
       "filePath": "deploy/lib/videoTimeline.js",
-      "contentHash": "f7c942e133dbbdf00937d656fa572e6159677422e93b4f85be5c668daa05f7ce",
+      "contentHash": "555fddf32c8d659c56313c90f9dcffe7120d0308483c75b8158d47344b9c64f9",
       "functions": [
         {
           "name": "num",
@@ -22372,6 +22571,14 @@
           "params": [
             "v",
             "max"
+          ],
+          "exported": false,
+          "lineCount": 1
+        },
+        {
+          "name": "lineOf",
+          "params": [
+            "v"
           ],
           "exported": false,
           "lineCount": 1
@@ -22425,7 +22632,7 @@
             "base"
           ],
           "exported": true,
-          "lineCount": 82
+          "lineCount": 87
         }
       ],
       "classes": [],
@@ -22440,6 +22647,7 @@
         "VOICES",
         "TTS_MODELS",
         "VOICE_TAIL",
+        "MAX_LINES",
         "MEDIA_PREFIX",
         "storagePrefix",
         "okSrc",
@@ -22447,7 +22655,7 @@
         "layout",
         "cleanTimeline"
       ],
-      "totalLines": 137,
+      "totalLines": 146,
       "hasStructuralAnalysis": true
     },
     "deploy/mcp/dvx_mcp_server.py": {
@@ -28673,7 +28881,7 @@
     },
     "scripts/test_headline.mjs": {
       "filePath": "scripts/test_headline.mjs",
-      "contentHash": "dfef49cc1976f4bfa1eb6d442e383f0963fce39bd924b0669c64c32a6d8e8b68",
+      "contentHash": "98d7e39e68913eaf67cac75cd060bdab5366ee758c65fd0ac37c364365270c97",
       "functions": [
         {
           "name": "load",
@@ -28682,6 +28890,23 @@
           ],
           "exported": false,
           "lineCount": 1
+        },
+        {
+          "name": "firstPara",
+          "params": [
+            "cap"
+          ],
+          "exported": false,
+          "lineCount": 2
+        },
+        {
+          "name": "midWord",
+          "params": [
+            "text",
+            "head"
+          ],
+          "exported": false,
+          "lineCount": 10
         },
         {
           "name": "avg",
@@ -28707,7 +28932,7 @@
         }
       ],
       "exports": [],
-      "totalLines": 119,
+      "totalLines": 139,
       "hasStructuralAnalysis": true
     },
     "scripts/test_idea_cap.py": {
@@ -32525,6 +32750,735 @@
       "imports": [],
       "exports": [],
       "totalLines": 46,
+      "hasStructuralAnalysis": true
+    },
+    "deploy/agents/video/qa.py": {
+      "filePath": "deploy/agents/video/qa.py",
+      "contentHash": "878f1a1ffc63c824732ac4fcd342e98d38269867621592221b044dd688c3f5ec",
+      "functions": [
+        {
+          "name": "_run",
+          "params": [
+            "args",
+            "timeout",
+            "binary"
+          ],
+          "exported": true,
+          "lineCount": 5
+        },
+        {
+          "name": "_check",
+          "params": [
+            "cid",
+            "label",
+            "status",
+            "detail"
+          ],
+          "exported": true,
+          "lineCount": 2
+        },
+        {
+          "name": "script_sha",
+          "params": [
+            "script"
+          ],
+          "exported": true,
+          "lineCount": 3
+        },
+        {
+          "name": "probe",
+          "params": [
+            "mp4"
+          ],
+          "exported": true,
+          "lineCount": 6
+        },
+        {
+          "name": "check_file",
+          "params": [
+            "info",
+            "expected",
+            "need_audio"
+          ],
+          "exported": true,
+          "lineCount": 26
+        },
+        {
+          "name": "_rank",
+          "params": [
+            "s"
+          ],
+          "exported": true,
+          "lineCount": 2
+        },
+        {
+          "name": "frame",
+          "params": [
+            "mp4",
+            "t"
+          ],
+          "exported": true,
+          "lineCount": 7
+        },
+        {
+          "name": "check_frames",
+          "params": [
+            "mp4",
+            "dur",
+            "step"
+          ],
+          "exported": true,
+          "lineCount": 29
+        },
+        {
+          "name": "_pearson",
+          "params": [
+            "xs",
+            "ys"
+          ],
+          "exported": true,
+          "lineCount": 9
+        },
+        {
+          "name": "logo_score",
+          "params": [
+            "img",
+            "box"
+          ],
+          "exported": true,
+          "lineCount": 13
+        },
+        {
+          "name": "logo_targets",
+          "params": [
+            "plan",
+            "dur"
+          ],
+          "exported": true,
+          "lineCount": 21
+        },
+        {
+          "name": "check_logo",
+          "params": [
+            "mp4",
+            "plan",
+            "dur"
+          ],
+          "exported": true,
+          "lineCount": 17
+        },
+        {
+          "name": "contact_sheet",
+          "params": [
+            "mp4",
+            "dur",
+            "out",
+            "cols",
+            "rows"
+          ],
+          "exported": true,
+          "lineCount": 24
+        },
+        {
+          "name": "check_audio",
+          "params": [
+            "mp4",
+            "plan",
+            "dur",
+            "has_audio"
+          ],
+          "exported": true,
+          "lineCount": 29
+        },
+        {
+          "name": "check_captions",
+          "params": [
+            "plan",
+            "work",
+            "dur"
+          ],
+          "exported": true,
+          "lineCount": 32
+        },
+        {
+          "name": "_texts",
+          "params": [
+            "node",
+            "key"
+          ],
+          "exported": true,
+          "lineCount": 10
+        },
+        {
+          "name": "check_brief",
+          "params": [
+            "plan",
+            "dur"
+          ],
+          "exported": true,
+          "lineCount": 26
+        },
+        {
+          "name": "run",
+          "params": [
+            "mp4",
+            "plan",
+            "expected",
+            "work",
+            "sheet"
+          ],
+          "exported": true,
+          "lineCount": 38
+        },
+        {
+          "name": "summary",
+          "params": [
+            "report"
+          ],
+          "exported": true,
+          "lineCount": 4
+        },
+        {
+          "name": "main",
+          "params": [
+            "argv"
+          ],
+          "exported": true,
+          "lineCount": 14
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "argparse",
+          "specifiers": [
+            "argparse"
+          ]
+        },
+        {
+          "source": "datetime",
+          "specifiers": [
+            "dt"
+          ]
+        },
+        {
+          "source": "hashlib",
+          "specifiers": [
+            "hashlib"
+          ]
+        },
+        {
+          "source": "io",
+          "specifiers": [
+            "io"
+          ]
+        },
+        {
+          "source": "json",
+          "specifiers": [
+            "json"
+          ]
+        },
+        {
+          "source": "math",
+          "specifiers": [
+            "math"
+          ]
+        },
+        {
+          "source": "pathlib",
+          "specifiers": [
+            "pathlib"
+          ]
+        },
+        {
+          "source": "re",
+          "specifiers": [
+            "re"
+          ]
+        },
+        {
+          "source": "subprocess",
+          "specifiers": [
+            "subprocess"
+          ]
+        },
+        {
+          "source": "sys",
+          "specifiers": [
+            "sys"
+          ]
+        },
+        {
+          "source": "PIL",
+          "specifiers": [
+            "Image",
+            "ImageDraw",
+            "ImageFont",
+            "ImageStat"
+          ]
+        },
+        {
+          "source": ".",
+          "specifiers": [
+            "config"
+          ]
+        }
+      ],
+      "exports": [
+        "_run",
+        "_check",
+        "script_sha",
+        "probe",
+        "check_file",
+        "_rank",
+        "frame",
+        "check_frames",
+        "_pearson",
+        "logo_score",
+        "logo_targets",
+        "check_logo",
+        "contact_sheet",
+        "check_audio",
+        "check_captions",
+        "_texts",
+        "check_brief",
+        "run",
+        "summary",
+        "main"
+      ],
+      "totalLines": 421,
+      "hasStructuralAnalysis": true
+    },
+    "deploy/app/api/video/ads/route.js": {
+      "filePath": "deploy/app/api/video/ads/route.js",
+      "contentHash": "dbac7e49a56359c1a1056b1b3547b41b5e033682e6b84c590fdcdfa6edb0d5c0",
+      "functions": [
+        {
+          "name": "extOf",
+          "params": [
+            "n"
+          ],
+          "exported": false,
+          "lineCount": 1
+        },
+        {
+          "name": "kindOf",
+          "params": [
+            "ext"
+          ],
+          "exported": false,
+          "lineCount": 1
+        },
+        {
+          "name": "str",
+          "params": [
+            "v",
+            "n"
+          ],
+          "exported": false,
+          "lineCount": 1
+        },
+        {
+          "name": "bkk",
+          "params": [],
+          "exported": false,
+          "lineCount": 1
+        },
+        {
+          "name": "readJson",
+          "params": [
+            "key"
+          ],
+          "exported": false,
+          "lineCount": 5
+        },
+        {
+          "name": "daysSince",
+          "params": [
+            "d"
+          ],
+          "exported": false,
+          "lineCount": 4
+        },
+        {
+          "name": "askVision",
+          "params": [
+            "parts",
+            "system"
+          ],
+          "exported": false,
+          "lineCount": 27
+        },
+        {
+          "name": "analysisPrompt",
+          "params": [
+            "ad"
+          ],
+          "exported": false,
+          "lineCount": 23
+        },
+        {
+          "name": "analyze",
+          "params": [
+            "ad"
+          ],
+          "exported": false,
+          "lineCount": 17
+        },
+        {
+          "name": "toPattern",
+          "params": [
+            "ad"
+          ],
+          "exported": false,
+          "lineCount": 20
+        },
+        {
+          "name": "GET",
+          "params": [
+            "req"
+          ],
+          "exported": true,
+          "lineCount": 12
+        },
+        {
+          "name": "POST",
+          "params": [
+            "req"
+          ],
+          "exported": true,
+          "lineCount": 77
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "next/server",
+          "specifiers": [
+            "NextResponse"
+          ]
+        },
+        {
+          "source": "../../../../lib/apiAuth",
+          "specifiers": [
+            "requireMarketing"
+          ]
+        },
+        {
+          "source": "../../../../lib/r2",
+          "specifiers": [
+            "getObject",
+            "listObjects",
+            "presign",
+            "putObject"
+          ]
+        }
+      ],
+      "exports": [
+        "dynamic",
+        "maxDuration",
+        "GET",
+        "POST"
+      ],
+      "totalLines": 237,
+      "hasStructuralAnalysis": true
+    },
+    "deploy/app/api/video/storyboard/route.js": {
+      "filePath": "deploy/app/api/video/storyboard/route.js",
+      "contentHash": "fcf8d5c1b6041dca72afe753750c105b0001d4d8c47d69e1cd116de4f160cde2",
+      "functions": [
+        {
+          "name": "task",
+          "params": [
+            "name"
+          ],
+          "exported": false,
+          "lineCount": 1
+        },
+        {
+          "name": "otherNames",
+          "params": [
+            "idea"
+          ],
+          "exported": false,
+          "lineCount": 12
+        },
+        {
+          "name": "allPatterns",
+          "params": [],
+          "exported": false,
+          "lineCount": 9
+        },
+        {
+          "name": "backgroundsFor",
+          "params": [
+            "franchise"
+          ],
+          "exported": false,
+          "lineCount": 24
+        },
+        {
+          "name": "recentLogs",
+          "params": [],
+          "exported": false,
+          "lineCount": 6
+        },
+        {
+          "name": "recentPatterns",
+          "params": [],
+          "exported": false,
+          "lineCount": 2
+        },
+        {
+          "name": "pickIdea",
+          "params": [
+            "seed"
+          ],
+          "exported": false,
+          "lineCount": 11
+        },
+        {
+          "name": "GET",
+          "params": [
+            "req"
+          ],
+          "exported": true,
+          "lineCount": 14
+        },
+        {
+          "name": "POST",
+          "params": [
+            "req"
+          ],
+          "exported": true,
+          "lineCount": 130
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "next/server",
+          "specifiers": [
+            "NextResponse"
+          ]
+        },
+        {
+          "source": "@supabase/supabase-js",
+          "specifiers": [
+            "createClient"
+          ]
+        },
+        {
+          "source": "node:fs/promises",
+          "specifiers": [
+            "readFile"
+          ]
+        },
+        {
+          "source": "node:path",
+          "specifiers": [
+            "path"
+          ]
+        },
+        {
+          "source": "../../../../lib/apiAuth",
+          "specifiers": [
+            "requireMarketing"
+          ]
+        },
+        {
+          "source": "../../../../lib/geminiText",
+          "specifiers": [
+            "askGeminiText"
+          ]
+        },
+        {
+          "source": "../../../../lib/r2",
+          "specifiers": [
+            "getObject",
+            "listObjects",
+            "mediaUrl",
+            "putObject"
+          ]
+        },
+        {
+          "source": "../../../../lib/videoTimeline",
+          "specifiers": [
+            "cleanTimeline",
+            "VOICES"
+          ]
+        },
+        {
+          "source": "../../../../lib/franchiseDetect",
+          "specifiers": [
+            "detectFranchise",
+            "FRANCHISE_LABEL"
+          ]
+        },
+        {
+          "source": "../../../../lib/storyboard",
+          "specifiers": [
+            "buildAssets",
+            "buildPrompt",
+            "choosePattern",
+            "compile",
+            "FREE",
+            "nameRegex",
+            "offCards",
+            "parseStoryboard",
+            "scrubNames",
+            "scrubSource"
+          ]
+        }
+      ],
+      "exports": [
+        "dynamic",
+        "maxDuration",
+        "GET",
+        "POST"
+      ],
+      "totalLines": 260,
+      "hasStructuralAnalysis": true
+    },
+    "deploy/lib/storyboard.js": {
+      "filePath": "deploy/lib/storyboard.js",
+      "contentHash": "0c3f4f0ea52cbaf1df66023e3ff87ab66c0e89031ae0b1ccde61b28c4a1a998c",
+      "functions": [
+        {
+          "name": "sanitizeLine",
+          "params": [
+            "line"
+          ],
+          "exported": true,
+          "lineCount": 9
+        },
+        {
+          "name": "splitVo",
+          "params": [
+            "text"
+          ],
+          "exported": true,
+          "lineCount": 13
+        },
+        {
+          "name": "estSec",
+          "params": [
+            "line"
+          ],
+          "exported": false,
+          "lineCount": 1
+        },
+        {
+          "name": "scrubSource",
+          "params": [
+            "text",
+            "sourceLabel"
+          ],
+          "exported": true,
+          "lineCount": 10
+        },
+        {
+          "name": "esc",
+          "params": [
+            "s"
+          ],
+          "exported": false,
+          "lineCount": 1
+        },
+        {
+          "name": "nameRegex",
+          "params": [
+            "names"
+          ],
+          "exported": true,
+          "lineCount": 5
+        },
+        {
+          "name": "scrubNames",
+          "params": [
+            "text",
+            "re"
+          ],
+          "exported": true,
+          "lineCount": 1
+        },
+        {
+          "name": "offCards",
+          "params": [
+            "idea"
+          ],
+          "exported": true,
+          "lineCount": 4
+        },
+        {
+          "name": "choosePattern",
+          "params": [
+            "patterns"
+          ],
+          "exported": true,
+          "lineCount": 27
+        },
+        {
+          "name": "buildAssets",
+          "params": [],
+          "exported": true,
+          "lineCount": 27
+        },
+        {
+          "name": "buildPrompt",
+          "params": [],
+          "exported": true,
+          "lineCount": 69
+        },
+        {
+          "name": "parseStoryboard",
+          "params": [
+            "text"
+          ],
+          "exported": true,
+          "lineCount": 9
+        },
+        {
+          "name": "bannedIn",
+          "params": [
+            "s"
+          ],
+          "exported": true,
+          "lineCount": 3
+        },
+        {
+          "name": "compile",
+          "params": [
+            "sb",
+            "assets"
+          ],
+          "exported": true,
+          "lineCount": 97
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [
+        "BRANCH_PHOTOS",
+        "MAX_VO",
+        "CHARS_PER_SEC",
+        "END_CARD",
+        "sanitizeLine",
+        "splitVo",
+        "scrubSource",
+        "nameRegex",
+        "scrubNames",
+        "offCards",
+        "FREE",
+        "choosePattern",
+        "buildAssets",
+        "buildPrompt",
+        "parseStoryboard",
+        "bannedIn",
+        "compile"
+      ],
+      "totalLines": 341,
       "hasStructuralAnalysis": true
     }
   }
