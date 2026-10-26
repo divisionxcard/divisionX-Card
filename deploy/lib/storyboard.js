@@ -436,12 +436,13 @@ export function compile(sb, assets, { voice = "Puck", pattern = null, external =
         const part = +(dur / n).toFixed(2)
         const pk = b.sticker
         clips.push(one({ hype: true }, part))
-        clips.push(one({ id: `c${i + 1}b`, hype: true, zoom: 1.45, fx: i % 2 ? 0.7 : 0.3, fy: 0.45, motion: "push", transition: "whip", layer: "speed", tint: "white",
+        // ซูม 1.45 บนภาพรายละเอียดเยอะดูไม่ออกว่าเป็นช็อตใหม่ (เรนเดอร์จริง 26 ต.ค.) → ซูมแรง + คนละมุม (ล่างซ้าย / บนขวา)
+        clips.push(one({ id: `c${i + 1}b`, hype: true, zoom: 1.75, fx: i % 2 ? 0.82 : 0.18, fy: 0.72, motion: "push", transition: "whip", layer: "speed", tint: "white",
           ...(a.kind === "video" ? { in: +Math.min(part, Math.max(0, (a.seconds || 8) - part)).toFixed(2), out: +Math.min(a.seconds || 8, part * 2).toFixed(2) } : {}) }, part))
         if (n === 3) {
           clips.push(pk
             ? { ...base, id: `c${i + 1}c`, kind: "image", src: assets[pk].src, fit: "contain", dur: part, motion: "beat", transition: "zoom", layer: "rings", tint: b.tint || "gold", hype: true, gen: undefined }
-            : one({ id: `c${i + 1}c`, hype: true, zoom: 1.3, fx: i % 2 ? 0.3 : 0.7, fy: 0.6, motion: "push", transition: "flash" }, part))
+            : one({ id: `c${i + 1}c`, hype: true, zoom: 1.6, fx: i % 2 ? 0.15 : 0.85, fy: 0.25, motion: "push", transition: "flash" }, part))
         }
         if (pk && n === 3) b.stickerShot = true
       }

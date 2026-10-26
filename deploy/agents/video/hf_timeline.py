@@ -288,6 +288,9 @@ def _resolve_gen(tl, plan):
     budget = int(plan.get("paint_budget", PAINT_BUDGET))
     rng = random.Random(f"gen:{plan.get('project')}")
     painted, used_lib, used_px, done = 0, set(), set(), []
+    # ภาพในคลังที่ฉากอื่นของคลิปนี้ใช้อยู่แล้ว (เช่น ภาพฉากเปิด) ห้ามหยิบซ้ำ — เรนเดอร์จริง 26 ต.ค.: ฉากใหม่ได้ภาพเดียวกับฉากเปิด
+    taken = {c["src"] for c in tl["clips"] if not c["src"].startswith("gen:")}
+    used_lib |= {x["key"] for x in hf_bg._lib()["items"] if x.get("url") in taken}
     same = {}                                              # ช็อตย่อยของฉากเดียวกัน (จังหวะไวรัล) → ไฟล์เดียวกัน
     for i, c in todo:
         g = c.get("gen") or {}
