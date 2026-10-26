@@ -63,6 +63,18 @@ export function clipFromAsset(a) {
            speed: 1, fit: "cover", fx: 0.5, fy: 0.5, zoom: 1, volume: 1, transition: "cut" }
 }
 
+// ── ผูกกับบรรทัดเสียงพากย์ (line/span · สตอรี่บอร์ด 26 ต.ค. 2026) ──
+// ร่างจากตัวเขียนสตอรี่บอร์ดผูกแต่ละชิ้นกับบรรทัดบทพากย์ · runner ตั้งเวลาตามเสียงจริง (hf_timeline.anchor)
+// คนแก้เวลา/ลากสลับ/หั่น/ทำซ้ำ = ถอดการผูก ให้เวลาที่คนจัดเป็นตัวจริง
+const CLIP_TIMING = ["dur", "in", "out", "speed"]
+const OV_TIMING = ["start", "end"]
+function unanchor(o, patch, keys) {
+  if (!o || (o.line === undefined && o.span === undefined)) return o
+  if (patch && keys && !keys.some(k => k in patch)) return o
+  const { line, span, ...rest } = o
+  return rest
+}
+
 export function reducer(state, a) {
   const tl = state.tl
   switch (a.type) {
@@ -90,7 +102,8 @@ export function reducer(state, a) {
       const clips = [...tl.clips.slice(0, at), c, ...tl.clips.slice(at)]
       return commit(state, { ...tl, clips }, { sel: { kind: "clip", id: c.id } })
     }
-    case "UPDATE_CLIP": return commit(state, mapClip(tl, a.id, c => ({ ...c, ...a.patch })), {}, a)
+    // คนปรับเวลาเอง = ปล่อยการผูกกับบรรทัดเสียงพากย์ (สตอรี่บอร์ด) — ไม่งั้นตอนเรนเดอร์ runner ตั้งเวลาทับที่คนจัดไว้
+    case "UPDATE_CLIP": return commit(state, mapClip(tl, a.id, c => ({ ...unanchor(c, a.patch, CLIP_TIMING), ...a.patch })), {}, a)
     case "MOVE_CLIP": {
       const from = tl.clips.findIndex(c => c.id === a.id)
       if (from < 0) return state
@@ -98,7 +111,7 @@ export function reducer(state, a) {
       if (from === to) return state
       const clips = [...tl.clips]
       const [c] = clips.splice(from, 1)
-      clips.splice(to, 0, c)
+      clips.splice(to, 0, unanchor(c))                    // ลากสลับลำดับ = เลขบรรทัดเดิมไม่มีความหมายแล้ว
       return commit(state, { ...tl, clips })
     }
     case "DELETE": {
@@ -113,13 +126,13 @@ export function reducer(state, a) {
       if (state.sel?.kind === "clip") {
         const i = tl.clips.findIndex(c => c.id === state.sel.id)
         if (i < 0) return state
-        const c = { ...tl.clips[i], id: uid("c") }
+        const c = { ...unanchor(tl.clips[i]), id: uid("c") }
         return commit(state, { ...tl, clips: [...tl.clips.slice(0, i + 1), c, ...tl.clips.slice(i + 1)] }, { sel: { kind: "clip", id: c.id } })
       }
       if (state.sel?.kind === "overlay") {
         const o0 = tl.overlays.find(o => o.id === state.sel.id)
         if (!o0) return state
-        const o = { ...o0, id: uid("o"), y: clamp((o0.y ?? 0.5) + 0.06, 0, 1) }
+        const o = { ...unanchor(o0), id: uid("o"), y: clamp((o0.y ?? 0.5) + 0.06, 0, 1) }
         return commit(state, { ...tl, overlays: [...tl.overlays, o] }, { sel: { kind: "overlay", id: o.id } })
       }
       return state
@@ -134,12 +147,12 @@ export function reducer(state, a) {
       let left, right
       if (c.kind === "video") {
         const cut = +(c.in + local * (c.speed || 1)).toFixed(2)
-        left = { ...c, out: cut }
-        right = { ...c, id: uid("c"), in: cut, transition: "cut" }
+        left = { ...unanchor(c), out: cut }
+        right = { ...unanchor(c), id: uid("c"), in: cut, transition: "cut" }
       } else {
         const d = +local.toFixed(2)
-        left = { ...c, dur: d }
-        right = { ...c, id: uid("c"), dur: +(c.dur - d).toFixed(2), transition: "cut" }
+        left = { ...unanchor(c), dur: d }
+        right = { ...unanchor(c), id: uid("c"), dur: +(c.dur - d).toFixed(2), transition: "cut" }
       }
       return commit(state, { ...tl, clips: [...tl.clips.slice(0, i), left, right, ...tl.clips.slice(i + 1)] },
                     { sel: { kind: "clip", id: right.id } })
@@ -152,7 +165,7 @@ export function reducer(state, a) {
       const o = { id: uid("o"), start, end: Math.min(start + (a.len || 3), Math.max(total, start + 1)), x: 0.5, y: 0.5, anim: "pop", ...a.overlay }
       return commit(state, { ...tl, overlays: [...tl.overlays, o] }, { sel: { kind: "overlay", id: o.id } })
     }
-    case "UPDATE_OVERLAY": return commit(state, mapOv(tl, a.id, o => ({ ...o, ...a.patch })), {}, a)
+    case "UPDATE_OVERLAY": return commit(state, mapOv(tl, a.id, o => ({ ...unanchor(o, a.patch, OV_TIMING), ...a.patch })), {}, a)
 
     // ── เสียง/ซับ/เพลง
     case "SET_VOICE": return commit(state, { ...tl, voice: a.voice }, a.select ? { sel: { kind: "voice", id: "voice" } } : {}, a)

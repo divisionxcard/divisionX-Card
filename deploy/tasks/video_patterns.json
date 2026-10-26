@@ -1,0 +1,636 @@
+{
+  "_about": "คลังรูปแบบไวรัลสำหรับตัวเขียนสตอรี่บอร์ด (lib/storyboard.js · /api/video/storyboard) — 26 ต.ค. 2026",
+  "_why": "เจ้าของ: 'ใช้ประโยชน์จากข้อมูลรีเสิร์ชที่มีเยอะ ให้ระบบเรียบเรียงเนื้อหาและออกแบบสตอรี่บอร์ด ให้หลากหลายมากขึ้นตามคอนเทนต์ที่เป็นไวรัล' · รูปแบบ = โครงจังหวะของคลิป ไม่ใช่เนื้อหาของใคร",
+  "_rules": [
+    "ทุกรูปแบบต้องมีหลักฐานจากข้อมูลของเรา (ตัวเฝ้าเพจ = แรงกว่าปกติของเพจตัวเองกี่เท่า · YouTube = วิวต่อชั่วโมงตอนเก็บ · กล่องส่งแอด = แอดวิ่งมากี่วัน)",
+    "beats[].say / screen = คำแนะนำให้ตัวเขียน ไม่ใช่ข้อความที่ใช้ตรง ๆ · ข้อเท็จจริงต้องมาจากข้อมูลที่ส่งให้เท่านั้น",
+    "guard 'trust_facts_only' = พูดเรื่องความเชื่อใจได้เฉพาะข้อที่อยู่ใน trust_facts ข้างล่าง (คำว่า 'ไม่คัดซอง' ยังไม่ได้รับการยืนยันจากเจ้าของ)",
+    "เพิ่มรูปแบบ = เพิ่มก้อนใน patterns · id ห้ามซ้ำ ห้ามเปลี่ยน (ประวัติการใช้ผูกกับ id)"
+  ],
+  "trust_facts": [
+    "ขายเฉพาะซองปิดผนึกจากผู้ผลิต — ของแท้ 100%",
+    "กดเองได้ที่ตู้ในห้าง ไม่ต้องต่อคิว ไม่ต้องคุยกับใคร",
+    "เลือกชุดเองได้ที่หน้าจอตู้ จ่ายผ่าน QR พร้อมเพย์",
+    "เช็กของในตู้แต่ละสาขาได้ที่หน้าเว็บ division-x-card.vercel.app/stock ก่อนไป (อัปเดตตามรอบซิงค์ ไม่ใช่เรียลไทม์)"
+  ],
+  "patterns": [
+    {
+      "id": "new-arrival-chase",
+      "name": "ของเข้าตู้ + ตามล่าใบเด่น",
+      "why": "ประกาศของใหม่พร้อมชี้ 'ใบที่คนตามหา' 1 ใบ — คนดูมีเป้าหมายให้ลุ้น ไม่ใช่แค่รู้ว่าของมา",
+      "evidence": [
+        {
+          "src": "social_watch",
+          "what": "เพจคู่แข่งตู้การ์ด: จัดชุดใหม่ให้แล้ว + ชวนตามการ์ดใบดังของชุด (คลิป)",
+          "lift": 9.4,
+          "seen": "2026-10"
+        },
+        {
+          "src": "social_watch",
+          "what": "เพจคู่แข่งตู้การ์ด: อัปบอร์ดใหม่ + เติมของจัดเต็ม (คลิป)",
+          "lift": 5.6,
+          "seen": "2026-10"
+        },
+        {
+          "src": "social_watch",
+          "what": "เพจคู่แข่งตู้การ์ด: สิ้นสุดการรอคอย ชุดใหม่ พร้อมให้กดพรุ่งนี้ (คลิป)",
+          "lift": 3.8,
+          "seen": "2026-07"
+        }
+      ],
+      "fits": {
+        "sources": [
+          "internal",
+          "official",
+          "news",
+          "price",
+          "manual",
+          "global"
+        ],
+        "subtypes": [
+          "hot_sku",
+          "machine_drop",
+          "op_products",
+          "pkm_jp",
+          "price_surge",
+          "hot_cards"
+        ],
+        "needs_sku": true
+      },
+      "length": [
+        18,
+        30
+      ],
+      "beats": [
+        {
+          "role": "hook",
+          "say": "ประกาศสั้น ๆ ว่ามีชุดอะไรใหม่ในตู้ เอ่ยชื่อชุดชัด ๆ",
+          "screen": "ชื่อชุด + 'มาแล้ว'",
+          "visual": "pack",
+          "style": "gold"
+        },
+        {
+          "role": "chase",
+          "say": "ใบ/จุดเด่นที่คนตามหาในชุดนี้ — เฉพาะที่มีในข้อมูล ไม่มีชื่อใบ = เล่าจุดเด่นของชุดแทน",
+          "screen": "ชื่อใบหรือจุดเด่น 2–5 คำ",
+          "visual": "pack|bg",
+          "style": "neon"
+        },
+        {
+          "role": "trust",
+          "say": "ซองปิดผนึก ของแท้ ลุ้นเองที่ตู้ (จาก trust_facts)",
+          "screen": "ของแท้ 100% · ลุ้นเอง",
+          "visual": "machine|branch",
+          "style": "box"
+        },
+        {
+          "role": "where",
+          "say": "มีที่สาขาไหน — เฉพาะสาขาที่ข้อมูลสต็อกบอกว่ามี · ไม่มีข้อมูล = ข้ามบรรทัดนี้",
+          "screen": "ชื่อสาขา",
+          "visual": "branch",
+          "style": "bold"
+        },
+        {
+          "role": "cta",
+          "say": "ชวนเช็กของในตู้ที่หน้าเว็บก่อนไป",
+          "screen": "",
+          "visual": "machine|branch",
+          "style": "box"
+        }
+      ],
+      "guard": [
+        "trust_facts_only"
+      ]
+    },
+    {
+      "id": "trust-proof",
+      "name": "ความเชื่อใจ: ของแท้ ลุ้นเอง",
+      "why": "หัวข้อความเชื่อใจแรงที่สุดในเพจที่ติดตาม — คนอยากรู้ว่าซองจากตู้ 'ของจริงไหม'",
+      "evidence": [
+        {
+          "src": "social_watch",
+          "what": "เพจคู่แข่งตู้การ์ด: ย้ำของแท้/ไม่คัดซอง + มีการ์ดให้ตามหา (คลิป)",
+          "lift": 70.2,
+          "seen": "2026-10"
+        },
+        {
+          "src": "social_insight",
+          "what": "หัวข้อ 'ความเชื่อใจ (ไม่คัดซอง/ของแท้)' มัธยฐาน 3.3 เท่าของปกติเพจ (4 โพสต์)",
+          "lift": 3.3,
+          "seen": "2026-W44"
+        }
+      ],
+      "fits": {
+        "sources": [
+          "internal",
+          "manual",
+          "radar",
+          "global",
+          "news"
+        ],
+        "subtypes": [],
+        "needs_sku": false
+      },
+      "length": [
+        16,
+        26
+      ],
+      "beats": [
+        {
+          "role": "hook",
+          "say": "ตั้งคำถามที่คนสงสัยจริงเรื่องซองจากตู้ (เช่น ซองจากตู้ของแท้ไหม)",
+          "screen": "คำถามสั้น ๆ",
+          "visual": "machine|branch",
+          "style": "bold"
+        },
+        {
+          "role": "answer",
+          "say": "ตอบด้วย trust_facts เท่านั้น",
+          "screen": "ของแท้ 100%",
+          "visual": "pack",
+          "style": "gold"
+        },
+        {
+          "role": "how",
+          "say": "เลือกชุดเอง จ่าย QR รับซองเอง (จาก trust_facts)",
+          "screen": "เลือกเอง · จ่าย QR · รับเอง",
+          "visual": "machine",
+          "style": "box"
+        },
+        {
+          "role": "cta",
+          "say": "ชวนเช็กของในตู้ที่หน้าเว็บก่อนไป",
+          "screen": "",
+          "visual": "branch|machine",
+          "style": "box"
+        }
+      ],
+      "guard": [
+        "trust_facts_only"
+      ]
+    },
+    {
+      "id": "event-ride",
+      "name": "เกาะอีเวนต์ / วันวางขาย",
+      "why": "ข่าวอีเวนต์และวันวางขายทางการได้รับความสนใจสูงกว่าโพสต์ปกติหลายเท่า",
+      "evidence": [
+        {
+          "src": "social_watch",
+          "what": "เพจทางการ One Piece: ข้อมูลกิจกรรมฉลองชุดใหม่ (รูป)",
+          "lift": 9.0,
+          "seen": "2026-10"
+        },
+        {
+          "src": "social_watch",
+          "what": "ร้านการ์ด: บรรยากาศงานแข่ง pre-release (อัลบั้ม)",
+          "lift": 7.2,
+          "seen": "2026-10"
+        },
+        {
+          "src": "youtube",
+          "what": "คลิปพาไปงานโปเกมอน: มีอะไรบ้าง ไปยังไง",
+          "views_per_hour": 358,
+          "seen": "2026-10"
+        }
+      ],
+      "fits": {
+        "sources": [
+          "official",
+          "news",
+          "global",
+          "manual"
+        ],
+        "subtypes": [
+          "tournaments",
+          "op_events",
+          "op_products",
+          "pkm_jp"
+        ],
+        "needs_sku": false
+      },
+      "length": [
+        18,
+        30
+      ],
+      "beats": [
+        {
+          "role": "hook",
+          "say": "ชื่องาน/ชุด + มาเมื่อไหร่ (จากข้อมูล)",
+          "screen": "ชื่องาน · วันที่",
+          "visual": "pack|bg",
+          "style": "gold"
+        },
+        {
+          "role": "what",
+          "say": "มีอะไรน่าสนใจ 1–2 อย่าง (จากข้อมูลเท่านั้น)",
+          "screen": "ไฮไลต์ 2–4 คำ",
+          "visual": "bg|pack",
+          "style": "neon"
+        },
+        {
+          "role": "why",
+          "say": "ทำไมนักสะสม/ผู้เล่นควรสนใจ",
+          "screen": "",
+          "visual": "pack|bg",
+          "style": "bold"
+        },
+        {
+          "role": "tie",
+          "say": "ซองที่เกี่ยวข้องมีในตู้ไหม — เฉพาะเมื่อมีสินค้าเกี่ยวข้องในข้อมูล · ไม่มี = ข้ามบรรทัดนี้",
+          "screen": "ชื่อชุดในตู้",
+          "visual": "pack",
+          "style": "box"
+        },
+        {
+          "role": "cta",
+          "say": "ชวนเช็กของในตู้ที่หน้าเว็บก่อนไป หรือถามว่าใครจะไปงาน",
+          "screen": "",
+          "visual": "branch|machine",
+          "style": "box"
+        }
+      ],
+      "guard": []
+    },
+    {
+      "id": "top3-countdown",
+      "name": "3 อันดับ นับถอยหลัง",
+      "why": "ลิสต์สั้น 3 ข้อ นับจาก 3 ไป 1 — คนดูรอจนถึงอันดับหนึ่ง",
+      "evidence": [
+        {
+          "src": "social_watch",
+          "what": "ร้านการ์ด: 3 การ์ดน่าเก็บ Pokémon (คลิป)",
+          "lift": 2.1,
+          "seen": "2026-10"
+        },
+        {
+          "src": "social_watch",
+          "what": "ร้านการ์ด: 3 การ์ดราคาพุ่ง Pokémon (คลิป)",
+          "lift": 1.9,
+          "seen": "2026-10"
+        },
+        {
+          "src": "youtube",
+          "what": "ช่องเล่าเรื่องอนิเมะ: ลิสต์ 5 ข้อแบบนับถอยหลัง",
+          "views_per_hour": 90,
+          "seen": "2026-10"
+        }
+      ],
+      "fits": {
+        "sources": [
+          "price",
+          "global",
+          "official"
+        ],
+        "subtypes": [
+          "hot_cards",
+          "tcgplayer_op",
+          "top5"
+        ],
+        "needs_sku": false,
+        "strict": true
+      },
+      "length": [
+        18,
+        30
+      ],
+      "beats": [
+        {
+          "role": "hook",
+          "say": "บอกว่าจะนับ 3 อะไร (ต้องมีครบ 3 ข้อในข้อมูล)",
+          "screen": "3 … ที่ต้องรู้",
+          "visual": "bg|pack",
+          "style": "gold"
+        },
+        {
+          "role": "item3",
+          "say": "อันดับ 3 + เหตุผลสั้น ๆ",
+          "screen": "#3 ชื่อ",
+          "visual": "pack",
+          "style": "bold"
+        },
+        {
+          "role": "item2",
+          "say": "อันดับ 2 + เหตุผลสั้น ๆ",
+          "screen": "#2 ชื่อ",
+          "visual": "pack",
+          "style": "bold"
+        },
+        {
+          "role": "item1",
+          "say": "อันดับ 1 + เหตุผลที่เด็ดที่สุด",
+          "screen": "#1 ชื่อ",
+          "visual": "pack",
+          "style": "gold"
+        },
+        {
+          "role": "cta",
+          "say": "ถามว่าใครมีใบไหนแล้ว + ชวนเช็กของในตู้ที่หน้าเว็บ",
+          "screen": "",
+          "visual": "branch|machine",
+          "style": "box"
+        }
+      ],
+      "guard": [
+        "needs_three_items"
+      ]
+    },
+    {
+      "id": "explain-30s",
+      "name": "รู้จัก X ใน 30 วินาที",
+      "why": "อธิบายเรื่องเดียวให้จบเร็ว — คนดูได้ความรู้กลับไป และอยากแชร์ต่อ",
+      "evidence": [
+        {
+          "src": "youtube",
+          "what": "ช่องเล่าเรื่องอนิเมะ: ทำความรู้จักตัวละครภายใน 1 นาที",
+          "views_per_hour": 291,
+          "seen": "2026-10"
+        },
+        {
+          "src": "youtube",
+          "what": "ช่องการ์ด: วิเคราะห์การ์ดจากวิดีโอตัวอย่างซองใหม่",
+          "views_per_hour": 262,
+          "seen": "2026-10"
+        }
+      ],
+      "fits": {
+        "sources": [
+          "youtube",
+          "official",
+          "global",
+          "news"
+        ],
+        "subtypes": [],
+        "needs_sku": false
+      },
+      "length": [
+        20,
+        32
+      ],
+      "beats": [
+        {
+          "role": "hook",
+          "say": "รู้จัก <เรื่อง> ใน 30 วินาที",
+          "screen": "รู้จัก … ใน 30 วิ",
+          "visual": "bg|pack",
+          "style": "neon"
+        },
+        {
+          "role": "fact1",
+          "say": "ข้อเท็จจริงข้อที่ 1 (จากข้อมูล)",
+          "screen": "2–5 คำ",
+          "visual": "bg|pack",
+          "style": "bold"
+        },
+        {
+          "role": "fact2",
+          "say": "ข้อเท็จจริงข้อที่ 2",
+          "screen": "2–5 คำ",
+          "visual": "pack|bg",
+          "style": "bold"
+        },
+        {
+          "role": "fact3",
+          "say": "ข้อที่ 3 หรือเรื่องที่คนไม่ค่อยรู้",
+          "screen": "2–5 คำ",
+          "visual": "bg|pack",
+          "style": "gold"
+        },
+        {
+          "role": "cta",
+          "say": "ถามความเห็น + ชวนแวะตู้แบบเบา ๆ (เรื่องไม่เกี่ยวกับการ์ด = ไม่ต้องโยงซอง)",
+          "screen": "",
+          "visual": "branch|machine|bg",
+          "style": "box"
+        }
+      ],
+      "guard": []
+    },
+    {
+      "id": "choose-challenge",
+      "name": "ท้าเลือก: ถ้าเป็นคุณ เลือกอะไร",
+      "why": "คลิปแนวท้าลอง/พิสูจน์ที่มีเดิมพันคือคลิปที่คนดูเร็วที่สุดในข้อมูล · ไม่มีฟุตเทจเปิดซอง = ทำเป็นคำถามให้เลือกข้าง",
+      "evidence": [
+        {
+          "src": "youtube",
+          "what": "ช่องการ์ด: เปิดกาชากับลูกค้าแล้วแข่งกันสด",
+          "views_per_hour": 27551,
+          "seen": "2026-10"
+        },
+        {
+          "src": "youtube",
+          "what": "ช่องการ์ด: เปิดการ์ดจากร้านเพื่อพิสูจน์",
+          "views_per_hour": 13030,
+          "seen": "2026-10"
+        },
+        {
+          "src": "youtube",
+          "what": "ช่องการ์ด: เหมาการ์ดทั้งร้าน",
+          "views_per_hour": 6188,
+          "seen": "2026-10"
+        }
+      ],
+      "fits": {
+        "sources": [
+          "internal",
+          "youtube",
+          "price",
+          "manual"
+        ],
+        "subtypes": [
+          "hot_sku",
+          "falling_sku"
+        ],
+        "needs_sku": true
+      },
+      "length": [
+        16,
+        28
+      ],
+      "beats": [
+        {
+          "role": "hook",
+          "say": "โจทย์ท้าเลือก 1 ประโยค (เช็กตู้ได้แค่ชุดเดียว / เปิดได้ซองเดียว)",
+          "screen": "เลือกได้แค่ 1!",
+          "visual": "machine|branch",
+          "style": "gold"
+        },
+        {
+          "role": "option_a",
+          "say": "ตัวเลือก A + จุดเด่น (จากข้อมูล)",
+          "screen": "A: ชื่อชุด",
+          "visual": "pack",
+          "style": "bold"
+        },
+        {
+          "role": "option_b",
+          "say": "ตัวเลือก B + จุดเด่น (จากข้อมูล)",
+          "screen": "B: ชื่อชุด",
+          "visual": "pack",
+          "style": "bold"
+        },
+        {
+          "role": "ask",
+          "say": "ถามว่าเลือกข้างไหน ให้คอมเมนต์ A หรือ B",
+          "screen": "A หรือ B?",
+          "visual": "pack|bg",
+          "style": "neon"
+        },
+        {
+          "role": "cta",
+          "say": "ชวนเช็กของในตู้ที่หน้าเว็บก่อนไปลุ้นเอง",
+          "screen": "",
+          "visual": "branch|machine",
+          "style": "box"
+        }
+      ],
+      "guard": [
+        "needs_two_packs"
+      ]
+    },
+    {
+      "id": "story-world",
+      "name": "เรื่องเล่าสนุกในโลกของค่าย",
+      "why": "เรื่องเล่ามีหักมุมจากโลกของเกม/อนิเมะ — คนดูจนจบเพื่อรู้ตอนจบ",
+      "evidence": [
+        {
+          "src": "youtube",
+          "what": "ช่องเล่าเรื่องโปเกมอน: มุกล้อของในโลกเกม (ภาค 1–2)",
+          "views_per_hour": 1737,
+          "seen": "2026-10"
+        },
+        {
+          "src": "youtube",
+          "what": "ช่องเล่าเรื่องโปเกมอน: แข่งทายกันเป็นทีม",
+          "views_per_hour": 700,
+          "seen": "2026-10"
+        }
+      ],
+      "fits": {
+        "sources": [
+          "youtube",
+          "global",
+          "news"
+        ],
+        "subtypes": [],
+        "needs_sku": false,
+        "off_cards_ok": true
+      },
+      "length": [
+        20,
+        34
+      ],
+      "beats": [
+        {
+          "role": "hook",
+          "say": "เปิดด้วยเรื่องแปลก/น่าสงสัยจากโลกของค่าย",
+          "screen": "คำถามหรือประโยคกระแทก",
+          "visual": "bg",
+          "style": "neon"
+        },
+        {
+          "role": "setup",
+          "say": "ปูเรื่อง (จากข้อมูลเท่านั้น)",
+          "screen": "",
+          "visual": "bg|pack",
+          "style": "bold"
+        },
+        {
+          "role": "twist",
+          "say": "จุดหักมุม/มุกของเรื่อง",
+          "screen": "2–5 คำ",
+          "visual": "bg|pack",
+          "style": "gold"
+        },
+        {
+          "role": "ask",
+          "say": "ถามความเห็นเรื่องเดียวกัน",
+          "screen": "คุณว่าไง?",
+          "visual": "bg",
+          "style": "box"
+        },
+        {
+          "role": "cta",
+          "say": "ชวนแวะตู้ 1 ประโยคเบา ๆ ไม่ต้องโยงกับเรื่อง",
+          "screen": "",
+          "visual": "branch|machine",
+          "style": "box"
+        }
+      ],
+      "guard": [
+        "no_forced_tie"
+      ]
+    },
+    {
+      "id": "guess-reveal",
+      "name": "ทายจากใบ้ แล้วเฉลย",
+      "why": "ให้คนดูมีส่วนร่วมทันที — นับถอยหลังก่อนเฉลยทำให้ดูจนจบ",
+      "evidence": [
+        {
+          "src": "youtube",
+          "what": "ช่องเล่าเรื่องโปเกมอน: แข่งทายโปเกมอน",
+          "views_per_hour": 700,
+          "seen": "2026-10"
+        },
+        {
+          "src": "video_jobs",
+          "what": "รูปแบบคลิปทายซองของเราเอง (quiz) ผ่านการทดสอบแล้ว",
+          "seen": "2026-10"
+        }
+      ],
+      "fits": {
+        "sources": [
+          "internal",
+          "official",
+          "global",
+          "youtube"
+        ],
+        "subtypes": [
+          "hot_sku"
+        ],
+        "needs_sku": true
+      },
+      "length": [
+        16,
+        26
+      ],
+      "beats": [
+        {
+          "role": "hook",
+          "say": "ท้าให้ทายว่าเป็นชุด/การ์ดอะไร",
+          "screen": "ทายซิ!",
+          "visual": "bg",
+          "style": "gold"
+        },
+        {
+          "role": "clue1",
+          "say": "ใบ้ข้อ 1 (จากข้อมูล)",
+          "screen": "ใบ้ 1",
+          "visual": "bg",
+          "style": "bold"
+        },
+        {
+          "role": "clue2",
+          "say": "ใบ้ข้อ 2",
+          "screen": "ใบ้ 2",
+          "visual": "bg",
+          "style": "bold"
+        },
+        {
+          "role": "reveal",
+          "say": "เฉลยชื่อชุด",
+          "screen": "เฉลย: ชื่อชุด",
+          "visual": "pack",
+          "style": "gold"
+        },
+        {
+          "role": "cta",
+          "say": "ถามว่าทายถูกไหม + ชวนเช็กของในตู้ที่หน้าเว็บ",
+          "screen": "",
+          "visual": "branch|machine",
+          "style": "box"
+        }
+      ],
+      "guard": []
+    }
+  ]
+}

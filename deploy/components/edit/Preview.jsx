@@ -14,6 +14,9 @@ const W = 1080, H = 1920
 export function srcOf(src, skuImg) {
   if (typeof src === "string" && src.startsWith("sku:")) return skuImg?.[src.slice(4)] || ""
   if (typeof src === "string" && src.startsWith("assets/brand/")) return "/logo-white.png"
+  // รูปในเทมเพลตที่ตัวเขียนสตอรี่บอร์ดใช้ (26 ต.ค. 2026) — ไฟล์จริงอยู่ฝั่งเครื่องเรนเดอร์ หน้าเว็บใช้รูปย่อใน public/
+  if (src === "assets/machine-hero.jpg") return "/machine/machine-hero.jpg"
+  if (typeof src === "string" && /^assets\/branches\/[a-z0-9]+\.jpg$/.test(src)) return `/video-assets/branches/${src.slice(16)}`
   return src
 }
 

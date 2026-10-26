@@ -332,11 +332,13 @@ def check_brief(plan, dur):
                     "overlays": (plan.get("timeline") or {}).get("overlays")})
     blob = "\n".join(texts)
     status, why, ok = "pass", [], []
+    # "ของแท้ 100%" = ข้อเท็จจริงของร้าน (ป้ายความน่าเชื่อถือ) ไม่ใช่ตัวเลขยอดขาย — ไม่นับ
+    sales_blob = re.sub(r"แท้\s*100\s*(%|เปอร์เซ็นต์)", "แท้", blob)
     if "เช็กหน้าตู้" in blob or "เช็คหน้าตู้" in blob:
         status = "warn"; why.append("มีคำว่า \"เช็กหน้าตู้\" (ต้องเป็น \"เช็กหน้าเว็บ\")")
     if OLD_PHONE.search(blob):
         status = "fail"; why.append("มีเบอร์เก่า 086-386-3219 (เบอร์ร้าน 093-073-7930)")
-    m = SALES.search(blob)
+    m = SALES.search(sales_blob)
     if m:
         status = max(status, "warn", key=_rank); why.append(f"มีตัวเลขยอดขาย/% \"{m.group(0)}\"")
     if eng == "hyperframes":

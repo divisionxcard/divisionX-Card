@@ -20,6 +20,10 @@ const num = (v, lo, hi, d) => {
 }
 const pick = (v, opts, d) => (opts.includes(v) ? v : d)
 const str = (v, max) => (typeof v === "string" ? v.trim().slice(0, max) : "")
+// ผูกกับบรรทัดเสียงพากย์ (26 ต.ค. 2026 · สตอรี่บอร์ด) — เลขบรรทัด 0 = บรรทัดแรกของบทพากย์
+// runner ตั้งเวลาให้ตรงจังหวะพูดจริงหลังทำเสียง (hf_timeline.anchor) · ในหน้าเว็บเป็นแค่เวลาประมาณ
+export const MAX_LINES = 60
+const lineOf = (v) => (Number.isInteger(v) && v >= 0 && v < MAX_LINES ? v : null)
 
 // แหล่งไฟล์ที่ยอมให้เครื่องเรนเดอร์โหลด — คลังไฟล์ของเรา · รูปซอง (sku:) · ไฟล์ในเทมเพลต
 // ห้ามลิงก์ภายนอก: ไม่งั้นใครก็ใช้ runner ของเราดาวน์โหลดอะไรก็ได้
@@ -80,6 +84,7 @@ export function cleanTimeline(raw, base) {
       row.dur = num(c.dur, 0.3, 60, 3)
       row.motion = pick(c.motion, MOTIONS, "zoomin")
     }
+    if (lineOf(c.line) !== null) row.line = c.line
     clips.push(row)
   }
   const ovIn = Array.isArray(raw.overlays) ? raw.overlays : []
@@ -104,6 +109,10 @@ export function cleanTimeline(raw, base) {
       row.w = num(o.w, 0.05, 1, 0.45)
     } else {
       row.x = num(o.x, 0, 1, 0.88); row.y = num(o.y, 0, 1, 0.05); row.w = num(o.w, 0.05, 0.5, 0.14)
+    }
+    if (lineOf(o.line) !== null) {
+      row.line = o.line
+      if (Number.isInteger(o.span) && o.span > 1) row.span = Math.min(o.span, 10)
     }
     overlays.push(row)
   }

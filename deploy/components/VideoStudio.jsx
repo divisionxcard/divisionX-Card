@@ -23,7 +23,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react"
 import {
   Film, Type, Image as ImageIcon, Send, AlertTriangle, X, Lock, Download,
-  RefreshCw, Loader2, Check, Clock, Sparkles, Mic, LogOut, Scissors, ListChecks,
+  RefreshCw, Loader2, Check, Clock, Sparkles, Mic, LogOut, Scissors, ListChecks, Lightbulb, ExternalLink,
 } from "lucide-react"
 import { supabase, getSkus, getProfile, signOutAndGoHome } from "../lib/supabase"
 
@@ -258,7 +258,15 @@ export default function VideoStudio() {
   const [skuErr, setSkuErr] = useState("")
 
   // ── โหมด "ให้ระบบออกแบบ" ──
-  const [mode, setMode] = useState("auto")       // auto = ระบบเขียนเองจากข้อมูลจริง · manual = เขียนสคริปต์เอง
+  const [mode, setMode] = useState("auto")       // auto = ระบบเขียนเองจากข้อมูลจริง · manual = เขียนสคริปต์เอง · story = สตอรี่บอร์ดจากไอเดีย
+  // ── สตอรี่บอร์ดจากไอเดีย (26 ต.ค. 2026) — ไอเดียรีเสิร์ช + รูปแบบไวรัล → ร่างห้องตัดต่อ ──
+  const [sbIdeas, setSbIdeas] = useState(null)   // null = ยังไม่โหลด
+  const [sbPatterns, setSbPatterns] = useState([])
+  const [sbQuery, setSbQuery] = useState("")
+  const [sbIdea, setSbIdea] = useState(null)
+  const [sbPattern, setSbPattern] = useState("auto")
+  const [sbVoice, setSbVoice] = useState("auto")
+  const [sbResult, setSbResult] = useState(null)
   const [fmt, setFmt] = useState("auto")
   const [autoMachine, setAutoMachine] = useState("")
   const [autoSku, setAutoSku] = useState("")
@@ -319,7 +327,7 @@ export default function VideoStudio() {
     const { data: s } = await supabase.auth.getSession()
     const fresh = s?.session?.access_token
     if (!fresh) { setAuthState("anon"); throw new Error("เซสชันหมดอายุ — เข้าสู่ระบบใหม่อีกครั้ง") }
-    const res = await fetch(`/api/video/${path}`, {
+    const res = await fetch(path.startsWith("/") ? path : `/api/video/${path}`, {
       ...opts,
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${fresh}`, ...(opts.headers || {}) },
     })
@@ -578,6 +586,44 @@ export default function VideoStudio() {
     }
   }
 
+  // ── สตอรี่บอร์ด: โหลดไอเดีย + รูปแบบครั้งแรกที่เปิดโหมด · ?idea=<id> เปิดโหมดนี้พร้อมเลือกไว้ ──
+  useEffect(() => {
+    if (authState !== "ok") return
+    const q = new URLSearchParams(window.location.search).get("idea")
+    if (q && /^\d+$/.test(q)) { setMode("story"); setSbIdea(Number(q)) }
+  }, [authState])
+  useEffect(() => {
+    if (authState !== "ok" || mode !== "story" || sbIdeas !== null) return
+    ;(async () => {
+      try {
+        const [ideas, pats] = await Promise.all([
+          api("/api/marketing/ideas?status=all&per_source=6&limit=300"),
+          api("storyboard"),
+        ])
+        if (!alive.current) return
+        setSbIdeas(ideas.items || [])
+        setSbPatterns(pats.patterns || [])
+      } catch (e) {
+        if (alive.current) { setSbIdeas([]); setErr({ msg: `โหลดไอเดียไม่สำเร็จ: ${e.message}` }) }
+      }
+    })()
+  }, [authState, mode, sbIdeas, api])
+
+  async function writeStoryboard() {
+    if (sending || !sbIdea) return
+    setSending(true); setErr(null); setSbResult(null)
+    try {
+      const r = await api("storyboard", { method: "POST", body: JSON.stringify({
+        idea_id: sbIdea, ...(sbPattern !== "auto" ? { pattern: sbPattern } : {}), ...(sbVoice !== "auto" ? { voice: sbVoice } : {}),
+      }) })
+      if (alive.current) setSbResult(r)
+    } catch (e) {
+      setErr({ msg: e.message, hint: e.hint })
+    } finally {
+      setSending(false)
+    }
+  }
+
   // ── ขั้นดูแผน: อนุมัติ → เรนเดอร์ตามแผนนี้ทั้งก้อน · ยกเลิก → ทิ้งแผน (ยังไม่ได้จ่ายอะไร) ──
   async function decidePlan(kind) {
     if (sending || !job?.id) return
@@ -651,6 +697,9 @@ export default function VideoStudio() {
         <button className={`vs-mode-b ${mode === "auto" ? "vs-mode-on" : ""}`} onClick={() => setMode("auto")}>
           <Sparkles size={14} /> ให้ระบบออกแบบ
         </button>
+        <button className={`vs-mode-b ${mode === "story" ? "vs-mode-on" : ""}`} onClick={() => setMode("story")}>
+          <Lightbulb size={14} /> จากไอเดีย
+        </button>
         <button className={`vs-mode-b ${mode === "manual" ? "vs-mode-on" : ""}`} onClick={() => setMode("manual")}>
           <Type size={14} /> เขียนสคริปต์เอง
         </button>
@@ -715,6 +764,13 @@ export default function VideoStudio() {
           </div>
           {job && <JobPanel job={job} waited={waited} busy={sending} onDecide={decidePlan} />}
         </section>
+      )}
+
+      {mode === "story" && (
+        <StoryPanel ideas={sbIdeas} patterns={sbPatterns} query={sbQuery} setQuery={setSbQuery}
+          idea={sbIdea} setIdea={(id) => { setSbIdea(id); setSbResult(null) }}
+          pattern={sbPattern} setPattern={setSbPattern} voice={sbVoice} setVoice={setSbVoice}
+          result={sbResult} busy={sending} onWrite={writeStoryboard} />
       )}
 
       {mode === "manual" && <>
@@ -1097,6 +1153,89 @@ function JobPanel({ job, waited, busy, onDecide }) {
   )
 }
 
+// ── สตอรี่บอร์ดจากไอเดีย ───────────────────────────────────────────────
+const SOURCE_TH = {
+  internal: "ยอดขายในตู้", official: "เว็บทางการ", news: "ข่าว", youtube: "YouTube", global: "ต่างประเทศ",
+  price: "ราคาการ์ด", manual: "เพจที่ติดตาม", radar: "เรดาร์", social: "โซเชียล",
+}
+const evidenceText = (e) => e?.lift ? `แรงกว่าปกติ ${e.lift} เท่า` : e?.views_per_hour ? `${Number(e.views_per_hour).toLocaleString("th-TH")} วิว/ชม.` : ""
+
+function StoryPanel({ ideas, patterns, query, setQuery, idea, setIdea, pattern, setPattern, voice, setVoice, result, busy, onWrite }) {
+  const q = query.trim().toLowerCase()
+  const list = (ideas || []).filter(x => !q || `${x.title} ${x.subtype || ""} ${x.related_sku || ""}`.toLowerCase().includes(q)).slice(0, 60)
+  const picked = (ideas || []).find(x => x.id === idea)
+  return (
+    <section className="dx-card vs-card">
+      <h2 className="vs-h"><Lightbulb size={16} /> สตอรี่บอร์ดจากไอเดีย</h2>
+      <p className="vs-dim vs-lead">
+        เลือกไอเดียจากรีเสิร์ช → ระบบเลือกรูปแบบคลิปที่แรงจริง (มีหลักฐานจากเพจ/YouTube ที่ติดตาม) แล้วเขียนเป็นฉาก ๆ ·
+        ได้เป็นร่างในห้องตัดต่อ เปิดดู/แก้ได้ก่อนกดทำ · ไม่เสียเงิน (ใช้ภาพที่มีอยู่แล้ว)
+      </p>
+      <input className="dx-input" value={query} onChange={e => setQuery(e.target.value)} placeholder="ค้นไอเดีย เช่น OP-17 · ทัวร์นาเมนต์ · Pokémon" />
+      <div className="vs-ideas">
+        {ideas === null && <p className="vs-dim vs-fine"><Loader2 size={12} className="vs-spin" /> กำลังโหลดไอเดีย…</p>}
+        {ideas && !list.length && <p className="vs-dim vs-fine">ไม่พบไอเดีย</p>}
+        {list.map(x => (
+          <button key={x.id} className={`vs-idea ${idea === x.id ? "vs-idea-on" : ""}`} onClick={() => setIdea(x.id)}>
+            <span className="vs-chip vs-chip-dim">{SOURCE_TH[x.source] || x.source}</span>
+            {String(x.summary || "").startsWith("📌") && <span className="vs-chip">ถอดเนื้อหาแล้ว</span>}
+            <span className="vs-idea-t">{x.title}</span>
+          </button>
+        ))}
+      </div>
+      <div className="vs-two">
+        <label className="vs-field">
+          <span>รูปแบบคลิป</span>
+          <select className="dx-input" value={pattern} onChange={e => setPattern(e.target.value)}>
+            <option value="auto">ให้ระบบเลือก (เข้ากับไอเดีย · ไม่ซ้ำร่างล่าสุด)</option>
+            {patterns.map(p => <option key={p.id} value={p.id}>{p.name}{p.evidence?.[0] ? ` — ${evidenceText(p.evidence[0])}` : ""}</option>)}
+          </select>
+        </label>
+        <label className="vs-field">
+          <span><Mic size={13} /> เสียงพากย์</span>
+          <select className="dx-input" value={voice} onChange={e => setVoice(e.target.value)}>
+            <option value="auto">ให้ระบบเลือก</option>
+            {VOICES.map(v => <option key={v.id} value={v.id}>{v.label} — {v.desc}</option>)}
+          </select>
+        </label>
+      </div>
+      <div className="vs-actions">
+        <button className="dx-btn dx-btn-primary" disabled={busy || !idea} onClick={onWrite}>
+          {busy ? <><Loader2 size={14} className="vs-spin" /> กำลังเขียน… (~20 วิ)</> : <><Sparkles size={14} /> {result ? "เขียนใหม่" : "เขียนสตอรี่บอร์ด"}</>}
+        </button>
+        <span className="vs-dim vs-fine">{picked ? `ไอเดีย: ${picked.title.slice(0, 60)}` : "เลือกไอเดียก่อน"}</span>
+      </div>
+      {result && (
+        <div className="vs-plan vs-story">
+          <b className="vs-plan-t"><ListChecks size={14} /> {result.pattern?.name} · ยาวราว {mmss(result.seconds)} นาที · เสียง {result.voice}</b>
+          <p className="vs-dim vs-fine">{result.pattern?.why}</p>
+          <div className="vs-auto-chips">
+            {(result.pattern?.evidence || []).map((e, i) => <span key={i} className="vs-chip vs-chip-dim" title={e.what}>{evidenceText(e) || e.src}</span>)}
+          </div>
+          <ol className="vs-beats">
+            {(result.beats || []).map((b, i) => (
+              <li key={i}>
+                <span className="vs-beat-role">{b.role}</span>
+                <span className="vs-beat-vo">{b.vo.join(" ")}</span>
+                <span className="vs-dim vs-fine">{b.screen ? `บนจอ: ${b.screen} · ` : ""}ภาพ: {b.visual}</span>
+              </li>
+            ))}
+          </ol>
+          {result.dropped?.length > 0 && (
+            <p className="vs-note">ตัดฉากทิ้ง {result.dropped.length} ฉาก: {result.dropped.map(d => `${d.role} (${d.why})`).join(" · ")}</p>
+          )}
+          <div className="vs-actions">
+            <a className="dx-btn dx-btn-primary" href={`/video/editor?id=${encodeURIComponent(result.edit_id)}`}>
+              <ExternalLink size={14} /> เปิดในห้องตัดต่อ
+            </a>
+            <span className="vs-dim vs-fine">ในห้องตัดต่อ: ดูภาพ/ข้อความ แก้ได้ทุกชิ้น แล้วกดทำคลิป · ภาพกับข้อความตั้งเวลาตามเสียงพากย์จริงตอนทำ</span>
+          </div>
+        </div>
+      )}
+    </section>
+  )
+}
+
 // แผนที่ระบบเสนอ (ขั้นดูแผน) — "AI เสนอ คนอนุมัติ": เห็นบท หน้าตา พื้นหลัง และค่าใช้จ่ายก่อนจ่ายจริง
 function PlanCard({ plan, busy, onDecide }) {
   const est = plan.estimate
@@ -1227,9 +1366,9 @@ const CSS = `
 .vs-mt{margin-top:12px;}
 
 /* ── โหมด ── */
-.vs-mode{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;}
+.vs-mode{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;}
 .vs-mode-edit{text-decoration:none;border-style:dashed;}
-@media (max-width:520px){.vs-mode{grid-template-columns:1fr 1fr;}.vs-mode-edit{grid-column:1/-1;}}
+@media (max-width:520px){.vs-mode{grid-template-columns:1fr 1fr;}}
 .vs-mode-b{display:flex;align-items:center;justify-content:center;gap:7px;padding:11px 12px;border-radius:12px;cursor:pointer;
   background:var(--dx-bg-card);border:1px solid var(--dx-border);color:var(--dx-text-2);font-family:var(--dx-font);font-size:13px;transition:all .18s;}
 .vs-mode-b:hover{border-color:var(--dx-border-strong);color:var(--dx-text);}
@@ -1316,6 +1455,19 @@ const CSS = `
 .vs-st-ok{color:var(--dx-success);background:rgba(0,255,136,.09);border-color:rgba(0,255,136,.3);}
 .vs-st-bad{color:var(--dx-danger);background:rgba(255,68,102,.09);border-color:rgba(255,68,102,.3);}
 .vs-st-plan{color:#FFD27A;background:rgba(255,184,77,.12);border-color:rgba(255,184,77,.45);}
+.vs-ideas{display:flex;flex-direction:column;gap:6px;max-height:340px;overflow-y:auto;margin-top:10px;padding-right:2px;}
+.vs-idea{display:flex;align-items:center;flex-wrap:wrap;gap:6px;text-align:left;padding:8px 10px;border-radius:10px;cursor:pointer;
+  background:var(--dx-bg-input);border:1px solid var(--dx-border);color:var(--dx-text);font-family:var(--dx-font);font-size:12.5px;min-width:0;}
+.vs-idea:hover{border-color:var(--dx-border-strong);}
+.vs-idea-on{border-color:var(--dx-cyan);background:rgba(0,212,255,.08);}
+.vs-idea-t{flex:1 1 200px;min-width:0;word-break:break-word;line-height:1.5;}
+.vs-story{border-color:rgba(0,212,255,.4);}
+.vs-story .vs-plan-t{color:var(--dx-cyan-bright);}
+.vs-beats{margin:10px 0 0;padding-left:20px;display:flex;flex-direction:column;gap:7px;}
+.vs-beats li{font-size:12.5px;line-height:1.6;}
+.vs-beats li > span{display:block;}
+.vs-beat-role{font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--dx-cyan-soft);}
+.vs-beat-vo{color:var(--dx-text);word-break:break-word;}
 .vs-plan{margin-top:10px;padding:12px;border-radius:11px;background:var(--dx-bg-card);border:1px solid rgba(255,184,77,.45);}
 .vs-plan-t{display:flex;align-items:center;gap:6px;font-size:13px;color:#FFD27A;margin-bottom:8px;}
 .vs-plan .vs-auto-chips{margin-bottom:8px;}

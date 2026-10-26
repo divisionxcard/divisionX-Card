@@ -15,7 +15,7 @@ export const MEDIA_BASE = `${SITE}/media/`
 // ลิงก์เดิมใน Supabase (ก่อนย้าย) — key เดียวกันทุกตัว (ย้ายแบบรักษา path)
 const LEGACY = () => `${(process.env.NEXT_PUBLIC_SUPABASE_URL || "").replace(/\/+$/, "")}/storage/v1/object/public/marketing/`
 // ไม่เปิดผ่าน /media: ร่างงานตัดต่อ · ไดอารี่งาน (เปิดได้ทาง /api/diary เฉพาะแอดมิน) · ไฟล์ทดสอบ
-export const PRIVATE_PREFIXES = ["video-edits/", "diary/", "_selftest/"]
+export const PRIVATE_PREFIXES = ["video-edits/", "diary/", "_selftest/", "research/"]   // research/ = ประวัติสตอรี่บอร์ด/กล่องส่งแอด (26 ต.ค.)
 
 function cfg() {
   const acc = (process.env.R2_ACCOUNT_ID || "").trim()

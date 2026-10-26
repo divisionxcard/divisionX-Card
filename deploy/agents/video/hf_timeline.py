@@ -52,6 +52,57 @@ def _pick(v, opts, d):
     return v if v in opts else d
 
 
+def _line(v):
+    """เลขบรรทัดบทพากย์ (0 = บรรทัดแรก) · ไม่ใช่จำนวนเต็ม 0–59 = ไม่ผูก"""
+    return v if isinstance(v, int) and not isinstance(v, bool) and 0 <= v < 60 else None
+
+
+def anchor(tl, timing, total):
+    """ผูกชิ้นงานกับบรรทัดเสียงพากย์ — ตั้งเวลาตามจังหวะพูดจริงหลังทำเสียง (26 ต.ค. 2026 · สตอรี่บอร์ด)
+
+    ทำไม: ความยาวเสียงรู้ได้หลัง TTS เท่านั้น สตอรี่บอร์ดเดาเวลาไว้ล่วงหน้า (ตัวอักษร/วินาที) จะคลาดสะสม
+    จนตัวหนังสือขึ้นก่อน/หลังเสียงพูดเป็นวินาที
+    คลิปหลัก: ชิ้นที่มี line ยาวถึงเวลาเริ่มบรรทัดของชิ้นถัดไป (ชิ้นท้าย = ท้ายเสียง + ค้างท้าย) — เฉพาะชิ้นที่ต่อกันและ
+    เลขบรรทัดเรียงขึ้น · ไม่เรียง (คนลากสลับ) = ไม่แตะคลิปหลักเลย (ใช้เวลาเดิมในร่าง)
+    ของทับ: เริ่มตอนบรรทัด line เริ่มพูด · จบตอนบรรทัดถัดจาก line+span-1 เริ่ม (ค้างระหว่างเว้นวรรค)
+    คืนจำนวนชิ้นที่ตั้งเวลาใหม่
+    """
+    st = {int(t["index"]): float(t["start"]) for t in (timing or []) if "start" in t}
+    if not st:
+        return 0
+    end_all = round(total + TAIL, 3)
+    n = 0
+    clips = tl["clips"]
+    lines = [c.get("line") for c in clips if c.get("line") in st]
+    if lines and all(b > a for a, b in zip(lines, lines[1:])):
+        t = 0.0
+        for i, c in enumerate(clips):
+            if c.get("line") in st:
+                nxt = clips[i + 1] if i + 1 < len(clips) else None
+                target = (st[nxt["line"]] if nxt is not None and nxt.get("line") in st
+                          else end_all if nxt is None else None)
+                if target is not None:
+                    d = round(max(0.4, target - t), 3)
+                    if c["kind"] == "image":
+                        c["dur"] = min(60.0, d)
+                    else:
+                        c["out"] = round(c["in"] + d * c["speed"], 3)
+                    n += 1
+            t += clip_len(c)
+    elif lines:
+        _log("⚠️ เลขบรรทัดของคลิปหลักไม่เรียง (ลากสลับในห้องตัดต่อ?) — ใช้เวลาตามร่าง ไม่ผูกกับเสียง")
+    last_line = max(st)
+    for o in tl["overlays"]:
+        ln = o.get("line")
+        if ln not in st:
+            continue
+        last = min(ln + max(1, int(o.get("span") or 1)) - 1, last_line)
+        o["start"] = 0.0 if ln == 0 else round(st[ln], 3)
+        o["end"] = round(st[last + 1], 3) if (last + 1) in st else end_all
+        n += 1
+    return n
+
+
 def normalize(tl):
     """ตรวจ/ล้างไทม์ไลน์ (ฝั่ง runner ตรวจซ้ำจาก route) → dict ที่ปลอดภัยต่อการประกอบ"""
     tl = tl if isinstance(tl, dict) else {}
@@ -73,6 +124,8 @@ def normalize(tl):
         else:
             row["dur"] = _num(c.get("dur"), 0.3, 60, 3.0)
             row["motion"] = _pick(c.get("motion"), MOTIONS, "zoomin")
+        if _line(c.get("line")) is not None:
+            row["line"] = c["line"]
         clips.append(row)
     overlays = []
     for o in (tl.get("overlays") or [])[:MAX_OVERLAYS]:
@@ -99,6 +152,10 @@ def normalize(tl):
         else:
             row.update(x=_num(o.get("x"), 0, 1, 0.88), y=_num(o.get("y"), 0, 1, 0.05), w=_num(o.get("w"), 0.05, 0.5, 0.14),
                        anim=_pick(o.get("anim"), ANIMS, "none"))
+        if _line(o.get("line")) is not None:
+            row["line"] = o["line"]
+            if isinstance(o.get("span"), int) and not isinstance(o.get("span"), bool) and o["span"] > 1:
+                row["span"] = min(o["span"], 10)
         overlays.append(row)
     v = tl.get("voice") if isinstance(tl.get("voice"), dict) else None
     voice = None
@@ -281,6 +338,9 @@ def build_video(plan, out_mp4=None, check=True):
               "tts_model": tl["voice"]["tts_model"] or plan.get("tts_model"), "whisper": plan.get("whisper", "large-v3-turbo")}
         _segs, wav, voice_total, _timing, _words, chunks = R.prepare(vp, work)
         _log(f"เสียงพากย์ {voice_total:.1f} วิ · ซับ {len(chunks)} ท่อน")
+        k = anchor(tl, _timing, voice_total)
+        if k:
+            _log(f"ผูกกับบรรทัดเสียงพากย์ {k} ชิ้น (ตั้งเวลาตามจังหวะพูดจริง)")
 
     # ── 2. โปรเจกต์ = ก๊อปเทมเพลต (ฟอนต์ · โลโก้ · ฉากซับ) แล้วโหลดสื่อลง assets/
     proj = work / "hf"
