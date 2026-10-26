@@ -2,7 +2,7 @@
 type: worklog
 date: 2026-10-26
 tags: [video, storyboard, research, patterns, ads, hyperframes]
-commits: [94c333d, 2ac0d6c, 649f368]
+commits: [94c333d, 2ac0d6c, 649f368, ff5fd37]
 status: ✅ สตอรี่บอร์ดจากไอเดีย → ร่างห้องตัดต่อ · ✅ คลังรูปแบบไวรัล 8 แบบ · ✅ กล่องส่งแอด · ✅ รันจริงบน GitHub ผ่าน
 ---
 
