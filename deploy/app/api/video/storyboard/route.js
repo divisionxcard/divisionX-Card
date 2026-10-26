@@ -19,7 +19,7 @@ import { getObject, listObjects, mediaUrl, putObject } from "../../../../lib/r2"
 import { cleanTimeline, VOICES } from "../../../../lib/videoTimeline"
 import { detectFranchise, FRANCHISE_LABEL } from "../../../../lib/franchiseDetect"
 import {
-  buildAssets, buildPrompt, choosePattern, compile, FREE, nameRegex, offCards, parseStoryboard, scrubNames, scrubSource,
+  buildAssets, buildPrompt, choosePattern, compile, FREE, internalFacts, nameRegex, offCards, parseStoryboard, scrubNames, scrubSource,
 } from "../../../../lib/storyboard"
 
 export const dynamic = "force-dynamic"
@@ -99,12 +99,22 @@ async function recentLogs(n = 15) {
 const recentPatterns = async (n = 10) =>
   (await recentLogs(n)).map(k => (k.match(/^[a-z0-9]+-([a-z0-9-]+?)--/) || [])[1]).filter(Boolean)
 
+// สรุปที่ไม่มีอะไรเกินหัวข้อ (ข่าวที่ดึงเนื้อข่าวเต็มไม่ได้)
+const squash = (s) => String(s || "").replace(/[\s\-–—·'"“”‘’|:]/g, "").toLowerCase()
+const thin = (summary, title) => squash(summary).length < squash(title).length + 40
+
 // ไอเดียเด็ดที่ยังไม่เคยทำ — คะแนนสูง · ถอดเนื้อหาแล้ว/ข้อมูลจริงของเรา/ทางการ/ราคา ได้แต้มเพิ่ม · ไม่ซ้ำ 15 สตอรี่บอร์ดล่าสุด
-async function pickIdea(seed) {
+// กดเลือกรูปแบบมา → เลือกไอเดียที่เข้ากับรูปแบบก่อน (ทดสอบ 26 ต.ค.: "เรื่องเล่าในโลกของค่าย" ได้ไอเดียยอดขาย OP-17)
+async function pickIdea(seed, pattern = null) {
   const used = new Set((await recentLogs(15)).map(k => Number((k.match(/--i(\d+)\.json$/) || [])[1])).filter(Boolean))
   const { data } = await db.from("marketing_ideas").select("id,source,subtype,title,summary,score,related_sku")
     .in("status", ["new", "picked"]).order("score", { ascending: false }).limit(80)
-  const pool = (data || []).filter(x => !used.has(x.id)).map(x => ({
+  const f = pattern?.fits
+  const fit = (x) => !f || ((!f.sources?.length || f.sources.includes(x.source)) &&
+    (!f.strict || (f.subtypes || []).includes(x.subtype)) && (!f.needs_sku || x.related_sku))
+  const fresh = (data || []).filter(x => !used.has(x.id))
+  const fitting = fresh.filter(fit)
+  const pool = (fitting.length ? fitting : fresh).map(x => ({
     id: x.id,
     s: Number(x.score || 0) + (String(x.summary || "").startsWith("📌") ? 1 : 0) +
        (["internal", "official", "price"].includes(x.source) ? 0.5 : 0) + (x.related_sku ? 0.3 : 0),
@@ -134,7 +144,9 @@ export async function POST(req) {
   try { body = await req.json() } catch { return NextResponse.json({ error: "bad json" }, { status: 400 }) }
   let ideaId = Number(body?.idea_id)
   if (body?.idea_id === "auto") {
-    ideaId = await pickIdea(Math.floor(Date.now() / 1000))
+    const forced = typeof body?.pattern === "string" && !["auto", "free"].includes(body.pattern)
+      ? (await allPatterns()).patterns.find(p => p.id === body.pattern) : null
+    ideaId = await pickIdea(Math.floor(Date.now() / 1000), forced)
     if (!ideaId) return NextResponse.json({ error: "ไม่มีไอเดียใหม่ให้เลือก — รอตัวเก็บไอเดียรอบ 07:00 หรือเลือกไอเดียเองในโหมด \"จากไอเดีย\"" }, { status: 404 })
   }
   if (!Number.isInteger(ideaId) || ideaId < 1) return NextResponse.json({ error: "ต้องระบุ idea_id" }, { status: 400 })
@@ -199,17 +211,23 @@ export async function POST(req) {
     // ── ข้อมูลที่ตัวเขียนใช้ได้ (ข้อเท็จจริงทั้งหมดต้องมาจากตรงนี้) ──
     const angle = (Array.isArray(idea.angles) ? idea.angles : []).find(a => a?.label === idea.chosen_angle)
     const forbid = await otherNames(idea)
-    const summary = scrubNames(scrubSource(idea.summary, idea.source_label), forbid).slice(0, 1800)
+    const inside = idea.source === "internal" ? internalFacts(idea) : null
+    // หัวข่าว Google News ห้อยชื่อสำนักข่าว " - Animation Magazine" — AI เข้าใจว่าสำนักข่าวเป็นคนเปิดตัว (ทดสอบ 26 ต.ค.)
+    if (idea.source === "news") idea.title = String(idea.title || "").replace(/\s+[-–]\s+[^-–—]{2,60}$/, "")
+    const summary = inside ? inside.summary : scrubNames(scrubSource(idea.summary, idea.source_label), forbid).slice(0, 1800)
     const facts = [
-      `หัวข้อ: ${scrubNames(idea.title, forbid) || "-"}`,
+      `หัวข้อ: ${(inside ? inside.title : scrubNames(idea.title, forbid)) || "-"}`,
       summary ? `ข้อเท็จจริงของเรื่อง:\n${summary}` : null,
-      angle ? `มุมที่เลือกไว้: ${angle.label} — ${scrubNames(scrubSource(angle.brief, idea.source_label), forbid)}` : null,
+      angle ? `มุมที่เลือกไว้: ${angle.label} — ${inside ? inside.scrub(angle.brief) : scrubNames(scrubSource(angle.brief, idea.source_label), forbid)}` : null,
       sku ? `สินค้าในตู้ที่เกี่ยวข้อง: ${sku.name} (${sku.sku_id}) · ค่าย ${FRANCHISE_LABEL[sku.franchise] || sku.franchise}` +
             (sku.language ? ` · ฉบับภาษา${LANG_TH[sku.language] || sku.language}` : "") : null,
       siblings.length ? `ชุดอื่นของค่ายเดียวกันที่มีในตู้: ${siblings.map(s => s.name).join(" · ")}` : null,
       sku ? (haveAt.length ? `สาขาที่มีชุดนี้ตามรอบซิงค์ล่าสุด: ${haveAt.map(b => b.name).join(" · ")}`
                            : "สาขาที่มีชุดนี้: ไม่มีข้อมูล (ห้ามระบุสาขา)") : null,
       offCards(idea) ? "หมายเหตุ: เรื่องนี้ไม่ได้พูดเรื่องการ์ดโดยตรง" : null,
+      // ข่าวที่มีแค่หัวข่าว (ทดสอบ 26 ต.ค.: หนัง Wild Card → AI แต่ง "ภาคนี้ฉีกแนวจนทุกคนต้องอึ้ง")
+      !inside && thin(summary, idea.title)
+        ? "หมายเหตุ: ข้อมูลมีแค่หัวข้อข่าว — เล่าได้แค่ที่หัวข้อบอก ห้ามแต่งรายละเอียดเพิ่ม (เนื้อเรื่อง แนว วันฉาย ราคา คำวิจารณ์) · ใช้ฉากชวนคิด/ชวนคอมเมนต์แทน" : null,
     ].filter(Boolean).join("\n")
       // ไอเดียจากยอดขายในตู้ (internal) มีตัวเลขในหัวข้อ "ยอดโต 1730%" — ห้ามขึ้นคอนเทนต์ · ลบตั้งแต่ก่อนส่งให้ AI
       .replace(/ยอด(โต|ตก|ขาย|พุ่ง)\s*[+-]?\d[\d,.]*\s*(%|เปอร์เซ็นต์|ซอง|ชิ้น)?/g, "ยอด$1 (ตัวเลขภายใน ห้ามบอก)")
@@ -226,7 +244,8 @@ export async function POST(req) {
     }
     if (!sb) return NextResponse.json({ error: "AI เขียนสตอรี่บอร์ดไม่สำเร็จ (ตอบไม่เป็น JSON) — กดใหม่อีกครั้ง" }, { status: 502 })
 
-    const out = compile(sb, assets, { voice, pattern, forbid, external: ["youtube", "manual", "social", "radar"].includes(idea.source) })
+    const out = compile(sb, assets, { voice, pattern, forbid, internal: !!inside,
+      external: ["youtube", "manual", "social", "radar"].includes(idea.source) })
     if (out.error) return NextResponse.json({ error: out.error, dropped: out.dropped }, { status: 422 })
     const cleaned = cleanTimeline(out.timeline)
     if (cleaned.error) return NextResponse.json({ error: `ไทม์ไลน์ไม่ผ่าน: ${cleaned.error}` }, { status: 422 })
