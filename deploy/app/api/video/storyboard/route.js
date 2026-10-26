@@ -68,6 +68,8 @@ async function allPatterns() {
 async function backgroundsFor(franchise) {
   const files = [...await listObjects("aibg/", 200), ...await listObjects("video-bg/", 200)]
     .filter(f => /\.(png|jpe?g|webp)$/i.test(f.key))
+    // พื้นหลังโปสเตอร์ "5 ใบเด็ด" เป็นพื้นน้ำเงินเปล่าไว้วางการ์ด 5 ใบ — ในคลิปกลายเป็นฉากโล่ง (เรนเดอร์จริง 26 ต.ค.)
+    .filter(f => !f.key.startsWith("aibg/top5-"))
     .sort((a, b) => String(b.modified).localeCompare(String(a.modified)))
   const cid = (k) => (k.match(/^aibg\/(?:top5-)?(\d+)-/) || [])[1]
   const proj = (k) => (k.match(/^video-bg\/(.+)-[0-9a-f]{8}\.(?:png|jpe?g|webp)$/) || [])[1]
