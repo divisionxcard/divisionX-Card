@@ -9,6 +9,9 @@ import { Undo2, Redo2, Scissors, Copy, Trash2, Type, ZoomIn, Mic, Music, Film, L
 import { clipLen, layout, LIMITS } from "../../lib/videoTimeline"
 import { totals, fmt } from "./timelineState"
 import { srcOf } from "./Preview"
+
+// สัญลักษณ์รอยต่อบนแถบคลิป (26 ต.ค. 2026 · รอยต่อ 8 แบบ)
+const TRANS_MARK = { flash: "✦", zoom: "Z", whip: "»", bolt: "ϟ", glitch: "▦", wipe: "⟋", ring: "◎" }
 import s from "./edit.module.css"
 
 const HEAD = 92
@@ -224,7 +227,7 @@ export default function Tracks({ state, dispatch, skuImg, playing, onSeek, onWan
                 const left = tot.starts[i] * k
                 const wpx = Math.max(6, clipLen(c) * k)
                 const moving = drag?.mode === "move-clip" && drag.id === c.id && Math.abs(drag.dx) >= 4
-                const thumb = c.kind === "image" ? srcOf(c.src, skuImg) : null
+                const thumb = c.kind === "image" && !c.src.startsWith("gen:") ? srcOf(c.src, skuImg) : null
                 return (
                   <div key={c.id}
                        className={`${s.block} ${c.kind === "image" ? s.blockImage : s.blockClip} ${isSel("clip", c.id) ? s.blockSel : ""}`}
@@ -237,7 +240,7 @@ export default function Tracks({ state, dispatch, skuImg, playing, onSeek, onWan
                           onPointerDown={(e) => start(e, { mode: "trim-l", id: c.id, sel: { kind: "clip", id: c.id } })} />
                     <span className={`${s.handle} ${s.handleR}`} title="ลากเพื่อตัดท้าย"
                           onPointerDown={(e) => start(e, { mode: "trim-r", id: c.id, sel: { kind: "clip", id: c.id } })} />
-                    {i > 0 && c.transition !== "cut" && <span className={s.transMark} style={{ left: 0 }}>{c.transition === "flash" ? "✦" : "Z"}</span>}
+                    {i > 0 && c.transition !== "cut" && <span className={s.transMark} style={{ left: 0 }}>{TRANS_MARK[c.transition] || "✦"}</span>}
                   </div>
                 )
               })}

@@ -71,6 +71,13 @@ async function backgroundsFor(franchise) {
     .sort((a, b) => String(b.modified).localeCompare(String(a.modified)))
   const cid = (k) => (k.match(/^aibg\/(?:top5-)?(\d+)-/) || [])[1]
   const proj = (k) => (k.match(/^video-bg\/(.+)-[0-9a-f]{8}\.(?:png|jpe?g|webp)$/) || [])[1]
+  // คลังภาพฉากรายฉาก (hf_bg.paint_scene · 26 ต.ค.) — มีค่าย/แท็ก/คำอธิบายในดัชนี → AI เลือกภาพที่ตรงเรื่องมาใช้ซ้ำได้ฟรี
+  let lib = new Map()
+  try {
+    const res = await getObject("video-bg/lib/index.json")
+    const idx = res ? await res.json() : { items: [] }
+    lib = new Map((idx.items || []).map(x => [x.key, x]))
+  } catch { /* ยังไม่มีคลัง */ }
   const ids = [...new Set(files.map(f => cid(f.key)).filter(Boolean))].map(Number)
   const projects = [...new Set(files.map(f => proj(f.key)).filter(Boolean))]
   const fr = new Map()
@@ -85,9 +92,13 @@ async function backgroundsFor(franchise) {
     const { data: jobs } = await db.from("video_jobs").select("project,plan").in("project", projects)
     for (const j of jobs || []) if (j.plan?.bg?.hero) fr.set(`p${j.project}`, j.plan.bg.hero)
   }
-  return files.map(f => ({ url: mediaUrl(f.key), franchise: fr.get(cid(f.key) ? `c${cid(f.key)}` : `p${proj(f.key)}`) || null }))
+  return files.map(f => {
+    const L = lib.get(f.key)
+    if (L) return { url: mediaUrl(f.key), franchise: L.franchise || null, tags: L.tags || [], note: L.note || "" }
+    return { url: mediaUrl(f.key), franchise: fr.get(cid(f.key) ? `c${cid(f.key)}` : `p${proj(f.key)}`) || null }
+  })
     .filter(b => b.franchise && (!franchise || b.franchise === franchise))
-    .slice(0, 6)
+    .slice(0, 10)
 }
 
 async function recentLogs(n = 15) {
@@ -234,17 +245,19 @@ export async function POST(req) {
 
     let voiceCfg = null
     try { voiceCfg = await task("content_voice.json") } catch { /* ใช้ค่ากลาง */ }
-    const { system, user } = buildPrompt({ pattern, idea, facts, assets, voice: voiceCfg, trustFacts, library: patterns })
+    let world = null
+    try { world = franchise ? (await task("franchise_style.json")).franchises?.[franchise]?.look || null : null } catch { /* ไม่มีไฟล์ */ }
+    const { system, user } = buildPrompt({ pattern, idea, facts, assets, voice: voiceCfg, trustFacts, library: patterns, world })
 
     let sb = null, model = null
     for (let i = 0; i < 2 && !sb; i++) {
       const r = await askGeminiText(i ? `${user}\n\n⚠️ รอบก่อนตอบไม่ใช่ JSON — ตอบเป็น JSON ล้วนเท่านั้น` : user,
-        { system, temperature: 0.85, maxOutputTokens: 4096, timeout: 60000 })
+        { system, temperature: 0.85, maxOutputTokens: 8192, timeout: 90000 })
       sb = parseStoryboard(r.text); model = r.model
     }
     if (!sb) return NextResponse.json({ error: "AI เขียนสตอรี่บอร์ดไม่สำเร็จ (ตอบไม่เป็น JSON) — กดใหม่อีกครั้ง" }, { status: 502 })
 
-    const out = compile(sb, assets, { voice, pattern, forbid, internal: !!inside,
+    const out = compile(sb, assets, { voice, pattern, forbid, internal: !!inside, franchise,
       external: ["youtube", "manual", "social", "radar"].includes(idea.source) })
     if (out.error) return NextResponse.json({ error: out.error, dropped: out.dropped }, { status: 422 })
     const cleaned = cleanTimeline(out.timeline)
@@ -258,6 +271,7 @@ export async function POST(req) {
     const story = {
       idea_id: idea.id, idea_title: idea.title, pattern_id: pattern.id, pattern_name: pattern.name,
       evidence: pattern.evidence, model, voice, beats: out.beats, dropped: out.dropped, seconds: out.seconds,
+      paints: out.paints, cost_thb: out.cost_thb,
       created_at: new Date().toISOString(), created_by: gate.user.id,
     }
     const doc = { id, name, timeline: cleaned.timeline, job_id: null, updated_at: story.created_at, updated_by: gate.user.id, story }
@@ -271,6 +285,7 @@ export async function POST(req) {
       pattern: { id: pattern.id, name: pattern.name, why: pattern.why, evidence: pattern.evidence, free: !!pattern.free },
       idea: { id: idea.id, title: idea.title, source: idea.source },
       beats: out.beats, dropped: out.dropped, model, timeline: cleaned.timeline,
+      paints: out.paints, cost_thb: out.cost_thb,
     })
   } catch (e) {
     return NextResponse.json({ error: e.message }, { status: 500 })

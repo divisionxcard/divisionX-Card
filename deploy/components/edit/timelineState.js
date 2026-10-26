@@ -104,6 +104,8 @@ export function reducer(state, a) {
     }
     // คนปรับเวลาเอง = ปล่อยการผูกกับบรรทัดเสียงพากย์ (สตอรี่บอร์ด) — ไม่งั้นตอนเรนเดอร์ runner ตั้งเวลาทับที่คนจัดไว้
     case "UPDATE_CLIP": return commit(state, mapClip(tl, a.id, c => ({ ...unanchor(c, a.patch, CLIP_TIMING), ...a.patch })), {}, a)
+    // เปลี่ยนไฟล์ของฉาก (อัปภาพ/วิดีโอจาก AI ตัวอื่นมาแทนฉากที่ AI ออกแบบ) — ไม่ใช่การจัดเวลาเอง จึงยังผูกกับเสียงพากย์ไว้
+    case "REPLACE_MEDIA": return commit(state, mapClip(tl, a.id, c => ({ ...c, ...a.patch })), {}, a)
     case "MOVE_CLIP": {
       const from = tl.clips.findIndex(c => c.id === a.id)
       if (from < 0) return state

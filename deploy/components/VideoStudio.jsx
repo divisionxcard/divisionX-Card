@@ -23,9 +23,10 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react"
 import {
   Film, Type, Image as ImageIcon, Send, AlertTriangle, X, Lock, Download,
-  RefreshCw, Loader2, Check, Clock, Sparkles, Mic, LogOut, Scissors, ListChecks, Lightbulb, ExternalLink,
+  RefreshCw, Loader2, Check, Clock, Sparkles, Mic, LogOut, Scissors, ListChecks, Lightbulb, ExternalLink, Upload, Copy,
 } from "lucide-react"
 import { supabase, getSkus, getProfile, signOutAndGoHome } from "../lib/supabase"
+import { clipLen, promptKit, LAYER_TH, MOTION_TH, CUT_TH, TINT_TH, PAINT_THB } from "../lib/videoTimeline"
 
 // ── ตัวเลือกที่ต้องตรงกับฝั่ง python ────────────────────────────────────
 // คำอธิบายลอกมาจาก VOICES ใน agents/video/voice.py — เสียงพวกนี้ทดสอบกับไทยแล้ว
@@ -821,7 +822,7 @@ export default function VideoStudio() {
             <span className="vs-dim vs-fine">ดูแผน ~20 วิ–2 นาที ยังไม่เสียเงิน · กดอนุมัติแล้วทำคลิป ~5–10 นาที · ปิดหน้านี้ไปก่อนได้</span>
           </div>
           {autoStory && <StoryResult result={autoStory} busy={sending} onRender={() => renderStory(autoStory)}
-            onRetry={() => submitAuto(true)} />}
+            onRetry={() => submitAuto(true)} api={api} onChange={setAutoStory} />}
           {job && <JobPanel job={job} waited={waited} busy={sending} onDecide={decidePlan} />}
         </section>
       )}
@@ -830,7 +831,8 @@ export default function VideoStudio() {
         <StoryPanel ideas={sbIdeas} patterns={sbPatterns} query={sbQuery} setQuery={setSbQuery}
           idea={sbIdea} setIdea={(id) => { setSbIdea(id); setSbResult(null) }}
           pattern={sbPattern} setPattern={setSbPattern} voice={sbVoice} setVoice={setSbVoice}
-          result={sbResult} busy={sending} onWrite={writeStoryboard} onRender={() => renderStory(sbResult)} />
+          result={sbResult} busy={sending} onWrite={writeStoryboard} onRender={() => renderStory(sbResult)}
+          api={api} onChange={setSbResult} />
       )}
       {mode === "story" && job && !sbResult && <section className="dx-card vs-card"><JobPanel job={job} waited={waited} busy={sending} onDecide={decidePlan} /></section>}
       {mode === "story" && (
@@ -1227,7 +1229,7 @@ const SOURCE_TH = {
 const evidenceText = (e) => e?.lift ? `แรงกว่าปกติ ${e.lift} เท่า` : e?.views_per_hour ? `${Number(e.views_per_hour).toLocaleString("th-TH")} วิว/ชม.`
   : e?.src === "ad_box" ? (e.days != null ? `แอดวิ่งมา ${e.days} วัน` : "จากกล่องส่งแอด") : ""
 
-function StoryPanel({ ideas, patterns, query, setQuery, idea, setIdea, pattern, setPattern, voice, setVoice, result, busy, onWrite, onRender }) {
+function StoryPanel({ ideas, patterns, query, setQuery, idea, setIdea, pattern, setPattern, voice, setVoice, result, busy, onWrite, onRender, api, onChange }) {
   const q = query.trim().toLowerCase()
   const list = (ideas || []).filter(x => !q || `${x.title} ${x.subtype || ""} ${x.related_sku || ""}`.toLowerCase().includes(q)).slice(0, 60)
   const picked = (ideas || []).find(x => x.id === idea)
@@ -1272,18 +1274,105 @@ function StoryPanel({ ideas, patterns, query, setQuery, idea, setIdea, pattern, 
         </button>
         <span className="vs-dim vs-fine">{picked ? `ไอเดีย: ${picked.title.slice(0, 60)}` : "เลือกไอเดียก่อน"}</span>
       </div>
-      {result && <StoryResult result={result} busy={busy} onRender={onRender} />}
+      {result && <StoryResult result={result} busy={busy} onRender={onRender} api={api} onChange={onChange} />}
     </section>
   )
 }
 
 // การ์ดสตอรี่บอร์ด — ใช้ทั้งโหมดให้ระบบออกแบบ (ไอเดียที่ระบบเลือก) และโหมดจากไอเดีย
-const VIS_TH = (k) => k.startsWith("pack:") ? `ซอง ${k.slice(5)}` : k.startsWith("branch:") ? "รูปตู้สาขา" : k.startsWith("bg:") ? "ภาพฉาก"
-  : k.startsWith("broll:") ? "คลิปบรรยากาศ" : k === "machine" ? "รูปตู้" : k
-function StoryResult({ result, busy, onRender, onRetry }) {
+const VIS_TH = (k) => k.startsWith("pack:") ? `ซอง ${k.slice(5)}` : k.startsWith("branch:") ? "รูปตู้สาขา" : k.startsWith("bg:") ? "ภาพฉากในคลัง"
+  : k.startsWith("broll:") ? "คลิปบรรยากาศ" : k === "machine" ? "รูปตู้" : k === "new" ? "ภาพใหม่เฉพาะฉาก" : k
+
+// ความยาววิดีโอจริงจากไฟล์ในเครื่อง (อ่านแค่ metadata)
+function fileSeconds(file) {
+  return new Promise((resolve) => {
+    const v = document.createElement("video"), url = URL.createObjectURL(file)
+    const done = (x) => { URL.revokeObjectURL(url); resolve(x) }
+    v.preload = "metadata"; v.muted = true
+    v.onloadedmetadata = () => done(Number.isFinite(v.duration) ? v.duration : null)
+    v.onerror = () => done(null)
+    setTimeout(() => done(null), 15000)
+    v.src = url
+  })
+}
+
+// คัดลอก — บางเบราว์เซอร์/แอปปฏิเสธ clipboard → เปิดกล่องข้อความให้กดค้างคัดลอกเอง
+function CopyBtn({ text, label, icon }) {
+  const [state, setState] = useState("")
+  return (
+    <>
+      <button type="button" className="dx-btn dx-btn-ghost vs-kit-btn" onClick={async () => {
+        try { await navigator.clipboard.writeText(text); setState("ok"); setTimeout(() => setState(""), 1800) } catch { setState("show") }
+      }}>{state === "ok" ? <Check size={13} /> : icon} {state === "ok" ? "คัดลอกแล้ว" : label}</button>
+      {state === "show" && <textarea className="dx-input vs-kit-text" readOnly value={text} onFocus={e => e.target.select()} />}
+    </>
+  )
+}
+
+// ฉากที่ AI ออกแบบภาพใหม่ — พร้อมต์ให้เอาไปทำกับ AI ฟรีตัวอื่น (Gemini · Google Flow · Meta AI · Kling) แล้วอัปไฟล์กลับมาใส่ฉาก
+// (26 ต.ค. 2026 · เจ้าของ: "เพิ่มฟังก์ชั่นเขียนเป็นพร้อมต์เอาไว้ใช้สำหรับไปให้เอไอฟรีตัวอื่นเขียนให้ได้ด้วย แล้วเอาภาพหรือวีดีโอนั้นมาใช้")
+function SceneKit({ clip, onFile, state }) {
+  const kit = promptKit(clip.gen)
+  if (!kit) return null
+  const pending = clip.src.startsWith("gen:")
+  return (
+    <div className="vs-kit">
+      <span className="vs-fine">
+        {pending
+          ? (clip.src === "gen:paint" ? `🎨 ตอนทำคลิป: ใช้ภาพในคลังถ้ามีที่ตรงเรื่อง ไม่มีค่อยวาดใหม่ (~${PAINT_THB} บาท)` : "🎞️ ตอนทำคลิป: หาฟุตเทจจริงฟรี")
+          : "✓ ใช้ไฟล์ที่อัปมาแล้ว"}{kit.note ? ` — ${kit.note}` : ""}
+      </span>
+      <div className="vs-kit-row">
+        <CopyBtn text={kit.image} label="พร้อมต์ภาพ" icon={<ImageIcon size={13} />} />
+        <CopyBtn text={kit.video} label="พร้อมต์วิดีโอ" icon={<Film size={13} />} />
+        <label className={`dx-btn dx-btn-ghost vs-kit-btn${state?.busy ? " is-busy" : ""}`}>
+          {state?.busy ? <Loader2 size={13} className="vs-spin" /> : <Upload size={13} />} {state?.busy ? state.busy : pending ? "อัปไฟล์มาแทน" : "เปลี่ยนไฟล์"}
+          <input type="file" hidden accept="image/jpeg,image/png,image/webp,video/mp4,video/quicktime,video/webm,.mov,.m4v"
+            disabled={!!state?.busy} onChange={e => { const f = e.target.files?.[0]; e.target.value = ""; if (f) onFile(f) }} />
+        </label>
+      </div>
+      {state?.err && <span className="vs-fine vs-bad">{state.err}</span>}
+    </div>
+  )
+}
+function StoryResult({ result, busy, onRender, onRetry, api, onChange }) {
+  const [up, setUp] = useState({})                   // เลขฉาก → { busy, err }
+  const clips = result.timeline?.clips || []
+  const paints = clips.filter(c => c.src === "gen:paint").length
+  const kits = clips.map((c, i) => ({ i, kit: promptKit(c.gen) })).filter(x => x.kit)
+  const allText = kits.map(({ i, kit }) => `ฉาก ${i + 1}${kit.note ? ` — ${kit.note}` : ""}\n[ภาพ]\n${kit.image}\n\n[วิดีโอ]\n${kit.video}`).join("\n\n-----\n\n")
+
+  // อัปไฟล์มาแทนภาพของฉาก → คลังไฟล์ R2 → แก้ร่าง (ตัวอนุมัติใช้ไทม์ไลน์ใหม่นี้)
+  async function replace(i, file) {
+    const set = (v) => setUp(u => ({ ...u, [i]: v }))
+    try {
+      set({ busy: "อัปโหลด…" })
+      const isVideo = (file.type || "").startsWith("video/") || /\.(mp4|mov|m4v|webm)$/i.test(file.name)
+      const seconds = isVideo ? await fileSeconds(file) : null
+      const tk = await api("assets", { method: "POST", body: JSON.stringify({ name: file.name, type: file.type, size: file.size }) })
+      const put = await fetch(tk.upload_url, { method: "PUT", body: file, headers: { "Content-Type": tk.content_type || file.type } })
+      if (!put.ok) throw new Error(`อัปโหลดไม่ผ่าน (${put.status})`)
+      const tl = JSON.parse(JSON.stringify(result.timeline))
+      const c = tl.clips[i], need = clipLen(c)
+      if (tk.kind === "video") {
+        const len = Math.max(0.5, Math.min(seconds || need, need))
+        Object.assign(c, { kind: "video", src: tk.url, in: 0, out: +len.toFixed(2), speed: 1, volume: 0, fit: "cover", name: file.name })
+        if (seconds) c.seconds = +seconds.toFixed(2)
+        delete c.dur
+      } else {
+        Object.assign(c, { kind: "image", src: tk.url, fit: "cover", dur: need, name: file.name })
+      }
+      set({ busy: "บันทึกร่าง…" })
+      await api("edits", { method: "PUT", body: JSON.stringify({ id: result.edit_id, name: result.name, timeline: tl }) })
+      onChange?.({ ...result, timeline: tl })
+      set({})
+    } catch (e) { set({ err: e.message || String(e) }) }
+  }
+
   return (
     <div className="vs-plan vs-story">
-      <b className="vs-plan-t"><ListChecks size={14} /> {result.pattern?.name} · ยาวราว {mmss(result.seconds)} นาที · เสียง {result.voice} · ฟรี</b>
+      <b className="vs-plan-t"><ListChecks size={14} /> {result.pattern?.name} · ยาวราว {mmss(result.seconds)} นาที · เสียง {result.voice} ·{" "}
+        {paints ? `ภาพวาดใหม่ไม่เกิน ${paints} ภาพ (~${(paints * PAINT_THB).toFixed(1)} บาท)` : "ฟรี"}</b>
       {result.idea?.title && <p className="vs-fine">ไอเดีย: {result.idea.title}</p>}
       <p className="vs-dim vs-fine">{result.pattern?.why}</p>
       {(result.pattern?.evidence || []).length > 0 && (
@@ -1292,14 +1381,31 @@ function StoryResult({ result, busy, onRender, onRetry }) {
         </div>
       )}
       <ol className="vs-beats">
-        {(result.beats || []).map((b, i) => (
-          <li key={i}>
-            <span className="vs-beat-role">{b.role}</span>
-            <span className="vs-beat-vo">{b.vo.join(" ")}</span>
-            <span className="vs-dim vs-fine">{b.screen ? `บนจอ: ${b.screen} · ` : ""}ภาพ: {VIS_TH(b.visual)}{b.sticker ? ` + ${VIS_TH(b.sticker)} ลอย` : ""}{b.style ? ` · ${b.style}` : ""}</span>
-          </li>
-        ))}
+        {(result.beats || []).map((b, i) => {
+          const c = clips[i]
+          return (
+            <li key={i}>
+              <span className="vs-beat-role">{b.role}</span>
+              <span className="vs-beat-vo">{b.vo.join(" ")}</span>
+              <span className="vs-dim vs-fine">{b.screen ? `บนจอ: ${b.screen} · ` : ""}ภาพ: {VIS_TH(b.visual)}{b.sticker ? ` + ${VIS_TH(b.sticker)} ลอย` : ""}</span>
+              {c && (
+                <span className="vs-fine vs-moves">
+                  {c.layer && c.layer !== "none" && <em>✦ {LAYER_TH[c.layer]}{c.tint ? ` สี${TINT_TH[c.tint]}` : ""}</em>}
+                  {c.motion && c.motion !== "none" && <em>🎥 {MOTION_TH[c.motion]}</em>}
+                  {i > 0 && c.transition && c.transition !== "cut" && <em>⚡ เข้าฉาก: {CUT_TH[c.transition]}</em>}
+                </span>
+              )}
+              {c?.gen && api && <SceneKit clip={c} state={up[i]} onFile={(f) => replace(i, f)} />}
+            </li>
+          )
+        })}
       </ol>
+      {kits.length > 0 && (
+        <div className="vs-kit-all">
+          <CopyBtn text={allText} label={`คัดลอกพร้อมต์ทั้ง ${kits.length} ฉาก`} icon={<Copy size={13} />} />
+          <span className="vs-dim vs-fine">เอาไปทำภาพ/วิดีโอกับ AI ฟรีตัวอื่นได้ (Gemini · Google Flow · Meta AI · Kling) แล้วกด "อัปไฟล์มาแทน" ที่ฉากนั้น — ไม่อัปก็ได้ ระบบหาภาพให้เอง</span>
+        </div>
+      )}
       {result.dropped?.length > 0 && (
         <p className="vs-dim vs-fine">ระบบตัดฉากทิ้ง {result.dropped.length} ฉาก: {result.dropped.map(d => `${d.role} (${d.why})`).join(" · ")}</p>
       )}
@@ -1313,7 +1419,7 @@ function StoryResult({ result, busy, onRender, onRetry }) {
           <ExternalLink size={14} /> เปิดแก้ในห้องตัดต่อ
         </a>
         {onRetry && (
-          <button className="dx-btn dx-btn-ghost" disabled={busy} onClick={onRetry}><RefreshCw size={14} /> คิดแบบใหม่</button>
+          <button className="dx-btn dx-btn-ghost" disabled={busy || Object.values(up).some(x => x?.busy)} onClick={onRetry}><RefreshCw size={14} /> คิดแบบใหม่</button>
         )}
         <span className="vs-dim vs-fine">ภาพกับตัวหนังสือตั้งเวลาตามเสียงพากย์จริงตอนทำ · ทำคลิป ~3–6 นาที</span>
       </div>
@@ -1686,6 +1792,15 @@ const CSS = `
 .vs-story{border-color:rgba(0,212,255,.4);}
 .vs-story .vs-plan-t{color:var(--dx-cyan-bright);}
 .vs-beats{margin:10px 0 0;padding-left:20px;display:flex;flex-direction:column;gap:7px;}
+.vs-moves{display:flex!important;flex-wrap:wrap;gap:4px 10px;color:var(--dx-text-dim);}
+.vs-moves em{font-style:normal;}
+.vs-kit{display:flex!important;flex-direction:column;gap:6px;margin-top:4px;padding:8px 10px;border:1px dashed var(--dx-border);border-radius:10px;}
+.vs-kit-row,.vs-kit-all{display:flex;flex-wrap:wrap;align-items:center;gap:6px;}
+.vs-kit-all{margin-top:10px;}
+.vs-kit-btn{padding:5px 10px!important;font-size:12px!important;min-height:0!important;cursor:pointer;}
+.vs-kit-btn.is-busy{opacity:.7;pointer-events:none;}
+.vs-kit-text{width:100%;min-height:110px;font-size:12px;line-height:1.5;}
+.vs-bad{color:var(--dx-danger,#ff6b6b);}
 .vs-beats li{font-size:12.5px;line-height:1.6;}
 .vs-beats li > span{display:block;}
 .vs-beat-role{font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--dx-cyan-soft);}

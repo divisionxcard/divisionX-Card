@@ -15,6 +15,7 @@ import argparse
 import html
 import json
 import pathlib
+import random
 import shutil
 import subprocess
 import sys
@@ -27,9 +28,16 @@ from . import hf_render as R
 
 MAX_CLIPS, MAX_OVERLAYS, MAX_SECONDS = 40, 40, 180
 STYLES = ("bold", "gold", "neon", "box")
-ANIMS = ("pop", "slide", "fade", "float", "none")
-TRANSITIONS = ("cut", "flash", "zoom")
-MOTIONS = ("none", "zoomin", "zoomout")
+# 26 ต.ค. 2026 · เจ้าของ: "เหมือนเอาภาพนิ่งมาตัดเรียงต่อกัน อยากให้ออกแบบอนิเมชั่นและแบล็คกราวให้สวยงามตามเนื้อหา และขยับได้"
+#   ท่าของทับ +6 · รอยต่อ +5 · กล้อง +6 · ชั้นเอฟเฟกต์ต่อฉาก 11 แบบ · ฉากที่ AI ออกแบบ (gen:) หาไฟล์จริงตอนเรนเดอร์
+ANIMS = ("pop", "slide", "fade", "float", "none", "punch", "type", "words", "slam", "spin", "tilt")
+TRANSITIONS = ("cut", "flash", "zoom", "whip", "bolt", "glitch", "wipe", "ring")
+MOTIONS = ("none", "zoomin", "zoomout", "panleft", "panright", "rise", "drift", "push", "shake")
+LAYERS = ("none", "motes", "sparks", "stars", "rays", "speed", "bolts", "rings", "sweep", "bubbles", "confetti", "aurora")
+TINTS = {"cyan": "#59d2ff", "gold": "#ffc24a", "purple": "#b06bff", "red": "#ff4d5e", "green": "#4dffa6",
+         "orange": "#ff8a3d", "pink": "#ff6bd5", "white": "#e8f7ff"}
+GEN_KINDS = ("paint", "footage")
+PAINT_BUDGET = 3                                   # ภาพวาดใหม่ต่อคลิป — เจ้าของเลือก "ไม่เกิน ~5 บาท/คลิป" (26 ต.ค.)
 FITS = ("cover", "contain")
 TAIL = 0.6                                         # ค้างท้ายหลังเสียงพากย์จบ
 LOGO = "assets/brand/logo-white.png"
@@ -103,6 +111,17 @@ def anchor(tl, timing, total):
     return n
 
 
+def _gen(v):
+    """สเปกฉากที่ AI ออกแบบ (สตอรี่บอร์ด) — พร้อมต์ภาพ/วิดีโอ (อังกฤษ) · คำค้นฟุตเทจ · แท็ก · ค่าย · คำอธิบายไทย"""
+    if not isinstance(v, dict):
+        return None
+    s = lambda k, n: str(v.get(k) or "").strip()[:n]
+    tags = [str(t).strip().lower()[:24] for t in (v.get("tags") or []) if str(t).strip()][:6] if isinstance(v.get("tags"), list) else []
+    g = {"kind": v.get("kind") if v.get("kind") in GEN_KINDS else "footage", "prompt": s("prompt", 700), "video": s("video", 700),
+         "query": s("query", 60), "note": s("note", 160), "franchise": s("franchise", 8) or None, "tags": tags}
+    return g if (g["prompt"] or g["query"]) else None
+
+
 def normalize(tl):
     """ตรวจ/ล้างไทม์ไลน์ (ฝั่ง runner ตรวจซ้ำจาก route) → dict ที่ปลอดภัยต่อการประกอบ"""
     tl = tl if isinstance(tl, dict) else {}
@@ -115,12 +134,21 @@ def normalize(tl):
                "fit": _pick(c.get("fit"), FITS, "cover" if kind == "video" else "contain"),
                "fx": _num(c.get("fx"), 0, 1, 0.5), "fy": _num(c.get("fy"), 0, 1, 0.5),
                "zoom": _num(c.get("zoom"), 1, 2, 1.0),
-               "transition": _pick(c.get("transition"), TRANSITIONS, "cut")}
+               "transition": _pick(c.get("transition"), TRANSITIONS, "cut"),
+               "layer": _pick(c.get("layer"), LAYERS, "none"), "tint": _pick(c.get("tint"), TINTS, "cyan")}
+        g = _gen(c.get("gen"))
+        if g:
+            row["gen"] = g
+        if row["src"].startswith("gen:"):
+            if not g:
+                continue
+            kind = row["kind"] = "image"                   # ยังไม่มีไฟล์ — ใช้ความยาวแบบรูป (dur) จนกว่าจะหาไฟล์ได้ตอนเรนเดอร์
         if kind == "video":
             row["in"] = _num(c.get("in"), 0, 36000, 0.0)
             row["out"] = _num(c.get("out"), row["in"] + 0.2, 36000, row["in"] + 5.0)
             row["speed"] = _num(c.get("speed"), 0.25, 4, 1.0)
             row["volume"] = _num(c.get("volume"), 0, 2, 1.0)
+            row["motion"] = _pick(c.get("motion"), MOTIONS, "none")
         else:
             row["dur"] = _num(c.get("dur"), 0.3, 60, 3.0)
             row["motion"] = _pick(c.get("motion"), MOTIONS, "zoomin")
@@ -198,6 +226,108 @@ def _clip_tags(clips, starts):
         out.append(f'      <div id="c-{i}" class="tl-clip" aria-hidden="true" data-layout-ignore>\n'
                    f'        {fill}\n        {main}\n      </div>')
     return "\n".join(out)
+
+
+def _layer_tags(clips, starts):
+    """ชั้นเอฟเฟกต์ของแต่ละฉาก — จับเวลาเท่าคลิปหลักชิ้นนั้น (ชิ้นในสร้างด้วยสคริปต์ในเทมเพลต)"""
+    out = []
+    for i, (c, t0) in enumerate(zip(clips, starts)):
+        if c.get("layer", "none") == "none":
+            continue
+        out.append(f'      <div id="l-{i}" class="clip tl-fx" data-start="{t0:.3f}" data-duration="{clip_len(c):.3f}" '
+                   f'data-track-index="3" style="--t: {TINTS[c.get("tint", "cyan")]};" aria-hidden="true" data-layout-ignore></div>')
+    return "\n".join(out)
+
+
+def _resolve_gen(tl, plan):
+    """ฉากที่ AI ออกแบบไว้ (src "gen:paint" / "gen:footage") → ไฟล์จริง ก่อนโหลดสื่อ — ต้องรันหลัง anchor (รู้ความยาวฉากจริงแล้ว)
+
+    ลำดับ (เจ้าของเลือก 26 ต.ค.: "ไม่เกิน ~5 บาท/คลิป"):
+      paint   → ภาพในคลังที่ตรงเรื่อง (พร้อมต์เดียวกัน/แท็กตรง · ฟรี) → วาดใหม่ถ้ายังไม่เกิน PAINT_BUDGET → ฟุตเทจ
+      footage → ฟุตเทจจริงฟรีจาก Pixabay ตามคำค้น (ไม่เจอ = คำค้นสำรองของค่าย) → ภาพในคลัง
+    หาไม่ได้เลย = ภาพฉากตู้ในเทมเพลต (คลิปไม่ล้มเพราะหาภาพไม่ได้)
+    คืน [(index, ผลลัพธ์)] สำหรับเขียนกลับร่างห้องตัดต่อ
+    """
+    from . import hf_bg
+    todo = [(i, c) for i, c in enumerate(tl["clips"]) if c["src"].startswith("gen:")]
+    if not todo:
+        return []
+    budget = int(plan.get("paint_budget", PAINT_BUDGET))
+    rng = random.Random(f"gen:{plan.get('project')}")
+    painted, used_lib, used_px, done = 0, set(), set(), []
+    for i, c in todo:
+        g = c.get("gen") or {}
+        dur = clip_len(c)
+        got = None
+        want = [g["kind"], "footage" if g["kind"] == "paint" else "library"]
+        for how in want + ["library"]:
+            if got:
+                break
+            if how == "paint":
+                hit = hf_bg.library_find(g, used_lib)
+                if hit:
+                    got = {"kind": "image", "src": hit["url"], "via": "คลังภาพ"}
+                    used_lib.add(hit["key"])
+                elif painted < budget:
+                    url = hf_bg.paint_scene(g, plan.get("project") or "clip")
+                    if url:
+                        painted += 1
+                        got = {"kind": "image", "src": url, "via": "วาดใหม่"}
+            elif how == "footage":
+                pick = hf_bg.footage_clip(g, rng, used_px, plan.get("project") or "clip", i)
+                if pick:
+                    used_px.add(pick["id"])
+                    secs = float(pick.get("seconds") or 8)
+                    speed = max(0.5, min(1.0, secs / max(0.3, dur)))
+                    got = {"kind": "video", "src": pick["url"], "in": 0.0, "out": round(min(secs, dur * speed), 3),
+                           "speed": round(speed, 3), "volume": 0.0, "via": f"ฟุตเทจ ({pick['query']})"}
+            elif how == "library":
+                hit = hf_bg.library_find(dict(g, prompt=""), used_lib, loose=True)
+                if hit:
+                    got = {"kind": "image", "src": hit["url"], "via": "คลังภาพ (ใกล้เคียง)"}
+                    used_lib.add(hit["key"])
+        if not got:
+            got = {"kind": "image", "src": "assets/machine-scene.jpg", "via": "ภาพสำรอง"}
+        c["kind"], c["src"] = got["kind"], got["src"]
+        if got["kind"] == "video":
+            c.update(fit="cover", **{k: got[k] for k in ("in", "out", "speed", "volume")})
+        else:
+            c["fit"] = "cover"
+            c["dur"] = dur
+        _log(f"ฉาก {i + 1}: {got['via']}" + (f" — {g.get('note')}" if g.get("note") else ""))
+        done.append((i, got))
+    _log(f"ฉากที่ AI ออกแบบ {len(todo)} ฉาก · วาดใหม่ {painted} ภาพ (~{painted * hf_bg.AI_COST_USD * 35:.1f} บาท)")
+    return done
+
+
+def _writeback(plan, tl, done):
+    """ไฟล์ที่หาได้ → ร่างห้องตัดต่อ (R2 video-edits/<edit_id>.json) — เปิดร่างมาเห็นภาพจริง · เรนเดอร์ซ้ำไม่ต้องหา/วาดใหม่"""
+    eid = plan.get("edit_id")
+    if not done or not isinstance(eid, str) or not eid.startswith("e-"):
+        return
+    try:
+        from .. import r2
+        key = f"video-edits/{eid}.json"
+        doc = json.loads(r2.get_bytes(key).decode("utf-8"))
+        by_id = {c.get("id"): c for c in (doc.get("timeline") or {}).get("clips") or []}
+        n = 0
+        for i, got in done:
+            if got["src"].startswith("assets/"):
+                continue
+            row = by_id.get(tl["clips"][i]["id"])
+            if not row or not str(row.get("src", "")).startswith("gen:"):
+                continue                                   # คนแก้ฉากนี้ไปแล้ว — ไม่ทับ
+            row["src"], row["kind"] = got["src"], got["kind"]
+            if got["kind"] == "video":
+                row.update({k: got[k] for k in ("in", "out", "speed", "volume")})
+                row.pop("dur", None)
+            row["fit"] = "cover"
+            n += 1
+        if n:
+            r2.put_bytes(json.dumps(doc, ensure_ascii=False).encode("utf-8"), key, "application/json")
+            _log(f"เขียนไฟล์ที่หาได้กลับร่างห้องตัดต่อ {n} ฉาก")
+    except Exception as e:
+        _log(f"⚠️ เขียนกลับร่างไม่ได้ ({str(e)[:100]}) — คลิปนี้ไม่กระทบ")
 
 
 def _has_audio(path):
@@ -343,6 +473,8 @@ def build_video(plan, out_mp4=None, check=True):
             _log(f"ผูกกับบรรทัดเสียงพากย์ {k} ชิ้น (ตั้งเวลาตามจังหวะพูดจริง)")
 
     # ── 2. โปรเจกต์ = ก๊อปเทมเพลต (ฟอนต์ · โลโก้ · ฉากซับ) แล้วโหลดสื่อลง assets/
+    done = _resolve_gen(tl, plan)
+    _writeback(plan, tl, done)
     proj = work / "hf"
     if proj.exists():
         shutil.rmtree(proj)
@@ -359,8 +491,13 @@ def build_video(plan, out_mp4=None, check=True):
         if c["kind"] == "video":
             secs = R._media_seconds(proj / c["local"])
             if secs > 0.3:                                  # ช่วงที่ตัดเกินความยาวไฟล์จริง → หดให้พอดี
+                need = clip_len(c)
                 c["out"] = min(c["out"], secs)
                 c["in"] = min(c["in"], max(0.0, c["out"] - 0.2))
+                # ผูกกับเสียงพากย์แต่ไฟล์สั้นกว่าบรรทัด (อัปวิดีโอ 5 วิจาก AI ตัวอื่นมาใส่ฉาก 6 วิ) → เล่นช้าลงให้พอดี
+                # ไม่งั้นแทร็กหลักหดแล้วทุกฉากหลังจากนี้ขึ้นก่อนเสียงพูด
+                if c.get("line") is not None and clip_len(c) + 0.05 < need:
+                    c["speed"] = max(0.25, round((c["out"] - c["in"]) / need, 3))
             c["local"] = _prep_video(proj, c["local"], c, f"clip-{i}")
     used = {c["local"] for c in tl["clips"]}
     for rel in set(fetched.values()) - used:                # ไฟล์ต้นฉบับที่ถูกหั่นใช้แล้ว (อาจหลายร้อย MB) — ไม่ต้องติดไปกับโปรเจกต์
@@ -396,13 +533,14 @@ def build_video(plan, out_mp4=None, check=True):
     audio = (f'      <audio id="vo" src="assets/voice.wav" data-start="0" data-duration="{round(voice_total, 3)}" '
              f'data-track-index="9" data-volume="1"></audio>') if wav else ""
     tl_json = {"clips": [{"i": i, "start": s, "dur": clip_len(c), "kind": c["kind"], "zoom": c["zoom"],
-                          "motion": c.get("motion", "none"), "transition": c["transition"]}
+                          "motion": c.get("motion", "none"), "transition": c["transition"], "layer": c.get("layer", "none")}
                          for i, (c, s) in enumerate(zip(tl["clips"], starts))],
-               "overlays": [{"i": i, "start": o["start"], "end": o["end"], "anim": o["anim"]}
+               "overlays": [{"i": i, "start": o["start"], "end": o["end"], "anim": o["anim"], "kind": o["type"]}
                             for i, o in enumerate(tl["overlays"])]}
     host = (R.TEMPLATE / "scaffold" / "timeline.template.html").read_text(encoding="utf-8")
     out = (host.replace("{{DURATION}}", str(duration))
                .replace("{{CLIPS}}", _clip_tags(tl["clips"], starts))
+               .replace("{{LAYERS}}", _layer_tags(tl["clips"], starts))
                .replace("{{OVERLAYS}}", _overlay_tags(tl["overlays"], proj))
                .replace("{{CAPTIONS_SLOT}}", caption_slot)
                .replace("{{AUDIO}}", audio)

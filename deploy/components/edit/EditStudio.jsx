@@ -285,7 +285,7 @@ export default function EditStudio({ editId }) {
                    sel={state.sel} onSelect={onSelect} onOverlayMove={onOverlayMove} />
         </div>
         <div className={`${s.col} ${s.colInsp}`}>
-          <Inspector state={state} dispatch={dispatch} />
+          <Inspector state={state} dispatch={dispatch} api={api} />
         </div>
       </div>
 

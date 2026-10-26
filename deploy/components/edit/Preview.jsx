@@ -4,7 +4,7 @@
 // ของทับที่เลือกอยู่ลากย้ายบนจอได้ (ส่งตำแหน่งออกไปครั้งเดียวตอนปล่อยเมาส์ — ไม่งั้นประวัติย้อนกลับเต็มด้วยการลากทีละพิกเซล)
 import { useEffect, useMemo, useRef, useState } from "react"
 import { Play, Pause, SkipBack } from "lucide-react"
-import { clipLen } from "../../lib/videoTimeline"
+import { clipLen, LAYER_TH } from "../../lib/videoTimeline"
 import { totals, fmt, estimateVoice } from "./timelineState"
 import s from "./edit.module.css"
 
@@ -113,10 +113,17 @@ export default function Preview({ tl, t, onTime, skuImg, playing, setPlaying, se
     setDrag(null)
   }
 
-  const zoom = clip ? (clip.zoom || 1) * (clip.kind === "image" && clip.motion === "zoomin" ? 1 + 0.08 * (local / clipLen(clip))
-    : clip.kind === "image" && clip.motion === "zoomout" ? 1.08 - 0.08 * (local / clipLen(clip)) : 1) : 1
-  const flash = clip && idx > 0 && clip.transition === "flash" && local < 0.3 ? 1 - local / 0.3 : 0
+  // กล้อง — ค่าประมาณของท่าในเทมเพลตเรนเดอร์ (timeline.template.html) · ของจริงลื่นกว่านี้
+  const P = clip ? Math.min(1, local / Math.max(0.1, clipLen(clip))) : 0
+  const M = clip?.motion || (clip?.kind === "image" ? "zoomin" : "none")
+  const cam = !clip ? { s: 1 } : M === "zoomin" ? { s: 1 + 0.08 * P } : M === "zoomout" ? { s: 1.08 - 0.08 * P }
+    : M === "panleft" ? { s: 1.15, x: 46 - 92 * P } : M === "panright" ? { s: 1.15, x: -46 + 92 * P } : M === "rise" ? { s: 1.15, y: 70 - 140 * P }
+    : M === "drift" ? { s: 1.06 + 0.07 * P, r: -1.4 + 2.8 * P, x: 22 - 44 * P } : M === "push" ? { s: 1 + 0.16 * Math.min(1, local / 0.7) + 0.06 * P }
+    : M === "shake" ? { s: 1.06 + 0.04 * P, x: local < 0.3 ? Math.sin(local * 90) * 14 : 0 } : { s: 1 }
+  const zoom = clip ? (clip.zoom || 1) * cam.s : 1
+  const flash = clip && idx > 0 && ["flash", "ring", "bolt"].includes(clip.transition) && local < 0.3 ? 1 - local / 0.3 : 0
   const punch = clip && idx > 0 && clip.transition === "zoom" && local < 0.38 ? 0.14 * (1 - local / 0.38) : 0
+  const whip = clip && idx > 0 && clip.transition === "whip" && local < 0.26 ? 760 * (1 - local / 0.26) : 0
   const mediaStyle = clip ? {
     objectFit: clip.fit || "cover",
     objectPosition: `${(clip.fx ?? 0.5) * 100}% ${(clip.fy ?? 0.5) * 100}%`,
@@ -132,15 +139,25 @@ export default function Preview({ tl, t, onTime, skuImg, playing, setPlaying, se
                onPointerDown={() => onSelect(null)}>
             <div className={s.stageBg} />
             {clip && (
-              <div className={s.clipLayer} style={{ transform: `scale(${zoom + punch})` }}>
-                {clip.fit === "contain" && clip.kind === "image" && (
-                  <img className={s.fill} src={srcOf(clip.src, skuImg)} alt="" />
-                )}
-                {clip.kind === "video"
-                  ? <video ref={vid} key={clip.src} className={s.media} style={mediaStyle} src={clip.src} playsInline preload="auto" />
-                  : <img className={s.media} style={mediaStyle} src={srcOf(clip.src, skuImg)} alt="" />}
+              <div className={s.clipLayer} style={{ transform: `translate(${(cam.x || 0) + whip}px, ${cam.y || 0}px) rotate(${cam.r || 0}deg) scale(${zoom + punch})` }}>
+                {clip.src.startsWith("gen:") ? (
+                  // ฉากที่ AI ออกแบบ — ไฟล์จริงหาตอนทำคลิป (หรืออัปมาแทนที่แผงขวา)
+                  <div className={s.genPh}>
+                    <b>{clip.src === "gen:paint" ? "🎨 ภาพที่ AI ออกแบบ" : "🎞️ ฟุตเทจจริง"}</b>
+                    <span>{clip.gen?.note || clip.gen?.query || ""}</span>
+                    <small>หาไฟล์ตอนทำคลิป · หรืออัปไฟล์มาแทนที่แผงขวา</small>
+                  </div>
+                ) : <>
+                  {clip.fit === "contain" && clip.kind === "image" && (
+                    <img className={s.fill} src={srcOf(clip.src, skuImg)} alt="" />
+                  )}
+                  {clip.kind === "video"
+                    ? <video ref={vid} key={clip.src} className={s.media} style={mediaStyle} src={clip.src} playsInline preload="auto" />
+                    : <img className={s.media} style={mediaStyle} src={srcOf(clip.src, skuImg)} alt="" />}
+                </>}
               </div>
             )}
+            {clip?.layer && clip.layer !== "none" && <div className={s.fxBadge}>✦ {LAYER_TH[clip.layer]}</div>}
             {!tl.clips.length && <div className={s.stageEmpty}>เพิ่มคลิปหรือรูป<br />จากคลังด้านซ้าย</div>}
             {tl.overlays.map(o => {
               const end = o.end < 0 ? tot.total : o.end

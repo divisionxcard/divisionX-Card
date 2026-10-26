@@ -489,6 +489,106 @@ def ensure(plan, seed=None, hist=None, upload=True):
     return _paint_into(plan, sig, medium, scene, by, upload)
 
 
+# ── ฉากรายฉากของสตอรี่บอร์ด (26 ต.ค. 2026 · hf_timeline._resolve_gen) ──────────────────────────────
+# เจ้าของ: "ติดที่รูปและภาพประกอบวนใช้ซ้ำ อยากให้ออกแบบแบล็คกราวให้สวยงามตามเนื้อหาคอนเทนต์" · งบ "ไม่เกิน ~5 บาท/คลิป"
+# AI ตัวเขียนสตอรี่บอร์ดเขียนพร้อมต์ของแต่ละฉากไว้ (gen) → ภาพที่วาดเก็บเข้าคลัง video-bg/lib/ + ดัชนีแท็ก
+# คลิปหลัง ๆ ที่เรื่องคล้ายกัน (พร้อมต์เดียวกัน/แท็กตรง ≥ 2) หยิบภาพเดิมฟรี — ค่าใช้จ่ายลดลงเรื่อย ๆ
+LIB_DIR = f"{STORAGE_DIR}/lib"
+LIB_INDEX = f"{LIB_DIR}/index.json"
+SCENE_COMPOSE = ("Vertical 2:3 full-bleed background plate for ONE scene of a short vertical video. Thai headline text, "
+                 "captions and sometimes a product photo will be composited on top later, so keep the centre a little "
+                 "calmer. Strong depth (foreground, middle ground, far background), cinematic light, rich colour.")
+
+
+def _lib():
+    from .. import r2
+    try:
+        d = json.loads(r2.get_bytes(LIB_INDEX).decode("utf-8"))
+        return d if isinstance(d.get("items"), list) else {"items": []}
+    except Exception:
+        return {"items": []}
+
+
+def _phash(prompt):
+    return hashlib.sha1(re.sub(r"\s+", " ", (prompt or "").strip().lower()).encode("utf-8")).hexdigest()[:12]
+
+
+def library_find(g, used, loose=False):
+    """ภาพในคลังที่ใช้แทนการวาดได้ — พร้อมต์เดียวกัน > แท็กตรงมากสุด (≥ 2 · loose ≥ 1 หรือค่ายเดียวกันภาพล่าสุด) · ไม่ซ้ำในคลิปเดียว"""
+    items = [x for x in _lib()["items"] if x.get("key") and x.get("url") and x["key"] not in used]
+    fr = g.get("franchise")
+    if g.get("prompt"):
+        ph = _phash(g["prompt"])
+        hit = next((x for x in items if x.get("hash") == ph), None)
+        if hit:
+            return hit
+    same = [x for x in items if not fr or not x.get("franchise") or x["franchise"] == fr]
+    tags = set(g.get("tags") or [])
+    need = 1 if loose else 2
+    best, score = None, 0
+    for x in same:
+        s = len(tags & set(x.get("tags") or []))
+        if s >= need and s > score:
+            best, score = x, s
+    if not best and loose and fr:
+        best = next((x for x in reversed(same) if x.get("franchise") == fr), None)
+    return best
+
+
+def paint_scene(g, project):
+    """วาดฉากตามพร้อมต์ของสตอรี่บอร์ด → คลัง R2 + ดัชนี · คืน URL · ไม่มีคีย์/ล้ม = None (ผู้เรียกตกไปฟุตเทจ)"""
+    if not g.get("prompt") or not config.env("OPENAI_API_KEY"):
+        return None
+    from .. import r2
+    t0 = time.time()
+    try:
+        png = paint(f"{g['prompt']}\n\n{SCENE_COMPOSE}\n{HARD}")
+    except Exception as e:
+        _log(f"⚠️ {str(e)[:160]} — ใช้ฟุตเทจแทน")
+        return None
+    if not png:
+        return None
+    ph = _phash(g["prompt"])
+    key = f"{LIB_DIR}/{g.get('franchise') or 'mix'}-{ph}.png"
+    try:
+        url = r2.upload(png, key, "image/png")
+        d = _lib()
+        d["items"] = [x for x in d["items"] if x.get("key") != key][-400:] + [{
+            "key": key, "url": url, "hash": ph, "franchise": g.get("franchise"), "tags": g.get("tags") or [],
+            "prompt": g["prompt"][:400], "note": g.get("note") or "", "project": project, "at": time.strftime("%Y-%m-%d")}]
+        r2.put_bytes(json.dumps(d, ensure_ascii=False).encode("utf-8"), LIB_INDEX, "application/json")
+    except Exception as e:
+        _log(f"⚠️ อัปภาพฉากไม่ได้ ({str(e)[:100]})")
+        return None
+    _log(f"วาดฉาก '{(g.get('note') or g['prompt'])[:50]}' ({time.time() - t0:.0f} วิ · ~{AI_COST_USD * 35:.1f} บาท)")
+    return url
+
+
+def footage_clip(g, rng, used, project, idx):
+    """ฟุตเทจจริงฟรีของฉากหนึ่ง — คำค้นจากสตอรี่บอร์ด → แท็ก → คำค้นสำรองของค่าย · คืน {id, url, seconds, query} หรือ None"""
+    import pathlib
+    import tempfile
+    q = " ".join(re.sub(r"[^A-Za-z ]", " ", g.get("query") or "").split()[:5])
+    if not q and g.get("tags"):
+        q = " ".join(g["tags"][:3])
+    pick = None
+    for query in [x for x in (q, FOOTAGE_FALLBACK.get(g.get("franchise"), FOOTAGE_FALLBACK[None])) if x]:
+        pick = _pixabay(query, rng, used)
+        if pick:
+            break
+    if not pick:
+        return None
+    tmp = pathlib.Path(tempfile.gettempdir()) / f"pxb-{pick['id']}.mp4"
+    try:
+        if not tmp.exists():
+            _prep_footage(pick["url"], tmp)
+        url = _upload_file(tmp, project, f"pxb-{pick['id']}", "video/mp4")
+    except Exception as e:
+        _log(f"⚠️ เตรียมฟุตเทจฉาก {idx + 1} ไม่สำเร็จ ({str(e)[:120]})")
+        return None
+    return {"id": pick["id"], "url": url, "seconds": min(12.0, float(pick.get("seconds") or 8)), "query": pick["query"]}
+
+
 def main(argv=None):
     """ทดสอบ: python -m agents.video.hf_bg plan.json [--out bg.png] [--dry]"""
     import argparse

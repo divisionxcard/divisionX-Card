@@ -258,3 +258,13 @@
   .tracksBody { height: 230px; flex: none; }
   .head { width: 64px; padding: 0 6px; font-size: 11px; }
 }
+
+/* ฉากที่ AI ออกแบบ (ยังไม่มีไฟล์) + ป้ายเอฟเฟกต์ซ้อน — 26 ต.ค. 2026 */
+.genPh { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 28px;
+  padding: 140px 90px; text-align: center; color: #cfe9ff; font-family: "Kanit", sans-serif;
+  background: radial-gradient(ellipse 80% 60% at 50% 40%, #1b4f9e 0%, #0a2a6b 45%, #03102a 100%); }
+.genPh b { font-size: 64px; font-weight: 900; }
+.genPh span { font-size: 46px; line-height: 1.35; opacity: 0.9; }
+.genPh small { font-size: 34px; opacity: 0.6; }
+.fxBadge { position: absolute; left: 40px; top: 44px; z-index: 30; padding: 10px 22px; border-radius: 16px; font-size: 36px; font-weight: 800;
+  font-family: "Kanit", sans-serif; color: #9fe2ff; background: rgba(3, 16, 42, 0.78); border: 3px solid rgba(89, 210, 255, 0.5); pointer-events: none; }

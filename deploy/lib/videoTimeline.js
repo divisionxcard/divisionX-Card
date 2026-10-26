@@ -6,9 +6,25 @@
 
 export const LIMITS = { clips: 40, overlays: 40, seconds: 180, text: 200, script: 3000 }
 export const TEXT_STYLES = ["bold", "gold", "neon", "box"]
-export const ANIMS = ["pop", "slide", "fade", "float", "none"]
-export const TRANSITIONS = ["cut", "flash", "zoom"]
-export const MOTIONS = ["none", "zoomin", "zoomout"]
+// 26 ต.ค. 2026 · เจ้าของ: "เหมือนเอาภาพนิ่งมาตัดเรียงต่อกัน อยากให้ออกแบบอนิเมชั่น…และขยับได้" → ท่าเพิ่ม + ชั้นเอฟเฟกต์ต่อฉาก
+export const ANIMS = ["pop", "slide", "fade", "float", "none", "punch", "type", "words", "slam", "spin", "tilt"]
+export const TRANSITIONS = ["cut", "flash", "zoom", "whip", "bolt", "glitch", "wipe", "ring"]
+export const MOTIONS = ["none", "zoomin", "zoomout", "panleft", "panright", "rise", "drift", "push", "shake"]
+export const LAYERS = ["none", "motes", "sparks", "stars", "rays", "speed", "bolts", "rings", "sweep", "bubbles", "confetti", "aurora"]
+export const TINTS = { cyan: "#59d2ff", gold: "#ffc24a", purple: "#b06bff", red: "#ff4d5e", green: "#4dffa6",
+  orange: "#ff8a3d", pink: "#ff6bd5", white: "#e8f7ff" }
+export const GEN_KINDS = ["paint", "footage"]
+// ชื่อไทยในหน้าเว็บ (การ์ดแผน · ห้องตัดต่อ)
+export const LAYER_TH = { none: "ไม่มี", motes: "ฝุ่นแสง", sparks: "ประกายไฟ", stars: "ดาวระยิบ", rays: "ลำแสงหมุน", speed: "เส้นสปีด",
+  bolts: "สายฟ้าแลบ", rings: "วงพลัง", sweep: "แสงกวาด", bubbles: "ฟองอากาศ", confetti: "กระดาษสี", aurora: "แสงออโรรา" }
+export const MOTION_TH = { none: "นิ่ง", zoomin: "ซูมเข้าช้า", zoomout: "ซูมออกช้า", panleft: "แพนซ้าย", panright: "แพนขวา",
+  rise: "เลื่อนขึ้น", drift: "ลอยเอียง", push: "พุ่งเข้า", shake: "สั่นกระแทก" }
+export const CUT_TH = { cut: "ตัดตรง", flash: "แสงวาบ", zoom: "ซูมทะลุ", whip: "สะบัดกล้อง", bolt: "สายฟ้าฟาด", glitch: "กลิตช์",
+  wipe: "แถบกวาด", ring: "วาบ+วงคลื่น" }
+export const ANIM_TH = { pop: "เด้ง", slide: "สไลด์", fade: "จาง", float: "ลอย", none: "นิ่ง", punch: "กระแทก", type: "พิมพ์ทีละตัว",
+  words: "ทีละคำ", slam: "ซองกระแทก", spin: "หมุน 3 มิติ", tilt: "ส่าย 3 มิติ" }
+export const TINT_TH = { cyan: "ฟ้า", gold: "ทอง", purple: "ม่วง", red: "แดง", green: "เขียว", orange: "ส้ม", pink: "ชมพู", white: "ขาว" }
+export const PAINT_THB = 1.4
 export const FITS = ["cover", "contain"]
 export const VOICES = ["Aoede", "Kore", "Puck", "Charon"]
 export const TTS_MODELS = ["gemini-2.5-flash-preview-tts", "gemini-3.8-flash-tts"]
@@ -36,9 +52,37 @@ export function storagePrefix(base) {
 const ours = (s, base) => s.startsWith(MEDIA_PREFIX) || s.startsWith(storagePrefix(base))
 export function okSrc(s, base) {
   if (typeof s !== "string" || !s || s.length > 600 || s.includes("..")) return false
+  if (s === "gen:paint" || s === "gen:footage") return true            // ฉากที่ AI ออกแบบ — runner หาไฟล์จริงตอนเรนเดอร์
   if (ours(s, base)) return !s.slice(s.indexOf("/media/") + 7).startsWith("video-edits/")
   if (/^sku:[A-Za-z0-9][A-Za-z0-9 ._-]{0,39}$/.test(s)) return true
   return /^assets\/[A-Za-z0-9._/-]{1,120}$/.test(s)
+}
+
+// สเปกฉากที่ AI ออกแบบ (สตอรี่บอร์ด) — เก็บไว้กับคลิปแม้คนอัปไฟล์มาแทนแล้ว (ยังคัดลอกพร้อมต์ได้)
+export function cleanGen(v) {
+  if (!v || typeof v !== "object") return null
+  const g = {
+    kind: GEN_KINDS.includes(v.kind) ? v.kind : "footage", prompt: str(v.prompt, 700), video: str(v.video, 700),
+    query: str(v.query, 60), note: str(v.note, 160), franchise: str(v.franchise, 8) || null,
+    tags: Array.isArray(v.tags) ? v.tags.map(t => str(String(t), 24).toLowerCase()).filter(Boolean).slice(0, 6) : [],
+  }
+  return g.prompt || g.query ? g : null
+}
+
+// พร้อมต์สำเร็จรูปสำหรับเอาไปให้ AI ฟรีตัวอื่นทำภาพ/วิดีโอ (Gemini · Google Flow · Meta AI · Kling ฯลฯ) แล้วอัปไฟล์กลับมาใส่ฉาก
+// (26 ต.ค. 2026 · เจ้าของ: "เพิ่มฟังก์ชั่นเขียนเป็นพร้อมต์เอาไว้ใช้สำหรับไปให้เอไอฟรีตัวอื่นเขียนให้ได้ด้วย แล้วเอาภาพหรือวีดีโอนั้นมาใช้")
+const KIT_RULES = "No text, letters, logos or watermarks. No people, faces, hands, characters, creatures or mascots. " +
+  "No trading cards, booster packs, boxes, products, vending machines or screens."
+export function promptKit(g) {
+  if (!g) return null
+  const scene = g.prompt || (g.query ? `Cinematic scene of ${g.query}` : "")
+  return {
+    image: `${scene}\n\nVertical 9:16 portrait (1080×1920), full-bleed cinematic background, strong depth, rich colour, ` +
+      `keep the centre slightly calmer for captions. ${KIT_RULES}`,
+    video: `${g.video || `${scene} Slow cinematic camera move, subtle natural motion in the scene (light, particles, clouds, water).`}\n\n` +
+      `Vertical 9:16, 6–8 seconds, smooth continuous shot, no cuts, no audio needed. ${KIT_RULES}`,
+    note: g.note || "",
+  }
 }
 
 export function clipLen(c) {
@@ -65,13 +109,17 @@ export function cleanTimeline(raw, base) {
   for (const [i, c] of clipsIn.entries()) {
     if (!c || typeof c !== "object") return { error: `คลิปที่ ${i + 1} ไม่ถูกรูปแบบ` }
     if (!okSrc(c.src, base)) return { error: `คลิปที่ ${i + 1}: ใช้ได้เฉพาะไฟล์ในคลังของเรา (อัปโหลดเข้าคลังก่อน)` }
-    const kind = c.kind === "image" ? "image" : "video"
+    const kind = c.kind === "image" || c.src.startsWith("gen:") ? "image" : "video"
     const row = {
       id: str(c.id, 24) || `c${i + 1}`, kind, src: c.src,
       fit: pick(c.fit, FITS, kind === "video" ? "cover" : "contain"),
       fx: num(c.fx, 0, 1, 0.5), fy: num(c.fy, 0, 1, 0.5), zoom: num(c.zoom, 1, 2, 1),
       transition: pick(c.transition, TRANSITIONS, "cut"),
+      layer: pick(c.layer, LAYERS, "none"), tint: pick(c.tint, Object.keys(TINTS), "cyan"),
     }
+    const gen = cleanGen(c.gen)
+    if (gen) row.gen = gen
+    if (c.src.startsWith("gen:") && !gen) return { error: `คลิปที่ ${i + 1}: ฉากที่ AI ออกแบบไม่มีพร้อมต์ — ลบฉากนี้หรืออัปไฟล์มาแทน` }
     // ข้อมูลประกอบหน้าเว็บ (ชื่อไฟล์ · ความยาวไฟล์จริง) — ร่างงานต้องเก็บไว้ ไม่งั้นเปิดมาแก้ต่อแล้วไม่รู้ว่าตัดได้ถึงไหน
     if (str(c.name, 80)) row.name = str(c.name, 80)
     if (Number(c.seconds) > 0) row.seconds = num(c.seconds, 0.1, 36000, 0)
@@ -80,6 +128,7 @@ export function cleanTimeline(raw, base) {
       row.out = num(c.out, row.in + 0.2, 36000, row.in + 5)
       row.speed = num(c.speed, 0.25, 4, 1)
       row.volume = num(c.volume, 0, 2, 1)
+      row.motion = pick(c.motion, MOTIONS, "none")
     } else {
       row.dur = num(c.dur, 0.3, 60, 3)
       row.motion = pick(c.motion, MOTIONS, "zoomin")

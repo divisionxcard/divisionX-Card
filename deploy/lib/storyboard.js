@@ -152,11 +152,12 @@ export function buildAssets({ sku = null, siblings = [], branches = [], backgrou
   }
   a.machine = { kind: "image", src: "assets/machine-hero.jpg", fit: "cover", label: "รูปตู้ DivisionX (ไม่ระบุสาขา)" }
   // backgrounds: [url] หรือ [{ url, franchise }] — route คัดให้เหลือเฉพาะค่ายเดียวกับไอเดียแล้ว
-  backgrounds.slice(0, 6).forEach((b, i) => {
+  backgrounds.slice(0, 10).forEach((b, i) => {
     const url = typeof b === "string" ? b : b?.url
     if (!url) return
     const fr = typeof b === "object" && b?.franchise ? ` โทน ${b.franchise}` : ""
-    a[`bg:${i + 1}`] = { kind: "image", src: url, fit: "cover", label: `ภาพฉากบรรยากาศ${fr} (ไม่มีตัวหนังสือ/สินค้า)` }
+    const what = typeof b === "object" && (b?.note || b?.tags?.length) ? ` — ${b.note || b.tags.join(", ")}` : ""
+    a[`bg:${i + 1}`] = { kind: "image", src: url, fit: "cover", label: `ภาพฉากบรรยากาศ${fr}${what} (ไม่มีตัวหนังสือ/สินค้า)` }
   })
   for (const c of broll) {
     if (!c?.url || !c.id) continue
@@ -167,7 +168,24 @@ export function buildAssets({ sku = null, siblings = [], branches = [], backgrou
 }
 
 // ── คำสั่งให้ AI ──
-export function buildPrompt({ pattern, idea, facts, assets, voice, trustFacts, library = [] }) {
+// คลังท่าเคลื่อนไหว (26 ต.ค. 2026 · เจ้าของ: "เหมือนเอาภาพนิ่งมาตัดเรียงต่อกัน อยากให้ออกแบบอนิเมชั่น…และขยับได้")
+// ⚠️ ต้องตรงกับ hf_timeline.py (LAYERS · MOTIONS · TRANSITIONS · ANIMS · TINTS) และ lib/videoTimeline.js
+export const DESIGN = {
+  layer: { motes: "ฝุ่นแสงลอย (นุ่ม ลึกลับ)", sparks: "ประกายไฟพุ่งขึ้น (มันส์ ร้อนแรง)", stars: "ดาวระยิบ+ดาวตก (ฝัน หายาก)",
+    rays: "ลำแสงหมุนจากด้านบน (ยิ่งใหญ่ เปิดตัว)", speed: "เส้นสปีดมังงะ (ตื่นเต้น เร่ง)", bolts: "สายฟ้าแลบเป็นระยะ (พลัง ดุ)",
+    rings: "วงพลังขยายจากกลางจอ (เฉลย กระแทก)", sweep: "แสงกวาดทแยง (เงางาม พรีเมียม)", bubbles: "ฟองอากาศลอย (ทะเล ใต้น้ำ)",
+    confetti: "กระดาษสีโปรย (ฉลอง ประกาศ)", aurora: "ก้อนแสงสีลอยวน (ฝัน ลึกลับ)", none: "ไม่มี" },
+  tint: ["cyan", "gold", "purple", "red", "green", "orange", "pink", "white"],
+  motion: { push: "พุ่งเข้าแรงแล้วค่อย ๆ ไหล", zoomin: "ซูมเข้าช้า", zoomout: "ซูมออกช้า", panleft: "แพนซ้าย", panright: "แพนขวา",
+    rise: "เลื่อนขึ้น", drift: "ลอยเอียงเบา ๆ", shake: "สั่นกระแทกตอนเข้า", none: "นิ่ง" },
+  cut: { flash: "แสงวาบ", whip: "สะบัดกล้อง", zoom: "ซูมทะลุ", bolt: "สายฟ้าฟาด", glitch: "สัญญาณกระตุก", wipe: "แถบนีออนกวาด", ring: "วาบ+วงคลื่น", cut: "ตัดตรง" },
+  text: { pop: "เด้ง", punch: "กระแทก+สั่น", words: "ขึ้นทีละคำ", type: "พิมพ์ทีละตัว", slide: "สไลด์ขึ้น", fade: "ค่อย ๆ ชัด", float: "ลอยเบา ๆ" },
+  sticker: { slam: "ซองกระแทกลง+คลื่น", spin: "ซองหมุน 3 มิติเข้า แล้วส่าย", tilt: "ซองส่าย 3 มิติ", pop: "เด้ง", float: "ลอย" },
+}
+export const PAINT_MAX = 3                     // ภาพวาดใหม่ต่อคลิป — งบ "ไม่เกิน ~5 บาท/คลิป" (เจ้าของเลือก 26 ต.ค.)
+export const PAINT_THB = 1.4                   // gpt-image 1024×1536 high ≈ $0.04
+
+export function buildPrompt({ pattern, idea, facts, assets, voice, trustFacts, library = [], world = null }) {
   const off = offCards(idea)
   const guard = pattern.guard || []
   const system = [
@@ -186,7 +204,10 @@ export function buildPrompt({ pattern, idea, facts, assets, voice, trustFacts, l
     "ภาษาไทยเท่านั้น (ชื่อชุด/การ์ดภาษาอังกฤษได้) · เขียนเป็นคอนเทนต์ของเราเอง ห้ามพูดถึงคลิป ช่อง ผู้สร้าง หรือที่มาของไอเดีย",
     `vo = คำพูดของเสียงพากย์ 1 บรรทัดต่อฉาก ยาวไม่เกิน ${MAX_VO - 10} ตัวอักษร · ห้ามอีโมจิ แฮชแท็ก วงเล็บ ลิงก์`,
     "screen = ข้อความบนจอสั้น ๆ ไม่เกิน 28 ตัวอักษร (คำเด่นของฉาก ไม่ต้องซ้ำทั้งประโยค เพราะมีซับอยู่แล้ว) · ไม่มีก็ใส่ \"\"",
-    "visual = ต้องเป็น key จากรายการภาพเท่านั้น (ห้ามคิดเอง) · ฉากติดกันพยายามไม่ใช้ภาพซ้ำ",
+    "visual = key จากรายการภาพ หรือ \"new\" (ออกแบบภาพใหม่เฉพาะฉาก — ต้องใส่ scene) · ห้ามคิด key เอง · ฉากติดกันห้ามใช้ภาพซ้ำ",
+    `ภาพต้องตรงกับเนื้อหาของฉากนั้น — ฉากเล่าเรื่อง/อธิบาย/สร้างอารมณ์ ให้ใช้ภาพฉากในคลังที่ตรงเรื่อง หรือ "new" · รูปตู้/รูปสาขาใช้เฉพาะฉากบอกสาขา ชวนมาตู้ และฉากปิด (รวมไม่เกิน 2 ฉาก) · "new" แบบ paint ได้ไม่เกิน ${PAINT_MAX} ฉาก (ที่เหลือใช้ footage)`,
+    "scene (เมื่อ visual = new): prompt = ภาพฉากภาษาอังกฤษ 40–80 คำ บอกสถานที่ แสง อากาศ อารมณ์ มุมกล้อง ให้ตรงกับสิ่งที่ฉากนั้นพูด · video = พร้อมต์วิดีโอภาษาอังกฤษของฉากเดียวกัน + กล้องเคลื่อน + สิ่งที่ขยับในภาพ · query = คำค้นฟุตเทจจริง 2–4 คำอังกฤษ (ธรรมชาติ แสง อากาศ ไฟ น้ำ อวกาศ) · tags = 3–5 คำอังกฤษ · note = คำอธิบายไทยสั้น ๆ · prefer = paint (ภาพวาด สวยตรงเรื่อง) หรือ footage (ฟุตเทจจริง ฟรี)",
+    "scene ห้ามมี: ตัวหนังสือ ป้าย โลโก้ คน ใบหน้า มือ ตัวละคร สัตว์ประหลาด/มาสคอต การ์ด ซอง กล่อง สินค้า ตู้ จอ · ห้ามเอ่ยชื่อค่าย ตัวละคร หรือสถานที่ที่มีลิขสิทธิ์ — บรรยายฉากต้นฉบับของเราเอง (ซองจริงระบบวางทับให้ผ่าน sticker)",
     "ข้อเท็จจริง ตัวเลข ราคา ชื่อการ์ด ชื่อสาขา อันดับ ต้องมาจากข้อมูลข้างล่างเท่านั้น — ไม่มีข้อมูลสำหรับฉากไหน ให้ข้ามฉากนั้น · ห้ามจัดอันดับเองถ้าข้อมูลไม่ได้บอกอันดับ",
     "ตัวเลขทุกตัวทั้งใน vo และ screen เขียนเป็นเลขอารบิก (96 งาน · 8 ซอง · 45 นาที · 3 ล้าน) ห้ามสะกดเป็นคำ — เสียงพากย์อ่านเอง",
     "เรื่องที่มาจากร้าน/ช่อง/คนอื่น (เช่น คลิปร้านการ์ดจัดแข่ง · คนรีวิว) ห้ามเล่าเหมือนเป็นของเรา: ห้ามใช้ \"ผม/เรา\" เล่าประสบการณ์ของเขา · ห้ามบอกราคา ค่าสมัคร โปร หรือกิจกรรมของที่อื่นเหมือนเป็นของเรา — เล่าเป็นเรื่องน่าสนใจในวงการ หรือดึงความรู้/กติกาที่ใช้ได้ทั่วไปมาเล่าแทน",
@@ -215,15 +236,18 @@ export function buildPrompt({ pattern, idea, facts, assets, voice, trustFacts, l
 ลำดับฉาก (ไม่เกิน 8 ฉาก · ข้ามฉากที่ไม่มีข้อมูลได้):
 ${beatLines}
 
-ออกแบบหน้าตาแต่ละฉากได้อิสระ (ใส่หรือไม่ใส่ก็ได้ — ไม่ใส่ระบบเลือกให้):
-- style: ตัวหนังสือบนจอ bold (ขาวขอบหนา) · gold (ทอง) · neon (ฟ้าเรืองแสง) · box (กล่องกรมท่าขอบฟ้า)
-- pos: top · middle · low (เหนือซับ) — ซับอยู่ล่างจอเสมอ
-- size: S · M · L
-- anim: pop · slide · fade · float  (ตัวหนังสือโผล่)
-- cut: cut · flash · zoom  (ท่าเปลี่ยนเข้าฉากนี้)
-- motion: zoomin · zoomout · none  (ภาพนิ่งเคลื่อนช้า ๆ)
-- sticker: key ของรูปซอง (pack:…) ให้วางลอยทับบนภาพฉาก (bg:…) — ทำให้ภาพมีชั้น · ใช้เมื่อ visual ไม่ใช่รูปซองเดียวกัน
-สลับหน้าตาให้หลากหลาย อย่าให้ทุกฉากเหมือนกัน แต่คุมโทนทั้งคลิปให้เข้ากัน
+ออกแบบภาพเคลื่อนไหวของแต่ละฉากเอง (ทุกฉากต้องขยับ — ห้ามเป็นภาพนิ่งเรียงกัน):
+- layer (เอฟเฟกต์ซ้อนบนภาพตลอดฉาก): ${Object.entries(DESIGN.layer).map(([k, v]) => `${k} = ${v}`).join(" · ")}
+- tint (สีของเอฟเฟกต์): ${DESIGN.tint.join(" · ")} — เลือกให้เข้ากับอารมณ์/สีของค่าย
+- motion (กล้อง): ${Object.entries(DESIGN.motion).map(([k, v]) => `${k} = ${v}`).join(" · ")}
+- cut (ท่าเปลี่ยนเข้าฉาก): ${Object.entries(DESIGN.cut).map(([k, v]) => `${k} = ${v}`).join(" · ")}
+- style (ตัวหนังสือบนจอ): bold (ขาวขอบหนา) · gold (ทอง) · neon (ฟ้าเรืองแสง) · box (กล่องกรมท่าขอบฟ้า)
+- anim (ตัวหนังสือโผล่): ${Object.entries(DESIGN.text).map(([k, v]) => `${k} = ${v}`).join(" · ")}
+- pos: top · middle · low (เหนือซับ) — ซับอยู่ล่างจอเสมอ · size: S · M · L
+- sticker: key รูปซอง (pack:…) ลอยทับภาพฉาก — ใช้เมื่อพูดถึงชุดนั้นและ visual ไม่ใช่รูปซองเดียวกัน · sticker_anim: ${Object.entries(DESIGN.sticker).map(([k, v]) => `${k} = ${v}`).join(" · ")}
+จับคู่ท่ากับอารมณ์ของฉาก (เปิดคลิป = แรง · เล่าเรื่อง = นุ่ม/ลึก · เฉลย = กระแทก · ปิด = ชวน) · ฉากติดกันใช้ layer/motion/cut ต่างกัน แต่คุมโทนสีทั้งคลิปให้เข้ากัน${world ? `
+
+โลกของค่ายนี้ (ใช้เป็นแรงบันดาลใจของ scene/tint — ห้ามเอ่ยชื่อค่าย/ตัวละคร): ${world}` : ""}
 
 ข้อมูล (ใช้ได้เท่านี้):
 ${facts}
@@ -235,7 +259,8 @@ ${assetLines}
 ${rules}
 
 ตอบเป็น JSON ล้วน รูปแบบนี้เท่านั้น:
-{"title": "ชื่อร่างสั้น ๆ", "beats": [{"role": "hook", "vo": "…", "screen": "…", "visual": "<key>", "style": "gold", "pos": "top", "size": "L", "anim": "pop", "cut": "flash", "motion": "zoomin", "sticker": ""}]}`
+{"title": "ชื่อร่างสั้น ๆ", "beats": [{"role": "hook", "vo": "…", "screen": "…", "visual": "<key หรือ new>", "scene": {"prompt": "…", "video": "…", "query": "…", "tags": ["…"], "note": "…", "prefer": "paint"}, "layer": "sparks", "tint": "gold", "motion": "push", "cut": "flash", "style": "gold", "pos": "top", "size": "L", "anim": "punch", "sticker": "", "sticker_anim": "slam"}]}
+(scene ใส่เฉพาะฉากที่ visual = new)`
   return { system, user }
 }
 
@@ -266,9 +291,22 @@ export function bannedIn(s) {
 }
 
 // ── สตอรี่บอร์ด → ไทม์ไลน์ห้องตัดต่อ ──
-const TRANS = ["flash", "zoom", "cut"]
-const ANIMS = ["slide", "pop", "float"]
-export function compile(sb, assets, { voice = "Puck", pattern = null, external = false, internal = false, forbid = null } = {}) {
+const TRANS = ["flash", "whip", "zoom", "bolt", "wipe", "ring", "glitch"]
+const ANIMS = ["punch", "words", "pop", "slide"]
+const LAYER_BY_ROLE = { hook: "sparks", cta: "sweep", reveal: "rings", trust: "sweep", branch: "sweep" }
+const LAYER_CYCLE = ["motes", "rays", "stars", "aurora", "sparks", "bubbles", "rings"]
+const MOTION_CYCLE = ["push", "panleft", "drift", "zoomout", "panright", "rise", "zoomin"]
+const sceneOf = (raw, franchise) => {
+  const s = raw?.scene && typeof raw.scene === "object" ? raw.scene : null
+  const str = (v, n) => (typeof v === "string" ? v.replace(/\s+/g, " ").trim().slice(0, n) : "")
+  if (!s) return null
+  const g = { kind: s.prefer === "footage" ? "footage" : "paint", prompt: str(s.prompt, 700), video: str(s.video, 700),
+    query: str(s.query, 60).replace(/[^A-Za-z ]/g, " ").replace(/\s+/g, " ").trim(), note: str(s.note, 160),
+    tags: (Array.isArray(s.tags) ? s.tags : []).map(t => str(String(t), 24).toLowerCase()).filter(Boolean).slice(0, 6),
+    franchise: franchise || null }
+  return g.prompt || g.query ? g : null
+}
+export function compile(sb, assets, { voice = "Puck", pattern = null, external = false, internal = false, forbid = null, franchise = null } = {}) {
   const keys = Object.keys(assets)
   // AI เลือกภาพนอกรายการ → ฉากปิดใช้รูปตู้ (สาขาแรกที่มีรูป) · ฉากอื่นใช้รูปซองหลัก
   const fbFor = (role) => role === "cta"
@@ -286,14 +324,18 @@ export function compile(sb, assets, { voice = "Puck", pattern = null, external =
       // ไอเดียจากยอดขายในตู้: ตัวเลขบาท/ขนาดยอด ("หลักแสน") มาจากรายรับของเราเท่านั้น
       (internal && /\d[\d,.]*\s*บาท|หลัก(พัน|หมื่น|แสน|ล้าน)/.test(`${raw?.vo} ${raw?.screen || ""}`) ? "ตัวเลขยอดขายภายใน" : null)
     if (bad) { dropped.push({ role: raw?.role, why: `คำต้องห้าม (${bad})` }); continue }
-    const visual = assets[raw?.visual] ? raw.visual : fbFor(raw?.role)
+    const scene = sceneOf(raw, franchise)
+    const visual = raw?.visual === "new" && scene ? "new" : assets[raw?.visual] ? raw.visual : scene ? "new" : fbFor(raw?.role)
     const one = (v, ok) => (ok.includes(v) ? v : null)
     const sticker = typeof raw?.sticker === "string" && raw.sticker.startsWith("pack:") && assets[raw.sticker] && raw.sticker !== visual
       ? raw.sticker : null
     beats.push({ role: String(raw?.role || "beat").slice(0, 20), vo, screen: String(raw?.screen || "").trim().slice(0, 40), visual,
+      scene: visual === "new" ? scene : null,
       style: one(raw?.style, ["bold", "gold", "neon", "box"]), pos: one(raw?.pos, ["top", "middle", "low"]),
-      size: one(raw?.size, ["S", "M", "L"]), anim: one(raw?.anim, ["pop", "slide", "fade", "float"]),
-      cut: one(raw?.cut, ["cut", "flash", "zoom"]), motion: one(raw?.motion, ["zoomin", "zoomout", "none"]), sticker })
+      size: one(raw?.size, ["S", "M", "L"]), anim: one(raw?.anim, Object.keys(DESIGN.text)),
+      cut: one(raw?.cut, Object.keys(DESIGN.cut)), motion: one(raw?.motion, Object.keys(DESIGN.motion)),
+      layer: one(raw?.layer, Object.keys(DESIGN.layer)), tint: one(raw?.tint, DESIGN.tint),
+      sticker, stickerAnim: one(raw?.sticker_anim, Object.keys(DESIGN.sticker)) })
   }
   if (!beats.length) return { error: "สตอรี่บอร์ดไม่มีฉากที่ใช้ได้", dropped }
   // งบความยาว — เกินเพดานของรูปแบบ +5 วิ: ตัดฉากท้ายก่อนฉากปิดทิ้งทีละฉาก (ส่วนใหญ่เป็นฉากชวนมาตู้ซ้ำ ๆ · ทดสอบ 26 ต.ค. ได้ 51 วิ)
@@ -304,10 +346,28 @@ export function compile(sb, assets, { voice = "Puck", pattern = null, external =
     const cut = beats.splice(ctaAt - 1, 1)[0]
     dropped.push({ role: cut.role, why: `ยาวเกิน ${cap} วิ` })
   }
+  // ภาพวาดใหม่เกินงบ → ฉากที่เกินใช้ฟุตเทจจริง (ฟรี) แทน · พร้อมต์ภาพยังเก็บไว้ให้เอาไปวาดเองกับ AI ตัวอื่น
+  let paints = 0
+  for (const b of beats) {
+    if (b.visual !== "new") continue
+    if (b.scene.kind === "paint" && (paints >= PAINT_MAX || !b.scene.prompt)) b.scene.kind = "footage"
+    if (b.scene.kind === "paint") paints++
+  }
+  // รูปตู้/สาขาเกิน 2 ฉาก (ไม่นับฉากปิด) → ฉากที่ไม่ได้พูดถึงสาขาเปลี่ยนเป็นภาพฉากที่ยังไม่ใช้ (เจ้าของ: "ภาพประกอบวนใช้ซ้ำ")
+  const isPhoto = (v) => v === "machine" || /^branch:/.test(v)
+  const branchTalk = (b) => /สาขา|ห้าง|เซ็นทรัล|เดอะมอลล์|ไอคอนสยาม|ซีคอน|แวะ|ที่ตู้/.test(b.vo.join(" ") + b.screen)
+  let photos = 0
+  beats.forEach((b, i) => {
+    if (!isPhoto(b.visual) || i === beats.length - 1) return
+    if (++photos <= 2 || branchTalk(b)) return
+    const used = new Set(beats.map(x => x.visual))
+    const alt = keys.find(k => /^(bg|broll):/.test(k) && !used.has(k))
+    if (alt) b.visual = alt
+  })
   // ภาพฉาก/คลิปบรรยากาศซ้ำติดกัน → สลับเป็นอันอื่นที่ยังไม่ได้ใช้ (ความหลากหลายของภาพ)
   // ⚠️ ห้ามสลับรูปซอง/รูปสาขา — พูดถึง OP-17 แต่โชว์ OP-13 = ข้อมูลผิด (เจอตอนทดสอบ)
   for (let i = 1; i < beats.length; i++) {
-    if (beats[i].visual === beats[i - 1].visual && /^(bg|broll):/.test(beats[i].visual)) {
+    if (beats[i].visual === beats[i - 1].visual && /^(bg|broll):/.test(beats[i].visual) && assets[beats[i].visual]) {
       const used = new Set(beats.map(b => b.visual))
       const alt = keys.find(k => !used.has(k) && assets[k].kind === assets[beats[i].visual].kind && k.split(":")[0] === beats[i].visual.split(":")[0])
       if (alt) beats[i].visual = alt
@@ -330,14 +390,20 @@ export function compile(sb, assets, { voice = "Puck", pattern = null, external =
     const first = lines.length
     lines.push(...b.vo)
     const dur = +b.vo.reduce((s, l) => s + estSec(l), 0).toFixed(2)
-    const a = assets[b.visual]
-    const base = { id: `c${i + 1}`, src: a.src, fit: a.fit, transition: i === 0 ? "cut" : (b.cut || TRANS[i % TRANS.length]), line: first }
+    const a = b.visual === "new" ? { kind: "image", src: `gen:${b.scene.kind}`, fit: "cover" } : assets[b.visual]
+    const isLast = i === beats.length - 1
+    const base = { id: `c${i + 1}`, src: a.src, fit: a.fit, transition: i === 0 ? "cut" : (b.cut || TRANS[i % TRANS.length]), line: first,
+      layer: b.layer || (isLast ? "sweep" : LAYER_BY_ROLE[b.role] || LAYER_CYCLE[i % LAYER_CYCLE.length]), tint: b.tint || "cyan",
+      ...(b.visual === "new" ? { gen: b.scene } : {}) }
+    // รูปซองเต็มจอ (contain) ขยับเบา ๆ พอ · ภาพฉาก/รูปตู้ใช้ท่ากล้องเต็มที่
+    const motion = b.motion || (a.fit === "contain" ? (i % 2 ? "zoomout" : "zoomin") : MOTION_CYCLE[i % MOTION_CYCLE.length])
     clips.push(a.kind === "video"
-      ? { ...base, kind: "video", in: 0, out: +Math.min(a.seconds || 8, dur).toFixed(2), speed: 1, volume: 0, fx: 0.5, fy: 0.5, zoom: 1 }
-      : { ...base, kind: "image", dur, motion: b.motion || (i % 2 ? "zoomout" : "zoomin"), fx: 0.5, fy: 0.5, zoom: 1 })
+      ? { ...base, kind: "video", in: 0, out: +Math.min(a.seconds || 8, dur).toFixed(2), speed: 1, volume: 0, fx: 0.5, fy: 0.5, zoom: 1, motion: b.motion || "none" }
+      : { ...base, kind: "image", dur, motion, fx: 0.5, fy: 0.5, zoom: 1 })
     if (b.sticker) {
+      const nth = overlays.filter(o => o.type === "image").length
       overlays.push({ id: `s${i + 1}`, type: "image", src: assets[b.sticker].src, start: +t.toFixed(2), end: +(t + dur).toFixed(2),
-        x: 0.5, y: 0.47, w: 0.42, anim: "pop", line: first, ...(b.vo.length > 1 ? { span: b.vo.length } : {}) })
+        x: 0.5, y: 0.47, w: 0.42, anim: b.stickerAnim || ["slam", "spin", "tilt"][nth % 3], line: first, ...(b.vo.length > 1 ? { span: b.vo.length } : {}) })
     }
     const isCta = b.role === "cta" || i === beats.length - 1 && /หน้าเว็บ/.test(b.vo.join(" "))
     if (isCta) {
@@ -365,7 +431,8 @@ export function compile(sb, assets, { voice = "Puck", pattern = null, external =
       captions: { on: true }, music: null, sfx: true,
     },
     beats, dropped, seconds: +t.toFixed(1),
+    paints, cost_thb: +(paints * PAINT_THB).toFixed(1),
   }
 }
 
-export default { BRANCH_PHOTOS, FREE, internalFacts, nameRegex, scrubNames, sanitizeLine, splitVo, scrubSource, offCards, choosePattern, buildAssets, buildPrompt, parseStoryboard, bannedIn, compile }
+export default { BRANCH_PHOTOS, DESIGN, PAINT_MAX, PAINT_THB, FREE, internalFacts, nameRegex, scrubNames, sanitizeLine, splitVo, scrubSource, offCards, choosePattern, buildAssets, buildPrompt, parseStoryboard, bannedIn, compile }

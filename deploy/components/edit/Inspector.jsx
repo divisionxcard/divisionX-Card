@@ -2,15 +2,20 @@
 // แผงตั้งค่าด้านขวา — เปลี่ยนตามของที่เลือก (คลิป · รูป · ตัวหนังสือ · ภาพทับ · โลโก้ · เสียงพากย์ · เพลง)
 // ไม่ได้เลือกอะไร = ตั้งค่าทั้งงาน + คีย์ลัด
 // ทุกช่องส่ง coalesce มากับ action → ลากแถบเลื่อน/พิมพ์ต่อเนื่อง = ย้อนกลับขั้นเดียว
-import { Film, Image as ImageIcon, Type, Layers, Mic, Music, Trash2, Copy, Settings2 } from "lucide-react"
-import { clipLen, TEXT_STYLES, ANIMS, TRANSITIONS, MOTIONS, VOICES, TTS_MODELS, LIMITS } from "../../lib/videoTimeline"
+import { useState } from "react"
+import { Film, Image as ImageIcon, Type, Layers, Mic, Music, Trash2, Copy, Settings2, Upload, Check, Loader2, Sparkles } from "lucide-react"
+import {
+  clipLen, TEXT_STYLES, ANIMS, TRANSITIONS, MOTIONS, LAYERS, TINTS, VOICES, TTS_MODELS, LIMITS,
+  LAYER_TH, MOTION_TH, CUT_TH as TRANS_TH, ANIM_TH, TINT_TH, PAINT_THB, promptKit,
+} from "../../lib/videoTimeline"
+import { probeSeconds } from "./Library"
 import { selected, estimateVoice, totals, fmt } from "./timelineState"
 import s from "./edit.module.css"
 
 const STYLE_TH = { bold: "ขาวหนา", gold: "ทอง", neon: "นีออน", box: "กล่อง" }
-const ANIM_TH = { pop: "เด้ง", slide: "เลื่อนขึ้น", fade: "ค่อย ๆ ขึ้น", float: "ลอย", none: "นิ่ง" }
-const TRANS_TH = { cut: "ตัดตรง", flash: "แฟลช", zoom: "ซูมกระแทก" }
-const MOTION_TH = { none: "นิ่ง", zoomin: "ค่อย ๆ ซูมเข้า", zoomout: "ค่อย ๆ ซูมออก" }
+// ท่าที่ใช้ได้เฉพาะตัวหนังสือ / เฉพาะภาพทับ (26 ต.ค. 2026)
+const TEXT_ANIMS = ANIMS.filter(a => !["slam", "spin", "tilt"].includes(a))
+const IMG_ANIMS = ANIMS.filter(a => !["punch", "type", "words"].includes(a))
 const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 2]
 const VOICE_TH = { Puck: "Puck · ชายสดใส", Kore: "Kore · หญิงหนักแน่น", Aoede: "Aoede · หญิงนุ่ม", Charon: "Charon · ชายทุ้ม" }
 const MODEL_TH = { "gemini-2.5-flash-preview-tts": "2.5 (รุ่นเก่า · ปิดบริการ 17 พ.ย.)", "gemini-3.8-flash-tts": "3.8 (ค่าเริ่มต้น)" }
@@ -45,7 +50,59 @@ function Num({ label, value, min, max, step = 0.1, onChange }) {
   )
 }
 
-export default function Inspector({ state, dispatch }) {
+// ฉากที่ AI ออกแบบ — คัดลอกพร้อมต์ไปทำกับ AI ฟรีตัวอื่น แล้วอัปไฟล์กลับมาแทน (26 ต.ค. 2026)
+function GenKit({ clip, api, dispatch }) {
+  const [busy, setBusy] = useState("")
+  const [err, setErr] = useState("")
+  const [done, setDone] = useState("")
+  const [show, setShow] = useState("")
+  const kit = promptKit(clip.gen)
+  if (!kit) return null
+  const pending = clip.src.startsWith("gen:")
+  const copy = async (k) => {
+    try { await navigator.clipboard.writeText(kit[k]); setDone(k); setTimeout(() => setDone(""), 1800) } catch { setShow(k) }
+  }
+  const replace = async (file) => {
+    setErr(""); setBusy("อัปโหลด…")
+    try {
+      const isVideo = (file.type || "").startsWith("video/") || /\.(mp4|mov|m4v|webm)$/i.test(file.name)
+      let seconds = null
+      if (isVideo) { const u = URL.createObjectURL(file); seconds = await probeSeconds(u); URL.revokeObjectURL(u) }
+      const tk = await api("assets", { method: "POST", body: JSON.stringify({ name: file.name, type: file.type, size: file.size }) })
+      const put = await fetch(tk.upload_url, { method: "PUT", body: file, headers: { "Content-Type": tk.content_type || file.type } })
+      if (!put.ok) throw new Error(`อัปโหลดไม่ผ่าน (${put.status})`)
+      const need = clipLen(clip)
+      const patch = tk.kind === "video"
+        ? { kind: "video", src: tk.url, in: 0, out: +Math.max(0.5, Math.min(seconds || need, need)).toFixed(2), speed: 1, volume: 0, fit: "cover", name: file.name,
+            ...(seconds ? { seconds: +seconds.toFixed(2) } : {}) }
+        : { kind: "image", src: tk.url, dur: need, fit: "cover", name: file.name }
+      dispatch({ type: "REPLACE_MEDIA", id: clip.id, patch })
+    } catch (e) { setErr(e.message || String(e)) } finally { setBusy("") }
+  }
+  return (
+    <div className={s.field}>
+      <span className={s.lab}><Sparkles size={13} /> ฉากที่ AI ออกแบบ</span>
+      <p className={s.hint}>
+        {pending ? (clip.src === "gen:paint" ? `ตอนทำคลิป: ใช้ภาพในคลังที่ตรงเรื่อง ไม่มีค่อยวาดใหม่ (~${PAINT_THB} บาท)` : "ตอนทำคลิป: หาฟุตเทจจริงฟรี")
+          : "ใช้ไฟล์ที่อัปมาแล้ว"}{kit.note ? ` — ${kit.note}` : ""}
+      </p>
+      <div className={s.row2}>
+        <button className={s.btn} onClick={() => copy("image")}>{done === "image" ? <Check size={14} /> : <ImageIcon size={14} />} {done === "image" ? "คัดลอกแล้ว" : "พร้อมต์ภาพ"}</button>
+        <button className={s.btn} onClick={() => copy("video")}>{done === "video" ? <Check size={14} /> : <Film size={14} />} {done === "video" ? "คัดลอกแล้ว" : "พร้อมต์วิดีโอ"}</button>
+      </div>
+      {show && <textarea className={s.input} style={{ minHeight: 120, fontSize: 12 }} readOnly value={kit[show]} onFocus={e => e.target.select()} />}
+      <label className={s.btn} style={{ cursor: busy ? "default" : "pointer", opacity: busy ? 0.7 : 1 }}>
+        {busy ? <Loader2 size={14} /> : <Upload size={14} />} {busy || (pending ? "อัปภาพ/วิดีโอมาแทน" : "เปลี่ยนไฟล์")}
+        <input type="file" hidden disabled={!!busy} accept="image/jpeg,image/png,image/webp,video/mp4,video/quicktime,video/webm,.mov,.m4v"
+               onChange={e => { const f = e.target.files?.[0]; e.target.value = ""; if (f) replace(f) }} />
+      </label>
+      {err && <p className={s.hint} style={{ color: "#ff8080" }}>{err}</p>}
+      <p className={s.hint}>เอาพร้อมต์ไปทำกับ Gemini · Google Flow · Meta AI · Kling ได้ฟรี แล้วอัปไฟล์กลับมาที่นี่</p>
+    </div>
+  )
+}
+
+export default function Inspector({ state, dispatch, api }) {
   const sel = state.sel
   const item = selected(state)
   const tot = totals(state.tl)
@@ -129,11 +186,28 @@ export default function Inspector({ state, dispatch }) {
         ) : (
           <>
             <Slider label="ความยาว" value={c.dur || 3} min={0.3} max={15} step={0.1} show={(v) => `${v.toFixed(1)} วิ`} onChange={(v) => upClip({ dur: v }, "dur")} />
-            <div className={s.field}>
-              <span className={s.lab}>การเคลื่อนไหว</span>
-              <Chips value={c.motion || "zoomin"} options={MOTIONS} labels={MOTION_TH} onPick={(v) => upClip({ motion: v }, "motion")} />
-            </div>
           </>
+        )}
+        {c.gen && api && <GenKit clip={c} api={api} dispatch={dispatch} />}
+        <div className={s.field}>
+          <span className={s.lab}>กล้อง</span>
+          <Chips value={c.motion || (isVid ? "none" : "zoomin")} options={MOTIONS} labels={MOTION_TH} onPick={(v) => upClip({ motion: v }, "motion")} />
+        </div>
+        <div className={s.field}>
+          <span className={s.lab}>เอฟเฟกต์ซ้อน (ขยับตลอดฉาก)</span>
+          <Chips value={c.layer || "none"} options={LAYERS} labels={LAYER_TH} onPick={(v) => upClip({ layer: v }, "layer")} />
+        </div>
+        {c.layer && c.layer !== "none" && (
+          <div className={s.field}>
+            <span className={s.lab}>สีเอฟเฟกต์</span>
+            <div className={s.chips}>
+              {Object.entries(TINTS).map(([k, hex]) => (
+                <button key={k} className={`${s.chip} ${(c.tint || "cyan") === k ? s.chipOn : ""}`} title={TINT_TH[k]}
+                        style={{ width: 30, height: 26, padding: 0, background: hex, borderColor: (c.tint || "cyan") === k ? "#fff" : undefined }}
+                        aria-label={TINT_TH[k]} onClick={() => upClip({ tint: k }, "tint")} />
+              ))}
+            </div>
+          </div>
         )}
         <div className={s.field}>
           <span className={s.lab}>จัดภาพ</span>
@@ -208,7 +282,7 @@ export default function Inspector({ state, dispatch }) {
           )}
           <div className={s.field}>
             <span className={s.lab}>ท่าตอนโผล่</span>
-            <Chips value={o.anim || "pop"} options={ANIMS} labels={ANIM_TH} onPick={(v) => upOv({ anim: v }, "anim")} />
+            <Chips value={o.anim || "pop"} options={TEXT_ANIMS} labels={ANIM_TH} onPick={(v) => upOv({ anim: v }, "anim")} />
           </div>
           {timing}
           <p className={s.hint}>ห้ามใส่ยอดขาย/ตัวเลขยอดในคลิป · ลากตัวหนังสือบนจอพรีวิวเพื่อย้ายได้เลย</p>
@@ -224,7 +298,7 @@ export default function Inspector({ state, dispatch }) {
         {o.type !== "logo" && (
           <div className={s.field}>
             <span className={s.lab}>ท่าตอนโผล่</span>
-            <Chips value={o.anim || "pop"} options={ANIMS} labels={ANIM_TH} onPick={(v) => upOv({ anim: v }, "anim")} />
+            <Chips value={o.anim || "pop"} options={IMG_ANIMS} labels={ANIM_TH} onPick={(v) => upOv({ anim: v }, "anim")} />
           </div>
         )}
         {timing}

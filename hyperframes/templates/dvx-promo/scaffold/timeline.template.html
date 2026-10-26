@@ -2,14 +2,18 @@
 <!--
   scaffold/timeline.template.html — โครงหลักของ "ห้องตัดต่อ" (plan.engine = "timeline" · deploy/agents/video/hf_timeline.py เติม {{...}})
   23 ต.ค. 2026 · เจ้าของ: "ทำหน้าโรงงานวิดีโอให้ใช้งานง่าย รองรับการตัดต่อได้ทุกรูปแบบ + อัปโหลดไฟล์วิดีโอจากภายนอกมาตัดต่อ"
+  26 ต.ค. 2026 · เจ้าของ: "ตอนนี้เหมือนเป็นเพียงเอาภาพนิ่งมาตัดเรียงต่อกัน อยากให้ออกแบบอนิเมชั่นและแบล็คกราวให้สวยงามตามเนื้อหา และขยับได้"
+    → ชั้นเอฟเฟกต์ต่อฉาก (layer) · กล้อง 9 ท่า (motion) · รอยต่อ 8 แบบ (transition) · ท่าของทับเพิ่ม (punch/type/words/slam/spin/tilt)
   สัญญาข้อมูล: deploy/agents/video/TIMELINE.md
 
   ชั้นภาพ (ล่าง → บน):
     พื้นกรมท่า (เผื่อคลิปสั้นกว่าเสียง) → แทร็กหลัก (คลิป/รูปเรียงต่อกัน · พอดีจอ cover หรือ contain + พื้นเบลอ)
-    → ตัวหนังสือ/ภาพทับ/โลโก้ (ช่วงเวลาอิสระ) → แสงวาบรอยตัด → ซับไทย (Chromium วาด — สระ/วรรณยุกต์ถูกเสมอ)
+    → ชั้นเอฟเฟกต์ของฉาก (ฝุ่นแสง/ประกายไฟ/ลำแสง/สายฟ้า/… จับเวลาเท่าคลิป) → ขอบมืด
+    → ตัวหนังสือ/ภาพทับ/โลโก้ (ช่วงเวลาอิสระ) → เอฟเฟกต์รอยตัด → ซับไทย (Chromium วาด — สระ/วรรณยุกต์ถูกเสมอ)
   เสียง: เสียงในคลิป (ตามระดับที่ตั้ง) + เสียงพากย์ · เพลง/เอฟเฟกต์/ความดัง ใส่หลังเรนเดอร์ใน sound.master
   ⚠️ <video> ที่มี data-start ห้ามอยู่ใต้กล่องที่มี data-start (กติกา HyperFrames) — กล่องห่อคลิปจึงไม่จับเวลา
      และขยับ/ซูมที่กล่องห่อ ไม่ tween ตัว video
+  ⚠️ สุ่มด้วย prand (มี seed) เท่านั้น — เครื่องเรนเดอร์โหลดหน้านี้หลายรอบพร้อมกัน Math.random ทำให้ประกายไฟกระพริบสลับที่ระหว่างเฟรม
 -->
 <html lang="th" data-resolution="portrait">
   <head>
@@ -31,12 +35,43 @@
         filter: blur(46px) brightness(0.55) saturate(1.2); }
       /* รูปนิ่ง: พื้นเบลอทำไว้ในไฟล์แล้ว — ห้ามใส่ filter (ทำให้โลโก้ที่ทับอยู่หายตอนเรนเดอร์จริง) */
       .tl-fill-baked { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+      /* ── ชั้นเอฟเฟกต์ของฉาก (จับเวลาเท่าคลิปหลักชิ้นนั้น) · --t = สีของเอฟเฟกต์ */
+      .tl-fx { position: absolute; inset: 0; z-index: 3; overflow: hidden; pointer-events: none; }
+      .fxp { position: absolute; left: 0; top: 0; border-radius: 50%; will-change: transform, opacity; }
+      .fx-mote { background: radial-gradient(circle, rgba(255, 255, 255, 0.95), var(--t) 42%, transparent 70%); mix-blend-mode: screen; }
+      .fx-spark { background: radial-gradient(circle, #ffffff 0%, var(--t) 40%, transparent 74%); box-shadow: 0 0 16px 3px var(--t); mix-blend-mode: screen; }
+      .fx-star { background: radial-gradient(circle, #ffffff 0%, var(--t) 30%, transparent 70%); mix-blend-mode: screen; }
+      .fx-bubble { border: 3px solid var(--t); background: radial-gradient(circle at 32% 30%, rgba(255, 255, 255, 0.55), transparent 28%); opacity: 0.7; }
+      .fx-conf { border-radius: 3px; }
+      .fx-big { position: absolute; will-change: transform, opacity; pointer-events: none; }
+      .fx-rays { left: -760px; top: -700px; width: 2600px; height: 2600px; mix-blend-mode: screen; opacity: 0.55;
+        background: repeating-conic-gradient(from 0deg, var(--t) 0deg 5deg, transparent 5deg 16deg);
+        -webkit-mask-image: radial-gradient(circle, rgba(0, 0, 0, 0.9) 0%, rgba(0, 0, 0, 0.4) 30%, rgba(0, 0, 0, 0) 58%);
+        mask-image: radial-gradient(circle, rgba(0, 0, 0, 0.9) 0%, rgba(0, 0, 0, 0.4) 30%, rgba(0, 0, 0, 0) 58%); }
+      .fx-speed { left: -760px; top: -340px; width: 2600px; height: 2600px; opacity: 0.6;
+        background: repeating-conic-gradient(from 0deg, rgba(255, 255, 255, 0.5) 0deg 0.8deg, transparent 0.8deg 5deg);
+        -webkit-mask-image: radial-gradient(circle, rgba(0, 0, 0, 0) 18%, rgba(0, 0, 0, 0.8) 40%, rgba(0, 0, 0, 1) 60%);
+        mask-image: radial-gradient(circle, rgba(0, 0, 0, 0) 18%, rgba(0, 0, 0, 0.8) 40%, rgba(0, 0, 0, 1) 60%); }
+      .fx-ringel { left: 540px; top: 900px; width: 520px; height: 520px; margin: -260px 0 0 -260px; border-radius: 50%;
+        border: 10px solid var(--t); box-shadow: 0 0 50px var(--t), inset 0 0 40px var(--t); opacity: 0; }
+      .fx-sweepel { left: -900px; top: -400px; width: 640px; height: 2800px; opacity: 0; mix-blend-mode: screen;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.28) 45%, var(--t) 50%, rgba(255, 255, 255, 0.28) 55%, transparent); }
+      .fx-blob { width: 1100px; height: 1100px; border-radius: 50%; mix-blend-mode: screen; opacity: 0.5;
+        background: radial-gradient(circle, var(--t), transparent 66%); }
+      .fx-flashel { inset: 0; opacity: 0; background: radial-gradient(circle at 50% 30%, rgba(255, 255, 255, 0.55), var(--t) 30%, transparent 75%); mix-blend-mode: screen; }
+      .fx-svg { position: absolute; inset: 0; width: 1080px; height: 1920px; overflow: visible; pointer-events: none; }
+      .fx-bolt { fill: none; stroke: #ffffff; stroke-width: 9; stroke-linejoin: round; stroke-linecap: round; opacity: 0;
+        filter: drop-shadow(0 0 16px var(--t)) drop-shadow(0 0 36px var(--t)); }
+      /* ขอบมืดแบบภาพยนตร์ — ภาพถ่าย/ภาพวาดดูมีมิติ ตัวหนังสือกลางจอไม่จม */
+      #tl-vig { position: absolute; inset: 0; z-index: 4; pointer-events: none;
+        background: radial-gradient(ellipse 85% 70% at 50% 46%, rgba(3, 16, 42, 0) 55%, rgba(3, 16, 42, 0.5) 100%); }
       /* ── ของทับ (ตัวหนังสือ/ภาพ/โลโก้) — กล่องนอกจับเวลา+ตำแหน่ง · กล่องใน (.ov-in) เคลื่อนไหว */
       .ov { position: absolute; z-index: 10; transform: translate(-50%, -50%); pointer-events: none; }
       .ov-in { display: block; will-change: transform, opacity; }
       /* width: max-content = กว้างตามข้อความ (ไม่เกิน 960) — ไม่ใส่ กล่องจะถูกบีบตามระยะจากจุดวางถึงขอบขวา
          ตัวหนังสือกลางจอเลยขึ้นบรรทัดใหม่ที่ 540 px ทั้งที่พรีวิวบนเว็บเป็นบรรทัดเดียว (เจอ 23 ต.ค. 2026) */
       .ov-text .ov-in { font-weight: 900; line-height: 1.18; text-align: center; white-space: pre-wrap; width: max-content; max-width: 960px; }
+      .ov-text .ov-in .w { display: inline-block; will-change: transform, opacity; }
       .st-bold .ov-in { color: var(--c, #ffffff); -webkit-text-stroke: 12px #03102a; paint-order: stroke fill;
         text-shadow: 0 8px 0 #03102a, 0 0 30px rgba(3, 16, 42, 0.85); }
       .st-gold .ov-in { color: #ffc24a; -webkit-text-stroke: 12px #03102a; paint-order: stroke fill;
@@ -49,8 +84,25 @@
       .ov-pic { width: 100%; background-position: center; background-size: contain; background-repeat: no-repeat; }
       .ov-img .ov-in { filter: drop-shadow(0 18px 30px rgba(0, 0, 0, 0.55)); }
       .ov-logo .ov-in { opacity: 0.92; filter: drop-shadow(0 0 14px rgba(27, 141, 255, 0.6)); }
+      /* คลื่นกระแทกตอนซองกระแทกลง (slam) — สร้างใน .ov ตอนโหลด */
+      .ov-shock { position: absolute; left: 50%; top: 50%; width: 120%; aspect-ratio: 1; border-radius: 50%; transform: translate(-50%, -50%) scale(0.3);
+        border: 12px solid #e8f7ff; box-shadow: 0 0 50px #59d2ff, inset 0 0 40px #1b8dff; opacity: 0; }
+      /* ── รอยตัด (ทั้งคลิปใช้ชุดเดียว — ตัวที่ทำงานเลือกตามคลิปที่กำลังเข้า) */
       #fx-flash { position: absolute; inset: 0; z-index: 20; opacity: 0; pointer-events: none;
         background: radial-gradient(circle at 50% 40%, rgba(235, 248, 255, 0.95), rgba(89, 210, 255, 0.55) 45%, rgba(27, 141, 255, 0) 80%); }
+      #fx-ring { position: absolute; z-index: 20; left: 540px; top: 860px; width: 600px; height: 600px; margin: -300px 0 0 -300px; border-radius: 50%;
+        border: 16px solid #e8f7ff; box-shadow: 0 0 60px #59d2ff, inset 0 0 50px #1b8dff; opacity: 0; pointer-events: none; }
+      #fx-glitch { position: absolute; inset: 0; z-index: 20; pointer-events: none; }
+      .fx-g { position: absolute; left: -40px; width: 1160px; opacity: 0; pointer-events: none; mix-blend-mode: screen; }
+      #fx-cover { position: absolute; z-index: 20; left: 0; top: -700px; width: 2200px; height: 3320px; opacity: 0; pointer-events: none;
+        background:
+          repeating-linear-gradient(90deg, rgba(89, 210, 255, 0.07) 0 5px, rgba(89, 210, 255, 0) 5px 64px),
+          linear-gradient(90deg, rgba(89, 210, 255, 0) 0, rgba(232, 247, 255, 0.95) 40px, #59d2ff 70px, #1b8dff 96px, #0a2a6b 170px, #061a45 50%,
+            #0a2a6b calc(100% - 170px), #1b8dff calc(100% - 96px), #59d2ff calc(100% - 70px), rgba(232, 247, 255, 0.95) calc(100% - 40px), rgba(89, 210, 255, 0) 100%); }
+      #fx-whip { position: absolute; z-index: 20; inset: -200px; opacity: 0; pointer-events: none;
+        background: repeating-linear-gradient(0deg, rgba(232, 247, 255, 0.0) 0 22px, rgba(232, 247, 255, 0.5) 22px 26px, rgba(232, 247, 255, 0) 26px 70px); }
+      #fx-bolts { position: absolute; z-index: 20; inset: 0; width: 1080px; height: 1920px; overflow: visible; pointer-events: none; }
+      .bolt { fill: none; stroke: #e8f7ff; stroke-width: 12; stroke-linejoin: round; stroke-linecap: round; filter: drop-shadow(0 0 18px #59d2ff) drop-shadow(0 0 40px #1b8dff); opacity: 0; }
       #captions-slot { position: absolute; inset: 0; z-index: 40; pointer-events: none; }
     </style>
   </head>
@@ -60,9 +112,21 @@
 
 {{CLIPS}}
 
+{{LAYERS}}
+
+      <div id="tl-vig" aria-hidden="true" data-layout-ignore></div>
+
 {{OVERLAYS}}
 
       <div id="fx-flash" aria-hidden="true" data-layout-ignore></div>
+      <div id="fx-ring" aria-hidden="true" data-layout-ignore></div>
+      <div id="fx-glitch" aria-hidden="true" data-layout-ignore></div>
+      <div id="fx-cover" aria-hidden="true" data-layout-ignore></div>
+      <div id="fx-whip" aria-hidden="true" data-layout-ignore></div>
+      <svg id="fx-bolts" viewBox="0 0 1080 1920" aria-hidden="true" data-layout-ignore>
+        <path class="bolt" id="bolt-a" d="M 760 -20 L 610 420 L 700 450 L 520 900 L 620 930 L 380 1500" />
+        <path class="bolt" id="bolt-b" d="M 160 -20 L 300 300 L 230 330 L 380 700" />
+      </svg>
 
 {{CAPTIONS_SLOT}}
 
@@ -74,41 +138,252 @@
         const DUR = {{DURATION}};
         const TL = JSON.parse('{{TL_JSON}}');
         const tl = gsap.timeline({ paused: true });
+        const prand = (n) => {
+          const x = Math.sin(n * 127.1 + 311.7) * 43758.5453;
+          return x - Math.floor(x);
+        };
+        const make = (box, cls, css) => {
+          const el = document.createElement("div");
+          el.className = cls;
+          Object.assign(el.style, css || {});
+          box.appendChild(el);
+          return el;
+        };
+        // วนเป็นรอบภายในช่วง [t0, t1) — ไม่เกินท้ายฉาก (ชิ้นที่ค้างครึ่งรอบตอนฉากจบไม่เป็นไร ชั้นนี้หายพร้อมฉาก)
+        const each = (t0, t1, cyc, fn) => { for (let t = t0, k = 0; t + 0.05 < t1; t += cyc, k++) fn(t, k); };
 
-        // ── แทร็กหลัก: ซูมคงที่ · รูปนิ่งซูมช้า (ken burns) · รอยตัด แสงวาบ/ซูมเข้า
+        // ── แทร็กหลัก: กล้อง 9 ท่า (ขยับที่กล่องห่อ) · รอยตัด 8 แบบ
         TL.clips.forEach((c) => {
           const sel = "#c-" + c.i;
-          const z = c.zoom || 1;
-          if (c.kind === "image" && c.motion === "zoomin") {
-            tl.fromTo(sel, { scale: z }, { scale: z * 1.08, duration: c.dur, ease: "sine.inOut", immediateRender: false }, c.start);
-          } else if (c.kind === "image" && c.motion === "zoomout") {
-            tl.fromTo(sel, { scale: z * 1.08 }, { scale: z, duration: c.dur, ease: "sine.inOut", immediateRender: false }, c.start);
-          } else {
-            tl.set(sel, { scale: z }, 0);
+          const z = c.zoom || 1, t0 = c.start, d = c.dur;
+          const M = c.motion || "none";
+          const from = (a, b, ease) => tl.fromTo(sel, a, Object.assign({ duration: d, ease: ease || "sine.inOut", immediateRender: false }, b), t0);
+          tl.set(sel, { scale: z, x: 0, y: 0, rotation: 0, transformOrigin: "50% 46%" }, 0);
+          if (M === "zoomin") from({ scale: z }, { scale: z * 1.08 });
+          else if (M === "zoomout") from({ scale: z * 1.08 }, { scale: z });
+          else if (M === "panleft") from({ scale: z * 1.14, x: 46 }, { scale: z * 1.16, x: -46 });
+          else if (M === "panright") from({ scale: z * 1.14, x: -46 }, { scale: z * 1.16, x: 46 });
+          else if (M === "rise") from({ scale: z * 1.14, y: 70 }, { scale: z * 1.16, y: -70 });
+          else if (M === "drift") from({ scale: z * 1.06, rotation: -1.4, x: 22 }, { scale: z * 1.13, rotation: 1.4, x: -22 });
+          else if (M === "push") {
+            tl.fromTo(sel, { scale: z }, { scale: z * 1.16, duration: Math.min(0.7, d * 0.4), ease: "power3.out", immediateRender: false }, t0);
+            if (d > 0.8) tl.to(sel, { scale: z * 1.22, duration: d - 0.7, ease: "sine.out" }, t0 + 0.7);
+          } else if (M === "shake") {
+            for (let s = 0; s < 6; s++) tl.set(sel, { x: (prand(c.i * 17 + s) - 0.5) * 34, y: (prand(c.i * 23 + s) - 0.5) * 26, rotation: (prand(c.i * 29 + s) - 0.5) * 2.2, scale: z * 1.06 }, t0 + s * 0.05);
+            tl.set(sel, { x: 0, y: 0, rotation: 0 }, t0 + 0.3);
+            if (d > 0.4) tl.fromTo(sel, { scale: z * 1.06 }, { scale: z * 1.1, duration: d - 0.3, ease: "sine.inOut", immediateRender: false }, t0 + 0.3);
           }
-          if (c.start > 0.01 && c.transition === "flash") {
-            tl.fromTo("#fx-flash", { opacity: 0 }, { opacity: 0.85, duration: 0.05, ease: "none", immediateRender: false }, c.start - 0.05);
-            tl.to("#fx-flash", { opacity: 0, duration: 0.3, ease: "power2.out" }, c.start);
-          } else if (c.start > 0.01 && c.transition === "zoom") {
-            tl.fromTo(sel, { scale: z * 1.14 }, { scale: z, duration: 0.38, ease: "power3.out", immediateRender: false }, c.start);
+
+          if (t0 < 0.01) return;
+          const T = c.transition;
+          if (T === "flash" || T === "ring") {
+            tl.fromTo("#fx-flash", { opacity: 0 }, { opacity: 0.85, duration: 0.05, ease: "none", immediateRender: false }, t0 - 0.05);
+            tl.to("#fx-flash", { opacity: 0, duration: 0.32, ease: "power2.out" }, t0);
+            if (T === "ring") tl.fromTo("#fx-ring", { scale: 0.2, opacity: 1 }, { scale: 2.6, opacity: 0, duration: 0.55, ease: "power2.out", immediateRender: false }, t0);
+          } else if (T === "zoom") {
+            tl.fromTo(sel, { scale: z * 1.14 }, { scale: z, duration: 0.38, ease: "power3.out", immediateRender: false }, t0);
+          } else if (T === "whip") {
+            // ภาพใหม่พุ่งเข้าจากขวา + เส้นความเร็วพาดจอ (กล้องสะบัด)
+            // xPercent ไม่ชนกับ x ของท่ากล้อง (แพน/ส่าย) ที่ทำงานพร้อมกัน
+            tl.fromTo(sel, { xPercent: 70 }, { xPercent: 0, duration: 0.26, ease: "power3.out", immediateRender: false }, t0);
+            tl.fromTo("#fx-whip", { opacity: 0.9, x: -120 }, { opacity: 0, x: 160, duration: 0.3, ease: "power2.out", immediateRender: false }, t0 - 0.04);
+          } else if (T === "bolt") {
+            const b = c.i % 2 ? "#bolt-a" : "#bolt-b";
+            const L = document.querySelector(b).getTotalLength();
+            tl.fromTo(b, { strokeDasharray: L, strokeDashoffset: L, opacity: 1 }, { strokeDashoffset: 0, duration: 0.12, ease: "power2.in", immediateRender: false }, t0 - 0.06);
+            tl.to(b, { opacity: 0, duration: 0.22, ease: "power1.out" }, t0 + 0.08);
+            tl.fromTo("#fx-flash", { opacity: 0 }, { opacity: 0.8, duration: 0.05, ease: "none", immediateRender: false }, t0 - 0.03);
+            tl.to("#fx-flash", { opacity: 0, duration: 0.28, ease: "power2.out" }, t0 + 0.02);
+          } else if (T === "glitch") {
+            const gl = document.getElementById("fx-glitch");
+            const cols = ["rgba(89,210,255,0.85)", "rgba(232,247,255,0.9)", "rgba(27,141,255,0.8)", "rgba(255,194,74,0.7)"];
+            const G = [];
+            for (let k = 0; k < 7; k++) {
+              G.push(make(gl, "fx-g", { top: Math.round(160 + prand(c.i * 50 + k * 7 + 1) * 1500) + "px",
+                height: Math.round(18 + prand(c.i * 50 + k * 7 + 2) * 70) + "px", background: cols[k % cols.length] }));
+            }
+            for (let s = 0; s < 4; s++) G.forEach((el, k) => tl.set(el, { x: (prand(c.i * 31 + s * 7 + k) - 0.5) * 220, opacity: prand(c.i * 13 + s * 5 + k) > 0.35 ? 1 : 0 }, t0 - 0.12 + s * 0.06));
+            tl.set(G, { opacity: 0 }, t0 + 0.14);
+          } else if (T === "wipe") {
+            tl.fromTo("#fx-cover", { x: -2440, rotation: -12, opacity: 1 }, { x: 1320, rotation: -12, opacity: 1, duration: 0.5, ease: "none", immediateRender: false }, t0 - 0.25);
+            tl.set("#fx-cover", { opacity: 0 }, t0 + 0.26);
           }
         });
 
-        // ── ของทับ: เข้า (pop/slide/fade) · ออกจาง 0.2 วิสุดท้าย · ลอย (float) ระหว่างแสดง
+        // ── ชั้นเอฟเฟกต์ของฉาก (ขยับตลอดฉาก) — 11 แบบ · สร้างชิ้นตอนโหลด ตำแหน่ง/จังหวะจาก prand(เลขฉาก)
+        TL.clips.forEach((c) => {
+          const box = document.getElementById("l-" + c.i);
+          if (!box) return;
+          const L = c.layer, t0 = c.start, t1 = c.start + c.dur, d = c.dur, S = c.i * 1000;
+          if (L === "motes" || L === "stars") {
+            const n = L === "stars" ? 46 : 28;
+            for (let k = 0; k < n; k++) {
+              const sz = L === "stars" ? 4 + prand(S + k * 3) * 9 : 8 + prand(S + k * 3) * 22;
+              const el = make(box, "fxp " + (L === "stars" ? "fx-star" : "fx-mote"), { width: sz + "px", height: sz + "px",
+                left: (prand(S + k * 3 + 1) * 1080).toFixed(0) + "px", top: (80 + prand(S + k * 3 + 2) * 1760).toFixed(0) + "px" });
+              if (L === "motes") tl.fromTo(el, { x: 0, y: 0 }, { x: (prand(S + k + 70) - 0.5) * 180, y: -(160 + prand(S + k + 40) * 380), duration: d, ease: "none", immediateRender: false }, t0);
+              const cyc = (L === "stars" ? 0.9 : 2.2) + prand(S + k + 130) * 1.6, ph = prand(S + k + 110) * cyc;
+              tl.set(el, { opacity: 0.08 }, t0);
+              each(t0 + ph, t1, cyc, (t) => {
+                tl.to(el, { opacity: 0.35 + prand(S + k + 90) * 0.6, duration: cyc * 0.5, ease: "sine.inOut" }, t);
+                tl.to(el, { opacity: 0.06, duration: cyc * 0.5, ease: "sine.inOut" }, t + cyc * 0.5);
+              });
+            }
+            if (L === "stars") each(t0 + 0.6, t1 - 0.5, 2.6, (t, k) => {
+              const el = make(box, "fxp fx-star", { width: "220px", height: "5px", borderRadius: "4px", left: (prand(S + k + 300) * 700).toFixed(0) + "px", top: (120 + prand(S + k + 310) * 700).toFixed(0) + "px" });
+              tl.set(el, { rotation: 24, opacity: 0 }, t0);
+              tl.fromTo(el, { x: 0, y: 0, opacity: 1 }, { x: 520, y: 230, opacity: 0, duration: 0.7, ease: "power1.in", immediateRender: false }, t);
+            });
+          } else if (L === "sparks" || L === "bubbles") {
+            // ประกายไฟลอยขึ้นจากขอบล่าง (เร็ว · เรืองแสง) / ฟองอากาศลอยส่าย (ช้า) — ปล่อยต่อเนื่องเป็นรอบ
+            // ตรวจ 26 ต.ค.: จางพร้อมกับลอยทั้งทาง → กลางทางเหลือความทึบ ~0.2 มองไม่เห็น · ตอนนี้สว่างเต็ม 60% แรกแล้วค่อยจาง
+            const n = L === "sparks" ? 40 : 18;
+            const peak = L === "sparks" ? 1 : 0.8;
+            for (let k = 0; k < n; k++) {
+              const sz = L === "sparks" ? 9 + prand(S + k) * 16 : 30 + prand(S + k) * 64;
+              const el = make(box, "fxp " + (L === "sparks" ? "fx-spark" : "fx-bubble"), { width: sz + "px", height: sz + "px", left: (prand(S + k + 7) * 1080).toFixed(0) + "px", top: "1960px", opacity: 0 });
+              const life = (L === "sparks" ? 1.5 : 3.4) + prand(S + k + 11) * (L === "sparks" ? 1.3 : 2.2);
+              const ph = prand(S + k + 13) * life;
+              each(t0 + ph - life, t1, life, (t) => {
+                if (t + life <= t0) return;
+                const st = Math.max(t, t0), frac = (st - t) / life;
+                const rise = (L === "sparks" ? 1000 : 1500) + prand(S + k + 17) * 900;
+                const sway = (prand(S + k + 19) - 0.5) * (L === "sparks" ? 260 : 140);
+                tl.fromTo(el, { y: -rise * frac, x: sway * frac, scale: 1 },
+                  { y: -rise, x: sway, scale: L === "sparks" ? 0.55 : 1.1, duration: life * (1 - frac), ease: L === "sparks" ? "power1.out" : "none", immediateRender: false }, st);
+                const fadeAt = Math.max(st, t + life * 0.6);
+                tl.set(el, { opacity: peak }, st);
+                tl.fromTo(el, { opacity: peak }, { opacity: 0, duration: Math.max(0.05, t + life - fadeAt), ease: "power2.in", immediateRender: false }, fadeAt);
+              });
+            }
+          } else if (L === "confetti") {
+            const cols = ["#59d2ff", "#ffc24a", "#ff6bd5", "#4dffa6", "#ffffff", "var(--t)"];
+            for (let k = 0; k < 40; k++) {
+              const el = make(box, "fxp fx-conf", { width: (12 + prand(S + k) * 14) + "px", height: (20 + prand(S + k + 1) * 18) + "px",
+                left: (prand(S + k + 2) * 1080).toFixed(0) + "px", top: "-60px", background: cols[k % cols.length] });
+              const life = 2.4 + prand(S + k + 3) * 1.8, ph = prand(S + k + 4) * life;
+              each(t0 + ph - life, t1, life, (t) => {
+                if (t + life <= t0) return;
+                const st = Math.max(t, t0), frac = (st - t) / life;
+                tl.fromTo(el, { y: 2050 * frac, x: 0, rotation: 0, rotationX: 0 },
+                  { y: 2050, x: (prand(S + k + 5) - 0.5) * 300, rotation: 360 + prand(S + k + 6) * 360, rotationX: 540, duration: life * (1 - frac), ease: "none", immediateRender: false }, st);
+              });
+            }
+          } else if (L === "rays") {
+            const el = make(box, "fx-big fx-rays");
+            tl.fromTo(el, { rotation: 0 }, { rotation: 30, duration: d, ease: "none", immediateRender: false }, t0);
+            each(t0, t1, 1.8, (t) => tl.fromTo(el, { opacity: 0.4 }, { opacity: 0.7, duration: 0.9, ease: "sine.inOut", yoyo: true, repeat: 1, immediateRender: false }, t));
+          } else if (L === "speed") {
+            const el = make(box, "fx-big fx-speed");
+            const n = Math.max(1, Math.floor(d / 0.1));
+            for (let k = 0; k < n; k++) tl.set(el, { rotation: (prand(S + k + 3) - 0.5) * 7, scale: 1 + prand(S + k + 9) * 0.05 }, t0 + k * 0.1);
+          } else if (L === "rings") {
+            for (let k = 0; k < 3; k++) {
+              const el = make(box, "fx-big fx-ringel");
+              each(t0 + k * 0.45, t1, 1.35, (t) => tl.fromTo(el, { scale: 0.25, opacity: 0.9 }, { scale: 2.4, opacity: 0, duration: 1.3, ease: "power2.out", immediateRender: false }, t));
+            }
+          } else if (L === "sweep") {
+            const el = make(box, "fx-big fx-sweepel");
+            each(t0 + 0.3, t1 - 0.6, 2.4, (t) => {
+              tl.fromTo(el, { x: 0, rotation: 16, opacity: 1 }, { x: 2400, rotation: 16, opacity: 1, duration: 1.3, ease: "power1.inOut", immediateRender: false }, t);
+              tl.set(el, { opacity: 0 }, t + 1.3);
+            });
+          } else if (L === "aurora") {
+            // ก้อนแสงสีใหญ่ 3 ก้อนลอยวน — บรรยากาศฝัน/ลึกลับ
+            [[-300, -200], [400, 600], [-200, 1200]].forEach(([x, y], k) => {
+              const el = make(box, "fx-big fx-blob", { left: x + "px", top: y + "px" });
+              tl.fromTo(el, { x: 0, y: 0, scale: 0.9 }, { x: (prand(S + k) - 0.5) * 500, y: (prand(S + k + 1) - 0.5) * 400, scale: 1.25, duration: d, ease: "sine.inOut", immediateRender: false }, t0);
+            });
+          } else if (L === "bolts") {
+            // สายฟ้าแลบเป็นระยะ (เส้นซิกแซกสุ่มมี seed) + แสงวาบสีของฉาก
+            const ns = "http://www.w3.org/2000/svg";
+            const svg = document.createElementNS(ns, "svg");
+            svg.setAttribute("class", "fx-svg");
+            svg.setAttribute("viewBox", "0 0 1080 1920");
+            box.appendChild(svg);
+            const fl = make(box, "fx-big fx-flashel");
+            each(t0 + 0.2, t1 - 0.25, 0.75 + prand(S) * 0.45, (t, k) => {
+              let x = 120 + prand(S + k * 9) * 840, y = -20, dpath = "M " + x.toFixed(0) + " " + y;
+              const steps = 6 + Math.floor(prand(S + k * 9 + 1) * 4);
+              for (let s = 0; s < steps; s++) {
+                x += (prand(S + k * 9 + s + 2) - 0.5) * 260;
+                y += 90 + prand(S + k * 9 + s + 30) * 120;
+                dpath += " L " + x.toFixed(0) + " " + y.toFixed(0);
+              }
+              const p = document.createElementNS(ns, "path");
+              p.setAttribute("class", "fx-bolt");
+              p.setAttribute("d", dpath);
+              svg.appendChild(p);
+              const len = p.getTotalLength();
+              tl.fromTo(p, { strokeDasharray: len, strokeDashoffset: len, opacity: 1 }, { strokeDashoffset: 0, duration: 0.1, ease: "power2.in", immediateRender: false }, t);
+              tl.fromTo(p, { opacity: 1 }, { opacity: 0, duration: 0.32, ease: "power1.in", immediateRender: false }, t + 0.14);
+              tl.fromTo(fl, { opacity: 0 }, { opacity: 0.7, duration: 0.05, ease: "none", immediateRender: false }, t + 0.06);
+              tl.fromTo(fl, { opacity: 0.7 }, { opacity: 0, duration: 0.32, ease: "power2.out", immediateRender: false }, t + 0.11);
+            });
+          }
+        });
+
+        // ── ของทับ: เข้า (pop/slide/fade/punch/type/words/slam/spin) · วน (float/tilt) · ออกจาง 0.2 วิสุดท้าย
+        const seg = (txt, g) => {
+          try { return [...new Intl.Segmenter("th", { granularity: g }).segment(txt)].map((x) => x.segment); } catch (e) { return [txt]; }
+        };
         TL.overlays.forEach((o) => {
           const sel = "#o-" + o.i + " .ov-in";
+          const inner = document.querySelector(sel);
           const d = Math.max(0.3, o.end - o.start);
-          if (o.anim === "pop") {
+          const A = o.anim;
+          if (A === "pop") {
             tl.fromTo(sel, { scale: 0.55, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.34, ease: "back.out(2.2)", immediateRender: false }, o.start);
-          } else if (o.anim === "slide") {
+          } else if (A === "slide") {
             tl.fromTo(sel, { y: 80, opacity: 0 }, { y: 0, opacity: 1, duration: 0.36, ease: "power3.out", immediateRender: false }, o.start);
-          } else if (o.anim === "fade") {
+          } else if (A === "fade") {
             tl.fromTo(sel, { opacity: 0 }, { opacity: 1, duration: 0.4, ease: "none", immediateRender: false }, o.start);
+          } else if (A === "punch") {
+            // กระแทกจากใหญ่ลงขนาดจริง แล้วสั่นสั้น ๆ
+            tl.fromTo(sel, { scale: 1.9, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.2, ease: "power4.in", immediateRender: false }, o.start);
+            for (let s = 0; s < 4; s++) tl.set(sel, { x: (prand(o.i * 11 + s) - 0.5) * 18, y: (prand(o.i * 13 + s) - 0.5) * 12 }, o.start + 0.2 + s * 0.04);
+            tl.set(sel, { x: 0, y: 0 }, o.start + 0.36);
+          } else if ((A === "type" || A === "words") && inner && o.kind === "text") {
+            // แยกเป็นตัวอักษร (type · ตามกลุ่มสระ/วรรณยุกต์) หรือเป็นคำ (words · ตัดคำไทยของเบราว์เซอร์) แล้วโผล่ทีละชิ้น
+            const parts = seg(inner.textContent, A === "type" ? "grapheme" : "word");
+            inner.textContent = "";
+            const W = parts.map((p) => {
+              if (p === "\n") { inner.appendChild(document.createElement("br")); return null; }
+              const sp = document.createElement("span");
+              sp.className = "w";
+              sp.textContent = p;
+              inner.appendChild(sp);
+              return sp;
+            }).filter(Boolean);
+            const span = Math.min(A === "type" ? 0.9 : 0.75, d * 0.45), step = span / Math.max(1, W.length);
+            // ซ่อนทุกชิ้นตั้งแต่ต้น — immediateRender:false ทำให้ชิ้นที่ยังไม่ถึงคิวโชว์สภาพปกติ (ทั้งประโยคขึ้นก่อนเวลา · ตรวจ 26 ต.ค.)
+            tl.set(W, { opacity: 0 }, 0);
+            tl.set(sel, { opacity: 1 }, o.start);
+            W.forEach((sp, k) => {
+              if (A === "type") tl.fromTo(sp, { opacity: 0 }, { opacity: 1, duration: 0.01, ease: "none", immediateRender: false }, o.start + k * step);
+              else tl.fromTo(sp, { y: 46, opacity: 0 }, { y: 0, opacity: 1, duration: 0.3, ease: "back.out(2)", immediateRender: false }, o.start + k * step);
+            });
+          } else if (A === "slam") {
+            tl.fromTo(sel, { scale: 2.6, rotation: -8, opacity: 0 }, { scale: 1, rotation: 0, opacity: 1, duration: 0.26, ease: "power4.in", immediateRender: false }, o.start);
+            const box = document.getElementById("o-" + o.i);
+            const sh = make(box, "ov-shock");
+            tl.fromTo(sh, { scale: 0.3, opacity: 1 }, { scale: 1.5, opacity: 0, duration: 0.5, ease: "power2.out", immediateRender: false }, o.start + 0.24);
+            tl.fromTo("#fx-flash", { opacity: 0 }, { opacity: 0.45, duration: 0.04, ease: "none", immediateRender: false }, o.start + 0.22);
+            tl.to("#fx-flash", { opacity: 0, duration: 0.25, ease: "power2.out" }, o.start + 0.26);
+          } else if (A === "spin") {
+            tl.fromTo(sel, { rotationY: -100, scale: 0.7, opacity: 0, transformPerspective: 900 },
+              { rotationY: 0, scale: 1, opacity: 1, duration: 0.6, ease: "back.out(1.6)", immediateRender: false }, o.start);
           }
-          if (o.anim === "float" || o.float) {
+          if (A === "float" || A === "tilt" || A === "spin" || o.float) {
             // จำนวนครึ่งรอบต้องเป็นเลขคู่ — จบที่ตำแหน่งเดิมพอดี (ไม่ค้างลอยตอนหาย)
-            const half = 0.9, n = Math.floor((d - 0.4) / half), h = n - (n % 2);
-            if (h >= 2) tl.fromTo(sel, { y: 0 }, { y: -14, duration: half, ease: "sine.inOut", yoyo: true, repeat: h - 1, immediateRender: false }, o.start + 0.2);
+            const lead = A === "spin" ? 0.6 : 0.2;
+            const half = A === "float" ? 0.9 : 1.1, n = Math.floor((d - lead - 0.2) / half), h = n - (n % 2);
+            if (h >= 2) {
+              if (A === "float") tl.fromTo(sel, { y: 0 }, { y: -14, duration: half, ease: "sine.inOut", yoyo: true, repeat: h - 1, immediateRender: false }, o.start + lead);
+              else tl.fromTo(sel, { rotationY: -13, rotationX: 4, y: 0, transformPerspective: 900 },
+                { rotationY: 13, rotationX: -4, y: -12, duration: half, ease: "sine.inOut", yoyo: true, repeat: h - 1, immediateRender: false }, o.start + lead);
+            }
+            if (A === "tilt") tl.fromTo(sel, { opacity: 0, scale: 0.8 }, { opacity: 1, scale: 1, duration: 0.3, ease: "power2.out", immediateRender: false }, o.start);
           }
           if (o.end < DUR - 0.05 && d > 0.6) {
             tl.to(sel, { opacity: 0, duration: 0.2, ease: "power1.in" }, o.end - 0.2);
