@@ -1281,7 +1281,9 @@ function StoryPanel({ ideas, patterns, query, setQuery, idea, setIdea, pattern, 
 
 // การ์ดสตอรี่บอร์ด — ใช้ทั้งโหมดให้ระบบออกแบบ (ไอเดียที่ระบบเลือก) และโหมดจากไอเดีย
 const VIS_TH = (k) => k.startsWith("pack:") ? `ซอง ${k.slice(5)}` : k.startsWith("branch:") ? "รูปตู้สาขา" : k.startsWith("bg:") ? "ภาพฉากในคลัง"
-  : k.startsWith("broll:") ? "คลิปบรรยากาศ" : k === "machine" ? "รูปตู้" : k === "new" ? "ภาพใหม่เฉพาะฉาก" : k
+  : k.startsWith("broll:") ? "คลิปบรรยากาศ" : k === "machine" ? "รูปตู้" : k === "new" ? "ภาพใหม่เฉพาะฉาก"
+  : k.startsWith("hero:") ? `ฉากเปิดตัวซอง ${k.slice(10)}` : k
+const PACE_TH = { fast: "⚡ จังหวะไวรัล", slow: "🎬 แบบหนัง" }
 
 // ความยาววิดีโอจริงจากไฟล์ในเครื่อง (อ่านแค่ metadata)
 function fileSeconds(file) {
@@ -1353,15 +1355,23 @@ function StoryResult({ result, busy, onRender, onRetry, api, onChange }) {
       const put = await fetch(tk.upload_url, { method: "PUT", body: file, headers: { "Content-Type": tk.content_type || file.type } })
       if (!put.ok) throw new Error(`อัปโหลดไม่ผ่าน (${put.status})`)
       const tl = JSON.parse(JSON.stringify(result.timeline))
-      const c = tl.clips[i], need = clipLen(c)
-      if (tk.kind === "video") {
-        const len = Math.max(0.5, Math.min(seconds || need, need))
-        Object.assign(c, { kind: "video", src: tk.url, in: 0, out: +len.toFixed(2), speed: 1, volume: 0, fit: "cover", name: file.name })
-        if (seconds) c.seconds = +seconds.toFixed(2)
-        delete c.dur
-      } else {
-        Object.assign(c, { kind: "image", src: tk.url, fit: "cover", dur: need, name: file.name })
-      }
+      // ช็อตย่อยของฉากเดียวกัน (จังหวะไวรัล ซอยจากภาพเดียว) ใช้ gen ชุดเดียวกัน → เปลี่ยนไฟล์พร้อมกันทุกช็อต
+      const key = JSON.stringify(tl.clips[i].gen || null)
+      let at = 0
+      tl.clips.forEach((c, j) => {
+        if (j !== i && !(c.gen && JSON.stringify(c.gen) === key && c.src === tl.clips[i].src)) return
+        const need = clipLen(c)
+        if (tk.kind === "video") {
+          const len = Math.max(0.5, Math.min((seconds || need) - at, need))
+          Object.assign(c, { kind: "video", src: tk.url, in: +Math.min(at, Math.max(0, (seconds || need) - 0.5)).toFixed(2), out: 0, speed: 1, volume: 0, fit: "cover", name: file.name })
+          c.out = +(c.in + Math.max(0.5, len)).toFixed(2)
+          if (seconds) c.seconds = +seconds.toFixed(2)
+          at += len
+          delete c.dur
+        } else {
+          Object.assign(c, { kind: "image", src: tk.url, dur: need, name: file.name })
+        }
+      })
       set({ busy: "บันทึกร่าง…" })
       await api("edits", { method: "PUT", body: JSON.stringify({ id: result.edit_id, name: result.name, timeline: tl }) })
       onChange?.({ ...result, timeline: tl })
@@ -1382,7 +1392,9 @@ function StoryResult({ result, busy, onRender, onRetry, api, onChange }) {
       )}
       <ol className="vs-beats">
         {(result.beats || []).map((b, i) => {
-          const c = clips[i]
+          const ci = Number.isInteger(b.clip) ? b.clip : i
+          const c = clips[ci]
+          const shots = clips.filter(x => x.line === c?.line && x.line !== undefined).length
           return (
             <li key={i}>
               <span className="vs-beat-role">{b.role}</span>
@@ -1390,12 +1402,14 @@ function StoryResult({ result, busy, onRender, onRetry, api, onChange }) {
               <span className="vs-dim vs-fine">{b.screen ? `บนจอ: ${b.screen} · ` : ""}ภาพ: {VIS_TH(b.visual)}{b.sticker ? ` + ${VIS_TH(b.sticker)} ลอย` : ""}</span>
               {c && (
                 <span className="vs-fine vs-moves">
+                  {PACE_TH[b.pace] && <em><b>{PACE_TH[b.pace]}</b>{shots > 1 ? ` · ${shots} ช็อต` : ""}</em>}
+                  {c.kind === "hero" && <em><b>🌟 ฉากเปิดตัวซอง</b></em>}
                   {c.layer && c.layer !== "none" && <em>✦ {LAYER_TH[c.layer]}{c.tint ? ` สี${TINT_TH[c.tint]}` : ""}</em>}
                   {c.motion && c.motion !== "none" && <em>🎥 {MOTION_TH[c.motion]}</em>}
                   {i > 0 && c.transition && c.transition !== "cut" && <em>⚡ เข้าฉาก: {CUT_TH[c.transition]}</em>}
                 </span>
               )}
-              {c?.gen && api && <SceneKit clip={c} state={up[i]} onFile={(f) => replace(i, f)} />}
+              {c?.gen && api && <SceneKit clip={c} state={up[ci]} onFile={(f) => replace(ci, f)} />}
             </li>
           )
         })}

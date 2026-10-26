@@ -8,19 +8,20 @@ export const LIMITS = { clips: 40, overlays: 40, seconds: 180, text: 200, script
 export const TEXT_STYLES = ["bold", "gold", "neon", "box"]
 // 26 ต.ค. 2026 · เจ้าของ: "เหมือนเอาภาพนิ่งมาตัดเรียงต่อกัน อยากให้ออกแบบอนิเมชั่น…และขยับได้" → ท่าเพิ่ม + ชั้นเอฟเฟกต์ต่อฉาก
 export const ANIMS = ["pop", "slide", "fade", "float", "none", "punch", "type", "words", "slam", "spin", "tilt"]
-export const TRANSITIONS = ["cut", "flash", "zoom", "whip", "bolt", "glitch", "wipe", "ring"]
-export const MOTIONS = ["none", "zoomin", "zoomout", "panleft", "panright", "rise", "drift", "push", "shake"]
-export const LAYERS = ["none", "motes", "sparks", "stars", "rays", "speed", "bolts", "rings", "sweep", "bubbles", "confetti", "aurora"]
+// เย็น 26 ต.ค.: "ยังไม่ค่อยว้าว" → เจ้าของเลือกผสม 3 แนว: beat (จังหวะไวรัล) · dissolve + film (แบบหนัง) · kind "hero" (ฉากเปิดตัวซอง)
+export const TRANSITIONS = ["cut", "flash", "zoom", "whip", "bolt", "glitch", "wipe", "ring", "dissolve"]
+export const MOTIONS = ["none", "zoomin", "zoomout", "panleft", "panright", "rise", "drift", "push", "shake", "beat"]
+export const LAYERS = ["none", "motes", "sparks", "stars", "rays", "speed", "bolts", "rings", "sweep", "bubbles", "confetti", "aurora", "film"]
 export const TINTS = { cyan: "#59d2ff", gold: "#ffc24a", purple: "#b06bff", red: "#ff4d5e", green: "#4dffa6",
   orange: "#ff8a3d", pink: "#ff6bd5", white: "#e8f7ff" }
 export const GEN_KINDS = ["paint", "footage"]
 // ชื่อไทยในหน้าเว็บ (การ์ดแผน · ห้องตัดต่อ)
 export const LAYER_TH = { none: "ไม่มี", motes: "ฝุ่นแสง", sparks: "ประกายไฟ", stars: "ดาวระยิบ", rays: "ลำแสงหมุน", speed: "เส้นสปีด",
-  bolts: "สายฟ้าแลบ", rings: "วงพลัง", sweep: "แสงกวาด", bubbles: "ฟองอากาศ", confetti: "กระดาษสี", aurora: "แสงออโรรา" }
+  bolts: "สายฟ้าแลบ", rings: "วงพลัง", sweep: "แสงกวาด", bubbles: "ฟองอากาศ", confetti: "กระดาษสี", aurora: "แสงออโรรา", film: "ฟิล์มภาพยนตร์" }
 export const MOTION_TH = { none: "นิ่ง", zoomin: "ซูมเข้าช้า", zoomout: "ซูมออกช้า", panleft: "แพนซ้าย", panright: "แพนขวา",
-  rise: "เลื่อนขึ้น", drift: "ลอยเอียง", push: "พุ่งเข้า", shake: "สั่นกระแทก" }
+  rise: "เลื่อนขึ้น", drift: "ลอยเอียง", push: "พุ่งเข้า", shake: "สั่นกระแทก", beat: "ตีจังหวะ" }
 export const CUT_TH = { cut: "ตัดตรง", flash: "แสงวาบ", zoom: "ซูมทะลุ", whip: "สะบัดกล้อง", bolt: "สายฟ้าฟาด", glitch: "กลิตช์",
-  wipe: "แถบกวาด", ring: "วาบ+วงคลื่น" }
+  wipe: "แถบกวาด", ring: "วาบ+วงคลื่น", dissolve: "ละลายภาพ" }
 export const ANIM_TH = { pop: "เด้ง", slide: "สไลด์", fade: "จาง", float: "ลอย", none: "นิ่ง", punch: "กระแทก", type: "พิมพ์ทีละตัว",
   words: "ทีละคำ", slam: "ซองกระแทก", spin: "หมุน 3 มิติ", tilt: "ส่าย 3 มิติ" }
 export const TINT_TH = { cyan: "ฟ้า", gold: "ทอง", purple: "ม่วง", red: "แดง", green: "เขียว", orange: "ส้ม", pink: "ชมพู", white: "ขาว" }
@@ -53,6 +54,7 @@ const ours = (s, base) => s.startsWith(MEDIA_PREFIX) || s.startsWith(storagePref
 export function okSrc(s, base) {
   if (typeof s !== "string" || !s || s.length > 600 || s.includes("..")) return false
   if (s === "gen:paint" || s === "gen:footage") return true            // ฉากที่ AI ออกแบบ — runner หาไฟล์จริงตอนเรนเดอร์
+  if (/^hero:[A-Za-z0-9][A-Za-z0-9 ._-]{0,39}$/.test(s)) return true      // ฉากเปิดตัวซอง (รูปซองจริงจาก sku)
   if (ours(s, base)) return !s.slice(s.indexOf("/media/") + 7).startsWith("video-edits/")
   if (/^sku:[A-Za-z0-9][A-Za-z0-9 ._-]{0,39}$/.test(s)) return true
   return /^assets\/[A-Za-z0-9._/-]{1,120}$/.test(s)
@@ -86,7 +88,7 @@ export function promptKit(g) {
 }
 
 export function clipLen(c) {
-  if (c.kind === "image") return num(c.dur, 0.3, 60, 3)
+  if (c.kind !== "video") return num(c.dur, 0.3, 60, 3)                  // image · hero
   const a = num(c.in, 0, 36000, 0)
   const b = num(c.out, a + 0.2, 36000, a + 5)
   return (b - a) / num(c.speed, 0.25, 4, 1)
@@ -109,7 +111,7 @@ export function cleanTimeline(raw, base) {
   for (const [i, c] of clipsIn.entries()) {
     if (!c || typeof c !== "object") return { error: `คลิปที่ ${i + 1} ไม่ถูกรูปแบบ` }
     if (!okSrc(c.src, base)) return { error: `คลิปที่ ${i + 1}: ใช้ได้เฉพาะไฟล์ในคลังของเรา (อัปโหลดเข้าคลังก่อน)` }
-    const kind = c.kind === "image" || c.src.startsWith("gen:") ? "image" : "video"
+    const kind = c.src.startsWith("hero:") ? "hero" : c.kind === "image" || c.src.startsWith("gen:") ? "image" : "video"
     const row = {
       id: str(c.id, 24) || `c${i + 1}`, kind, src: c.src,
       fit: pick(c.fit, FITS, kind === "video" ? "cover" : "contain"),
@@ -131,8 +133,9 @@ export function cleanTimeline(raw, base) {
       row.motion = pick(c.motion, MOTIONS, "none")
     } else {
       row.dur = num(c.dur, 0.3, 60, 3)
-      row.motion = pick(c.motion, MOTIONS, "zoomin")
+      row.motion = pick(c.motion, MOTIONS, kind === "hero" ? "none" : "zoomin")
     }
+    if (c.hype === true) row.hype = true                                    // ซับช่วงนี้เป็นคำยักษ์กลางจอ (จังหวะไวรัล)
     if (lineOf(c.line) !== null) row.line = c.line
     clips.push(row)
   }

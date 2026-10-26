@@ -13,6 +13,7 @@ const W = 1080, H = 1920
 // sku:XXX → URL รูปจริงจาก skus (ชั้นบนส่ง map มา) · โลโก้ในเทมเพลต → ไฟล์เดียวกันใน public/
 export function srcOf(src, skuImg) {
   if (typeof src === "string" && src.startsWith("sku:")) return skuImg?.[src.slice(4)] || ""
+  if (typeof src === "string" && src.startsWith("hero:")) return skuImg?.[src.slice(5)] || ""     // ฉากเปิดตัวซอง
   if (typeof src === "string" && src.startsWith("assets/brand/")) return "/logo-white.png"
   // รูปในเทมเพลตที่ตัวเขียนสตอรี่บอร์ดใช้ (26 ต.ค. 2026) — ไฟล์จริงอยู่ฝั่งเครื่องเรนเดอร์ หน้าเว็บใช้รูปย่อใน public/
   if (src === "assets/machine-hero.jpg") return "/machine/machine-hero.jpg"
@@ -140,7 +141,13 @@ export default function Preview({ tl, t, onTime, skuImg, playing, setPlaying, se
             <div className={s.stageBg} />
             {clip && (
               <div className={s.clipLayer} style={{ transform: `translate(${(cam.x || 0) + whip}px, ${cam.y || 0}px) rotate(${cam.r || 0}deg) scale(${zoom + punch})` }}>
-                {clip.src.startsWith("gen:") ? (
+                {clip.kind === "hero" ? (
+                  // ฉากเปิดตัวซอง — ของจริงซองพุ่งหมุน 3 มิติ ระเบิดแสง การ์ดกางพัด (ดูในคลิปที่ทำแล้ว)
+                  <div className={s.heroPh}>
+                    <img src={srcOf(clip.src, skuImg)} alt="" />
+                    <b>🌟 ฉากเปิดตัวซอง</b>
+                  </div>
+                ) : clip.src.startsWith("gen:") ? (
                   // ฉากที่ AI ออกแบบ — ไฟล์จริงหาตอนทำคลิป (หรืออัปมาแทนที่แผงขวา)
                   <div className={s.genPh}>
                     <b>{clip.src === "gen:paint" ? "🎨 ภาพที่ AI ออกแบบ" : "🎞️ ฟุตเทจจริง"}</b>
@@ -157,7 +164,8 @@ export default function Preview({ tl, t, onTime, skuImg, playing, setPlaying, se
                 </>}
               </div>
             )}
-            {clip?.layer && clip.layer !== "none" && <div className={s.fxBadge}>✦ {LAYER_TH[clip.layer]}</div>}
+            {clip?.layer && clip.layer !== "none" && <div className={s.fxBadge}>✦ {LAYER_TH[clip.layer]}{clip.hype ? " · ซับคำยักษ์" : ""}</div>}
+            {clip?.hype && (!clip.layer || clip.layer === "none") && <div className={s.fxBadge}>ซับคำยักษ์</div>}
             {!tl.clips.length && <div className={s.stageEmpty}>เพิ่มคลิปหรือรูป<br />จากคลังด้านซ้าย</div>}
             {tl.overlays.map(o => {
               const end = o.end < 0 ? tot.total : o.end

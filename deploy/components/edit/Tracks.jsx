@@ -11,7 +11,7 @@ import { totals, fmt } from "./timelineState"
 import { srcOf } from "./Preview"
 
 // สัญลักษณ์รอยต่อบนแถบคลิป (26 ต.ค. 2026 · รอยต่อ 8 แบบ)
-const TRANS_MARK = { flash: "✦", zoom: "Z", whip: "»", bolt: "ϟ", glitch: "▦", wipe: "⟋", ring: "◎" }
+const TRANS_MARK = { flash: "✦", zoom: "Z", whip: "»", bolt: "ϟ", glitch: "▦", wipe: "⟋", ring: "◎", dissolve: "≈" }
 import s from "./edit.module.css"
 
 const HEAD = 92
@@ -227,7 +227,7 @@ export default function Tracks({ state, dispatch, skuImg, playing, onSeek, onWan
                 const left = tot.starts[i] * k
                 const wpx = Math.max(6, clipLen(c) * k)
                 const moving = drag?.mode === "move-clip" && drag.id === c.id && Math.abs(drag.dx) >= 4
-                const thumb = c.kind === "image" && !c.src.startsWith("gen:") ? srcOf(c.src, skuImg) : null
+                const thumb = (c.kind === "image" && !c.src.startsWith("gen:")) || c.kind === "hero" ? srcOf(c.src, skuImg) : null
                 return (
                   <div key={c.id}
                        className={`${s.block} ${c.kind === "image" ? s.blockImage : s.blockClip} ${isSel("clip", c.id) ? s.blockSel : ""}`}
@@ -235,7 +235,7 @@ export default function Tracks({ state, dispatch, skuImg, playing, onSeek, onWan
                        title={`${c.name || c.src} · ${clipLen(c).toFixed(1)} วิ`}
                        onPointerDown={(e) => start(e, { mode: "move-clip", id: c.id, sel: { kind: "clip", id: c.id } })}>
                     {thumb && <span className={s.blockThumb} style={{ backgroundImage: `url("${thumb}")` }} />}
-                    <span className={s.blockLabel}>{c.name || (c.kind === "image" ? "รูป" : "คลิป")} · {clipLen(c).toFixed(1)}s</span>
+                    <span className={s.blockLabel}>{c.name || (c.kind === "hero" ? "ฉากเปิดตัวซอง" : c.kind === "image" ? "รูป" : "คลิป")} · {clipLen(c).toFixed(1)}s</span>
                     <span className={`${s.handle} ${s.handleL}`} title="ลากเพื่อตัดหัว"
                           onPointerDown={(e) => start(e, { mode: "trim-l", id: c.id, sel: { kind: "clip", id: c.id } })} />
                     <span className={`${s.handle} ${s.handleR}`} title="ลากเพื่อตัดท้าย"

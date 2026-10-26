@@ -174,11 +174,16 @@ export const DESIGN = {
   layer: { motes: "ฝุ่นแสงลอย (นุ่ม ลึกลับ)", sparks: "ประกายไฟพุ่งขึ้น (มันส์ ร้อนแรง)", stars: "ดาวระยิบ+ดาวตก (ฝัน หายาก)",
     rays: "ลำแสงหมุนจากด้านบน (ยิ่งใหญ่ เปิดตัว)", speed: "เส้นสปีดมังงะ (ตื่นเต้น เร่ง)", bolts: "สายฟ้าแลบเป็นระยะ (พลัง ดุ)",
     rings: "วงพลังขยายจากกลางจอ (เฉลย กระแทก)", sweep: "แสงกวาดทแยง (เงางาม พรีเมียม)", bubbles: "ฟองอากาศลอย (ทะเล ใต้น้ำ)",
-    confetti: "กระดาษสีโปรย (ฉลอง ประกาศ)", aurora: "ก้อนแสงสีลอยวน (ฝัน ลึกลับ)", none: "ไม่มี" },
+    confetti: "กระดาษสีโปรย (ฉลอง ประกาศ)", aurora: "ก้อนแสงสีลอยวน (ฝัน ลึกลับ)",
+    film: "ฟิล์มภาพยนตร์: หมอก โบเก้ แสงรั่ว เกรน (เล่าเรื่อง ลึก นุ่ม)", none: "ไม่มี" },
   tint: ["cyan", "gold", "purple", "red", "green", "orange", "pink", "white"],
   motion: { push: "พุ่งเข้าแรงแล้วค่อย ๆ ไหล", zoomin: "ซูมเข้าช้า", zoomout: "ซูมออกช้า", panleft: "แพนซ้าย", panright: "แพนขวา",
-    rise: "เลื่อนขึ้น", drift: "ลอยเอียงเบา ๆ", shake: "สั่นกระแทกตอนเข้า", none: "นิ่ง" },
-  cut: { flash: "แสงวาบ", whip: "สะบัดกล้อง", zoom: "ซูมทะลุ", bolt: "สายฟ้าฟาด", glitch: "สัญญาณกระตุก", wipe: "แถบนีออนกวาด", ring: "วาบ+วงคลื่น", cut: "ตัดตรง" },
+    rise: "เลื่อนขึ้น", drift: "ลอยเอียงเบา ๆ", shake: "สั่นกระแทกตอนเข้า", beat: "ซูมกระแทกเป็นจังหวะ (มันส์)", none: "นิ่ง" },
+  cut: { flash: "แสงวาบ", whip: "สะบัดกล้อง", zoom: "ซูมทะลุ", bolt: "สายฟ้าฟาด", glitch: "สัญญาณกระตุก", wipe: "แถบนีออนกวาด", ring: "วาบ+วงคลื่น",
+    dissolve: "ละลายภาพ (นุ่ม แบบหนัง)", cut: "ตัดตรง" },
+  // แนวของฉาก (ต้นแบบที่เจ้าของเลือก "ผสมทั้ง 3" · เย็น 26 ต.ค.)
+  pace: { fast: "จังหวะไวรัล — ซอยเป็นช็อตย่อยไว ซูมกระแทก ซับคำยักษ์กลางจอ (เปิดคลิป · ประโยคเด็ด · ชวนลุ้น)",
+    normal: "ปกติ", slow: "แบบหนัง — ฟิล์ม หมอก ละลายภาพ กล้องช้า (เล่าเรื่อง · สร้างบรรยากาศ)" },
   text: { pop: "เด้ง", punch: "กระแทก+สั่น", words: "ขึ้นทีละคำ", type: "พิมพ์ทีละตัว", slide: "สไลด์ขึ้น", fade: "ค่อย ๆ ชัด", float: "ลอยเบา ๆ" },
   sticker: { slam: "ซองกระแทกลง+คลื่น", spin: "ซองหมุน 3 มิติเข้า แล้วส่าย", tilt: "ซองส่าย 3 มิติ", pop: "เด้ง", float: "ลอย" },
 }
@@ -207,6 +212,8 @@ export function buildPrompt({ pattern, idea, facts, assets, voice, trustFacts, l
     "visual = key จากรายการภาพ หรือ \"new\" (ออกแบบภาพใหม่เฉพาะฉาก — ต้องใส่ scene) · ห้ามคิด key เอง · ฉากติดกันห้ามใช้ภาพซ้ำ",
     `ภาพต้องตรงกับเนื้อหาของฉากนั้น — ฉากเล่าเรื่อง/อธิบาย/สร้างอารมณ์ ให้ใช้ภาพฉากในคลังที่ตรงเรื่อง หรือ "new" · รูปตู้/รูปสาขาใช้เฉพาะฉากบอกสาขา ชวนมาตู้ และฉากปิด (รวมไม่เกิน 2 ฉาก) · "new" แบบ paint ได้ไม่เกิน ${PAINT_MAX} ฉาก (ที่เหลือใช้ footage)`,
     "scene (เมื่อ visual = new): prompt = ภาพฉากภาษาอังกฤษ 40–80 คำ บอกสถานที่ แสง อากาศ อารมณ์ มุมกล้อง ให้ตรงกับสิ่งที่ฉากนั้นพูด · video = พร้อมต์วิดีโอภาษาอังกฤษของฉากเดียวกัน + กล้องเคลื่อน + สิ่งที่ขยับในภาพ · query = คำค้นฟุตเทจจริง 2–4 คำอังกฤษ (ธรรมชาติ แสง อากาศ ไฟ น้ำ อวกาศ) · tags = 3–5 คำอังกฤษ · note = คำอธิบายไทยสั้น ๆ · prefer = paint (ภาพวาด สวยตรงเรื่อง) หรือ footage (ฟุตเทจจริง ฟรี)",
+    "pace (แนวของฉาก): fast = จังหวะไวรัล (ระบบซอยเป็น 2–3 ช็อตย่อยให้เอง + ซับคำยักษ์) · slow = แบบหนัง · normal = ปกติ — ผสมหลายแนวในคลิปเดียว (ไม่ใช่ fast ทั้งคลิป) · ฉากเปิดคลิปควร fast หรือ hero",
+    "visual = hero:pack:… (ฉากเปิดตัวซอง: ซองพุ่งหมุน 3 มิติ ระเบิดแสง การ์ดเรืองแสงกางพัด) — ถ้ามีรูปซองในรายการ ให้มี 1 ฉาก (ฉากประกาศ/เฉลย/ชวนลุ้นชุดนั้น · บทพูดยาวพอ ~3 วิ) · ฉากนี้ไม่ต้องมี sticker",
     "scene ห้ามมี: ตัวหนังสือ ป้าย โลโก้ คน ใบหน้า มือ ตัวละคร สัตว์ประหลาด/มาสคอต การ์ด ซอง กล่อง สินค้า ตู้ จอ · ห้ามเอ่ยชื่อค่าย ตัวละคร หรือสถานที่ที่มีลิขสิทธิ์ — บรรยายฉากต้นฉบับของเราเอง (ซองจริงระบบวางทับให้ผ่าน sticker)",
     "ข้อเท็จจริง ตัวเลข ราคา ชื่อการ์ด ชื่อสาขา อันดับ ต้องมาจากข้อมูลข้างล่างเท่านั้น — ไม่มีข้อมูลสำหรับฉากไหน ให้ข้ามฉากนั้น · ห้ามจัดอันดับเองถ้าข้อมูลไม่ได้บอกอันดับ",
     "ตัวเลขทุกตัวทั้งใน vo และ screen เขียนเป็นเลขอารบิก (96 งาน · 8 ซอง · 45 นาที · 3 ล้าน) ห้ามสะกดเป็นคำ — เสียงพากย์อ่านเอง",
@@ -259,7 +266,7 @@ ${assetLines}
 ${rules}
 
 ตอบเป็น JSON ล้วน รูปแบบนี้เท่านั้น:
-{"title": "ชื่อร่างสั้น ๆ", "beats": [{"role": "hook", "vo": "…", "screen": "…", "visual": "<key หรือ new>", "scene": {"prompt": "…", "video": "…", "query": "…", "tags": ["…"], "note": "…", "prefer": "paint"}, "layer": "sparks", "tint": "gold", "motion": "push", "cut": "flash", "style": "gold", "pos": "top", "size": "L", "anim": "punch", "sticker": "", "sticker_anim": "slam"}]}
+{"title": "ชื่อร่างสั้น ๆ", "beats": [{"role": "hook", "vo": "…", "screen": "…", "visual": "<key · new · hero:pack:…>", "pace": "fast", "scene": {"prompt": "…", "video": "…", "query": "…", "tags": ["…"], "note": "…", "prefer": "paint"}, "layer": "sparks", "tint": "gold", "motion": "push", "cut": "flash", "style": "gold", "pos": "top", "size": "L", "anim": "punch", "sticker": "", "sticker_anim": "slam"}]}
 (scene ใส่เฉพาะฉากที่ visual = new)`
   return { system, user }
 }
@@ -325,7 +332,9 @@ export function compile(sb, assets, { voice = "Puck", pattern = null, external =
       (internal && /\d[\d,.]*\s*บาท|หลัก(พัน|หมื่น|แสน|ล้าน)/.test(`${raw?.vo} ${raw?.screen || ""}`) ? "ตัวเลขยอดขายภายใน" : null)
     if (bad) { dropped.push({ role: raw?.role, why: `คำต้องห้าม (${bad})` }); continue }
     const scene = sceneOf(raw, franchise)
-    const visual = raw?.visual === "new" && scene ? "new" : assets[raw?.visual] ? raw.visual : scene ? "new" : fbFor(raw?.role)
+    const heroOf = typeof raw?.visual === "string" && raw.visual.startsWith("hero:") ? raw.visual.slice(5) : null
+    const visual = heroOf && assets[heroOf]?.src?.startsWith("sku:") ? `hero:${heroOf}`
+      : raw?.visual === "new" && scene ? "new" : assets[raw?.visual] ? raw.visual : scene ? "new" : fbFor(raw?.role)
     const one = (v, ok) => (ok.includes(v) ? v : null)
     const sticker = typeof raw?.sticker === "string" && raw.sticker.startsWith("pack:") && assets[raw.sticker] && raw.sticker !== visual
       ? raw.sticker : null
@@ -334,7 +343,7 @@ export function compile(sb, assets, { voice = "Puck", pattern = null, external =
       style: one(raw?.style, ["bold", "gold", "neon", "box"]), pos: one(raw?.pos, ["top", "middle", "low"]),
       size: one(raw?.size, ["S", "M", "L"]), anim: one(raw?.anim, Object.keys(DESIGN.text)),
       cut: one(raw?.cut, Object.keys(DESIGN.cut)), motion: one(raw?.motion, Object.keys(DESIGN.motion)),
-      layer: one(raw?.layer, Object.keys(DESIGN.layer)), tint: one(raw?.tint, DESIGN.tint),
+      layer: one(raw?.layer, Object.keys(DESIGN.layer)), tint: one(raw?.tint, DESIGN.tint), pace: one(raw?.pace, Object.keys(DESIGN.pace)),
       sticker, stickerAnim: one(raw?.sticker_anim, Object.keys(DESIGN.sticker)) })
   }
   if (!beats.length) return { error: "สตอรี่บอร์ดไม่มีฉากที่ใช้ได้", dropped }
@@ -346,6 +355,13 @@ export function compile(sb, assets, { voice = "Puck", pattern = null, external =
     const cut = beats.splice(ctaAt - 1, 1)[0]
     dropped.push({ role: cut.role, why: `ยาวเกิน ${cap} วิ` })
   }
+  let heroes = 0
+  for (const b of beats) if (b.visual.startsWith("hero:") && ++heroes > 1) b.visual = b.visual.slice(5)
+  // AI ไม่ได้เลือกฉากเปิดตัวซอง (ทดสอบ 26 ต.ค. เย็น: 2 ใน 2 ร่างไม่ใช้) → ฉากแรกที่โชว์รูปซองเต็มจอ (ยาวพอ) กลายเป็นฉากเปิดตัวซอง
+  if (!heroes) {
+    const h = beats.find((b, i) => i < beats.length - 1 && b.visual.startsWith("pack:") && b.vo.reduce((s, l) => s + estSec(l), 0) >= 2.4)
+    if (h) { h.visual = "hero:" + h.visual; h.sticker = null }
+  }
   // ภาพวาดใหม่เกินงบ → ฉากที่เกินใช้ฟุตเทจจริง (ฟรี) แทน · พร้อมต์ภาพยังเก็บไว้ให้เอาไปวาดเองกับ AI ตัวอื่น
   let paints = 0
   for (const b of beats) {
@@ -355,6 +371,7 @@ export function compile(sb, assets, { voice = "Puck", pattern = null, external =
   }
   // รูปตู้/สาขาเกิน 2 ฉาก (ไม่นับฉากปิด) → ฉากที่ไม่ได้พูดถึงสาขาเปลี่ยนเป็นภาพฉากที่ยังไม่ใช้ (เจ้าของ: "ภาพประกอบวนใช้ซ้ำ")
   const isPhoto = (v) => v === "machine" || /^branch:/.test(v)
+  // (ฉากเปิดตัวซอง/ภาพใหม่ไม่ใช่รูปตู้ — ไม่นับ)
   const branchTalk = (b) => /สาขา|ห้าง|เซ็นทรัล|เดอะมอลล์|ไอคอนสยาม|ซีคอน|แวะ|ที่ตู้/.test(b.vo.join(" ") + b.screen)
   let photos = 0
   beats.forEach((b, i) => {
@@ -390,17 +407,46 @@ export function compile(sb, assets, { voice = "Puck", pattern = null, external =
     const first = lines.length
     lines.push(...b.vo)
     const dur = +b.vo.reduce((s, l) => s + estSec(l), 0).toFixed(2)
-    const a = b.visual === "new" ? { kind: "image", src: `gen:${b.scene.kind}`, fit: "cover" } : assets[b.visual]
+    const isHero = b.visual.startsWith("hero:")
+    const a = isHero ? { kind: "hero", src: `hero:${assets[b.visual.slice(5)].src.slice(4)}`, fit: "contain" }
+      : b.visual === "new" ? { kind: "image", src: `gen:${b.scene.kind}`, fit: "cover" } : assets[b.visual]
     const isLast = i === beats.length - 1
-    const base = { id: `c${i + 1}`, src: a.src, fit: a.fit, transition: i === 0 ? "cut" : (b.cut || TRANS[i % TRANS.length]), line: first,
-      layer: b.layer || (isLast ? "sweep" : LAYER_BY_ROLE[b.role] || LAYER_CYCLE[i % LAYER_CYCLE.length]), tint: b.tint || "cyan",
-      ...(b.visual === "new" ? { gen: b.scene } : {}) }
-    // รูปซองเต็มจอ (contain) ขยับเบา ๆ พอ · ภาพฉาก/รูปตู้ใช้ท่ากล้องเต็มที่
-    const motion = b.motion || (a.fit === "contain" ? (i % 2 ? "zoomout" : "zoomin") : MOTION_CYCLE[i % MOTION_CYCLE.length])
-    clips.push(a.kind === "video"
-      ? { ...base, kind: "video", in: 0, out: +Math.min(a.seconds || 8, dur).toFixed(2), speed: 1, volume: 0, fx: 0.5, fy: 0.5, zoom: 1, motion: b.motion || "none" }
-      : { ...base, kind: "image", dur, motion, fx: 0.5, fy: 0.5, zoom: 1 })
-    if (b.sticker) {
+    const pace = isHero ? "normal" : b.pace || (i === 0 ? "fast" : "normal")
+    const slow = pace === "slow"
+    const base = { id: `c${i + 1}`, src: a.src, fit: a.fit, line: first,
+      transition: i === 0 ? "cut" : (b.cut || (slow ? "dissolve" : TRANS[i % TRANS.length])),
+      layer: b.layer || (isHero ? "none" : slow ? "film" : isLast ? "sweep" : LAYER_BY_ROLE[b.role] || LAYER_CYCLE[i % LAYER_CYCLE.length]),
+      tint: b.tint || (isHero ? "gold" : "cyan"), ...(b.visual === "new" ? { gen: b.scene } : {}) }
+    b.clip = clips.length
+    if (isHero) {
+      clips.push({ ...base, kind: "hero", dur, motion: "none" })
+    } else {
+      // รูปซองเต็มจอ (contain) ขยับเบา ๆ พอ · ภาพฉาก/รูปตู้ใช้ท่ากล้องเต็มที่ · แบบหนัง = กล้องช้า · จังหวะไวรัล = ตีจังหวะ
+      const motion = b.motion || (pace === "fast" ? "beat" : slow ? (i % 2 ? "drift" : "zoomin")
+        : a.fit === "contain" ? (i % 2 ? "zoomout" : "zoomin") : MOTION_CYCLE[i % MOTION_CYCLE.length])
+      const one = (over = {}, part = dur) => (a.kind === "video"
+        ? { ...base, kind: "video", in: 0, out: +Math.min(a.seconds || 8, part).toFixed(2), speed: 1, volume: 0, fx: 0.5, fy: 0.5, zoom: 1, motion: b.motion || (pace === "fast" ? "beat" : "none"), ...over }
+        : { ...base, kind: "image", dur: part, motion, fx: 0.5, fy: 0.5, zoom: 1, ...over })
+      // จังหวะไวรัล: ซอยเป็น 2–3 ช็อตย่อยจากภาพเดิม (มุมกว้าง → ซูมใกล้คนละมุม → รูปซองถ้าพูดถึงชุด) ผูกบรรทัดเดียวกัน
+      //   runner แบ่งเวลาของบรรทัดให้ตามสัดส่วน (hf_timeline.anchor กลุ่มบรรทัดเดียวกัน) · ซับช่วงนี้เป็นคำยักษ์ (hype)
+      const n = pace === "fast" && dur >= 2.2 ? (dur >= 4.2 ? 3 : 2) : 1
+      if (n === 1) {
+        clips.push(one(pace === "fast" ? { hype: true } : {}))
+      } else {
+        const part = +(dur / n).toFixed(2)
+        const pk = b.sticker
+        clips.push(one({ hype: true }, part))
+        clips.push(one({ id: `c${i + 1}b`, hype: true, zoom: 1.45, fx: i % 2 ? 0.7 : 0.3, fy: 0.45, motion: "push", transition: "whip", layer: "speed", tint: "white",
+          ...(a.kind === "video" ? { in: +Math.min(part, Math.max(0, (a.seconds || 8) - part)).toFixed(2), out: +Math.min(a.seconds || 8, part * 2).toFixed(2) } : {}) }, part))
+        if (n === 3) {
+          clips.push(pk
+            ? { ...base, id: `c${i + 1}c`, kind: "image", src: assets[pk].src, fit: "contain", dur: part, motion: "beat", transition: "zoom", layer: "rings", tint: b.tint || "gold", hype: true, gen: undefined }
+            : one({ id: `c${i + 1}c`, hype: true, zoom: 1.3, fx: i % 2 ? 0.3 : 0.7, fy: 0.6, motion: "push", transition: "flash" }, part))
+        }
+        if (pk && n === 3) b.stickerShot = true
+      }
+    }
+    if (b.sticker && !b.stickerShot && !isHero) {
       const nth = overlays.filter(o => o.type === "image").length
       overlays.push({ id: `s${i + 1}`, type: "image", src: assets[b.sticker].src, start: +t.toFixed(2), end: +(t + dur).toFixed(2),
         x: 0.5, y: 0.47, w: 0.42, anim: b.stickerAnim || ["slam", "spin", "tilt"][nth % 3], line: first, ...(b.vo.length > 1 ? { span: b.vo.length } : {}) })
@@ -411,13 +457,14 @@ export function compile(sb, assets, { voice = "Puck", pattern = null, external =
         size: 76, style: "box", color: "#ffffff", anim: "pop", line: first })
     } else if (b.screen) {
       const long = b.screen.length > 16
-      const pos = b.sticker ? "top" : (b.pos || "top")
+      // จังหวะไวรัล: ซับคำยักษ์อยู่กลางจอ → ตัวหนังสือบนจอขึ้นบนเสมอ
+      const pos = b.sticker || pace === "fast" ? "top" : (b.pos || "top")
       let size = b.size ? SIZE[b.size] : i === 0 ? (long ? 92 : 112) : (long ? 76 : 92)
       if (long) size = Math.min(size, 92)
       if (b.sticker) size = Math.min(size, 90)
       overlays.push({ id: `t${i + 1}`, type: "text", text: b.screen, start: +t.toFixed(2), end: +(t + dur).toFixed(2),
         x: 0.5, y: Y[pos] + (i === 0 && pos === "top" ? 0.03 : 0), size,
-        style: style(b, i), color: "#ffffff", anim: b.anim || (i === 0 ? "pop" : ANIMS[i % ANIMS.length]), line: first,
+        style: style(b, i), color: "#ffffff", anim: b.anim || (slow ? "fade" : i === 0 ? "punch" : ANIMS[i % ANIMS.length]), line: first,
         ...(b.vo.length > 1 ? { span: b.vo.length } : {}) })
     }
     t += dur

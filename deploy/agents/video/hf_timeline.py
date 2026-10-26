@@ -16,6 +16,7 @@ import html
 import json
 import pathlib
 import random
+import re
 import shutil
 import subprocess
 import sys
@@ -31,9 +32,11 @@ STYLES = ("bold", "gold", "neon", "box")
 # 26 ต.ค. 2026 · เจ้าของ: "เหมือนเอาภาพนิ่งมาตัดเรียงต่อกัน อยากให้ออกแบบอนิเมชั่นและแบล็คกราวให้สวยงามตามเนื้อหา และขยับได้"
 #   ท่าของทับ +6 · รอยต่อ +5 · กล้อง +6 · ชั้นเอฟเฟกต์ต่อฉาก 11 แบบ · ฉากที่ AI ออกแบบ (gen:) หาไฟล์จริงตอนเรนเดอร์
 ANIMS = ("pop", "slide", "fade", "float", "none", "punch", "type", "words", "slam", "spin", "tilt")
-TRANSITIONS = ("cut", "flash", "zoom", "whip", "bolt", "glitch", "wipe", "ring")
-MOTIONS = ("none", "zoomin", "zoomout", "panleft", "panright", "rise", "drift", "push", "shake")
-LAYERS = ("none", "motes", "sparks", "stars", "rays", "speed", "bolts", "rings", "sweep", "bubbles", "confetti", "aurora")
+# เย็น 26 ต.ค.: เจ้าของ "ยังไม่ค่อยว้าว" → เลือก "ผสมทั้ง 3 แนว" จากต้นแบบ — beat (A) · dissolve + film (C) · kind "hero" (B)
+TRANSITIONS = ("cut", "flash", "zoom", "whip", "bolt", "glitch", "wipe", "ring", "dissolve")
+MOTIONS = ("none", "zoomin", "zoomout", "panleft", "panright", "rise", "drift", "push", "shake", "beat")
+LAYERS = ("none", "motes", "sparks", "stars", "rays", "speed", "bolts", "rings", "sweep", "bubbles", "confetti", "aurora", "film")
+DISSOLVE = 0.5                                     # คลิปก่อนหน้าค้างต่อให้ละลายภาพทับ (วินาที)
 TINTS = {"cyan": "#59d2ff", "gold": "#ffc24a", "purple": "#b06bff", "red": "#ff4d5e", "green": "#4dffa6",
          "orange": "#ff8a3d", "pink": "#ff6bd5", "white": "#e8f7ff"}
 GEN_KINDS = ("paint", "footage")
@@ -81,22 +84,34 @@ def anchor(tl, timing, total):
     end_all = round(total + TAIL, 3)
     n = 0
     clips = tl["clips"]
-    lines = [c.get("line") for c in clips if c.get("line") in st]
+    # ช็อตย่อย (จังหวะไวรัล): หลายคลิปต่อกันผูกบรรทัดเดียวกัน = กลุ่มเดียว → แบ่งเวลาของบรรทัดตามสัดส่วนความยาวในร่าง
+    groups = []
+    for i, c in enumerate(clips):
+        if groups and c.get("line") is not None and c.get("line") == clips[groups[-1][-1]].get("line"):
+            groups[-1].append(i)
+        else:
+            groups.append([i])
+    lines = [clips[g[0]].get("line") for g in groups if clips[g[0]].get("line") in st]
     if lines and all(b > a for a, b in zip(lines, lines[1:])):
         t = 0.0
-        for i, c in enumerate(clips):
-            if c.get("line") in st:
-                nxt = clips[i + 1] if i + 1 < len(clips) else None
+        for gi, g in enumerate(groups):
+            head = clips[g[0]]
+            if head.get("line") in st:
+                nxt = clips[groups[gi + 1][0]] if gi + 1 < len(groups) else None
                 target = (st[nxt["line"]] if nxt is not None and nxt.get("line") in st
                           else end_all if nxt is None else None)
                 if target is not None:
-                    d = round(max(0.4, target - t), 3)
-                    if c["kind"] == "image":
-                        c["dur"] = min(60.0, d)
-                    else:
-                        c["out"] = round(c["in"] + d * c["speed"], 3)
-                    n += 1
-            t += clip_len(c)
+                    d = max(0.4 * len(g), target - t)
+                    weights = [max(0.1, clip_len(clips[i])) for i in g]
+                    for i, w in zip(g, weights):
+                        c = clips[i]
+                        part = round(max(0.4, d * w / sum(weights)), 3)
+                        if c["kind"] == "video":
+                            c["out"] = round(c["in"] + part * c["speed"], 3)
+                        else:
+                            c["dur"] = min(60.0, part)
+                        n += 1
+            t += sum(clip_len(clips[i]) for i in g)
     elif lines:
         _log("⚠️ เลขบรรทัดของคลิปหลักไม่เรียง (ลากสลับในห้องตัดต่อ?) — ใช้เวลาตามร่าง ไม่ผูกกับเสียง")
     last_line = max(st)
@@ -139,6 +154,12 @@ def normalize(tl):
         g = _gen(c.get("gen"))
         if g:
             row["gen"] = g
+        if row["src"].startswith("hero:"):              # ฉากเปิดตัวซอง — src "hero:<รหัสซอง>"
+            if not re.fullmatch(r"hero:[A-Za-z0-9][A-Za-z0-9 ._-]{0,39}", row["src"]):
+                continue
+            kind = row["kind"] = "hero"
+        if c.get("hype") is True:
+            row["hype"] = True                             # ซับช่วงคลิปนี้เป็นคำยักษ์กลางจอ (จังหวะไวรัล)
         if row["src"].startswith("gen:"):
             if not g:
                 continue
@@ -151,7 +172,7 @@ def normalize(tl):
             row["motion"] = _pick(c.get("motion"), MOTIONS, "none")
         else:
             row["dur"] = _num(c.get("dur"), 0.3, 60, 3.0)
-            row["motion"] = _pick(c.get("motion"), MOTIONS, "zoomin")
+            row["motion"] = _pick(c.get("motion"), MOTIONS, "zoomin" if kind == "image" else "none")
         if _line(c.get("line")) is not None:
             row["line"] = c["line"]
         clips.append(row)
@@ -201,15 +222,27 @@ def clip_len(c):
     return round((c["out"] - c["in"]) / c["speed"], 3) if c["kind"] == "video" else c["dur"]
 
 
+def _hold(clips, i):
+    """สื่อของคลิป i ค้างต่ออีกเท่าไร — คลิปถัดไปละลายภาพทับ (dissolve) ต้องเห็นภาพเดิมอยู่ข้างใต้"""
+    return DISSOLVE if i + 1 < len(clips) and clips[i + 1].get("transition") == "dissolve" else 0.0
+
+
 def _clip_tags(clips, starts):
     """แทร็กหลัก — กล่องห่อ (ไม่จับเวลา) + สื่อ (จับเวลา) · contain = สำเนาเบลอเต็มจอด้านหลัง"""
     out = []
     for i, (c, t0) in enumerate(zip(clips, starts)):
-        d = clip_len(c)
+        d = clip_len(c) + _hold(clips, i)
+        if c["kind"] == "hero":
+            out.append(f'      <div id="c-{i}" class="tl-clip" aria-hidden="true" data-layout-ignore>\n'
+                       f'        <div id="h-{i}" class="clip tl-hero" data-start="{t0:.3f}" data-duration="{d:.3f}" data-track-index="2" '
+                       f'style="--t: {TINTS[c.get("tint", "gold")]};"></div>\n      </div>')
+            continue
         style = (f'object-fit: {c["fit"]}; object-position: {c["fx"] * 100:.1f}% {c["fy"] * 100:.1f}%;')
         src = html.escape(c["local"], quote=True)
         common = f'data-start="{t0:.3f}" data-duration="{d:.3f}"'
         if c["kind"] == "video":
+            # ค้างต่อให้ละลายภาพ: แค่ยืด data-duration (d) — เกินท้ายช่วงที่ตัดไว้ = ค้างเฟรมสุดท้าย 0.5 วิใต้ภาพใหม่
+            # ห้ามแก้ c["out"] ตรงนี้: ชั้นเอฟเฟกต์ (_layer_tags) คำนวณความยาวจาก clip_len ทีหลัง → ซ้อนทับฉากถัดไป
             media = (f'data-media-start="{c["in"]:.3f}" data-playback-rate="{c["speed"]}"')
             audio = (f'data-has-audio="true" data-volume="{c["volume"]:.2f}"' if c["volume"] > 0.001 else "muted")
             fill = (f'<video id="vf-{i}" class="clip tl-fill" src="{src}" muted playsinline {common} {media} '
@@ -255,10 +288,15 @@ def _resolve_gen(tl, plan):
     budget = int(plan.get("paint_budget", PAINT_BUDGET))
     rng = random.Random(f"gen:{plan.get('project')}")
     painted, used_lib, used_px, done = 0, set(), set(), []
+    same = {}                                              # ช็อตย่อยของฉากเดียวกัน (จังหวะไวรัล) → ไฟล์เดียวกัน
     for i, c in todo:
         g = c.get("gen") or {}
         dur = clip_len(c)
-        got = None
+        sig = (c["src"], g.get("prompt"), g.get("query"))
+        got = dict(same[sig]) if sig in same else None
+        if got and got["kind"] == "video":                 # วิดีโอ: ช็อตย่อยถัดไปเริ่มต่อจากช่วงก่อน (ไม่เล่นซ้ำท่อนเดิม)
+            got["in"] = round(got["out"], 3)
+            got["out"] = round(got["in"] + dur * got["speed"], 3)
         want = [g["kind"], "footage" if g["kind"] == "paint" else "library"]
         for how in want + ["library"]:
             if got:
@@ -288,6 +326,7 @@ def _resolve_gen(tl, plan):
                     used_lib.add(hit["key"])
         if not got:
             got = {"kind": "image", "src": "assets/machine-scene.jpg", "via": "ภาพสำรอง"}
+        same.setdefault(sig, got)
         c["kind"], c["src"] = got["kind"], got["src"]
         if got["kind"] == "video":
             c.update(fit="cover", **{k: got[k] for k in ("in", "out", "speed", "volume")})
@@ -419,11 +458,18 @@ def _overlay_tags(overlays, proj):
     return "\n".join(out)
 
 
-def _captions(proj, chunks):
+def _captions(proj, chunks, hype=()):
+    """ซับ · hype = ช่วงเวลา [(เริ่ม, จบ)] ของคลิปจังหวะไวรัล → ท่อนที่เริ่มในช่วงนั้นเป็นคำยักษ์กลางจอ สลับสีขาว/ทอง"""
     caps = []
+    n_hype = 0
     for k, c in enumerate(chunks):
         s, e = round(float(c["start"]), 3), round(float(c["end"]), 3)
-        caps.append(f'        <div id="cap-{k + 1}" class="clip cap" data-start="{s}" data-duration="{max(0.3, e - s):.3f}" '
+        big = any(a - 0.05 <= s < b for a, b in hype)
+        cls = "clip cap"
+        if big:
+            cls += " hype" + (" alt" if n_hype % 2 else "")
+            n_hype += 1
+        caps.append(f'        <div id="cap-{k + 1}" class="{cls}" data-start="{s}" data-duration="{max(0.3, e - s):.3f}" '
                     f'data-track-index="0"><span class="cap-text">{R._caption_html(c["text"], set(), BRAND)}</span></div>')
     tpl = (R.TEMPLATE / "scaffold" / "captions.template.html").read_text(encoding="utf-8")
     (proj / "compositions" / "captions.html").write_text(tpl.replace("{{CAPTIONS}}", "\n".join(caps)), encoding="utf-8")
@@ -483,6 +529,12 @@ def build_video(plan, out_mp4=None, check=True):
     t0 = time.time()
     fetched = {}                                            # ไฟล์เดียวกันหลายชิ้น (หั่นคลิป) → โหลดครั้งเดียว
     for i, c in enumerate(tl["clips"]):
+        if c["kind"] == "hero":                            # ฉากเปิดตัวซอง: รูปซองจริง (sku:) เป็นตัวเอก
+            key = "sku:" + c["src"][5:]
+            if key not in fetched:
+                fetched[key] = R.resolve_image(key, proj, f"src-{len(fetched)}")
+            c["local"] = fetched[key]
+            continue
         if c["src"] not in fetched:
             fetched[c["src"]] = R.resolve_image(c["src"], proj, f"src-{len(fetched)}")
         c["local"] = fetched[c["src"]]
@@ -526,14 +578,16 @@ def build_video(plan, out_mp4=None, check=True):
     # ── 4. index.html + ซับ
     if wav:
         shutil.copyfile(wav, proj / "assets" / "voice.wav")
-    _captions(proj, chunks if (tl["captions"] and wav) else [])
+    hype = [(s, s + clip_len(c)) for c, s in zip(tl["clips"], starts) if c.get("hype")]
+    _captions(proj, chunks if (tl["captions"] and wav) else [], hype)
     caption_slot = (f'      <div id="captions-slot" data-composition-id="captions" data-composition-src="compositions/captions.html" '
                     f'data-start="0" data-duration="{duration}" data-track-index="7" data-track-kind="captions" '
                     f'data-width="1080" data-height="1920"></div>')
     audio = (f'      <audio id="vo" src="assets/voice.wav" data-start="0" data-duration="{round(voice_total, 3)}" '
              f'data-track-index="9" data-volume="1"></audio>') if wav else ""
     tl_json = {"clips": [{"i": i, "start": s, "dur": clip_len(c), "kind": c["kind"], "zoom": c["zoom"],
-                          "motion": c.get("motion", "none"), "transition": c["transition"], "layer": c.get("layer", "none")}
+                          "motion": c.get("motion", "none"), "transition": c["transition"], "layer": c.get("layer", "none"),
+                          **({"pk": c["local"]} if c["kind"] == "hero" else {})}
                          for i, (c, s) in enumerate(zip(tl["clips"], starts))],
                "overlays": [{"i": i, "start": o["start"], "end": o["end"], "anim": o["anim"], "kind": o["type"]}
                             for i, o in enumerate(tl["overlays"])]}
@@ -549,6 +603,12 @@ def build_video(plan, out_mp4=None, check=True):
     sfx = []
     if tl["sfx"]:
         sfx += [(round(max(0.0, s - 0.2), 3), "whoosh", None) for s in starts[1:]]
+        # ฉากเปิดตัวซอง: วูบตอนพุ่งเข้า · ประกายตอนแสงกวาด · ไต่ระดับตอนสะสมพลัง · กระแทกตอนระเบิด (เวลาเดียวกับเทมเพลต)
+        for c, s in zip(tl["clips"], starts):
+            if c["kind"] == "hero":
+                k = max(0.55, min(1.3, clip_len(c) / 4.2))
+                sfx += [(round(s + 0.12 * k, 3), "whoosh", None), (round(s + 1.3 * k, 3), "shine", None),
+                        (round(s + 2.0 * k, 3), "riser", round(0.8 * k, 3)), (round(s + 2.8 * k, 3), "impact", None)]
         sfx += [(round(o["start"] + 0.02, 3), "pop", None) for o in tl["overlays"] if o["type"] != "logo" and o["start"] > 0.05]
     (work / "sfx.json").write_text(json.dumps([e for e in sfx if 0 <= e[0] < duration]), encoding="utf-8")
     _log(f"ประกอบไทม์ไลน์ {duration:.1f} วิ · เอฟเฟกต์ {len(sfx)} จุด")

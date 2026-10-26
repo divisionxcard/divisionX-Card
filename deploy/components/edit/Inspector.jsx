@@ -168,7 +168,8 @@ export default function Inspector({ state, dispatch, api }) {
     const idx = state.tl.clips.findIndex(x => x.id === c.id)
     return (
       <div className={s.insp}>
-        <div className={s.inspHead}>{isVid ? <Film size={16} /> : <ImageIcon size={16} />}{isVid ? "คลิปวิดีโอ" : "รูป"}<small>{c.name}</small></div>
+        <div className={s.inspHead}>{isVid ? <Film size={16} /> : <ImageIcon size={16} />}{isVid ? "คลิปวิดีโอ" : c.kind === "hero" ? "ฉากเปิดตัวซอง" : "รูป"}<small>{c.kind === "hero" ? c.src.slice(5) : c.name}</small></div>
+        {c.kind === "hero" && <p className={s.hint}>ซองพุ่งหมุน 3 มิติ → แสงโครเมียมกวาด → สั่นสะสมพลัง → ระเบิดแสง → การ์ดเรืองแสงกางพัด · จังหวะยืดหดตามความยาวฉาก (เหมาะ 3–5 วิ)</p>}
         <div className={s.note}>ยาวบนไทม์ไลน์ <b>{clipLen(c).toFixed(1)} วิ</b>{isVid && c.seconds > 0 && <> · ไฟล์จริง {c.seconds.toFixed(1)} วิ</>}</div>
         {isVid ? (
           <>
@@ -193,6 +194,10 @@ export default function Inspector({ state, dispatch, api }) {
           <span className={s.lab}>กล้อง</span>
           <Chips value={c.motion || (isVid ? "none" : "zoomin")} options={MOTIONS} labels={MOTION_TH} onPick={(v) => upClip({ motion: v }, "motion")} />
         </div>
+        <label className={s.check}>
+          <input type="checkbox" checked={!!c.hype} onChange={(e) => upClip({ hype: e.target.checked || undefined }, "hype")} />
+          ซับคำยักษ์กลางจอช่วงนี้ (จังหวะไวรัล)
+        </label>
         <div className={s.field}>
           <span className={s.lab}>เอฟเฟกต์ซ้อน (ขยับตลอดฉาก)</span>
           <Chips value={c.layer || "none"} options={LAYERS} labels={LAYER_TH} onPick={(v) => upClip({ layer: v }, "layer")} />

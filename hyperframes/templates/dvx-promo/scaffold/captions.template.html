@@ -13,6 +13,7 @@
     <template>
       <style>
         @font-face { font-family: "Kanit"; src: url("assets/fonts/Kanit-ExtraBold.ttf"); font-weight: 800; }
+        @font-face { font-family: "Kanit"; src: url("assets/fonts/Kanit-Black.ttf"); font-weight: 900; }
         #root { position: absolute; inset: 0; overflow: hidden; pointer-events: none; font-family: "Kanit", sans-serif; }
         .cap { position: absolute; left: 70px; right: 70px; top: 1330px; display: flex; justify-content: center; }
         .cap-text {
@@ -24,6 +25,11 @@
         }
         .cap-text .hl { color: #59d2ff; }
         .cap-text .hot { color: var(--hot, #ffc24a); }   /* สีเน้นของชุดหน้าตา (ตั้งที่ slot ใน index.html) */
+        /* ซับคำยักษ์ (ฉากจังหวะไวรัล · 26 ต.ค. 2026 ต้นแบบ A) — ใหญ่ กลางจอค่อนล่าง กระแทกเข้า สลับสีขาว/ทอง */
+        .cap.hype { top: 1060px; }
+        .cap.hype .cap-text { font-weight: 900; font-size: 112px; line-height: 1.14; -webkit-text-stroke: 16px #03102a;
+          text-shadow: 0 10px 0 #03102a, 0 0 40px rgba(3, 16, 42, 0.9); }
+        .cap.hype.alt .cap-text { color: #ffd84a; }
       </style>
 
       <div data-hf-id="hf-3147" id="root" data-composition-id="captions" data-width="1080" data-height="1920">
@@ -34,14 +40,19 @@
         (function () {
           const tl = gsap.timeline({ paused: true });
           // ซับแต่ละท่อนเด้งขึ้นตอนเริ่มพูด — ท่อนเป็น clip ของ runtime จึง tween เฉพาะตัวลูก (.cap-text)
-          document.querySelectorAll("#root .cap").forEach((cap) => {
+          const prand = (n) => { const x = Math.sin(n * 127.1 + 311.7) * 43758.5453; return x - Math.floor(x); };
+          document.querySelectorAll("#root .cap").forEach((cap, k) => {
             const s = Number(cap.getAttribute("data-start"));
-            tl.fromTo(
-              cap.querySelector(".cap-text"),
-              { scale: 0.86, y: 18, opacity: 0 },
-              { scale: 1, y: 0, opacity: 1, duration: 0.16, ease: "power3.out", immediateRender: false },
-              s,
-            );
+            const txt = cap.querySelector(".cap-text");
+            if (cap.classList.contains("hype")) {
+              // เห็นทันทีตรงจังหวะพูด แล้วหดจากใหญ่ลงขนาดจริง + สั่นสั้น ๆ
+              tl.set(txt, { opacity: 1 }, s);
+              tl.fromTo(txt, { scale: 1.7 }, { scale: 1, duration: 0.2, ease: "expo.out", immediateRender: false }, s);
+              for (let j = 0; j < 4; j++) tl.set(txt, { x: (prand(k * 7 + j) - 0.5) * 22, y: (prand(k * 11 + j) - 0.5) * 16 }, s + 0.2 + j * 0.04);
+              tl.set(txt, { x: 0, y: 0 }, s + 0.36);
+              return;
+            }
+            tl.fromTo(txt, { scale: 0.86, y: 18, opacity: 0 }, { scale: 1, y: 0, opacity: 1, duration: 0.16, ease: "power3.out", immediateRender: false }, s);
           });
           window.__timelines["captions"] = tl;
         })();
