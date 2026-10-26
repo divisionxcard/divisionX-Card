@@ -27,7 +27,8 @@ const db = createClient(
 )
 
 const TABLE = "video_jobs"
-const STATUSES = ["queued", "rendering", "done", "failed"]
+// planned = แผนพร้อม รอคนกดอนุมัติ (ขั้นดูแผน · migration 082 · 26 ต.ค. 2026)
+const STATUSES = ["queued", "rendering", "planned", "done", "failed"]
 
 // id เป็น uuid — ต้องคัดรูปแบบเองก่อนส่งให้ PostgREST
 // ถ้าปล่อยค่ามั่ว ๆ ผ่านไป Postgres จะตอบ "invalid input syntax for type uuid"
@@ -40,6 +41,14 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 const LIST_COLS =
   "id, project, status, content_id, video_url, duration_seconds, error, " +
   "created_at, updated_at"
+
+// qa = รายงานด่านตรวจหลังเรนเดอร์ (agents/video/qa.py) — คอลัมน์มากับ migration 082
+// ยังไม่ได้รัน = ขอคอลัมน์ที่ไม่มีแล้ว select พังทั้งก้อน (42703) → ลองใหม่โดยไม่ขอ qa ให้หน้าเว็บยังใช้ได้
+async function withQa(build) {
+  const r = await build(`${LIST_COLS}, qa`)
+  if (r.error && /\bqa\b/.test(r.error.message || "")) return build(LIST_COLS)
+  return r
+}
 
 export async function GET(req) {
   const gate = await requireUser(req)
@@ -54,10 +63,10 @@ export async function GET(req) {
       if (!UUID_RE.test(idParam)) {
         return NextResponse.json({ error: "id ต้องเป็น uuid" }, { status: 400 })
       }
-      const { data, error } = await db.from(TABLE)
-        .select(`${LIST_COLS}, plan`)
+      const { data, error } = await withQa(cols => db.from(TABLE)
+        .select(`${cols}, plan`)
         .eq("id", idParam)
-        .maybeSingle()
+        .maybeSingle())
       if (error) throw error
       if (!data) return NextResponse.json({ error: `ไม่พบงาน id=${idParam}` }, { status: 404 })
       return NextResponse.json(data)
@@ -86,15 +95,16 @@ export async function GET(req) {
     // ไม่ได้แปลว่าใหม่/เก่า · ที่ต้องมี id ต่อท้ายเพราะสองใบที่สั่งติดกันมี created_at
     // เท่ากันได้ ถ้าไม่มีตัวตัดสินลำดับจะสลับไปมาเองทุกรอบ poll (หน้าเว็บกระพริบ
     // โดยไม่มีอะไรเปลี่ยนจริง) · uuid เป็นตัวตัดสินที่ "มั่ว แต่คงที่" ซึ่งพอสำหรับงานนี้
-    let q = db.from(TABLE).select(LIST_COLS)
-      .order("created_at", { ascending: false })
-      .order("id", { ascending: false })
-      .limit(limit)
-    if (wanted.length) q = wanted.length > 1 ? q.in("status", wanted) : q.eq("status", wanted[0])
     const project = (searchParams.get("project") || "").trim()
-    if (project) q = q.eq("project", project)
-
-    const { data, error } = await q
+    const { data, error } = await withQa(cols => {
+      let q = db.from(TABLE).select(cols)
+        .order("created_at", { ascending: false })
+        .order("id", { ascending: false })
+        .limit(limit)
+      if (wanted.length) q = wanted.length > 1 ? q.in("status", wanted) : q.eq("status", wanted[0])
+      if (project) q = q.eq("project", project)
+      return q
+    })
     if (error) throw error
 
     // ไม่นับยอดรวมแต่ละสถานะให้ที่นี่ — route นี้ถูก poll ซ้ำทุกไม่กี่วินาที

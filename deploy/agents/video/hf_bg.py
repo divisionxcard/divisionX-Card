@@ -319,12 +319,12 @@ def _upload_file(path, project, tag, ctype):
     return r2.upload(str(path), key, ctype)
 
 
-def footage(sig, rng, hist, plan, upload=True):
-    """ฟุตเทจจริงจาก Pixabay → plan["bg_video"] · คืน True ถ้าได้"""
+def footage(sig, rng, hist, plan, upload=True, query=None):
+    """ฟุตเทจจริงจาก Pixabay → plan["bg_video"] · คืน True ถ้าได้ · query = คำค้นจากแผนที่อนุมัติ (ขั้นดูแผน)"""
     import pathlib
     import tempfile
     used = {b.get("id") for b in _recent(hist, 8) if b.get("source") == "pixabay"}
-    query = footage_query(sig)
+    query = query or footage_query(sig)
     pick = _pixabay(query, rng, used) or _pixabay(FOOTAGE_FALLBACK.get(sig["hero"], FOOTAGE_FALLBACK[None]), rng, used)
     if not pick:
         _log(f"Pixabay ไม่มีฟุตเทจที่ใช้ได้สำหรับ '{query}' — วาดภาพแทน")
@@ -369,35 +369,14 @@ def _broll(sig, rng, hist):
     return rng.choice(exact or fresh)
 
 
-def ensure(plan, seed=None, hist=None, upload=True):
-    """เติมพื้นหลังให้แผน (ในที่) · คืน plan · มีแล้ว/ปิดไว้ = ไม่ทำอะไร"""
-    if plan.get("bg_image") or plan.get("bg_video") or plan.get("bg_auto") is False:
-        return plan
-    if (plan.get("engine") or "").lower() != "hyperframes":
-        return plan
-    rng = random.Random(f"bg:{seed or plan.get('project')}")
-    sig = signals(plan)
-    clip = _broll(sig, rng, hist)
-    if clip:
-        plan["bg_video"] = [clip["url"]]
-        plan["bg"] = {"source": "flow", "videos": [clip["url"]], "hero": sig["hero"], "id": clip.get("id")}
-        _log(f"ใช้คลิป Flow '{clip.get('id')}' (ค่าย {sig['hero']})")
-        return plan
-    # ฟุตเทจจริงเฉพาะค่ายที่ "โลก" ถ่ายได้จริง (ทะเล/พายุ/ภูเขา/วิหาร/โรงงาน/เวที) · โปเกมอน/โพนี่เป็นแฟนตาซี
-    # ค้นจริงได้ผีเสื้อบนดอกไม้มาเป็นฉากเลือกข้างโปเกมอน (23 ต.ค.) → ให้ AI วาดแทน · คลิปพิกัดตู้ไม่ใช้ (ห้างต่างประเทศ ≠ ห้างนี้)
-    can_footage = (bool(config.env("PIXABAY_API_KEY")) and sig["format"] != "map"
-                   and sig["hero"] not in FOOTAGE_SKIP)
-    medium, mdesc = choose_medium(rng, hist, footage=can_footage)
-    if plan.get("bg_medium") in [m[0] for m in MEDIA]:          # บังคับสื่อได้ (ทดสอบ / เจ้าของเลือกเอง)
-        medium, mdesc = next((k, d) for k, _, d in MEDIA if k == plan["bg_medium"])
-    if medium == "footage":
-        if footage(sig, rng, hist, plan, upload=upload):
-            return plan
-        medium, mdesc = choose_medium(rng, hist, footage=False)
-    if not config.env("OPENAI_API_KEY"):              # เช็กก่อนเรียก Gemini — ไม่เปลืองโควตาคิดฉากที่ไม่ได้วาด
-        _log("ไม่มี OPENAI_API_KEY และไม่มีคลิป Flow/ฟุตเทจที่ใช้ได้ — ใช้ลายกราฟิกเดิม")
-        return plan
-    scene, by = write_scene(sig, mdesc, hist)
+# ค่าวาดภาพพื้นหลัง 1 ใบ (gpt-image-2.5-flare · 1024×1536 · high) — ใช้แสดงในขั้นดูแผน ไม่ได้ใช้คิดเงินจริง
+AI_COST_USD = 0.04
+MEDIUM_TH = {"matte": "ภาพวาดแบบหนัง", "concept": "ภาพวาดคอนเซ็ปต์", "photo": "ภาพถ่าย", "render": "ภาพ 3 มิติ",
+             "anime": "ภาพแนวอนิเมะ", "diorama": "โมเดลจิ๋ว", "footage": "ฟุตเทจจริง"}
+
+
+def _paint_into(plan, sig, medium, scene, by, upload):
+    """วาดฉาก → อัป → plan["bg_image"] · ล้ม = คืน plan เดิม (คลิปใช้ลายกราฟิก)"""
     prompt = f"{scene}\n\n{COMPOSE}\n{HARD}"
     t0 = time.time()
     try:
@@ -421,6 +400,93 @@ def ensure(plan, seed=None, hist=None, upload=True):
         plan["_bg_png"] = png
     _log(f"วาดพื้นหลัง {medium} · ค่าย {sig['hero']} · ฉากจาก {by} ({time.time() - t0:.0f} วิ)")
     return plan
+
+
+def decide(plan, seed=None, hist=None):
+    """ขั้นดูแผน (26 ต.ค. 2026 · "AI เสนอ คนอนุมัติ") — ตัดสินใจพื้นหลังโดย **ไม่จ่ายเงิน** → plan["bg_plan"]
+
+    ทำแค่ส่วนที่ฟรี: เลือกคลิป Flow · เลือกสื่อ · คิดคำค้นฟุตเทจ / เขียนฉาก (Gemini คีย์ฟรี)
+    ไม่วาดภาพ ไม่โหลดฟุตเทจ — ensure() ทำตาม bg_plan นี้ทีหลัง หลังคนกดอนุมัติ
+    """
+    if plan.get("bg_image") or plan.get("bg_video") or plan.get("bg_auto") is False:
+        return plan
+    if (plan.get("engine") or "").lower() != "hyperframes":
+        return plan
+    rng = random.Random(f"bg:{seed or plan.get('project')}")
+    sig = signals(plan)
+    clip = _broll(sig, rng, hist)
+    if clip:
+        plan["bg_plan"] = {"source": "flow", "url": clip["url"], "id": clip.get("id"), "hero": sig["hero"],
+                           "cost_usd": 0, "label": "คลิป Google Flow ที่ทำไว้"}
+        return plan
+    can_footage = (bool(config.env("PIXABAY_API_KEY")) and sig["format"] != "map"
+                   and sig["hero"] not in FOOTAGE_SKIP)
+    medium, mdesc = choose_medium(rng, hist, footage=can_footage)
+    if plan.get("bg_medium") in [m[0] for m in MEDIA]:
+        medium, mdesc = next((k, d) for k, _, d in MEDIA if k == plan["bg_medium"])
+    if medium == "footage":
+        plan["bg_plan"] = {"source": "pixabay", "medium": "footage", "query": footage_query(sig), "hero": sig["hero"],
+                           "cost_usd": 0, "label": "ฟุตเทจจริงฟรีจาก Pixabay"}
+        return plan
+    if not config.env("OPENAI_API_KEY"):
+        plan["bg_plan"] = {"source": "none", "cost_usd": 0, "label": "ลายกราฟิกเดิม (ไม่มีคีย์วาดภาพ)"}
+        return plan
+    scene, by = write_scene(sig, mdesc, hist)
+    plan["bg_plan"] = {"source": "ai", "medium": medium, "scene": scene, "scene_by": by, "hero": sig["hero"],
+                       "model": IMAGE_MODEL, "cost_usd": AI_COST_USD,
+                       "label": f"AI วาดฉากใหม่ ({MEDIUM_TH.get(medium, medium)})"}
+    return plan
+
+
+def _follow(plan, bp, rng, sig, hist, upload):
+    """ทำตามแผนที่คนอนุมัติแล้ว — **ห้ามจ่ายเกินที่แผนบอก** (แผนฟรีแล้วฟุตเทจหาไม่เจอ = ลายกราฟิก ไม่ตกไปวาด)"""
+    src = bp.get("source")
+    if src == "flow" and bp.get("url"):
+        plan["bg_video"] = [bp["url"]]
+        plan["bg"] = {"source": "flow", "videos": [bp["url"]], "hero": sig["hero"], "id": bp.get("id")}
+        _log(f"ตามแผน: คลิป Flow '{bp.get('id')}'")
+    elif src == "pixabay":
+        if not footage(sig, rng, hist, plan, upload=upload, query=bp.get("query")):
+            _log("ตามแผน: ฟุตเทจหาไม่เจอ — ใช้ลายกราฟิกเดิม (แผนที่อนุมัติไม่มีค่าวาดภาพ จึงไม่วาดแทน)")
+    elif src == "ai" and bp.get("scene"):
+        _paint_into(plan, sig, bp.get("medium") or "concept", bp["scene"], bp.get("scene_by") or "plan", upload)
+    else:
+        _log("ตามแผน: ไม่ใช้พื้นหลังภาพ — ลายกราฟิกเดิม")
+    return plan
+
+
+def ensure(plan, seed=None, hist=None, upload=True):
+    """เติมพื้นหลังให้แผน (ในที่) · คืน plan · มีแล้ว/ปิดไว้ = ไม่ทำอะไร · มี bg_plan (ผ่านขั้นดูแผน) = ทำตามนั้น"""
+    if plan.get("bg_image") or plan.get("bg_video") or plan.get("bg_auto") is False:
+        return plan
+    if (plan.get("engine") or "").lower() != "hyperframes":
+        return plan
+    rng = random.Random(f"bg:{seed or plan.get('project')}")
+    sig = signals(plan)
+    if isinstance(plan.get("bg_plan"), dict):
+        return _follow(plan, plan["bg_plan"], rng, sig, hist, upload)
+    clip = _broll(sig, rng, hist)
+    if clip:
+        plan["bg_video"] = [clip["url"]]
+        plan["bg"] = {"source": "flow", "videos": [clip["url"]], "hero": sig["hero"], "id": clip.get("id")}
+        _log(f"ใช้คลิป Flow '{clip.get('id')}' (ค่าย {sig['hero']})")
+        return plan
+    # ฟุตเทจจริงเฉพาะค่ายที่ "โลก" ถ่ายได้จริง (ทะเล/พายุ/ภูเขา/วิหาร/โรงงาน/เวที) · โปเกมอน/โพนี่เป็นแฟนตาซี
+    # ค้นจริงได้ผีเสื้อบนดอกไม้มาเป็นฉากเลือกข้างโปเกมอน (23 ต.ค.) → ให้ AI วาดแทน · คลิปพิกัดตู้ไม่ใช้ (ห้างต่างประเทศ ≠ ห้างนี้)
+    can_footage = (bool(config.env("PIXABAY_API_KEY")) and sig["format"] != "map"
+                   and sig["hero"] not in FOOTAGE_SKIP)
+    medium, mdesc = choose_medium(rng, hist, footage=can_footage)
+    if plan.get("bg_medium") in [m[0] for m in MEDIA]:          # บังคับสื่อได้ (ทดสอบ / เจ้าของเลือกเอง)
+        medium, mdesc = next((k, d) for k, _, d in MEDIA if k == plan["bg_medium"])
+    if medium == "footage":
+        if footage(sig, rng, hist, plan, upload=upload):
+            return plan
+        medium, mdesc = choose_medium(rng, hist, footage=False)
+    if not config.env("OPENAI_API_KEY"):              # เช็กก่อนเรียก Gemini — ไม่เปลืองโควตาคิดฉากที่ไม่ได้วาด
+        _log("ไม่มี OPENAI_API_KEY และไม่มีคลิป Flow/ฟุตเทจที่ใช้ได้ — ใช้ลายกราฟิกเดิม")
+        return plan
+    scene, by = write_scene(sig, mdesc, hist)
+    return _paint_into(plan, sig, medium, scene, by, upload)
 
 
 def main(argv=None):

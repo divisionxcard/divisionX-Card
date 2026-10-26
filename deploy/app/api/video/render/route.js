@@ -1,4 +1,8 @@
-// สั่งเรนเดอร์วิดีโอสั้น — POST /api/video/render { plan, content_id? }
+// สั่งเรนเดอร์วิดีโอสั้น — POST /api/video/render { plan, content_id?, preview? }
+//   ดูแผนก่อน (26 ต.ค. 2026):  { plan, preview: true }  → ผู้กำกับเขียนแผนบน runner (ไม่จ่ายเงิน) → status planned
+//                               { approve: "<job id>" }  → แผนที่ดูแล้ว → queued → เรนเดอร์ตามแผนนั้นทั้งก้อน
+//                               { cancel:  "<job id>" }  → ทิ้งแผน (status failed · error บอกว่ายกเลิกเอง)
+//   ที่มา: เจ้าของถอดแนวคิดคลิป "ระบบทำวีดีโอ" (OpenMontage) แล้วเลือก "วางแผนก่อนสร้าง · AI เสนอ คนอนุมัติ"
 //
 // ทำไมต้องยิงไป GitHub Actions แทนที่จะเรนเดอร์ตรงนี้ (เหตุผลเดียวกับโปสเตอร์):
 //   คลิปหนึ่งใช้ TTS ~3-4 นาที + whisper + Chromium + ffmpeg — เกินเพดานเวลาของ
@@ -11,7 +15,7 @@
 //
 // contract ฝั่ง DB — ยึดตาม backend/database/migrations/075_video_jobs.sql เป๊ะ ๆ:
 //   id UUID (gen_random_uuid) · project TEXT · plan JSONB
-//   status TEXT ('queued'|'rendering'|'done'|'failed')   ← ไม่มีคำว่า running
+//   status TEXT ('queued'|'rendering'|'planned'|'done'|'failed')   ← ไม่มีคำว่า running · planned มากับ migration 082
 //   content_id BIGINT → marketing_content(id) · created_by UUID → auth.users(id)
 //   error TEXT · video_url TEXT · duration_seconds NUMERIC
 //   created_at / updated_at TIMESTAMPTZ (updated_at มี trigger อัปเดตให้เอง)
@@ -69,6 +73,7 @@ const STALE_MINUTES = 60
 // GitHub ไม่เคยตอบช้าขนาดนี้ แต่ถ้าค้างจนถูก Vercel ตัดกลางคัน แถวที่จองไว้จะค้าง
 // queued ตลอดกาลโดยไม่มีใครไปปิด — timeout ของเราเองทำให้ยังมีจังหวะเขียน failed ทัน
 const DISPATCH_TIMEOUT_MS = 10000
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 // ── ตรวจแผนก่อนจอง job ──
 // คืน { plan } ถ้าผ่าน หรือ { error: "ข้อความไทย" } ถ้าไม่ผ่าน
@@ -270,9 +275,27 @@ export async function POST(req) {
   let body
   try { body = await req.json() } catch { return NextResponse.json({ error: "bad json" }, { status: 400 }) }
 
+  // ── อนุมัติ / ยกเลิกแผนที่ดูแล้ว ──
+  if (body?.approve !== undefined) return approvePlan(String(body.approve || ""), gate.user, token)
+  if (body?.cancel !== undefined) return cancelPlan(String(body.cancel || ""))
+
   const checked = validatePlan(body?.plan)
   if (checked.error) return NextResponse.json({ error: checked.error }, { status: 400 })
   const plan = checked.plan
+  // ดูแผนก่อน — ห้องตัดต่อไม่ต้อง (หน้าห้องตัดต่อคือแผนที่คนเห็นและจัดเองทุกชิ้นอยู่แล้ว)
+  const preview = body?.preview === true && plan.engine !== "timeline"
+  if (preview) {
+    // สถานะ planned + คอลัมน์ qa มากับ migration 082 ชุดเดียวกัน — ยังไม่รัน = ขั้นวางแผนจะไปล้มตอนบันทึกบน runner
+    // เช็กคอลัมน์ qa แทน (PostgREST อ่าน CHECK constraint ไม่ได้) · บอกตั้งแต่ตรงนี้ ไม่เสียรอบ Actions เปล่า ๆ
+    const { error: colErr } = await db.from(TABLE).select("qa").limit(1)
+    if (colErr && /\bqa\b/.test(colErr.message || "")) {
+      return NextResponse.json({
+        error: "ยังใช้ \"ดูแผนก่อน\" ไม่ได้ — ตารางคิววิดีโอยังไม่ได้อัปเดต",
+        hint: "รัน backend/database/migrations/082_video_jobs_qa_plan.sql ใน Supabase SQL Editor ครั้งเดียว · ระหว่างนี้กด \"ทำเลย\" ได้ตามเดิม",
+      }, { status: 409 })
+    }
+    plan.stage = "plan"
+  }
 
   // content_id ไม่บังคับ — ใช้ผูกคลิปกลับไปที่แคปชั่นที่อนุมัติแล้วใน marketing_content
   // (publish.finish_job จะเขียน media_url กลับไปที่แถวนั้นให้เมื่อเรนเดอร์เสร็จ)
@@ -339,6 +362,15 @@ export async function POST(req) {
       throw error
     }
 
+    return dispatch(token, job.id, preview ? "plan" : "render")
+  } catch (err) {
+    return NextResponse.json({ error: err.message }, { status: 500 })
+  }
+}
+
+// ── สั่ง workflow ด้วย job id · ล้ม = ปิดแถวเป็น failed พร้อมเหตุผล (ไม่ปล่อยค้าง queued) ──
+async function dispatch(token, jobId, stage = "render") {
+  try {
     let res
     try {
       res = await fetch(
@@ -353,17 +385,18 @@ export async function POST(req) {
           },
           // dispatch ตอบ 204 ตัวเปล่า ไม่คืน run id กลับมาเลย — ผูกงานกลับได้ทางเดียว
           // คือ job_id ที่ส่งเข้าไป runner จึงต้องเขียนสถานะกลับมาที่แถวนี้เอง
-          body: JSON.stringify({ ref: "main", inputs: { job_id: String(job.id) } }),
+          // (ขั้น plan/render ไม่ต้องส่งเป็น input — Preflight อ่านจาก plan.stage ของแถวเอง)
+          body: JSON.stringify({ ref: "main", inputs: { job_id: String(jobId) } }),
           signal: AbortSignal.timeout(DISPATCH_TIMEOUT_MS),
         }
       )
     } catch (err) {
-      await markFailed(job.id, `ยิง GitHub ไม่สำเร็จ: ${err.message}`)
-      return NextResponse.json({ error: err.message, job_id: job.id, status: "failed" }, { status: 502 })
+      await markFailed(jobId, `ยิง GitHub ไม่สำเร็จ: ${err.message}`)
+      return NextResponse.json({ error: err.message, job_id: jobId, status: "failed" }, { status: 502 })
     }
 
     if (res.status === 204) {
-      return NextResponse.json({ job_id: job.id, status: "queued" }, { status: 202 })
+      return NextResponse.json({ job_id: jobId, status: "queued", stage }, { status: 202 })
     }
 
     // ── dispatch ไม่ผ่าน = ต้องปิดแถวเป็น failed ──
@@ -375,7 +408,7 @@ export async function POST(req) {
     const reason = res.status === 404
       ? `GitHub หา ${WORKFLOW} ไม่เจอ — ต้อง push ขึ้น main ก่อน`
       : `GitHub ตอบ ${res.status}: ${detail}`
-    await markFailed(job.id, reason)
+    await markFailed(jobId, reason)
 
     // ⚠️ ห้ามส่ง status ของ GitHub ต่อให้เบราว์เซอร์ตรง ๆ
     //    ตัวห่อ fetch ของหน้าเว็บ (แม่แบบเดียวกับ api() ใน MarketingOS.jsx) ตีความ
@@ -388,9 +421,55 @@ export async function POST(req) {
         ? "GH_PAT บน Vercel หมดอายุหรือไม่มี scope workflow"
         : undefined,
       github_status: res.status,
-      job_id: job.id,
+      job_id: jobId,
       status: "failed",
     }, { status: 502 })
+  } catch (err) {
+    return NextResponse.json({ error: err.message }, { status: 500 })
+  }
+}
+
+// ── อนุมัติแผน: planned → queued → สั่งเรนเดอร์ ──
+// เปลี่ยนสถานะด้วยเงื่อนไข status=planned ใน query เดียว — กดอนุมัติซ้ำ/สองเครื่องพร้อมกันได้งานเดียว
+async function approvePlan(id, user, token) {
+  if (!UUID_RE.test(id)) return NextResponse.json({ error: "approve ต้องเป็น job id (uuid)" }, { status: 400 })
+  try {
+    const { data: job, error } = await db.from(TABLE).select("id, project, status, plan").eq("id", id).maybeSingle()
+    if (error) throw error
+    if (!job) return NextResponse.json({ error: `ไม่พบงาน id=${id}` }, { status: 404 })
+    if (job.status !== "planned") {
+      return NextResponse.json({ error: `งานนี้ไม่ได้รออนุมัติแล้ว (สถานะ ${job.status})`, status: job.status }, { status: 409 })
+    }
+    // ชื่อ project เดียวกันห้ามเรนเดอร์ซ้อนกัน (โฟลเดอร์งาน/ไฟล์ปลายทางเดียวกัน) — เหตุผลเดียวกับตัวกันสั่งซ้ำข้างบน
+    const { data: busy, error: busyErr } = await db.from(TABLE).select("id, status")
+      .eq("project", job.project).in("status", ["queued", "rendering"]).neq("id", id).limit(1).maybeSingle()
+    if (busyErr) throw busyErr
+    if (busy) {
+      return NextResponse.json({ error: `project "${job.project}" มีงานกำลังทำอยู่ (job ${busy.id}) — รอให้จบก่อน` }, { status: 409 })
+    }
+    const plan = { ...job.plan, stage: "approved", approved_at: new Date().toISOString(), approved_by: user?.id || null }
+    const { data: rows, error: upErr } = await db.from(TABLE)
+      .update({ status: "queued", plan, error: null })
+      .eq("id", id).eq("status", "planned")
+      .select("id")
+    if (upErr) throw upErr
+    if (!rows?.length) return NextResponse.json({ error: "มีคนกดอนุมัติ/ยกเลิกแผนนี้ไปแล้ว" }, { status: 409 })
+    return dispatch(token, id, "render")
+  } catch (err) {
+    return NextResponse.json({ error: err.message }, { status: 500 })
+  }
+}
+
+async function cancelPlan(id) {
+  if (!UUID_RE.test(id)) return NextResponse.json({ error: "cancel ต้องเป็น job id (uuid)" }, { status: 400 })
+  try {
+    const { data: rows, error } = await db.from(TABLE)
+      .update({ status: "failed", error: "ยกเลิกที่ขั้นดูแผน — ยังไม่ได้ใช้เงิน/เรนเดอร์" })
+      .eq("id", id).eq("status", "planned")
+      .select("id")
+    if (error) throw error
+    if (!rows?.length) return NextResponse.json({ error: "งานนี้ไม่ได้รออนุมัติแล้ว" }, { status: 409 })
+    return NextResponse.json({ job_id: id, status: "failed" })
   } catch (err) {
     return NextResponse.json({ error: err.message }, { status: 500 })
   }

@@ -30,6 +30,7 @@
     เพิ่ม --demo เพื่อเขียน index.html ตัวอย่างลงในโฟลเดอร์เทมเพลต (ไม่เรนเดอร์)
 """
 import argparse
+import hashlib
 import html
 import json
 import os
@@ -135,6 +136,14 @@ def prepare(plan, work):
     timing = align.map_segments(said, words, total) if words else align._even(segs, total)
     chunks = align.subtitle_chunks(segs, timing, max_chars=int(plan.get("sub_chars", 20)))
     _log("2/4", f"เวลา {len(words)} คำ · ซับ {len(chunks)} ท่อน ({time.time() - t0:.0f} วิ)")
+    # ให้ด่านตรวจหลังเรนเดอร์ (qa.py) อ่าน — ผูกกับสคริปต์ด้วย sha (ต้องตรงกับ qa.script_sha) กันไฟล์ค้างจากรอบก่อน
+    # aligned = จับเวลารายคำได้จริง · False = whisper ล้ม ซับแบ่งเวลาตามตัวอักษร (เคยเงียบ ๆ ไม่มีใครรู้)
+    try:
+        (work / "captions.json").write_text(json.dumps({
+            "script_sha": hashlib.sha1((plan.get("script") or "").encode("utf-8")).hexdigest()[:16],
+            "aligned": bool(words), "total": total, "chunks": chunks}, ensure_ascii=False), encoding="utf-8")
+    except Exception as e:
+        _log("2/4", f"⚠️ บันทึกข้อมูลซับให้ด่านตรวจไม่สำเร็จ ({str(e)[:60]})")
     return segs, wav, total, timing, words, chunks
 
 

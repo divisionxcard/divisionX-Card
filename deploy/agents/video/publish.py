@@ -45,6 +45,7 @@ except Exception:
 
 BUCKET = "marketing"        # bucket เดียวกับโปสเตอร์ (poster_render.py) — public read
 STORAGE_DIR = "video"       # เก็บแยกโฟลเดอร์จาก poster/ กับ aibg/ ที่มีอยู่แล้ว
+QA_DIR = "video-qa"         # ภาพรวมเฟรมของด่านตรวจหลังเรนเดอร์ (qa.py) · ชื่อตาม project ทับรอบเก่าเหมือนคลิป
 
 _CREDS = None
 
@@ -173,6 +174,35 @@ def upload_video(mp4_path, project):
     return url
 
 
+def run_qa(mp4, plan, duration):
+    """ด่านตรวจหลังเรนเดอร์ (qa.py · 26 ต.ค. 2026 · "เรนเดอร์เสร็จ ≠ งานเสร็จ") → รายงาน หรือ None ถ้าตัวตรวจเองล้ม
+
+    ⚠️ ตัวตรวจล้ม ≠ คลิปเสีย — คืน None แล้วปิดงานตามเดิม (ห้ามให้ด่านตรวจเป็นเหตุให้คลิปที่ดีหาย)
+    """
+    project = plan.get("project") or "clip"
+    try:
+        from . import qa
+        sheet = pathlib.Path(mp4).with_name("qa-sheet.jpg")
+        rep = qa.run(mp4, plan, expected=duration, work=config.work_dir(project), sheet=sheet)
+        if rep.get("sheet"):
+            try:
+                url = r2.upload(pathlib.Path(rep["sheet"]).read_bytes(), f"{QA_DIR}/{_safe_name(project)}.jpg",
+                                "image/jpeg")
+                # ชื่อไฟล์เดิมทุกรอบ + /media แคช 1 ชม. → ใส่ ?v= ให้เบราว์เซอร์โหลดภาพของรอบนี้
+                rep["sheet_url"] = f"{url}?v={int(time.time())}"
+            except Exception as e:
+                print(f"::warning::อัปภาพรวมเฟรมไม่สำเร็จ: {str(e)[:160]}")
+        rep.pop("sheet", None)                  # path ในเครื่อง runner ไม่มีความหมายบนเว็บ
+        print(f"[publish] ด่านตรวจ ({rep['level']}): {qa.summary(rep)}")
+        for c in rep["checks"]:
+            if c["status"] in ("warn", "fail"):
+                print(f"::warning::ด่านตรวจ · {c['label']}: {c['detail']}")
+        return rep
+    except Exception as e:
+        print(f"::warning::ด่านตรวจหลังเรนเดอร์ล้ม ({str(e)[:200]}) — ปิดงานตามเดิมโดยไม่มีรายงาน")
+        return None
+
+
 # ── สถานะงานในคิว ────────────────────────────────────────────────────────
 def claim_job(job_id):
     """จองงานแล้วคืน plan — เปลี่ยนสถานะ queued → rendering
@@ -231,14 +261,82 @@ def save_plan(job_id, plan):
         print(f"::warning::บันทึกแผนที่ผู้กำกับเขียนกลับลงงาน {job_id} ไม่สำเร็จ: {str(e)[:200]}")
 
 
-def finish_job(job_id, video_url, duration_seconds):
-    """ปิดงานเป็น done + เขียนลิงก์กลับ marketing_content ถ้างานนี้ผูกกับคอนเทนต์"""
-    rows = sb("PATCH", f"video_jobs?id=eq.{_q(job_id)}",
-              {"status": "done",
-               "video_url": video_url,
-               "duration_seconds": round(float(duration_seconds), 2),
-               "error": None,
-               })
+# ── ขั้นดูแผน (26 ต.ค. 2026 · "วางแผนก่อนสร้าง · AI เสนอ คนอนุมัติ") ─────────────────────
+USD_THB = 35                # ใช้แสดงค่าใช้จ่ายโดยประมาณเท่านั้น
+CHARS_PER_SEC = 9.5         # วัดจากคลิปจริง: quiz 140 ตัว/14.5 วิ · rank 210 ตัว/25 วิ (รวมจังหวะหยุด)
+
+
+def estimate(plan):
+    """ค่าใช้จ่าย + ความยาวโดยประมาณของแผน — ให้คนเห็นก่อนกดอนุมัติ"""
+    from . import segments
+    segs = segments.split_script(plan.get("script") or "")
+    chars = sum(len(re.sub(r"\s", "", s["text"])) for s in segs)
+    bp = plan.get("bg_plan") or {}
+    items = [{"what": "เสียงพากย์ Gemini", "usd": 0, "note": "ฟรี (โควตารายวัน)"},
+             {"what": "ประกอบคลิปบน GitHub Actions", "usd": 0, "note": "ฟรี"}]
+    if bp:
+        items.append({"what": f"พื้นหลัง: {bp.get('label') or bp.get('source')}", "usd": float(bp.get("cost_usd") or 0),
+                      "note": "จ่ายหลังอนุมัติเท่านั้น" if bp.get("cost_usd") else "ฟรี"})
+    usd = round(sum(i["usd"] for i in items), 3)
+    return {"lines": len(segs), "seconds": round(chars / CHARS_PER_SEC + 0.9, 1), "items": items,
+            "usd": usd, "thb": round(usd * USD_THB, 1), "render_minutes": "5–10"}
+
+
+def make_plan(job_id, plan):
+    """ขั้นดูแผน: ผู้กำกับเขียนแผน + เลือกพื้นหลัง (ไม่วาด ไม่จ่าย) → status planned รอคนกดอนุมัติ
+
+    เรนเดอร์จริงหลังอนุมัติใช้แผนนี้ทั้งก้อน: มีคีย์ director แล้ว = ผู้กำกับไม่เขียนใหม่ ·
+    มี bg_plan = hf_bg.ensure ทำตามนั้น (ไม่สุ่มใหม่ และไม่จ่ายเกินที่แผนบอก)
+    """
+    from .hf_director import Director, direct, history
+    hist = history(exclude_id=job_id)
+    if plan.get("format") and not plan.get("director"):
+        plan = direct(plan, seed=job_id, project=plan["project"], hist=hist)
+    elif (plan.get("engine") or "").lower() == "hyperframes" and not isinstance(plan.get("look"), dict):
+        plan["look"] = Director(job_id, hist).look()
+    if (plan.get("engine") or "").lower() == "hyperframes" and not (plan.get("bg_image") or plan.get("bg_video")):
+        try:
+            from .hf_bg import decide
+            decide(plan, seed=job_id, hist=hist)
+        except Exception as e:
+            print(f"[publish] ⚠️ เลือกพื้นหลังไม่สำเร็จ ({str(e)[:120]}) — แผนนี้ใช้ลายกราฟิกเดิม")
+            plan["bg_plan"] = {"source": "none", "cost_usd": 0, "label": "ลายกราฟิกเดิม"}
+    plan["estimate"] = estimate(plan)
+    plan["stage"] = "review"
+    try:
+        rows = sb("PATCH", f"video_jobs?id=eq.{_q(job_id)}&status=eq.rendering", {"status": "planned", "plan": plan})
+    except RuntimeError as e:
+        if "23514" in str(e) or "check constraint" in str(e):
+            raise RuntimeError("แผนพร้อมแล้ว แต่ตารางยังไม่รู้จักสถานะ planned — รัน backend/database/migrations/"
+                               "082_video_jobs_qa_plan.sql ใน Supabase SQL Editor แล้วกด \"ดูแผนก่อน\" ใหม่") from None
+        raise
+    if not rows:
+        raise RuntimeError("บันทึกแผนไม่สำเร็จ — แถวงานไม่ได้อยู่ในสถานะ rendering แล้ว")
+    e = plan["estimate"]
+    print(f"[publish] แผนพร้อม · {e['lines']} บรรทัด · ~{e['seconds']} วิ · ค่าใช้จ่ายราว {e['thb']} บาท — รอคนกดอนุมัติ")
+
+
+def finish_job(job_id, video_url, duration_seconds, qa=None):
+    """ปิดงานเป็น done + เขียนลิงก์กลับ marketing_content ถ้างานนี้ผูกกับคอนเทนต์
+
+    qa = รายงานด่านตรวจ (run_qa) · ไม่ผ่าน (level=fail) = ปิดงาน done ตามเดิม (คลิปยังเปิดดูได้)
+    แต่ **ไม่ผูกเข้าคอนเทนต์** — คลิปที่ภาพหาย/เสียงเงียบต้องไม่ไปแทนโปสเตอร์ในคิวโพสต์เงียบ ๆ
+    """
+    body = {"status": "done",
+            "video_url": video_url,
+            "duration_seconds": round(float(duration_seconds), 2),
+            "error": None,
+            }
+    try:
+        rows = sb("PATCH", f"video_jobs?id=eq.{_q(job_id)}", {**body, **({"qa": qa} if qa else {})})
+    except RuntimeError as e:
+        # คอลัมน์ qa มากับ migration 082 — ยังไม่ได้รัน = PostgREST ไม่รู้จักคอลัมน์ (PGRST204) → ปิดงานแบบเดิม
+        msg = str(e)
+        if not (qa and "qa" in msg and ("PGRST204" in msg or "column" in msg)):
+            raise
+        print("::warning::ตาราง video_jobs ยังไม่มีคอลัมน์ qa — รัน backend/database/migrations/"
+              "082_video_jobs_qa_plan.sql ใน Supabase SQL Editor (รายงานด่านตรวจของรอบนี้อยู่ใน log ข้างบน)")
+        rows = sb("PATCH", f"video_jobs?id=eq.{_q(job_id)}", body)
     if not rows:
         raise RuntimeError(
             f"อัปคลิปขึ้นแล้ว ({video_url}) แต่หาแถว {job_id} ไม่เจอตอนปิดงาน "
@@ -248,6 +346,11 @@ def finish_job(job_id, video_url, duration_seconds):
     content_id = rows[0].get("content_id")
     if not content_id:
         return                                  # เรนเดอร์เดี่ยว ไม่ได้ผูกกับคอนเทนต์
+    if qa and qa.get("level") == "fail":
+        bad = " · ".join(f"{c['label']}: {c['detail']}" for c in qa["checks"] if c["status"] == "fail")
+        print(f"::warning::ด่านตรวจไม่ผ่าน — ไม่ผูกคลิปเข้าคอนเทนต์ id={content_id} ({bad[:300]}) "
+              f"· คลิปอยู่ที่ {video_url} ดูแล้วใช้ได้ค่อยใส่เอง")
+        return
 
     # media_url / media_type มีมาตั้งแต่ migration 059 · media_type ถูก check constraint
     # จำกัดไว้แค่ image | video | none — ส่งค่าอื่น Postgres ปฏิเสธทั้งแถว
@@ -321,6 +424,16 @@ def main():
     plan = claim_job(job_id)
     print(f"[publish] จองงาน {job_id} · project={plan.get('project')}")
 
+    if plan.get("stage") == "plan":
+        try:
+            make_plan(job_id, plan)
+        except BaseException as e:
+            msg = f"{e.__class__.__name__}: {e}\n\n{traceback.format_exc()}"
+            print(msg, file=sys.stderr)
+            fail_job(job_id, f"ขั้นดูแผนล้ม — {msg}")
+            raise SystemExit(1)
+        return
+
     try:
         # import ตรงนี้ ไม่ใช่บนหัวไฟล์ ด้วยเหตุผลสองข้อ:
         #   1) claim/finish/fail ต้องเรียกได้จากเครื่องที่ไม่มี ffmpeg/torch/playwright
@@ -368,7 +481,8 @@ def main():
         url = upload_video(mp4, plan.get("project") or job_id)
         print(f"[publish] {url}")
 
-        finish_job(job_id, url, duration)
+        report = run_qa(mp4, plan, duration)
+        finish_job(job_id, url, duration, qa=report)
         print("[publish] ปิดงานเป็น done เรียบร้อย")
 
     except BaseException as e:

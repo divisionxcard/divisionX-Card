@@ -60,6 +60,10 @@ jobs:
       R2_BUCKET:                  ${{ secrets.R2_BUCKET }}
       JOB_ID:                     ${{ inputs.job_id }}
       ENGINE:                     classic   # Preflight เขียนทับจาก plan.engine ผ่าน $GITHUB_ENV
+      # ขั้นดูแผน (26 ต.ค. 2026): plan.stage = "plan" → ผู้กำกับเขียนแผนอย่างเดียว ไม่เรนเดอร์ ไม่จ่ายเงิน
+      # ข้ามการลง ffmpeg / whisper / Chromium / Node (ต้องใช้แค่ Python + Pillow) ให้ได้แผนในราว 1 นาที
+      # Preflight อ่านไม่ได้ = ค่าเริ่มต้น render = ลงครบตามเดิม (ช้ากว่าแต่ได้ผลเหมือนกัน)
+      STAGE:                      render
 
     steps:
       - name: Checkout code
@@ -132,6 +136,10 @@ jobs:
           ENGINE=$(jq -r '.[0].plan.engine // "classic"' "$JOB_JSON")
           echo "ENGINE=$ENGINE" >> "$GITHUB_ENV"
           echo "engine: $ENGINE"
+          STAGE=$(jq -r '.[0].plan.stage // "render"' "$JOB_JSON")
+          [ "$STAGE" = "plan" ] || STAGE=render
+          echo "STAGE=$STAGE" >> "$GITHUB_ENV"
+          echo "stage: $STAGE"
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -145,6 +153,7 @@ jobs:
       # → โหลด ffmpeg สำเร็จรูปจาก GitHub Releases ก่อน (BtbN · ดาวน์โหลดภายใน GitHub เร็ว ไม่ผ่าน apt)
       #   โหลดไม่ได้ค่อยถอยไป apt แบบจำกัดเวลาต่อรอบ + ลองซ้ำ · ไม่มีทั้งคู่ ffmpeg -version ล้ม = งานล้มเร็วพร้อมเหตุผล
       - name: Install ffmpeg
+        if: env.STAGE != 'plan'
         timeout-minutes: 15
         # ⚠️ ชื่อไฟล์รุ่นเลข (ffmpeg-n7.1-…) ถูกลบเมื่อออกรุ่นใหม่ → 404 (เจอจริงรอบที่สาม) · ใช้ชื่อ master ที่คงที่ + johnvansickle สำรอง
         run: |
@@ -176,6 +185,7 @@ jobs:
       #    จะไม่ได้แคชเลย ช่วงที่ยังไล่แก้บั๊กจึงต้องโหลดโมเดลใหม่ทุกรอบ
       #    ถ้าเริ่มรำคาญ ให้แยกเป็น cache/restore + cache/save ที่ if: always()
       - name: Cache whisper model
+        if: env.STAGE != 'plan'
         uses: actions/cache@v4
         with:
           path: ~/.cache/huggingface
@@ -193,6 +203,10 @@ jobs:
       # ถ้าจะคุยกับฐานข้อมูล ให้ใช้ urllib แบบเดียวกับ video/visuals.py
       - name: Install Python deps + Chromium
         run: |
+          if [ "$STAGE" = "plan" ]; then
+            pip install pillow          # ขั้นดูแผน: ผู้กำกับวัดความกว้างข้อความด้วย Pillow · ไม่ต้องใช้ whisper/Chromium
+            exit 0
+          fi
           pip install faster-whisper "playwright>=1.49" pillow
           playwright install --with-deps chromium
 
@@ -205,6 +219,7 @@ jobs:
       # อาจข้ามตัวเองไปตอนอ่านแผนไม่ได้ (ENGINE ว่าง) — ไม่อยากให้งาน hyperframes ไปตายเพราะ Node เก่า
       # Chrome ใช้ตัวที่มากับอิมเมจ (HyperFrames หาเองเหมือนบนเครื่องเจ้าของ · doctor ยืนยันได้)
       - name: Set up Node 22 (HyperFrames)
+        if: env.STAGE != 'plan'
         uses: actions/setup-node@v4
         with:
           node-version: "22"
@@ -212,7 +227,7 @@ jobs:
       # อุ่น npx cache ล่วงหน้า + พิมพ์ผลตรวจเครื่องลง log (ไม่ล้มงานถ้าตัวเสริมบางตัวไม่มี)
       # รุ่น CLI อ่านจาก package.json ของเทมเพลต — แก้รุ่นที่เดียว ไม่ต้องตามแก้ไฟล์นี้
       - name: Warm HyperFrames CLI
-        if: env.ENGINE == 'hyperframes' || env.ENGINE == 'timeline'
+        if: env.STAGE != 'plan' && (env.ENGINE == 'hyperframes' || env.ENGINE == 'timeline')
         working-directory: hyperframes/templates/dvx-promo
         run: |
           V=$(node -p "require('./package.json').scripts.render.match(/hyperframes@([\d.]+)/)[1]")

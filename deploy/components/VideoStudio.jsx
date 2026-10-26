@@ -23,7 +23,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react"
 import {
   Film, Type, Image as ImageIcon, Send, AlertTriangle, X, Lock, Download,
-  RefreshCw, Loader2, Check, Clock, Sparkles, Mic, LogOut, Scissors,
+  RefreshCw, Loader2, Check, Clock, Sparkles, Mic, LogOut, Scissors, ListChecks,
 } from "lucide-react"
 import { supabase, getSkus, getProfile, signOutAndGoHome } from "../lib/supabase"
 
@@ -210,9 +210,18 @@ const STATUS_ALIAS = {
 const STATUS = {
   queued:    { label: "รอคิว",     cls: "vs-st-wait" },
   rendering: { label: "กำลังทำ",   cls: "vs-st-run" },
+  // แผนพร้อม รอคนกดอนุมัติ (ขั้นดูแผน · 26 ต.ค. 2026) — ไม่ใช่สถานะเปิด: ไม่ poll ไม่เดินนาฬิกา รอคน
+  planned:   { label: "รออนุมัติแผน", cls: "vs-st-plan" },
   done:      { label: "เสร็จแล้ว", cls: "vs-st-ok" },
   failed:    { label: "ล้มเหลว",   cls: "vs-st-bad" },
 }
+// ด่านตรวจหลังเรนเดอร์ (agents/video/qa.py) — job.qa.level / checks[].status
+const QA_LEVEL = {
+  pass: { label: "ผ่านทุกข้อ", cls: "vs-qa-pass" },
+  warn: { label: "ผ่าน แต่มีจุดควรดู", cls: "vs-qa-warn" },
+  fail: { label: "ไม่ผ่าน — ยังไม่ผูกคลิปเข้าคอนเทนต์ ดูแล้วใช้ได้ค่อยใส่เอง", cls: "vs-qa-fail" },
+}
+const QA_MARK = { pass: "✓", warn: "!", fail: "✕", skip: "·" }
 const OPEN_STATES = new Set(["queued", "rendering"])
 
 function normJob(raw) {
@@ -508,7 +517,7 @@ export default function VideoStudio() {
       })
   }, [authState])
 
-  async function submitAuto() {
+  async function submitAuto(preview = true) {
     if (sending) return
     setSending(true); setErr(null)
     try {
@@ -520,10 +529,10 @@ export default function VideoStudio() {
         ...(fmt === "quiz" && autoSku ? { sku: autoSku } : {}),
         voice: autoVoice,
       }
-      const r = await api("render", { method: "POST", body: JSON.stringify({ plan }) })
+      const r = await api("render", { method: "POST", body: JSON.stringify({ plan, preview }) })
       const n = normJob(r)
       if (!n?.id) throw new Error("เซิร์ฟเวอร์ไม่ได้ส่งเลขงานกลับมา — ติดตามสถานะไม่ได้")
-      setJob({ ...n, project: n.project || name }); setSince(Date.now())
+      setJob({ ...n, project: n.project || name, ...(preview ? { plan: { stage: "plan" } } : {}) }); setSince(Date.now())
       loadJobs()
     } catch (e) {
       setErr({ msg: e.message, hint: e.hint })
@@ -533,7 +542,7 @@ export default function VideoStudio() {
     }
   }
 
-  async function submit() {
+  async function submit(preview = true) {
     if (sending || blockers.length) return
     setSending(true); setErr(null)
     try {
@@ -551,12 +560,13 @@ export default function VideoStudio() {
       // ⚠️ ห่อไว้ใน { plan } — route ฝั่งเซิร์ฟเวอร์อ่าน body.plan ไม่ใช่ body ทั้งก้อน
       //    (มันประกอบแผนขึ้นใหม่จากคีย์ที่อยู่ใน contract เท่านั้น ส่งแบน ๆ ไปจะถูกตีกลับ
       //    ว่า "ต้องส่ง plan เป็น object" ซึ่งอ่านแล้วนึกว่าแผนตัวเองผิด)
-      const r = await api("render", { method: "POST", body: JSON.stringify({ plan }) })
+      const r = await api("render", { method: "POST", body: JSON.stringify({ plan, preview }) })
       const n = normJob(r)
       if (!n?.id) throw new Error("เซิร์ฟเวอร์ไม่ได้ส่งเลขงานกลับมา — ติดตามสถานะไม่ได้")
       // route ตอบกลับแค่ { job_id, status } ไม่มีชื่องานมาด้วย — เติมเองไว้ก่อน
       // ไม่งั้นพาเนลจะโชว์ uuid ยาว ๆ อยู่ 5 วินาทีจนกว่ารอบ poll แรกจะกลับมา
-      setJob({ ...n, project: n.project || project }); setSince(Date.now()); setStep(3)
+      setJob({ ...n, project: n.project || project, ...(preview ? { plan: { stage: "plan" } } : {}) })
+      setSince(Date.now()); setStep(3)
       loadJobs()
     } catch (e) {
       setErr({ msg: e.message, hint: e.hint })
@@ -566,6 +576,34 @@ export default function VideoStudio() {
     } finally {
       setSending(false)
     }
+  }
+
+  // ── ขั้นดูแผน: อนุมัติ → เรนเดอร์ตามแผนนี้ทั้งก้อน · ยกเลิก → ทิ้งแผน (ยังไม่ได้จ่ายอะไร) ──
+  async function decidePlan(kind) {
+    if (sending || !job?.id) return
+    setSending(true); setErr(null)
+    try {
+      await api("render", { method: "POST", body: JSON.stringify({ [kind]: job.id }) })
+      if (kind === "approve") {
+        setJob(j => ({ ...j, status: "queued", plan: { ...(j.plan || {}), stage: "approved" } })); setSince(Date.now())
+      } else {
+        setJob(j => ({ ...j, status: "failed", error: "ยกเลิกที่ขั้นดูแผน — ยังไม่ได้ใช้เงิน/เรนเดอร์" }))
+      }
+      loadJobs()
+    } catch (e) {
+      setErr({ msg: e.message, hint: e.hint })
+    } finally {
+      setSending(false)
+    }
+  }
+
+  // รายการงานไม่ได้ดึง plan/qa ก้อนเต็มมา (payload บวม) — กดเปิดใบไหนค่อยถามรายละเอียดใบนั้น
+  async function openJob(j) {
+    setJob(j); setSince(null)
+    try {
+      const r = await api(`jobs?id=${encodeURIComponent(j.id)}`)
+      if (alive.current) setJob(cur => (cur?.id === j.id ? normJob(r) : cur))
+    } catch { /* เปิดได้ด้วยข้อมูลในรายการ — รอบ poll ถัดไป (ถ้ายังเปิดอยู่) จะเติมให้เอง */ }
   }
 
   // ── หน้าจอสถานะสิทธิ์ ──
@@ -665,14 +703,17 @@ export default function VideoStudio() {
             </label>
           </div>
           <div className="vs-actions">
-            <button className="dx-btn dx-btn-primary" disabled={sending} onClick={submitAuto}>
+            <button className="dx-btn dx-btn-primary" disabled={sending} onClick={() => submitAuto(true)}>
               {sending
                 ? <><Loader2 size={14} className="vs-spin" /> กำลังส่ง…</>
-                : <><Sparkles size={14} /> ให้ระบบออกแบบและเรนเดอร์</>}
+                : <><ListChecks size={14} /> ดูแผนก่อน</>}
             </button>
-            <span className="vs-dim vs-fine">ใช้เวลา ~5 นาที · สคริปต์ที่ระบบเขียนจะขึ้นใต้คลิปเมื่อเสร็จ · ปิดหน้านี้ไปก่อนได้</span>
+            <button className="dx-btn dx-btn-ghost" disabled={sending} onClick={() => submitAuto(false)}>
+              <Sparkles size={14} /> ทำเลย ไม่ดูแผน
+            </button>
+            <span className="vs-dim vs-fine">ดูแผน ~1–2 นาที ยังไม่เสียเงิน · กดอนุมัติแล้วทำคลิป ~5–10 นาที · ปิดหน้านี้ไปก่อนได้</span>
           </div>
-          {job && <JobPanel job={job} waited={waited} />}
+          {job && <JobPanel job={job} waited={waited} busy={sending} onDecide={decidePlan} />}
         </section>
       )}
 
@@ -853,17 +894,20 @@ export default function VideoStudio() {
           )}
 
           <div className="vs-actions">
-            <button className="dx-btn dx-btn-primary" disabled={sending || blockers.length > 0} onClick={submit}>
+            <button className="dx-btn dx-btn-primary" disabled={sending || blockers.length > 0} onClick={() => submit(true)}>
               {sending
                 ? <><Loader2 size={14} className="vs-spin" /> กำลังส่ง…</>
-                : <><Send size={14} /> ส่งเรนเดอร์</>}
+                : <><ListChecks size={14} /> ดูแผนก่อน</>}
+            </button>
+            <button className="dx-btn dx-btn-ghost" disabled={sending || blockers.length > 0} onClick={() => submit(false)}>
+              <Send size={14} /> ส่งเรนเดอร์เลย
             </button>
             <span className="vs-dim vs-fine">
-              คลิปหนึ่งตัวใช้เวลา ~5 นาที (ช้าสุดคือทำเสียงพากย์ 3-4 นาที) · ปิดหน้านี้ไปก่อนได้ งานไม่หาย
+              ดูแผน ~1–2 นาที ยังไม่เสียเงิน · คลิปหนึ่งตัวใช้เวลา ~5 นาที · ปิดหน้านี้ไปก่อนได้ งานไม่หาย
             </span>
           </div>
 
-          {job && <JobPanel job={job} waited={waited} />}
+          {job && <JobPanel job={job} waited={waited} busy={sending} onDecide={decidePlan} />}
         </section>
       )}
 
@@ -880,7 +924,7 @@ export default function VideoStudio() {
             <div className="vs-jobs">
               {jobs.map(j => (
                 <button key={j.id} className={`vs-job ${job?.id === j.id ? "vs-job-on" : ""}`}
-                  onClick={() => { setJob(j); setSince(null); setStep(3); setMode(j.project?.startsWith("auto-") ? "auto" : "manual") }}>
+                  onClick={() => { openJob(j); setStep(3); setMode(j.project?.startsWith("auto-") ? "auto" : "manual") }}>
                   <span className={`vs-st ${STATUS[j.status]?.cls}`}>{STATUS[j.status]?.label}</span>
                   <span className="vs-job-name dx-mono">{j.project || j.id}</span>
                   <span className="vs-dim vs-fine">{thaiAgo(j.created_at || j.inserted_at)}</span>
@@ -969,13 +1013,14 @@ function SceneRow({ i, text, pick, skus, onChange }) {
   )
 }
 
-function JobPanel({ job, waited }) {
+function JobPanel({ job, waited, busy, onDecide }) {
   const st = STATUS[job.status]
+  const planning = OPEN_STATES.has(job.status) && job.plan?.stage === "plan"
   return (
     <div className="vs-jobpanel">
       <div className="vs-jobpanel-head">
         <span className={`vs-st ${st?.cls}`}>
-          {job.status === "rendering" && <Loader2 size={12} className="vs-spin" />} {st?.label}
+          {job.status === "rendering" && <Loader2 size={12} className="vs-spin" />} {planning ? "กำลังวางแผน" : st?.label}
         </span>
         <span className="dx-mono vs-fine">{job.project || job.id}</span>
         {waited != null && <span className="vs-dim vs-fine">รอมาแล้ว {mmss(waited)}</span>}
@@ -986,9 +1031,14 @@ function JobPanel({ job, waited }) {
 
       {/* ระหว่างรอไม่มีสถานะย่อยให้ดู (API เก็บแค่ queued/running/done/failed) —
           บอกลำดับงานไว้แทน คนจะได้รู้ว่าเงียบไป 4 นาทีเป็นเรื่องปกติ ไม่ใช่ค้าง */}
-      {job.status === "rendering" && (
+      {planning && (
         <p className="vs-dim vs-fine">
-          ลำดับงาน: เสียงพากย์ (~3-4 นาที · ช้าสุด) → จับเวลารายคำ → เตรียมภาพ → เรนเดอร์ซับ → ประกอบ
+          ระบบกำลังวางแผน: เขียนบท · เลือกหน้าตาและเสียง · คิดฉากพื้นหลัง — <b>ยังไม่เสียเงิน</b> · ราว 1–2 นาที
+        </p>
+      )}
+      {job.status === "rendering" && !planning && (
+        <p className="vs-dim vs-fine">
+          ลำดับงาน: เสียงพากย์ (~3-4 นาที · ช้าสุด) → จับเวลารายคำ → เตรียมภาพ → เรนเดอร์ซับ → ประกอบ → ด่านตรวจ
         </p>
       )}
 
@@ -1008,8 +1058,10 @@ function JobPanel({ job, waited }) {
         <p className="vs-note">{job.error || "เรนเดอร์ล้มเหลว — ดู log บนเครื่องเรนเดอร์"}</p>
       )}
 
+      {job.status === "planned" && job.plan && <PlanCard plan={job.plan} busy={busy} onDecide={onDecide} />}
+
       {/* งานที่ระบบออกแบบ: ผู้กำกับเขียนแผนกลับลงแถวงาน (publish.save_plan) — โชว์ให้ตรวจก่อนโพสต์ */}
-      {job.plan?.director && job.plan?.script && (
+      {job.status !== "planned" && job.plan?.director && job.plan?.script && (
         <div className="vs-auto-plan">
           <div className="vs-auto-chips">
             <span className="vs-chip">{AUTO_FORMATS.find(f => f.id === job.plan.format)?.label || job.plan.format}</span>
@@ -1038,6 +1090,76 @@ function JobPanel({ job, waited }) {
         <p className="vs-note">
           งานเสร็จแล้วแต่ไม่ได้ลิงก์ไฟล์กลับมา — ไฟล์อยู่ที่ .video-work บนเครื่องเรนเดอร์
         </p>
+      )}
+
+      {job.status === "done" && job.qa?.checks && <QaPanel qa={job.qa} />}
+    </div>
+  )
+}
+
+// แผนที่ระบบเสนอ (ขั้นดูแผน) — "AI เสนอ คนอนุมัติ": เห็นบท หน้าตา พื้นหลัง และค่าใช้จ่ายก่อนจ่ายจริง
+function PlanCard({ plan, busy, onDecide }) {
+  const est = plan.estimate
+  const bp = plan.bg_plan
+  return (
+    <div className="vs-plan">
+      <b className="vs-plan-t"><ListChecks size={14} /> แผนพร้อมแล้ว — ดูก่อนกดอนุมัติ</b>
+      <div className="vs-auto-chips">
+        {plan.format && <span className="vs-chip">{AUTO_FORMATS.find(f => f.id === plan.format)?.label || plan.format}</span>}
+        {plan.voice && <span className="vs-chip">เสียง {plan.voice}</span>}
+        {plan.look && Object.entries(LOOK_TH).map(([k, m]) =>
+          plan.look[k] ? <span key={k} className="vs-chip vs-chip-dim">{m[plan.look[k]] || plan.look[k]}</span> : null)}
+        {est?.seconds > 0 && <span className="vs-chip vs-chip-dim">ยาวราว {mmss(est.seconds)} นาที</span>}
+      </div>
+      {plan.script && !plan.script.startsWith("[") && <pre className="vs-auto-script">{plan.script}</pre>}
+      {bp && (
+        <div className="vs-plan-bg">
+          <span className="vs-dim vs-fine">พื้นหลัง</span>
+          <b>{bp.label || bp.source}</b>
+          {bp.query && <span className="vs-dim vs-fine">คำค้นฟุตเทจ: {bp.query}</span>}
+          {bp.scene && <span className="vs-dim vs-fine">ฉากที่จะให้ AI วาด (ภาษาอังกฤษ): {bp.scene.slice(0, 220)}{bp.scene.length > 220 ? "…" : ""}</span>}
+        </div>
+      )}
+      {est?.items?.length > 0 && (
+        <div className="vs-sum">
+          {est.items.map((it, i) => (
+            <SumRow key={i} k={it.usd > 0 ? `≈ ${(it.usd * 35).toFixed(1)} บาท` : "ฟรี"} v={`${it.what} · ${it.note}`} />
+          ))}
+          <SumRow k={<b>รวม</b>} v={<b>{est.thb > 0 ? `ราว ${est.thb} บาท (จ่ายหลังอนุมัติ)` : "ฟรี"}</b>} />
+        </div>
+      )}
+      <div className="vs-actions">
+        <button className="dx-btn dx-btn-primary" disabled={busy} onClick={() => onDecide?.("approve")}>
+          {busy ? <Loader2 size={14} className="vs-spin" /> : <Check size={14} />} อนุมัติ · เริ่มทำคลิป
+        </button>
+        <button className="dx-btn dx-btn-ghost" disabled={busy} onClick={() => onDecide?.("cancel")}>
+          <X size={14} /> ยกเลิกแผน
+        </button>
+        <span className="vs-dim vs-fine">ไม่ชอบแผนนี้ → ยกเลิก แล้วกด &ldquo;ดูแผนก่อน&rdquo; ใหม่ ระบบจะคิดแบบใหม่ให้</span>
+      </div>
+    </div>
+  )
+}
+
+// ด่านตรวจหลังเรนเดอร์ — "เรนเดอร์เสร็จ ≠ งานเสร็จ" · ภาพรวมเฟรม 12 ช่องให้ดูทั้งคลิปในภาพเดียว
+function QaPanel({ qa }) {
+  const lv = QA_LEVEL[qa.level] || QA_LEVEL.pass
+  return (
+    <div className={`vs-qa ${lv.cls}`}>
+      <b className="vs-qa-t">ด่านตรวจหลังเรนเดอร์ · {lv.label}</b>
+      <ul className="vs-qa-list">
+        {qa.checks.map(c => (
+          <li key={c.id} className={`vs-qa-${c.status}`}>
+            <span className="vs-qa-mark">{QA_MARK[c.status] || "·"}</span>
+            <b>{c.label}</b>
+            <span>{c.detail}</span>
+          </li>
+        ))}
+      </ul>
+      {qa.sheet_url && (
+        <a href={qa.sheet_url} target="_blank" rel="noreferrer" className="vs-sheet-a" title="เปิดภาพเต็ม">
+          <img className="vs-sheet" src={qa.sheet_url} alt="ภาพรวมเฟรมของคลิป 12 ช่อง" loading="lazy" />
+        </a>
       )}
     </div>
   )
@@ -1193,6 +1315,27 @@ const CSS = `
 .vs-st-run{color:var(--dx-cyan-bright);background:rgba(0,212,255,.10);border-color:rgba(0,212,255,.35);}
 .vs-st-ok{color:var(--dx-success);background:rgba(0,255,136,.09);border-color:rgba(0,255,136,.3);}
 .vs-st-bad{color:var(--dx-danger);background:rgba(255,68,102,.09);border-color:rgba(255,68,102,.3);}
+.vs-st-plan{color:#FFD27A;background:rgba(255,184,77,.12);border-color:rgba(255,184,77,.45);}
+.vs-plan{margin-top:10px;padding:12px;border-radius:11px;background:var(--dx-bg-card);border:1px solid rgba(255,184,77,.45);}
+.vs-plan-t{display:flex;align-items:center;gap:6px;font-size:13px;color:#FFD27A;margin-bottom:8px;}
+.vs-plan .vs-auto-chips{margin-bottom:8px;}
+.vs-plan-bg{display:flex;flex-direction:column;gap:3px;margin:10px 0 4px;padding:9px 11px;border-radius:10px;
+  background:var(--dx-bg-input);border:1px solid var(--dx-border);font-size:12.5px;min-width:0;word-break:break-word;}
+.vs-qa{margin-top:12px;padding:11px 12px;border-radius:11px;border:1px solid var(--dx-border);background:var(--dx-bg-card);}
+.vs-qa-t{display:block;font-size:12.5px;margin-bottom:7px;}
+.vs-qa.vs-qa-pass{border-color:rgba(0,255,136,.3);} .vs-qa.vs-qa-pass .vs-qa-t{color:var(--dx-success);}
+.vs-qa.vs-qa-warn{border-color:rgba(255,200,87,.4);} .vs-qa.vs-qa-warn .vs-qa-t{color:var(--dx-warning);}
+.vs-qa.vs-qa-fail{border-color:rgba(255,68,102,.45);} .vs-qa.vs-qa-fail .vs-qa-t{color:var(--dx-danger);}
+.vs-qa-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:5px;}
+.vs-qa-list li{display:grid;grid-template-columns:18px 62px minmax(0,1fr);gap:6px;font-size:12px;line-height:1.55;align-items:baseline;}
+.vs-qa-list li > span:last-child{color:var(--dx-text-2);word-break:break-word;}
+.vs-qa-mark{font-weight:700;text-align:center;}
+.vs-qa-list .vs-qa-pass .vs-qa-mark{color:var(--dx-success);}
+.vs-qa-list .vs-qa-warn .vs-qa-mark{color:var(--dx-warning);}
+.vs-qa-list .vs-qa-fail .vs-qa-mark{color:var(--dx-danger);}
+.vs-qa-list .vs-qa-skip{opacity:.65;}
+.vs-sheet-a{display:block;margin-top:10px;}
+.vs-sheet{display:block;width:100%;max-width:420px;margin:0 auto;border-radius:10px;border:1px solid var(--dx-border-strong);}
 .vs-video{display:block;width:100%;max-width:300px;max-height:66vh;margin:10px auto 0;border-radius:12px;
   background:#000;border:1px solid var(--dx-border-strong);}
 .vs-spin{animation:vs-rot 1s linear infinite;}
