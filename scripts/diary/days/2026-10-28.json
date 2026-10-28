@@ -13,7 +13,9 @@
       "what": "Reddit: วางตัวเลือกบัญชี Research ไว้หน้าคำสั่ง · IG: ถูกเด้งกลับหน้าแรก/ตอบถี่เกินไป/ได้หน้าเว็บแทนข้อมูล = นับว่าโดนบล็อก หยุดเลนทันทีแล้วพัก 3 วัน",
       "why": "Reddit พังทุกห้องเพราะตัวเลือกอยู่ผิดตำแหน่ง · IG ล็อกอินอยู่แต่ถูกจำกัด และสคริปต์เดิมยิงต่อครบทุกเพจ ยิ่งเสี่ยงบัญชีโดนแบน",
       "result": "Reddit รันซ้ำผ่านครบ 5 ห้อง · IG ไม่ยิงซ้ำวันนี้ · ไม่หาช่องอื่นมาเลี่ยงการจำกัด",
-      "refs": ["wiki/worklog/2026-10-28-social-ig-reddit-first-run.md"]
+      "refs": [
+        "wiki/worklog/2026-10-28-social-ig-reddit-first-run.md"
+      ]
     }
   ],
   "decisions": [],
@@ -21,8 +23,8 @@
     {
       "id": "ig-research-check",
       "owner": "you",
-      "text": "เปิด Chrome profile Research → instagram.com ดูว่ามีแจ้งเตือนจำกัดการใช้งาน/ขอยืนยันตัวตนไหม (ดูเฉย ๆ ไม่ต้องกดอะไร) แล้วบอก Claude",
-      "done": false
+      "text": "เปิด Chrome profile Research → instagram.com ดูว่ามีแจ้งเตือนจำกัดการใช้งาน/ขอยืนยันตัวตนไหม (ดูเฉย ๆ ไม่ต้องกดอะไร) แล้วบอก Claude — เช็กแล้ว: ใช้งานปกติ ไม่มีแจ้งเตือน",
+      "done": true
     },
     {
       "id": "ig-retry-1031",
@@ -31,7 +33,12 @@
       "done": false
     }
   ],
-  "stats": {"commits": 2, "files": 5},
-  "areas": ["social-watch"],
+  "stats": {
+    "commits": 2,
+    "files": 5
+  },
+  "areas": [
+    "social-watch"
+  ],
   "source": "wiki/daily/2026-10-28.md"
 }
