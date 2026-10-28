@@ -145,14 +145,15 @@ def oc(*args, timeout=150):
     except subprocess.TimeoutExpired:
         raise WatchError(f"OpenCLI ช้าเกิน {timeout} วิ ({' '.join(args[:2])})")
     out = (p.stdout or "").strip()
+    cmd = " ".join((args[2:] if args[:1] == ("--profile",) else args)[:2])
     try:
         res = json.loads(out)
     except ValueError:
-        raise WatchError(f"OpenCLI ตอบไม่ใช่ JSON ({' '.join(args[:2])}): {(out or p.stderr or '').strip()[-240:]}")
+        raise WatchError(f"OpenCLI ตอบไม่ใช่ JSON ({cmd}): {(out or p.stderr or '').strip()[-240:]}")
     if isinstance(res, dict) and res.get("ok") is False:
         err = res.get("error")
         msg = err.get("message") if isinstance(err, dict) else err
-        raise WatchError(f"OpenCLI {' '.join(args[:2])}: {str(msg or res)[:240]}")
+        raise WatchError(f"OpenCLI {cmd}: {str(msg or res)[:240]}")
     return res
 
 
@@ -324,7 +325,10 @@ IG_JS = r"""
   if (/^\/(accounts\/login|challenge)/.test(location.pathname)) return { blocked: location.pathname.split('/')[1] };
   const r = await fetch('/api/v1/feed/user/' + encodeURIComponent(U) + '/username/?count=12',
     { credentials: 'include', headers: { 'X-IG-App-ID': '936619743392459' } });
-  if (r.status === 401 || r.status === 403) return { blocked: 'http ' + r.status };
+  if (r.status === 401 || r.status === 403 || r.status === 429) return { blocked: 'http ' + r.status };
+  // 28 ต.ค. 2026 รอบแรก: ล็อกอินอยู่แต่ endpoint นี้เด้งกลับหน้าแรก (ได้ HTML) + web_profile_info ตอบ 429
+  // = IG จำกัดบัญชี Research → นับเป็น blocked ให้เลนพัก 3 วัน ห้ามวนหา endpoint อื่นมาเลี่ยง
+  if (r.redirected || !(r.headers.get('content-type') || '').includes('json')) return { blocked: 'redirect' };
   if (!r.ok) return { error: 'HTTP ' + r.status };
   const d = await r.json();
   return { posts: (d.items || []).map(p => ({ code: p.code, caption: ((p.caption && p.caption.text) || '').slice(0, 700),
@@ -359,8 +363,9 @@ def read_instagram(target, cfg):
 
 # ── Reddit (ปิดไว้จนถึงวันใน gates) ─────────────────────────────────────────
 def read_reddit(target, cfg):
-    res = unwrap(oc("reddit", "subreddit", target["sub"], "--sort", "top", "--time", "day", "--limit", "10",
-                    "--window", "background", "--profile", cfg.get("bridge_profile", "research")))
+    # คำสั่งของเว็บ (ไม่ใช่ browser ...) รับ --profile แค่ตำแหน่งหน้าสุด — ต่อท้ายแล้ว "unknown option" (28 ต.ค. 2026)
+    res = unwrap(oc("--profile", cfg.get("bridge_profile", "research"), "reddit", "subreddit", target["sub"],
+                    "--sort", "top", "--time", "day", "--limit", "10", "--window", "background"))
     if not isinstance(res, list):
         raise WatchError(f"Reddit {target['sub']}: ได้ข้อมูลรูปแบบแปลก ({type(res).__name__})")
     out = []
