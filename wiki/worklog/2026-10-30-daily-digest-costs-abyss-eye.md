@@ -2,7 +2,7 @@
 type: worklog
 date: 2026-10-30
 tags: [digest, telegram, dvx-job, profit, costs, sku-rename, migration-083]
-commits: [fc63093, c2e6a3b, 7b41dc2, cb89313, 9dd10ed, 0207ac5]
+commits: [fc63093, c2e6a3b, 7b41dc2, cb89313, 9dd10ed, 0207ac5, cd4590a, 3820adc, d093e7d]
 status: ✅ โค้ด+ย้ายชื่อ SKU เสร็จ · deploy แล้ว · ⏳ รอเจ้าของรัน migration 083 แล้วค่อยใส่ต้นทุน · ⏳ รอเพิ่มบอทเข้ากลุ่ม DVX_Admin
 ---
 
@@ -75,6 +75,10 @@ status: ✅ โค้ด+ย้ายชื่อ SKU เสร็จ · deploy 
 - เจ้าของสั่งยกเลิกแจ้งเตือน "Stock หน้าตู้ต่ำ" ในกลุ่ม → ปิด schedule ของ stock-low-alert.yml (0207ac5) · กดรันเองยังได้ · สคริปต์ไม่กรองตู้ที่ปิดแล้ว (wwv02 โผล่ 6/19 รายการ) ถ้าเปิดคืนต้องกรอง
 - เจ้าของขอปุ่มเข้าหน้าเว็บในกลุ่ม DVX_Admin (แอดมินบางคนไม่รู้จักเว็บ) → ทุกสรุปของ DVX Job มีปุ่ม "📊 ดูยอดขายบนหน้าเว็บ" (`/?page=sales`) ·
   ส่งข้อความแนะนำเว็บ+ปุ่มเข้ากลุ่ม 1 ข้อความไว้ให้ปักหมุด (บอทเป็นสมาชิก ปักเองไม่ได้)
+- เจ้าของขอ "แผงควบคุม" แบบห้อง DVX_Owner ในกลุ่ม DVX_Admin → reply keyboard ของ DVX Job (3820adc · d093e7d):
+  ปุ่มแผงล่างเปิด URL เองไม่ได้ในกลุ่ม → กดแล้ว mkt-webhook (Vercel) ตอบปุ่มลิงก์ `/?page=sales` · /web@ · /panel@ · setMyCommands ของกลุ่ม ·
+  ⚠️ ปุ่มรุ่นแรกไม่มีชื่อบอท → **Hermes ตอบแทรกและใช้ computer_use เปิดเบราว์เซอร์บนเครื่องเจ้าของ 3 นาที** (Hermes ตอบทุกข้อความในกลุ่ม ไม่ต้อง mention) ·
+  แก้: ข้อความปุ่มต่อท้าย @dvx_marketing_bot → Hermes ข้ามเพราะ exclusive_bot_mentions · DVX Job เป็นแอดมินกลุ่มแล้ว (กลุ่มยังเป็น type group id เดิม)
 - นอกใบจัดยอด: Hermes `SOUL.md` แก้ข้อ 3 (ทุนครบแล้ว · id ใหม่) สำรอง `.bak.before-costs-20261030`
 
 ## ค้าง
