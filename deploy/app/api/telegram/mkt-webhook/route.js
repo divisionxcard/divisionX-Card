@@ -28,7 +28,10 @@ async function tgReply(chatId, text) {
 //    ⚠️ กลุ่มธรรมดา (type group) ถ้าถูกอัปเป็น supergroup id จะเปลี่ยน → แก้ TELEGRAM_DVX_ADMIN_CHAT_ID แล้ว /panel ใหม่
 //    ไม่จำกัดห้อง: คำตอบมีแค่ลิงก์เว็บสาธารณะ (เข้าได้ต้องล็อกอิน) ไม่มีข้อมูลธุรกิจ
 const SITE = (process.env.DVX_BASE_URL || "https://division-x-card.vercel.app").replace(/\/$/, "")
-const WEB_BUTTON_TEXT = "🌐 เปิดหน้าเว็บยอดขาย"
+// ⚠️ ต้องมี @dvx_marketing_bot ในข้อความปุ่ม — Hermes (อยู่ในกลุ่ม อ่านทุกข้อความ) ข้ามข้อความที่ระบุชื่อบอทตัวอื่น
+//    (exclusive_bot_mentions) · ปุ่มเดิมไม่มีชื่อ กดแล้ว Hermes ตอบแทรก "Searching files for sales" (30 ต.ค. 2026)
+const WEB_BUTTON_TEXT = "🌐 เปิดหน้าเว็บยอดขาย @dvx_marketing_bot"
+const WEB_BUTTON_LEGACY = "🌐 เปิดหน้าเว็บยอดขาย"     // แผงรุ่นแรก — ยังรับไว้ จนกว่าทุกคนจะได้แผงใหม่
 const WEB_LINK = { inline_keyboard: [[{ text: "📊 ดูยอดขายบนหน้าเว็บ", url: `${SITE}/?page=sales` }]] }
 const PANEL_KEYBOARD = { keyboard: [[{ text: WEB_BUTTON_TEXT }]], resize_keyboard: true, is_persistent: true }
 
@@ -77,7 +80,7 @@ export async function POST(req) {
   // แผงปุ่มกลุ่ม — ก่อนด่านจำกัดห้อง (ดูหมายเหตุที่ WEB_BUTTON_TEXT) · เฉพาะข้อความใหม่ (แก้ข้อความเก่าไม่ตอบซ้ำ)
   const raw = body.message ? (msg.text || "").trim() : ""
   const cmd = raw.split(/\s+/)[0].toLowerCase()
-  if (raw === WEB_BUTTON_TEXT || cmd === "/web" || cmd === "/web@dvx_marketing_bot") {
+  if (raw === WEB_BUTTON_TEXT || raw === WEB_BUTTON_LEGACY || cmd === "/web" || cmd === "/web@dvx_marketing_bot") {
     await tgSend(chatId, "📊 กดปุ่มด้านล่างเพื่อเปิดหน้ายอดขาย\n<i>ล็อกอินด้วยชื่อผู้ใช้ (username) · ยังไม่มีบัญชีแจ้งเจ้าของ</i>",
       WEB_LINK, msg.message_id)
     return NextResponse.json({ ok: true })
