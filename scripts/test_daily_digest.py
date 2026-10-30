@@ -186,6 +186,9 @@ check("รายสัปดาห์เทียบสัปดาห์ก่�
 long = dg.fit(["<b>บรรทัด</b> " + "ก" * 90] * 200)
 check("ตัดข้อความที่ขอบบรรทัด ไม่เกินเพดาน", len(long) <= 4096 and long.endswith("…(ตัดเพราะยาวเกิน)"), True)
 check("ตัดแล้วแท็ก HTML ครบคู่", long.count("<b>") == long.count("</b>"), True)
+btn = dg.web_button()["inline_keyboard"][0][0]
+check("ปุ่มเปิดหน้ายอดขายบนเว็บ", (btn["text"], btn["url"].endswith("/?page=sales"), btn["url"].startswith("https://")),
+      ("📊 ดูยอดขายบนหน้าเว็บ", True, True))
 
 print(f"\n{'ผ่านทั้งหมด' if not fails else f'ตก {fails} ข้อ'}")
 sys.exit(1 if fails else 0)

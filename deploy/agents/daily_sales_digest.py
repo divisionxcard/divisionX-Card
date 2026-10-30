@@ -391,9 +391,23 @@ def build_message(first, last, per, tot, unknown, prev_per, prev_tot, movers, bm
     return fit(lines)
 
 
-def tg_send(token, chat_id, text):
-    body = json.dumps({"chat_id": chat_id, "text": text, "parse_mode": "HTML",
-                       "disable_web_page_preview": True}).encode("utf-8")
+SITE_URL = (os.environ.get("DVX_BASE_URL") or "https://division-x-card.vercel.app").rstrip("/")
+
+
+def web_button():
+    """ปุ่มเปิดหน้ายอดขายบนเว็บ ติดท้ายทุกสรุป (ฟังก์ชันล้วน)
+
+    เจ้าของขอ 30 ต.ค. 2026 — แอดมินบางคนในกลุ่ม DVX_Admin ไม่รู้จักหน้าเว็บ
+    /?page=sales = deep link ของ DivisionXApp (รายการหน้าที่อนุญาตอยู่ในนั้น) · ยังต้องล็อกอินด้วย username ตามปกติ
+    """
+    return {"inline_keyboard": [[{"text": "📊 ดูยอดขายบนหน้าเว็บ", "url": f"{SITE_URL}/?page=sales"}]]}
+
+
+def tg_send(token, chat_id, text, markup=None):
+    payload = {"chat_id": chat_id, "text": text, "parse_mode": "HTML", "disable_web_page_preview": True}
+    if markup:
+        payload["reply_markup"] = markup
+    body = json.dumps(payload).encode("utf-8")
     req = urllib.request.Request(f"https://api.telegram.org/bot{token}/sendMessage", data=body,
                                  headers={"Content-Type": "application/json"}, method="POST")
     try:
@@ -457,7 +471,7 @@ def main():
         print(f"{tag} TELEGRAM_MKT_* ยังไม่ตั้ง — ไม่ได้ส่ง")
         return 1
     # แชตเจ้าของคือตัวตัดสินว่า "ส่งสำเร็จ" — กลุ่มล้มอย่างเดียวห้ามให้บอทลองใหม่ (จะส่งซ้ำเข้าแชตเจ้าของ)
-    ok, err = tg_send(token, owner, text)
+    ok, err = tg_send(token, owner, text, web_button())
     if not ok:
         print(f"⚠️ {tag} ส่งเข้าแชตเจ้าของไม่สำเร็จ — {err}")
         return 1
@@ -465,7 +479,7 @@ def main():
     if not group:
         print(f"{tag} ส่งแล้ว 1/1 ห้อง" + ("" if a.only_owner else " (ยังไม่ได้ตั้งกลุ่ม DVX_Admin)"))
         return 0
-    ok, err = tg_send(token, group, text)
+    ok, err = tg_send(token, group, text, web_button())
     if not ok:
         print(f"⚠️ {tag} ส่งแชตเจ้าของแล้ว แต่ส่งเข้ากลุ่ม DVX_Admin ไม่สำเร็จ — {err}")
         return EXIT_GROUP_FAILED
