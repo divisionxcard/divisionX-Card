@@ -297,8 +297,30 @@ def fit(lines, limit=MAX_CHARS):
     return "\n".join(out)
 
 
-def build_message(first, last, per, tot, unknown, prev_per, prev_tot, top_sku, bmap, active, note=""):
-    """ข้อความ HTML ของ Telegram (ฟังก์ชันล้วน — ทดสอบได้) · first == last = รายวัน"""
+def sku_movers(cur_sales, prev_sales, n=5):
+    """→ (ขายดี, ยอดลดลง) เป็นลิสต์ (sku, ยอดช่วงนี้, ยอดช่วงเทียบ) (ฟังก์ชันล้วน — ทดสอบได้)
+
+    ขายดี = ยอดเงินสูงสุด n ตัว · ยอดลดลง = ลดลงเป็นบาทมากสุด n ตัว (รวมตัวที่ช่วงนี้ขายไม่ได้เลย)
+    เรียงตามบาทไม่ใช่ % — ตัวขายน้อยลดจาก 80 เหลือ 0 = ▼100% แต่ไม่สำคัญเท่าตัวหลักที่หายไปหลายพัน
+    """
+    def by_sku(rows):
+        out = {}
+        for r in rows:
+            k = r.get("sku_id") or "?"
+            out[k] = out.get(k, 0.0) + float(r.get("grand_total") or 0)
+        return out
+    cur, prev = by_sku(cur_sales), by_sku(prev_sales)
+    top = [(k, v, prev.get(k, 0.0)) for k, v in sorted(cur.items(), key=lambda kv: kv[1], reverse=True)[:n]]
+    falls = [(k, cur.get(k, 0.0), p) for k, p in prev.items() if cur.get(k, 0.0) < p]
+    down = sorted(falls, key=lambda t: t[2] - t[1], reverse=True)[:n]
+    return top, down
+
+
+def build_message(first, last, per, tot, unknown, prev_per, prev_tot, movers, bmap, active, note=""):
+    """ข้อความ HTML ของ Telegram (ฟังก์ชันล้วน — ทดสอบได้) · first == last = รายวัน
+
+    movers = (ขายดี, ยอดลดลง, ป้ายช่วงเทียบ) จาก sku_movers — รายวันเทียบวันก่อนหน้า · รายสัปดาห์เทียบสัปดาห์ก่อน
+    """
     week = first != last
     days = (last - first).days + 1
     if week:
@@ -339,8 +361,13 @@ def build_message(first, last, per, tot, unknown, prev_per, prev_tot, top_sku, b
     idle = sorted((k for k in labels if k not in printed), key=lambda k: labels[k])
     for key in idle:
         lines.append(f"• {html.escape(labels[key])}: 0 — ไม่มียอด")
-    if top_sku:
-        lines += ["", "🔥 <b>Top SKU</b>: " + " · ".join(f"{html.escape(k)} ({fmt(v)})" for k, v in top_sku)]
+    top, down, sku_vs = movers if movers else ([], [], "")
+    if top:
+        lines += ["", f"🔥 <b>ขายดี</b> (เทียบ {sku_vs}): "
+                  + " · ".join(f"{html.escape(k)} {fmt(c)} ({arrow(c, p)})" for k, c, p in top)]
+    if down:
+        lines += [f"📉 <b>ยอดลดลง</b> (เทียบ {sku_vs}): "
+                  + " · ".join(f"{html.escape(k)} {fmt(c)} ({arrow(c, p)})" for k, c, p in down)]
 
     drops = []
     for key, b in shown:
@@ -409,11 +436,14 @@ def main():
     sales, prev_sales = sales_between(first, last), sales_between(p_first, p_last)
     per, tot, unknown = summarize(sales, claims_in(first, last), brand, costs)
     prev_per, prev_tot, _ = summarize(prev_sales, claims_in(p_first, p_last), brand, costs)
-    sku_rev = {}
-    for r in sales:
-        sku_rev[r.get("sku_id") or "?"] = sku_rev.get(r.get("sku_id") or "?", 0) + float(r.get("grand_total") or 0)
-    top_sku = sorted(sku_rev.items(), key=lambda kv: kv[1], reverse=True)[:5]
-    text = build_message(first, last, per, tot, unknown, prev_per, prev_tot, top_sku, bmap, active, a.note)
+    # สินค้าขายดี/ยอดลดลง: รายวันเทียบ "วันก่อนหน้า" (เจ้าของขอ 30 ต.ค.) · รายสัปดาห์เทียบสัปดาห์ก่อน
+    if first == last:
+        d0 = first - timedelta(days=1)
+        sku_prev, sku_vs = sales_between(d0, d0), f"{DOW_SHORT[d0.weekday()]} {d0.day} {MONTH_TH[d0.month]}"
+    else:
+        sku_prev, sku_vs = prev_sales, "สัปดาห์ก่อน"
+    movers = sku_movers(sales, sku_prev) + (sku_vs,)
+    text = build_message(first, last, per, tot, unknown, prev_per, prev_tot, movers, bmap, active, a.note)
 
     span = first.isoformat() if first == last else f"{first}→{last}"
     print(f"{tag} {span} · ยอด {fmt(tot['rev'])} · กำไร {fmt(tot['profit'])} · {len(sales)} แถว"

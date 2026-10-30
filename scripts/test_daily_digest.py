@@ -150,10 +150,19 @@ check("ลูกศร: ช่วงก่อน 0 = ของใหม่", dg.
 check("ลูกศร: ช่วงก่อนขาดทุน = เทียบ % ไม่ได้", dg.arrow(100, -50), "—")
 check("ลูกศร: ขึ้น", dg.arrow(120, 100), "▲20%")
 
+# ── สินค้าขายดี / ยอดลดลง (เทียบวันก่อนหน้า) ──
+cur_s = [{"sku_id": "A", "grand_total": 900}, {"sku_id": "B", "grand_total": 300}, {"sku_id": "C", "grand_total": 50}]
+prev_s = [{"sku_id": "A", "grand_total": 600}, {"sku_id": "B", "grand_total": 1000}, {"sku_id": "C", "grand_total": 80},
+          {"sku_id": "D", "grand_total": 400}]
+top, down = dg.sku_movers(cur_s, prev_s)
+check("ขายดีเรียงตามยอดเงิน พร้อมยอดช่วงเทียบ", top, [("A", 900.0, 600.0), ("B", 300.0, 1000.0), ("C", 50.0, 80.0)])
+check("ยอดลดลงเรียงตามบาทที่หาย (รวมตัวที่วันนี้ขายไม่ได้)", [k for k, _, _ in down], ["B", "D", "C"])
+check("ตัวที่ยอดขึ้นไม่อยู่ในยอดลดลง", "A" in [k for k, _, _ in down], False)
+mv = (top, down, "พ. 28 ต.ค.")
 day = date(2026, 10, 29)
 per2 = {"m1": per["m1"], "m2": per["m2"], "m4": {**dg._blank(), "refund": 30.0, "profit": -30.0}}
 msg = dg.build_message(day, day, per2, tot, unknown, {"m1": {**dg._blank(), "rev": 1000.0}, "m3": {**dg._blank(), "rev": 5000.0}},
-                       {"rev": 1000, "profit": 200}, [("A", 400)], bmap, ["m1", "m2", "m3", "m4"], "🔄 ทดสอบ")
+                       {"rev": 1000, "profit": 200}, mv, bmap, ["m1", "m2", "m3", "m4"], "🔄 ทดสอบ")
 check("หัวข้อรายวันมีวันในสัปดาห์", "สรุปยอดขายประจำวัน" in msg and "พฤหัสบดี 29 ต.ค. 2026" in msg, True)
 check("เทียบวันเดียวกันสัปดาห์ก่อน", "จากพฤ. ก่อน" in msg, True)
 check("ชื่อสาขาถูก escape HTML", "สาขา &lt;A&gt;" in msg, True)
@@ -163,12 +172,14 @@ check("สาขาที่มีแต่เคลมขึ้นบรรท�
 check("ตกจากฐาน ≥1,000 → เตือน", "สาขา &lt;A&gt; ▼40%" in msg, True)
 check("เตือนสินค้าไม่มีทุน", "ยังไม่มีต้นทุนในระบบ" in msg, True)
 check("แนบโน้ตจากบอท", "🔄 ทดสอบ" in msg, True)
+check("บรรทัดขายดีมี % เทียบวันก่อนหน้า", "🔥 <b>ขายดี</b> (เทียบ พ. 28 ต.ค.): A 900 (▲50%)" in msg, True)
+check("บรรทัดยอดลดลง", "📉 <b>ยอดลดลง</b> (เทียบ พ. 28 ต.ค.): B 300 (▼70%) · D 0 (▼100%)" in msg, True)
 check("ยาวไม่เกินขีดจำกัด Telegram", len(msg) <= 4096, True)
 small = dg.build_message(day, day, {"m1": {**dg._blank(), "rev": 100.0}}, {**tot, "rev": 100.0}, {}, {"m1": {**dg._blank(), "rev": 500.0}},
-                         {"rev": 500, "profit": 0}, [], bmap, ["m1"], "")
+                         {"rev": 500, "profit": 0}, None, bmap, ["m1"], "")
 check("ตกจากฐานต่ำกว่า 1,000 → ไม่เตือน (รายวันแกว่งแรง)", "ยอดตก" in small, False)
 wk = dg.build_message(date(2026, 10, 26), date(2026, 11, 1), per, tot, unknown, {}, {"rev": 0, "profit": 0},
-                      [], bmap, ["m1"], "")
+                      ([], [], "สัปดาห์ก่อน"), bmap, ["m1"], "")
 check("หัวข้อรายสัปดาห์ + ช่วงจันทร์–อาทิตย์", "สรุปยอดขายรายสัปดาห์" in wk and "จ. 26 ต.ค. – อา. 1 พ.ย. 2026" in wk, True)
 check("รายสัปดาห์มีเฉลี่ย/วัน", "เฉลี่ย/วัน" in wk, True)
 check("รายสัปดาห์เทียบสัปดาห์ก่อน", "จากสัปดาห์ก่อน" in wk, True)
