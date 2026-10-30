@@ -6,28 +6,36 @@ import {
 } from "recharts"
 import { CHART_COLORS } from "../shared/constants"
 import { fmt, fmtB, getLastNDays, fmtDayLabel, buildBrandMap, ksherFeePct } from "../shared/helpers"
+import { buildCostIndex, costOn } from "../shared/costs"
 import { Badge, SectionTitle } from "../shared/dx-components"
 
 const SERIES_DARK = { OP: "#4FC3F7", PRB: "#B794F6", EB: "#68D391" }
 
-export default function PageAnalytics({ sales, skus, machines = [] }) {
+export default function PageAnalytics({ sales, skus, skuCosts = [], machines = [] }) {
   const [metric, setMetric] = useState("revenue")
   const brandMap = buildBrandMap(machines)
+  const costIndex = buildCostIndex(skuCosts, skus)
 
+  // ต้นทุนคิดรายแถวตามวันที่ขาย (shared/costs.js) แล้วค่อยรวม — ไม่ใช่ยอดซองรวม × ทุนตัวเดียว
+  // ไม่งั้นช่วงที่คร่อมวันเปลี่ยนทุนจะได้ทุนใหม่ทั้งก้อน
   const skuMap = {}
   sales.forEach(r => {
-    if (!skuMap[r.sku_id]) skuMap[r.sku_id] = { qty: 0, rev: 0, ksherFee: 0 }
+    if (!skuMap[r.sku_id]) skuMap[r.sku_id] = { qty: 0, rev: 0, ksherFee: 0, qtyByCost: {} }
     skuMap[r.sku_id].qty += r.quantity_sold
     skuMap[r.sku_id].rev += r.revenue
     skuMap[r.sku_id].ksherFee += (r.revenue || 0) * ksherFeePct(brandMap[r.machine_id])
+    // รวมซองแยกตามทุนก่อนค่อยคูณ — ช่วงที่ทุนเดียวได้ผลเท่าสูตรเดิม (ซองรวม × ทุน) เป๊ะ ไม่มีเศษทศนิยมเพี้ยน
+    const c = costOn(costIndex, r.sku_id, r.sold_at)
+    skuMap[r.sku_id].qtyByCost[c] = (skuMap[r.sku_id].qtyByCost[c] || 0) + (r.quantity_sold || 0)
   })
 
   const ranked = Object.entries(skuMap)
     .map(([id, v]) => {
       const s = skus.find(sk => sk.sku_id === id)
       const netRev = v.rev - v.ksherFee
+      const cogs = Object.entries(v.qtyByCost).reduce((a, [c, q]) => a + q * Number(c), 0)
       return { sku_id: id, series: s?.series || "OP", ...v, netRev,
-        profit: netRev - v.qty * (s?.avg_cost || s?.cost_price || 0) }
+        profit: netRev - cogs }
     })
     .sort((a, b) => metric === "revenue" ? b.rev - a.rev : metric === "qty" ? b.qty - a.qty : b.profit - a.profit)
 

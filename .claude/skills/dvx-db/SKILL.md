@@ -87,7 +87,7 @@ sales           machine_id, sku_id, product_name_raw, quantity_sold, grand_total
                 sold_at (UTC!), synced_at, slot_number, sale_key, transaction_id, product_id
                 ← ชื่อสินค้าคือ product_name_raw ไม่ใช่ product_name
 skus            sku_id, name, canonical_sku, packs_per_box, boxes_per_cotton,
-                sell_price, cost_price, avg_cost(=0 ไม่ใช้แล้ว), franchise, series, is_active
+                sell_price, cost_price, avg_cost(21 SKU > 0 · กำไรไม่อ่านตรงแล้ว — ต้นทุนตามช่วงเวลาอยู่ตาราง sku_costs mig 083), franchise, series, is_active
 machines        machine_id, name, location, status, brand, config(jsonb)
                 ← ไม่มีคอลัมน์ updated_at บน production ห้ามใส่ใน UPDATE
 ```

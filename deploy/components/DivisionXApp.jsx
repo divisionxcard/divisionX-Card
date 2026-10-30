@@ -21,7 +21,7 @@ import {
   deleteStockIn as dbDeleteStockIn,
   deleteStockOut as dbDeleteStockOut, deleteStockOutByClaim as dbDeleteStockOutByClaim,
   getMachines, getSalesByMachine,
-  getSkus, addSku as dbAddSku, deactivateSku as dbDeactivateSku, updateSkuAvgCost,
+  getSkus, getSkuCosts, addSku as dbAddSku, deactivateSku as dbDeactivateSku, updateSkuAvgCost,
   signInWithUsername as authSignIn, signOut as authSignOut, signOutAndGoHome, getProfile, resetPasswordByUsername, updatePassword,
   getMachineStock,
   getClaims, addClaim as dbAddClaim, updateClaim as dbUpdateClaim, deleteClaim as dbDeleteClaim, deleteStockTransfersByClaim as dbDeleteStockTransfersByClaim,
@@ -441,6 +441,7 @@ export default function DivisionXApp() {
   // ── Data State ──
   const [machines,            setMachines]            = useState([])
   const [skus,                setSkus]                = useState(SKUS)
+  const [skuCosts,            setSkuCosts]            = useState([])   // ต้นทุนตามวันมีผล (sku_costs) — ยังไม่มีตาราง = []
   const [stockIn,             setStockIn]             = useState([])
   const [stockOut,            setStockOut]             = useState([])
   const [stockBalance,        setStockBalance]        = useState([])
@@ -459,9 +460,10 @@ export default function DivisionXApp() {
     try {
       setLoading(true)
       setDataError(null)
-      const [machData, skuData, siData, soData, sbData, salesData, msData, claimsData, tfData, maData, profData, wrData] = await Promise.all([
+      const [machData, skuData, skuCostData, siData, soData, sbData, salesData, msData, claimsData, tfData, maData, profData, wrData] = await Promise.all([
         getMachines(),
         getSkus(),
+        getSkuCosts().catch(() => []),   // ตารางยังไม่มี/อ่านไม่ได้ → กำไรใช้ skus.avg_cost/cost_price เหมือนเดิม
         getStockIn(),
         getStockOut(),
         getStockBalance(),
@@ -475,6 +477,7 @@ export default function DivisionXApp() {
       ])
       setMachines(machData)
       if (skuData?.length) setSkus(skuData)
+      setSkuCosts(skuCostData || [])
       setStockIn(siData)
       setStockOut(soData)
       setStockBalance(sbData)
@@ -940,9 +943,9 @@ export default function DivisionXApp() {
           {page === "mystock"    && <PageMyStock   transfers={transfers} stockOut={stockOut} stockIn={stockIn} skus={skus} profile={profile} session={session} profiles={allProfiles} machines={machines} machineAssignments={machineAssignments} stockBalance={stockBalance} withdrawalRequests={withdrawalRequests} onDeleteTransfer={deleteTransfer} onAddRequest={addWithdrawalRequest} onCancelRequest={cancelWithdrawalRequest}/>}
           {page === "refillprep" && <PageRefillPrep machines={machines} machineStock={machineStock} machineAssignments={machineAssignments} transfers={transfers} stockOut={stockOut} skus={skus} profile={profile} session={session} profiles={allProfiles} onAddStockOut={addStockOut} onUpdateStockOut={updateStockOut} onDeleteStockOut={deleteStockOut}/>}
           {page === "machstock"  && <PageMachineStockView machines={machines} machineStock={machineStock} skus={skus} onRefresh={loadAll} profile={profile}/>}
-          {page === "sales"      && <PageSales     machines={machines} sales={sales} skus={skus} claims={claims} onRefresh={loadAll}/>}
+          {page === "sales"      && <PageSales     machines={machines} sales={sales} skus={skus} skuCosts={skuCosts} claims={claims} onRefresh={loadAll}/>}
           {page === "claims"     && <PageClaims    machines={machines} skus={skus} claims={claims} onAddClaim={addClaim} onConfirmClaim={confirmClaim} onDeleteClaim={deleteClaim} machineAssignments={machineAssignments} session={session} profile={profile}/>}
-          {page === "analytics"  && <PageAnalytics sales={sales} skus={skus} machines={machines}/>}
+          {page === "analytics"  && <PageAnalytics sales={sales} skus={skus} skuCosts={skuCosts} machines={machines}/>}
           {page === "users"      && <PageUsers     currentProfile={profile} machines={machines} machineAssignments={machineAssignments} allProfiles={allProfiles} onAddAssignment={addAssignment} onRemoveAssignment={removeAssignment}/>}
           {page === "slots"      && <PageSlots     machines={machines} skus={skus} allProfiles={allProfiles} machineStock={machineStock}/>}
           {page.startsWith("machine_") && (() => {

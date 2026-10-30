@@ -52,6 +52,7 @@ const TABLES = [
   { name: "machine_assignments", orderBy: "created_at" },
   { name: "machines",           orderBy: "machine_id" },
   { name: "skus",               orderBy: "sku_id" },
+  { name: "sku_costs",          orderBy: "id" },        // ประวัติต้นทุนต่อซอง (migration 083 · 30 ต.ค. 2026)
 ]
 
 async function fetchAllRows(table, orderBy) {

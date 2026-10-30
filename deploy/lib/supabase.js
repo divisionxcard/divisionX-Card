@@ -294,6 +294,19 @@ export async function getSkus() {
   return data
 }
 
+// ── ต้นทุนต่อซองตามวันมีผล (sku_costs · migration 083) ─────────
+// ไม่กรอง is_active — ยอดขายเก่าของ SKU ที่ปิดไปแล้วยังต้องหาทุนเจอ
+// ตารางยังไม่มี = throw → ผู้เรียก .catch(() => []) แล้วใช้ skus.avg_cost/cost_price แทน
+// กติกาเลือกแถวอยู่ที่ components/shared/costs.js (costOn)
+export async function getSkuCosts() {
+  // fetchAll — ประวัติโตได้เรื่อย ๆ · PostgREST ตัดที่ 1,000 แถวเงียบ ๆ (ดู lib/fetchAll.js)
+  return fetchAll(() => supabase
+    .from("sku_costs")
+    .select("sku_id,cost_per_pack,effective_from")
+    .order("sku_id")
+    .order("effective_from"))
+}
+
 // ── เพิ่ม SKU ใหม่ ────────────────────────────────────────────
 export async function addSku(record) {
   const { data, error } = await supabase

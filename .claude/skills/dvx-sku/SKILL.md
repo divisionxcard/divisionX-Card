@@ -91,7 +91,8 @@ query `machine_stock?sku_id=is.null` ดูว่าค้างช่องไ�
 ```
 sku_id, name, series, packs_per_box, boxes_per_cotton   ← สะกด cotton ไม่ใช่ carton
 sell_price, cost_price   ← ราคาอยู่ที่นี่
-avg_cost                 ← เป็น 0 ทุกแถว ไม่ได้ใช้แล้ว อย่าไปยุ่ง
+avg_cost                 ← ค่าเฉลี่ยจาก stock_in (21 SKU ยัง > 0) · กำไรไม่อ่านตรงแล้ว อย่าไปยุ่ง
+sku_costs (ตารางแยก)     ← ต้นทุนต่อซองตามช่วงเวลา (migration 083) · SKU ใหม่ต้องใส่แถวทุนที่นี่ด้วย ไม่งั้นกำไรใช้ cost_price
 canonical_sku            ← ชื่อจริงหน้าตู้ · หน้า PageSlots ใช้โชว์ + ตรวจ naming contract
 franchise, set_code, item_type, language, is_active, image_url, image_url_box
 ```
