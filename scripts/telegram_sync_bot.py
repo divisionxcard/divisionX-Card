@@ -44,6 +44,14 @@
 
     สั่งได้ในห้อง: /ideas (เก็บเดี๋ยวนี้) · /ideas on|off
 
+สรุปยอด+กำไร รายวัน/รายสัปดาห์ (30 ต.ค. 2026):
+    รายวัน = ของเมื่อวานทุกเช้า · รายสัปดาห์ = จันทร์–อาทิตย์ที่แล้ว ทุกวันจันทร์ (เครื่องปิดวันจันทร์ ชดเชยได้ถึงพุธ)
+    07:45 ดึงยอดขายจากตู้อีกรอบ (ถือล็อกเดียวกับซิงค์) → ส่งไม่ก่อน 08:00 ผ่าน deploy/agents/daily_sales_digest.py
+    ซึ่งส่งเองด้วยบอท DVX Job (TELEGRAM_MKT_*) เข้าแชตเจ้าของ + กลุ่ม DVX_Admin (TELEGRAM_DVX_ADMIN_CHAT_ID)
+    ห้องนี้เห็นเฉพาะตอนล้ม/ตอนกดเอง · เงื่อนไข "วันนี้ส่งหรือยัง" แบบเดียวกับงานอื่น
+
+    สั่งได้ในห้อง: /digest (รายวันเดี๋ยวนี้) · /digest week (รายสัปดาห์เดี๋ยวนี้) · /digest on|off
+
 สำรองข้อมูล + โพสต์อัตโนมัติ (16 ก.ย. 2026):
     GitHub ยังไม่ปลดแฟล็ก (ครบ 6 วันแล้ว) เจ้าของเลือกย้ายสองงานนี้มาก่อน
       · สำรองข้อมูล  — ของเดิมรายสัปดาห์ (weekly-backup.yml) ขาดไปหนึ่งรอบแล้ว
@@ -107,6 +115,9 @@ SOCIAL_INSIGHT = ROOT / "deploy" / "agents" / "social_insight.py"
 # อ่านต้นฉบับก่อนคิดมุม (23 ต.ค. 2026) — ถอดคำบรรยายคลิป YouTube → summary 📌 + มุมที่อิงเนื้อหาจริง
 # เจ้าของ: AI เขียนโดยไม่อ้างอิงต้นฉบับ (#69 คลิปล้อโฆษณาในเกม → โพสต์กติกาสลับเบนช์) · ต้องมี yt-dlp (~/.agent-reach-venv)
 SOURCE_NOTES = ROOT / "deploy" / "agents" / "source_notes.py"
+# สรุปยอด+กำไรของเมื่อวานรายวัน (30 ต.ค. 2026) — บอท DVX Job ส่งเข้าแชตเจ้าของ + กลุ่ม DVX_Admin
+# อยู่ในบอทนี้ไม่ใช่ GitHub เพราะต้องตรงเวลา 08:00 (cron ที่นั่นเลื่อนได้หลายชั่วโมง) และต้องดึงยอดรอบเช้าก่อน
+DAILY_DIGEST = ROOT / "deploy" / "agents" / "daily_sales_digest.py"
 
 BTN_STOCK = "🔄 ซิงค์สต็อกหน้าตู้"
 BTN_ALL = "📊 ซิงค์ทั้งหมด (ยอดขาย+สต็อก)"
@@ -142,6 +153,16 @@ SALES_OVERLAP_DAYS = 2
 # ── ค่าตั้งของรอบเก็บไอเดีย ──
 # 07:00 ตามเวลาเดิมของ workflow และข้อความบนหน้า /marketing ("ตัวเก็บไอเดียรันทุกเช้า 07:00 น.")
 IDEAS_AT_DEFAULT = "07:00"
+
+# สรุปยอดรายวัน: ดึงยอดขายจากตู้อีกรอบตอน 07:45 แล้วส่งสรุปไม่ก่อน 08:00 (เจ้าของขอ "ช่วง 08.00 น.")
+# เครื่องปิดตอนเช้า = เปิดเมื่อไหร่ดึง+ส่งชดเชยทันที (สรุปของเมื่อวานเสมอ)
+DIGEST_AT_DEFAULT = "07:45"
+DIGEST_SEND_AT = "08:00"
+DIGEST_SYNC_WAIT_SEC = 2400    # งานซิงค์อื่นถือล็อกอยู่ (เช่นรอบเที่ยงคืนชดเชย) รอได้นานเท่านี้
+# สรุปรายสัปดาห์ (จันทร์–อาทิตย์ที่แล้ว) ส่งวันจันทร์ · เครื่องปิดวันจันทร์ = ชดเชยได้ถึงวันพุธ (weekday 0–2)
+WEEKLY_CATCHUP_DAYS = 2
+DIGEST_RESYNC_MIN = 60         # รอบลองใหม่ไม่ดึงยอดซ้ำถ้าเพิ่งดึงสำเร็จภายในเท่านี้
+DIGEST_EXIT_GROUP_FAILED = 3   # รหัสออกจาก daily_sales_digest.py: แชตเจ้าของได้แล้ว กลุ่มล้ม
 IDEAS_ANGLE_LIMIT = "40"   # เท่ากับ workflow · โควตา Gemini ฟรีมีจำกัด
 
 # ── ค่าตั้งของงานที่ย้ายมาเพิ่ม 16 ก.ย. 2026 ──
@@ -1071,6 +1092,189 @@ def run_ideas(manual=False):
         _ideas_lock.release()
 
 
+# ── สรุปยอด+กำไร รายวัน/รายสัปดาห์ (30 ต.ค. 2026) ──
+#
+# ลำดับ: ดึงยอดขายจากตู้อีกรอบ (ถือ _lock เดียวกับงานซิงค์อื่น) → รอถึง 08:00 → daily_sales_digest.py ส่งผ่านบอท DVX Job
+#   รายวัน = ของเมื่อวาน ทุกวัน · รายสัปดาห์ (--week) = จันทร์–อาทิตย์ของสัปดาห์ที่แล้ว ทุกวันจันทร์
+#   วันจันทร์ถึงคิวทั้งคู่ → ดึงยอดรอบเดียว ส่งรายวันก่อนแล้วตามด้วยรายสัปดาห์
+# ดึงยอดไม่สำเร็จก็ยังส่ง แต่แนบคำเตือนว่าตัวเลขมาจากรอบซิงค์ก่อนหน้า — ไม่ส่งเลยแย่กว่า
+# ส่งไม่สำเร็จ (Telegram/ฐานข้อมูลล่ม) = ลองใหม่ทุก 30 นาที 3 รอบ แล้วรายงานห้องนี้ (แยกนับรายวัน/รายสัปดาห์)
+_digest_lock = threading.Lock()
+
+
+def digest_due(now, state):
+    """ถึงเวลาทำสรุปรายวันหรือยัง (ฟังก์ชันล้วน — ทดสอบได้) · เงื่อนไขแบบเดียวกับ ideas_due"""
+    if not state.get("digest_enabled", True):
+        return False
+    if now.strftime("%H:%M") < DIGEST_AT_DEFAULT:
+        return False
+    if state.get("digest_done_date") == now.date().isoformat():
+        return False
+    retry_at = state.get("digest_retry_at")
+    if retry_at and now.timestamp() < retry_at:
+        return False
+    return True
+
+
+def weekly_target(now):
+    """วันจันทร์ของสัปดาห์ (จันทร์–อาทิตย์) ล่าสุดที่จบแล้ว (ฟังก์ชันล้วน)"""
+    today = now.date()
+    return today - timedelta(days=today.weekday() + 7)
+
+
+def weekly_due(now, state):
+    """ถึงเวลาทำสรุปรายสัปดาห์หรือยัง (ฟังก์ชันล้วน — ทดสอบได้)
+
+    ปกติวันจันทร์ 07:45 · เครื่องปิดวันจันทร์ = ส่งชดเชยได้ถึงวันพุธ (WEEKLY_CATCHUP_DAYS)
+    เลยกว่านั้นข้ามสัปดาห์นั้นไป — กันสรุปสัปดาห์ที่แล้วโผล่กลางสัปดาห์ (เช่นรีสตาร์ตบอทวันพฤหัส)
+    """
+    if not state.get("digest_enabled", True):
+        return False
+    if now.weekday() > WEEKLY_CATCHUP_DAYS:
+        return False
+    # ทุกวันที่ชดเชยได้ต้องรอ 07:45 เหมือนกัน — ไม่งั้นเปิดเครื่องตีหนึ่งวันอังคารจะเริ่มรอบนั้นเลย
+    # แล้วนอนรอ 08:00 ถือล็อกไว้ 7 ชม. ทับรอบรายวัน · รอ 07:45 = ดึงยอดรอบเดียวส่งพร้อมรายวัน
+    if now.strftime("%H:%M") < DIGEST_AT_DEFAULT:
+        return False
+    if state.get("weekly_done_for") == weekly_target(now).isoformat():
+        return False
+    retry_at = state.get("weekly_retry_at")
+    if retry_at and now.timestamp() < retry_at:
+        return False
+    return True
+
+
+def digest_wait_sec(now, send_at=DIGEST_SEND_AT):
+    """เหลืออีกกี่วินาทีถึงเวลาส่ง (ฟังก์ชันล้วน) · เลยแล้ว = 0"""
+    h, m = map(int, send_at.split(":"))
+    target = now.replace(hour=h, minute=m, second=0, microsecond=0)
+    return max(0.0, (target - now).total_seconds())
+
+
+# ชนิดสรุป → (ป้ายในข้อความ, อาร์กิวเมนต์, คีย์ state "ทำแล้ว", คีย์นับครั้งที่ลอง, คีย์รอบลองใหม่)
+DIGEST_KINDS = {
+    "daily": ("สรุปยอดรายวัน", [], "digest_done_date", "digest_tries", "digest_retry_at"),
+    "weekly": ("สรุปยอดรายสัปดาห์", ["--week"], "weekly_done_for", "weekly_tries", "weekly_retry_at"),
+}
+
+
+def _digest_mark(kind, now):
+    """ค่าที่บอกว่า "รอบนี้ของ kind ทำแล้ว" — รายวันผูกวันนี้ · รายสัปดาห์ผูกสัปดาห์เป้าหมาย"""
+    return now.date().isoformat() if kind == "daily" else weekly_target(now).isoformat()
+
+
+def digest_period_arg(kind, now):
+    """--date ที่ส่งให้สคริปต์ — คิดจาก now เดียวกับ _digest_mark (ฟังก์ชันล้วน)
+
+    ห้ามให้สคริปต์เดาวันเองจากนาฬิกาตอนรัน: รอบที่เริ่ม 23:58 แต่ไปถึงขั้นส่งหลังเที่ยงคืน
+    จะสรุปผิดวัน ทั้งที่บันทึกว่า "ทำแล้ว" ของอีกวัน
+    """
+    if kind == "daily":
+        return (now.date() - timedelta(days=1)).isoformat()
+    return weekly_target(now).isoformat()
+
+
+def run_digest(manual=False, kinds=None):
+    """kinds = ชนิดที่จะส่ง · ไม่ระบุ = ตามที่ถึงคิว (ตัวจับเวลา)"""
+    chat_id = STATE.get("chat_id")
+    if not _digest_lock.acquire(blocking=False):
+        if manual and chat_id:
+            send(chat_id, "⏳ กำลังทำสรุปยอดอยู่แล้ว — รอผลสักครู่")
+        return
+    try:
+        now = datetime.now()
+        kinds = kinds or [k for k, due in (("daily", digest_due), ("weekly", weekly_due)) if due(now, STATE)]
+        if not kinds:
+            return
+        for k in kinds:                       # นับครั้งที่ลองแยกตามรอบเป้าหมาย (วัน/สัปดาห์)
+            mark = _digest_mark(k, now)
+            if STATE.get(f"{k}_tries_for") != mark:
+                STATE[DIGEST_KINDS[k][3]] = 0
+                STATE[f"{k}_tries_for"] = mark
+        if manual and chat_id:
+            send(chat_id, f"📊 เริ่มทำ{' + '.join(DIGEST_KINDS[k][0] for k in kinds)} — ดึงยอดขายจากตู้อีกรอบก่อน (ราว 2-5 นาที)")
+
+        # 1) ดึงยอดขายรอบเช้า — ไล่จากตัวชี้แบบเดียวกับรอบอัตโนมัติ (ห้ามเรียก sync_local เปล่า ๆ ดู run_sales_catchup)
+        #    รอบลองใหม่ (Telegram/DB ล้ม) ไม่ดึงซ้ำถ้าเพิ่งดึงสำเร็จไม่เกิน DIGEST_RESYNC_MIN นาที
+        synced_at = STATE.get("digest_synced_at") or 0
+        if time.time() - synced_at < DIGEST_RESYNC_MIN * 60:
+            note = f"🔄 ดึงยอดจากตู้รอบเช้าแล้ว ({datetime.fromtimestamp(synced_at):%H:%M} น.)"
+        elif _lock.acquire(timeout=DIGEST_SYNC_WAIT_SEC):
+            try:
+                parts, sync_ok = run_sales_catchup(pending_sales_chunks())
+            finally:
+                _lock.release()
+            if sync_ok:
+                STATE["digest_synced_at"] = time.time()
+                save_state()
+            note = (f"🔄 ดึงยอดจากตู้รอบเช้าแล้ว ({datetime.now():%H:%M} น.)" if sync_ok
+                    else "⚠️ ดึงยอดรอบเช้าไม่สำเร็จ — ตัวเลขมาจากรอบซิงค์ก่อนหน้า อาจยังไม่ครบ")
+            if not sync_ok and chat_id:
+                send(chat_id, "⚠️ <b>ดึงยอดรอบเช้า (ก่อนสรุปยอด) ไม่สำเร็จ</b> — ยังส่งสรุปตามเวลา พร้อมคำเตือน"
+                              f"\n\n<pre>{_esc((parts[-1] if parts else '')[:1500])}</pre>")
+        else:
+            note = "⚠️ งานซิงค์อื่นค้างนานเกิน — ไม่ได้ดึงยอดรอบเช้า ตัวเลขอาจยังไม่ครบ"
+
+        # 2) ส่งไม่ก่อน 08:00 — กดเองส่งเลย
+        if not manual:
+            time.sleep(digest_wait_sec(datetime.now()))
+
+        # 3) สรุป + ส่งทีละชนิด (สคริปต์ส่งเองผ่านบอท DVX Job · exit 0 = ส่งครบทุกห้อง)
+        for k in kinds:
+            label, args, done_key, tries_key, retry_key = DIGEST_KINDS[k]
+            p, err = _run_py(DAILY_DIGEST, [*args, "--date", digest_period_arg(k, now), "--note", note], timeout=600)
+            # exit 3 = ถึงแชตเจ้าของแล้ว แต่กลุ่ม DVX_Admin ล้ม → นับว่าสำเร็จ (ลองใหม่ = ส่งซ้ำเข้าแชตเจ้าของ) แล้วแจ้งห้องนี้ครั้งเดียว
+            ok = p is not None and p.returncode in (0, DIGEST_EXIT_GROUP_FAILED)
+            out = ((p.stdout if p is not None else "") or "").strip()
+            summary = "\n".join(l for l in out.splitlines() if "[daily]" in l or "[weekly]" in l)
+            mark = _digest_mark(k, now)
+            if ok:
+                STATE[done_key] = mark
+                STATE.pop(retry_key, None)
+                STATE[tries_key] = 0
+                save_state()
+                if p.returncode == DIGEST_EXIT_GROUP_FAILED and chat_id:
+                    send(chat_id, f"⚠️ <b>{label}</b>: ส่งเข้าแชตเจ้าของแล้ว แต่<b>ส่งเข้ากลุ่ม DVX_Admin ไม่สำเร็จ</b> — "
+                                  "เช็กว่าบอท DVX Job ยังอยู่ในกลุ่ม และ TELEGRAM_DVX_ADMIN_CHAT_ID ถูกต้อง"
+                                  f"\n<pre>{_esc(summary[:1200])}</pre>")
+                elif manual and chat_id:
+                    send(chat_id, f"📊 <b>ส่ง{label}แล้ว</b> (บอท DVX Job)\n<pre>{_esc(summary[:1500])}</pre>")
+                continue
+            detail = err if p is None else ((p.stderr or "").strip()[-1000:] or summary or out[-600:])
+            tries = STATE.get(tries_key, 0) + 1
+            STATE[tries_key] = tries
+            if tries >= AUTO_MAX_TRIES:
+                STATE[done_key] = mark                # ยอมแพ้ของรอบนี้ รอบหน้าส่งของใหม่เอง
+                STATE.pop(retry_key, None)
+            else:
+                STATE[retry_key] = time.time() + AUTO_RETRY_MIN * 60
+            save_state()
+            if chat_id:
+                send(chat_id, f"❌ <b>ส่ง{label}ไม่สำเร็จ</b> (รอบที่ {tries}/{AUTO_MAX_TRIES})"
+                              + (f" — จะลองใหม่ในอีก {AUTO_RETRY_MIN} นาที" if tries < AUTO_MAX_TRIES
+                                 else " — หยุดลองของรอบนี้ พิมพ์ /digest (หรือ /digest week) เพื่อส่งเอง")
+                              + f"\n\n<pre>{_esc(detail)}</pre>")
+    except Exception as e:
+        # นับเป็นการลองหนึ่งครั้งเหมือนล้มปกติ — ไม่งั้นข้อผิดพลาดถาวรจะลองทุก 30 นาทีทั้งวัน
+        now2 = datetime.now()
+        for k in (kinds or ["daily"]):
+            _, _, done_key, tries_key, retry_key = DIGEST_KINDS[k]
+            STATE[tries_key] = STATE.get(tries_key, 0) + 1
+            if STATE[tries_key] >= AUTO_MAX_TRIES:
+                STATE[done_key] = _digest_mark(k, now2)
+                STATE.pop(retry_key, None)
+            else:
+                STATE[retry_key] = time.time() + AUTO_RETRY_MIN * 60
+        try:
+            save_state()
+        except Exception:
+            pass
+        if chat_id:
+            send(chat_id, f"❌ สรุปยอดล้ม: {_esc(e)}")
+    finally:
+        _digest_lock.release()
+
+
 # ── โพสต์อัตโนมัติ — เคาะปลายทางบนเว็บทุก 15 นาที (แทน marketing-autopost.yml) ──
 #
 # ⚠️ ตัวตัดสินใจว่าโพสต์ชิ้นไหนอยู่ฝั่งเว็บ บอทเป็นแค่ตัวจับเวลาเหมือน workflow เดิมเป๊ะ
@@ -1223,6 +1427,9 @@ def scheduler():
                 # แยกเธรด — ขั้นคิดมุมวัดจริง 18 นาทีกับ 19 ชิ้น ถ้ารันในเธรดนี้ ตัวจับเวลาซิงค์จะค้างรอไปด้วย
                 # ติ๊กถัดไประหว่างที่ยังรันอยู่จะเรียกซ้ำ แต่ _ideas_lock ทำให้ตัวที่ซ้ำออกทันที
                 threading.Thread(target=run_ideas, daemon=True).start()
+            # สรุปยอดรายวัน/รายสัปดาห์ — แยกเธรด (รอซิงค์ + รอถึง 08:00) · _digest_lock กันเรียกซ้ำระหว่างรอ
+            if digest_due(datetime.now(), STATE) or weekly_due(datetime.now(), STATE):
+                threading.Thread(target=run_digest, daemon=True).start()
             # ทั้งสองตัวแยกเธรดเหมือนกัน — เคาะโพสต์รอปลายทางได้นาน ส่วนสำรองข้อมูลกินหลายนาที
             if autopost_due(datetime.now(), STATE):
                 threading.Thread(target=run_autopost, daemon=True).start()
@@ -1259,6 +1466,11 @@ def auto_status():
     idea_done = STATE.get("ideas_done_date") == date.today().isoformat()
     lines.append(f"💡 เก็บไอเดีย: <b>{'เปิด' if idea_on else 'ปิด'}</b> · เวลา <b>{IDEAS_AT_DEFAULT}</b> น. · "
                  f"วันนี้{'เก็บแล้ว' if idea_done else 'ยังไม่ได้เก็บ'}")
+    dg_done = STATE.get("digest_done_date") == date.today().isoformat()
+    wk_last = STATE.get("weekly_done_for")
+    lines.append(f"📊 สรุปยอด (DVX Job): <b>{'เปิด' if STATE.get('digest_enabled', True) else 'ปิด'}</b> · "
+                 f"ดึงยอด {DIGEST_AT_DEFAULT} ส่ง {DIGEST_SEND_AT} น. · รายวัน: วันนี้{'ส่งแล้ว' if dg_done else 'ยังไม่ได้ส่ง'} · "
+                 f"รายสัปดาห์ทุกจันทร์: ล่าสุดสัปดาห์ของ {wk_last or 'ยังไม่เคย'}")
     bk = STATE.get("backup_done_date") or "ยังไม่เคย"
     lines.append(f"💾 สำรองข้อมูล: <b>{'เปิด' if STATE.get('backup_enabled', True) else 'ปิด'}</b> · "
                  f"ทุก {BACKUP_EVERY_DAYS} วัน · ชุดล่าสุด {bk}")
@@ -1269,7 +1481,7 @@ def auto_status():
     lines.append("\nเครื่องต้องเปิดอยู่บอทถึงจะทำงาน — ถ้าเครื่องปิดข้ามคืน "
                  "บอทจะซิงค์ชดเชยให้ทันทีที่เปิดมา")
     lines.append("สั่งได้: /auto on · /auto off · /auto 00:30 · /rounds (รอบซิงค์ระหว่างวัน) · "
-                 "/ideas (เก็บไอเดียเดี๋ยวนี้) · /ideas on|off")
+                 "/ideas (เก็บไอเดียเดี๋ยวนี้) · /ideas on|off · /digest (ส่งสรุปเมื่อวานเดี๋ยวนี้) · /digest week · /digest on|off")
     lines.append("ปุ่มหาย/ไม่ขึ้นบนเครื่องใคร ให้พิมพ์ /panel — แผงปุ่มในข้อความ ทุกคนในห้องกดได้")
     return "\n".join(lines)
 
@@ -1336,6 +1548,23 @@ def handle(u):
             send(chat_id, "ไม่เข้าใจครับ — ใช้ /autopost · /autopost on · /autopost off")
         else:
             threading.Thread(target=run_autopost, kwargs={"manual": True}, daemon=True).start()
+    elif text.startswith("/digest"):
+        arg = text.split(maxsplit=1)[1].strip().lower() if " " in text else ""
+        if arg in ("on", "เปิด"):
+            state["digest_enabled"] = True
+            save_state()
+            send(chat_id, f"✅ เปิดสรุปยอดแล้ว — รายวันทุกเช้า + รายสัปดาห์ทุกวันจันทร์ (ดึงยอด {DIGEST_AT_DEFAULT} · "
+                          f"ส่ง {DIGEST_SEND_AT} น. ผ่านบอท DVX Job)")
+        elif arg in ("off", "ปิด"):
+            state["digest_enabled"] = False
+            save_state()
+            send(chat_id, "⏸ ปิดสรุปยอดอัตโนมัติแล้ว (ทั้งรายวันและรายสัปดาห์) — พิมพ์ /digest หรือ /digest week เพื่อส่งเองได้")
+        elif arg in ("week", "weekly", "สัปดาห์"):
+            threading.Thread(target=run_digest, kwargs={"manual": True, "kinds": ["weekly"]}, daemon=True).start()
+        elif arg:
+            send(chat_id, "ไม่เข้าใจครับ — ใช้ /digest · /digest week · /digest on · /digest off")
+        else:
+            threading.Thread(target=run_digest, kwargs={"manual": True, "kinds": ["daily"]}, daemon=True).start()
     elif text.startswith("/ideas"):
         arg = text.split(maxsplit=1)[1].strip().lower() if " " in text else ""
         if arg in ("on", "เปิด"):

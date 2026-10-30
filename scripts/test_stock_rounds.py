@@ -513,14 +513,14 @@ def tick(h, m, day=17):
         def start(self):
             self.target(*self.args, **self.kwargs)
 
-    names = ("time", "threading", "ideas_due", "autopost_due", "backup_due", "run_auto", "run_stock_round")
+    names = ("time", "threading", "ideas_due", "autopost_due", "backup_due", "digest_due", "weekly_due", "run_auto", "run_stock_round")
     saved = {k: getattr(bot, k) for k in names}
     real_auto, real_round = bot.run_auto, bot.run_stock_round
     try:
         # time.time() ตามนาฬิกาปลอมด้วย — เวลาลองใหม่ของรอบเที่ยงคืน (auto_retry_at) จะได้เทียบกับ "ตอนนี้" ของเทสต์
         bot.time = types.SimpleNamespace(time=lambda: datetime(2026, 10, day, h, m).timestamp(), sleep=_stop)
         bot.threading = types.SimpleNamespace(Thread=SyncThread, Lock=threading.Lock, Event=threading.Event)
-        bot.ideas_due = bot.autopost_due = bot.backup_due = lambda now, st: False
+        bot.ideas_due = bot.autopost_due = bot.backup_due = bot.digest_due = bot.weekly_due = lambda now, st: False
         bot.run_auto = lambda: (order.append("auto"), real_auto())
         bot.run_stock_round = lambda now=None: (order.append("round"), real_round(now))
         with frozen(h, m, day):
@@ -914,11 +914,11 @@ check("ข้อความของรีวิวรอบ 3 ไม่มี 
 
 # ── ตัวจับเวลา: ถึงคิวแล้วต้องปล่อยตัวรันในเธรดแยก ──
 ran = threading.Event()
-saved = {k: getattr(bot, k) for k in ("time", "auto_due", "ideas_due", "autopost_due", "backup_due",
+saved = {k: getattr(bot, k) for k in ("time", "auto_due", "ideas_due", "autopost_due", "backup_due", "digest_due", "weekly_due",
                                        "stock_rounds_due", "run_stock_round")}
 try:
     bot.time = types.SimpleNamespace(time=time.time, sleep=_stop)   # ติ๊กเดียวแล้วออกจากลูป
-    bot.auto_due = bot.ideas_due = bot.autopost_due = bot.backup_due = lambda now, st: False
+    bot.auto_due = bot.ideas_due = bot.autopost_due = bot.backup_due = bot.digest_due = bot.weekly_due = lambda now, st: False
     bot.stock_rounds_due = lambda now, st: ["10:00"]
     bot.run_stock_round = lambda now=None: ran.set()
     try:
