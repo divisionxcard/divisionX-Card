@@ -58,7 +58,7 @@ LICENSE = ("เนื้อหาลิขสิทธิ์ The Pokémon Compan
 OUR_SETS = {
     "MA3": {"our_sku": "PKM Dream EX", "jp_code": "M2a",
             "jp": "ハイクラスパック MEGA ドリームex · 10 ใบ/ซอง"},
-    "MA5": {"our_sku": "PKM Ninja + PKM Ghost", "jp_code": "M4 + M5",
+    "MA5": {"our_sku": "PKM Ninja + PKM M5 Abyss Eye", "jp_code": "M4 + M5",
             "jp": "ไทยรวม 拡張パック ニンジャスピナー (M4 · 5 ใบ/ซอง) "
                   "กับ 拡張パック アビスアイ (M5 · 5 ใบ/ซอง) เข้าเป็นชุดเดียว"},
 }

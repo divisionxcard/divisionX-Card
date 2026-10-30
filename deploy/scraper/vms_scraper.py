@@ -42,7 +42,7 @@ PACKS_PER_BOX = {
     "YGH The Heroes": 15, "YGH The Revals": 15, "YGH Chaos Origins": 30,
     # สินค้าใหม่ 2026-08-13 (ตู้ chukes01-03) — เจ้าของยืนยันตัวเลขเอง
     "YGH UT01": 15, "TF Overdrive 01": 15, "MLP SEA02": 30, "MLP BP-01": 20,
-    "PKM Ghost": 30,
+    "PKM M5 Abyss Eye": 30,
     "MLBB HOD - 02": 20,
     "NRT Jin - 2": 10,
     "OP 16": 24,
@@ -165,8 +165,8 @@ def map_sku(product_name: str) -> str | None:
         ("solo leveling",   "SLL UA 51"),
         # ── ตามให้ทันของที่เพิ่มไปแล้วใน vms_stock_sync (25 ส.ค. 2026) ──
         # ตกหล่นมาตั้งแต่ มิ.ย. — ไฟล์นี้เป็นทางสำรองเลยไม่มีใครสังเกต
-        ("pokemon ghost",   "PKM Ghost"),
-        ("abyss",           "PKM Ghost"),   # หลังบ้าน WW เปลี่ยนชื่อเป็น "M5 Abyss Eye"
+        ("pokemon ghost",   "PKM M5 Abyss Eye"),
+        ("abyss",           "PKM M5 Abyss Eye"),   # หลังบ้าน WW เปลี่ยนชื่อเป็น "M5 Abyss Eye"
         ("chaos origins",   "YGH Chaos Origins"),
         ("limited over",    "YGH The Revals"),
         ("the revals",      "YGH The Revals"),

@@ -61,8 +61,8 @@ def map_product_to_sku(product_name: str) -> str | None:
         ("pokemon maga ex", "PKM Dream EX"),
         ("solo leveling",   "SLL UA 51"),
         # ── mirror vms_stock_sync.py ──
-        ("pokemon ghost",   "PKM Ghost"),
-        ("abyss",           "PKM Ghost"),   # 2026-08-13 เปลี่ยนชื่อเป็น M5 Abyss Eye
+        ("pokemon ghost",   "PKM M5 Abyss Eye"),
+        ("abyss",           "PKM M5 Abyss Eye"),   # 2026-08-13 เปลี่ยนชื่อเป็น M5 Abyss Eye
         ("chaos origins",   "YGH Chaos Origins"),
         ("limited over",    "YGH The Revals"),
         ("the revals",      "YGH The Revals"),

@@ -39,7 +39,7 @@ PACKS_PER_BOX = {
     "YGH The Heroes": 15, "YGH The Revals": 15, "YGH Chaos Origins": 30,
     # สินค้าใหม่ 2026-08-13 (ตู้ chukes01-03) — เจ้าของยืนยันตัวเลขเอง
     "YGH UT01": 15, "TF Overdrive 01": 15, "MLP SEA02": 30, "MLP BP-01": 20,
-    "PKM Ghost": 30,
+    "PKM M5 Abyss Eye": 30,
     "MLBB HOD - 02": 20,
     "NRT Jin - 2": 10,
     "OP 16": 24,
@@ -65,8 +65,8 @@ DIRECT_MAP = {
     "solo leveling":   "SLL UA 51",
     # ── mirror vms_stock_sync.py — ไฟล์นี้เคยตกหล่นจนยอดขายถูกทิ้งทั้งแถว ──
     # ตู้ VMS ส่ง 'Pokemon Ghost ' (มีช่องว่างท้าย) · strip() ในฟังก์ชันจัดการแล้ว
-    "pokemon ghost":   "PKM Ghost",
-    "abyss":           "PKM Ghost",   # 2026-08-13 หลังบ้านเปลี่ยนชื่อเป็น M5 Abyss Eye
+    "pokemon ghost":   "PKM M5 Abyss Eye",
+    "abyss":           "PKM M5 Abyss Eye",   # 2026-08-13 หลังบ้านเปลี่ยนชื่อเป็น M5 Abyss Eye
     "chaos origins":   "YGH Chaos Origins",
     "limited over":    "YGH The Revals",
     "the revals":      "YGH The Revals",

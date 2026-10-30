@@ -9,6 +9,7 @@ import {
 } from "recharts"
 import { CHART_COLORS } from "../shared/constants"
 import { fmt, fmtB, getLastNDays, fmtDayLabel, today, buildBrandMap, ksherFeePct } from "../shared/helpers"
+import { buildCostIndex, costOn } from "../shared/costs"
 import { KpiCard, SectionTitle } from "../shared/dx-components"
 import { authFetch } from "../../lib/authFetch"
 
@@ -16,7 +17,7 @@ import { authFetch } from "../../lib/authFetch"
 // ไม่ใช่เรียงตามตัวอักษร เพราะเวลาเทียบกับใบจัดของต้องไล่ตามลำดับนี้
 //
 // ⚠️ ค่าในลิสต์ต้องเป็น sku_id จริงเท่านั้น ห้ามใช้ชื่อที่แสดงบนหน้าจอ — สองอันนี้ต่างกัน:
-//     'PKM Ghost'      แสดงว่า "Pokemon M5 Abyss Eye"  (เปลี่ยนชื่อแล้ว id เดิม)
+//     'PKM M5 Abyss Eye' เดิมคือ id 'PKM Ghost' (เปลี่ยน id ตามชื่อจริง 30 ต.ค. 2026)
 //     'YGH The Revals' แสดงว่า "Yu-Gi-Oh The Rivals"   (id ยังติดคำสะกดผิด)
 //    ใส่ผิดจะไม่ error แต่ SKU นั้นจะตกไปท้ายตารางเงียบ ๆ
 // SKU ที่ไม่อยู่ในลิสต์ (เช่น 'YGH The Heroes' หรือชุดใหม่ที่เพิ่งเพิ่ม) จะไปต่อท้าย
@@ -32,7 +33,7 @@ const SKU_ORDER = [
   // Naruto
   "NRT Jin - 1", "NRT Jin - 2", "NRT Series - 01", "NRT Series - 02",
   // Pokemon
-  "PKM Dream EX", "PKM Ghost", "PKM Ninja",
+  "PKM Dream EX", "PKM M5 Abyss Eye", "PKM Ninja",
   // Solo Leveling
   "SLL UA 51",
   // Yu-Gi-Oh
@@ -316,7 +317,7 @@ function SalesSkuByMachine({ sales, machines, skus }) {
   )
 }
 
-export default function PageSales({ machines, sales, skus, claims, onRefresh }) {
+export default function PageSales({ machines, sales, skus, skuCosts = [], claims, onRefresh }) {
   const [viewMode, setViewMode] = useState("daily")
   const [machineSel, setMachineSel] = useState("all")
   const [syncingVms, setSyncingVms] = useState(false)
@@ -380,11 +381,12 @@ export default function PageSales({ machines, sales, skus, claims, onRefresh }) 
     })
     .reduce((a, c) => a + (parseFloat(c.refund_amount) || 0), 0)
   // Net profit = (revenue − Ksher fee) − COGS − refunds
+  // COGS = ต้นทุนต่อซอง "ณ วันที่ขาย" ของแต่ละแถว (shared/costs.js) × จำนวนซอง — ช่วงที่คร่อมวันเปลี่ยนทุนได้ทุนถูกทั้งสองฝั่ง
+  const costIndex = buildCostIndex(skuCosts, skus)
   const profit = filtered.reduce((a, r) => {
-    const s = skus.find(sk => sk.sku_id === r.sku_id)
     const gross = r.revenue || 0
     const fee = gross * ksherFeePct(brandMap[r.machine_id])
-    const cost = (s?.avg_cost || s?.cost_price || 0) * (r.quantity_sold || 0)
+    const cost = costOn(costIndex, r.sku_id, r.sold_at) * (r.quantity_sold || 0)
     return a + gross - fee - cost
   }, 0) - totalRefund
 

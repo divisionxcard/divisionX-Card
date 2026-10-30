@@ -48,7 +48,7 @@ PACKS_PER_BOX = {
     "PKM Dream EX": 10, "PKM Ninja": 30,
     "SLL UA 51": 16,
     # WW ตู้ wwv03/04/05 (2026-06-03)
-    "OP 16": 24, "PKM Ghost": 30,
+    "OP 16": 24, "PKM M5 Abyss Eye": 30,
     # ชุดใหม่ 2026-08-24 — แอดมินตั้งเข้าตู้ wwv03/04/07 ก่อนใส่ของ
     "OP 17": 24,
     "YGH The Heroes": 15, "YGH The Revals": 15, "YGH Chaos Origins": 30,
@@ -110,10 +110,10 @@ def map_goods_to_sku(goods_name: str) -> str | None:
         ("pokemon maga ex", "PKM Dream EX"),
         ("solo leveling",   "SLL UA 51"),
         # WW ตู้ wwv03/04/05 (2026-06-03) — ชื่อ portal ≠ ชื่อ DvX
-        ("pokemon ghost",   "PKM Ghost"),
+        ("pokemon ghost",   "PKM M5 Abyss Eye"),
         # 2026-08-13 หลังบ้านเปลี่ยนชื่อชุดนี้เป็น "Pokemon M5 Abyss Eye" (เจ้าของยืนยัน)
         # ⚠ ไฟล์นี้ทิ้งรายการขายทั้งแถวถ้า map ไม่ติด — ตู้ wwv06 มีของพร้อมขาย 12 ซอง
-        ("abyss",           "PKM Ghost"),
+        ("abyss",           "PKM M5 Abyss Eye"),
         ("chaos origins",   "YGH Chaos Origins"),
         ("limited over",    "YGH The Revals"),   # portal เรียก "Yuki oh Limited Over Collection"
         ("the revals",      "YGH The Revals"),   # เผื่อ portal เปลี่ยนเป็นชื่อจริงทีหลัง

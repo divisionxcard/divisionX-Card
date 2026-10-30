@@ -23,7 +23,7 @@
 
 ชุดทดสอบ
 ────────
-ชื่อสินค้าจริง 179 แบบที่เคยเจอใน machine_stock + sales (ณ 25 ส.ค. 2026)
+ชื่อสินค้าจริง 179 แบบที่เคยเจอใน machine_stock + sales (ณ 25 ส.ค. 2026) · 181 แบบ ณ 30 ต.ค. 2026 (เพิ่มชื่อ VMS ของ PKM M5 Abyss Eye ตอนเปลี่ยน id จาก PKM Ghost)
 ไม่ได้แต่งขึ้นเอง — เพราะบั๊กที่เกิดจริงคือ "หลังบ้านเปลี่ยนชื่อแล้วโค้ดตามไม่ทัน"
 
 ⚠️ แต่ละเคสผูกกับ **แบรนด์ที่ส่งชื่อนั้นมาจริง** เพราะสามแบรนด์ตั้งชื่อคนละแบบ:
@@ -203,8 +203,12 @@ CASES = [
     ("POKEMON MAGA EX", "PKM Dream EX", "vms"),
     ("Pokemon  Dream EX", "PKM Dream EX", "payif"),
     ("Pokemon Dream EX", "PKM Dream EX", "worldwide"),
-    ("Pokemon Ghost", "PKM Ghost", "vms,worldwide"),
-    ("Pokemon M5 Abyss Eye", "PKM Ghost", "worldwide"),
+    # 30 ต.ค. 2026 เปลี่ยน id 'PKM Ghost' → 'PKM M5 Abyss Eye' (ของชุดเดียวกัน เจ้าของยืนยัน)
+    # หลังบ้านบางตู้ยังส่งชื่อเก่า "Ghost" มา → ต้องติดทั้ง ghost และ abyss
+    ("Pokemon Ghost", "PKM M5 Abyss Eye", "vms,worldwide"),
+    ("Pokemon Ghost ", "PKM M5 Abyss Eye", "vms"),            # VMS ส่งมีช่องว่างท้าย
+    ("POKEMON M5 Abyss Eye", "PKM M5 Abyss Eye", "vms"),
+    ("Pokemon M5 Abyss Eye", "PKM M5 Abyss Eye", "payif,worldwide"),
     ("POKEMON NINJA", "PKM Ninja", "vms"),
     ("Pokemon Ninja", "PKM Ninja", "payif,worldwide"),
     ("ONE PIECE PRB - 01 Box", "PRB 01", "payif"),

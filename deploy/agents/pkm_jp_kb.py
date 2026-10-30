@@ -48,7 +48,7 @@ OUT = ROOT / "deploy" / "tasks" / "pkm_jp_cards.json"
 SETS = {
     "M2a": {"our_sku_id": "PKM Dream EX", "name_ja": "ハイクラスパック MEGAドリームex"},
     "M4": {"our_sku_id": "PKM Ninja", "name_ja": "拡張パック ニンジャスピナー"},
-    "M5": {"our_sku_id": "PKM Ghost", "name_ja": "拡張パック アビスアイ"},
+    "M5": {"our_sku_id": "PKM M5 Abyss Eye", "name_ja": "拡張パック アビスアイ"},
 }
 
 # ไอคอนความหายากบนเว็บ → ชื่อเต็ม (ยืนยันจากหน้ารายละเอียด · MA = Mega Attack Rare มีเฉพาะ M2a)

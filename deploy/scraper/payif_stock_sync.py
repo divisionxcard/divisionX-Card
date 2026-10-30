@@ -76,9 +76,9 @@ def map_name_to_sku(name: str) -> str | None:
         # ไฟล์ฝั่ง VMS มีคำนี้อยู่แล้ว payif ตกไป (ดู vms_stock_sync.py)
         ("maga ex",       "PKM Dream EX"),
         ("ninja",         "PKM Ninja"),
-        ("ghost",         "PKM Ghost"),
+        ("ghost",         "PKM M5 Abyss Eye"),
         # 2026-08-13 หลังบ้าน WW เปลี่ยนชื่อชุดนี้เป็น "Pokemon M5 Abyss Eye"
-        ("abyss",         "PKM Ghost"),
+        ("abyss",         "PKM M5 Abyss Eye"),
         ("solo leveling", "SLL UA 51"),
         ("chaos",         "YGH Chaos Origins"),
         ("revals",        "YGH The Revals"),

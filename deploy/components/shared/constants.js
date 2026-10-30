@@ -57,7 +57,7 @@ export const REFILL_REPORT_SKU_ORDER = [
   "NRT Jin - 1", "NRT Jin - 2", "NRT Series - 01", "NRT Series - 02",
   // ── Pokemon ──
   "PKM Dream EX",   // ใบแอดมินเขียน "Mega Dream"
-  "PKM Ghost",      // ใบแอดมินเขียน "M5 Abyss Eye"
+  "PKM M5 Abyss Eye", // ใบแอดมินเขียน "M5 Abyss Eye" · เดิม id "PKM Ghost" (เปลี่ยน 30 ต.ค. 2026)
   "PKM Ninja",
   // ── Solo Leveling ──
   "SLL UA 51",      // ใบแอดมินเขียน "Ua01"

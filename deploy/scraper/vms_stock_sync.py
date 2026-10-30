@@ -150,10 +150,10 @@ def map_product_to_sku(product_name: str) -> str | None:
         ("solo leveling",   "SLL UA 51"),
         # สินค้าใหม่ 2026-06 (ขายทั้งตู้ VMS + WW) — mirror worldwide_stock_sync.py
         # ตู้ VMS ส่ง 'Pokemon Ghost ' (มีช่องว่างท้าย) · strip() ด้านบนจัดการแล้ว
-        ("pokemon ghost",   "PKM Ghost"),
+        ("pokemon ghost",   "PKM M5 Abyss Eye"),
         # 2026-08-13 หลังบ้าน WW เปลี่ยนชื่อชุดนี้เป็น "Pokemon M5 Abyss Eye"
         # ใส่ที่ VMS ด้วยเผื่อตู้ chukes เปลี่ยนตามทีหลัง
-        ("abyss",           "PKM Ghost"),
+        ("abyss",           "PKM M5 Abyss Eye"),
         ("chaos origins",   "YGH Chaos Origins"),
         ("limited over",    "YGH The Revals"),
         ("the revals",      "YGH The Revals"),
