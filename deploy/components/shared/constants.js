@@ -75,4 +75,11 @@ export const REFILL_REPORT_SKU_ORDER = [
   "MLP BP-01",      // ใบแอดมินเขียน "Booster Pack 01"
 ]
 
+// รหัสที่ "แสดง" บนใบจัดของ/รายงานเติมของ ต่างจาก sku_id ในระบบ — เจ้าของสั่ง 30 ต.ค. 2026:
+// ใบจัดยอดต้องหน้าตาเหมือนเดิมทุกอย่าง แม้ id ในระบบเปลี่ยนแล้ว (แอดมินพิมพ์ทุกวัน คุ้นกับรหัสเดิม)
+// ใช้เฉพาะตอนแสดงผล (sheetSku ใน helpers) · เรียง/จับคู่/บันทึกยังใช้ sku_id จริงเสมอ
+export const SHEET_SKU_LABEL = {
+  "PKM M5 Abyss Eye": "PKM Ghost",
+}
+
 export const UNIT_LABEL = { pack: "ซอง", box: "กล่อง", cotton: "Cotton" }

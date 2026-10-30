@@ -5,7 +5,7 @@ import {
   PackagePlus, Play, CheckCircle2, X, RefreshCw, Pencil, Check,
   ChevronDown, ChevronUp, History,
 } from "lucide-react"
-import { fmt } from "../shared/helpers"
+import { fmt, sheetSku } from "../shared/helpers"
 import {
   getOpenRestockSession, startRestockSession, closeRestockSession, cancelRestockSession,
   getRestockSessions, getRefillEventsForSession, updateRefillEventQty, getLatestStockSyncedAt,
@@ -321,7 +321,7 @@ function RefillTable({ events, nameOf, eventPacks, editId, editVal, setEditVal, 
                     const editing = editId === e.id
                     return (
                       <tr key={e.id}>
-                        <td className="dx-mono" style={{ padding: "5px 8px", fontWeight: 700, color: "var(--dx-text)", border: "1px solid var(--dx-border)" }}>{e.sku_id || e.product_name || "?"}</td>
+                        <td className="dx-mono" style={{ padding: "5px 8px", fontWeight: 700, color: "var(--dx-text)", border: "1px solid var(--dx-border)" }}>{sheetSku(e.sku_id) || e.product_name || "?"}</td>
                         <td style={{ padding: "5px 8px", color: "var(--dx-text-secondary)", border: "1px solid var(--dx-border)" }}>{e.is_box ? "กล่อง" : "ซอง"}</td>
                         <td style={{ padding: "5px 8px", color: "var(--dx-text-muted)", border: "1px solid var(--dx-border)" }}>{e.slot_number || "รวม"}</td>
                         <td className="dx-mono" style={{ padding: "5px 8px", textAlign: "right", color: "var(--dx-text-muted)", border: "1px solid var(--dx-border)" }}>{e.qty_before}</td>

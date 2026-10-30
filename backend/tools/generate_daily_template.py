@@ -113,6 +113,7 @@ def short_sku(sku_id: str) -> str:
     if s.startswith("PKM "):
         rest = s[4:]
         if "Dream" in rest: return "Mega Dream"
+        if "Abyss" in rest: return "Ghost"   # id เปลี่ยนจาก "PKM Ghost" 30 ต.ค. 2026 — ใบคงคำเดิม (เจ้าของสั่ง)
         return rest  # "Ninja"
     if s.startswith("SLL "):
         return "Ua 1"  # ตามที่ admin ใช้

@@ -5,7 +5,7 @@ import {
   ChevronUp, ChevronDown, MonitorDown,
 } from "lucide-react"
 import { CHART_COLORS } from "../shared/constants"
-import { fmt, sortSkus } from "../shared/helpers"
+import { fmt, sortSkus, sheetSku } from "../shared/helpers"
 import { SectionTitle } from "../shared/dx-components"
 import RestockSessionPanel from "./RestockSessionPanel"
 import { authFetch } from "../../lib/authFetch"
@@ -377,7 +377,7 @@ export default function PageMachineStockView({ machines, machineStock, skus, onR
                       return (
                         <tr key={r.sku_id + (r.isBox ? "b" : "p")}
                           style={{ background: full ? "rgba(0,255,136,0.04)" : "transparent" }}>
-                          <td className="dx-mono" style={{ padding: "5px 10px", fontWeight: 700, color: "var(--dx-text)", border: "1px solid var(--dx-border)" }}>{r.sku_id}</td>
+                          <td className="dx-mono" style={{ padding: "5px 10px", fontWeight: 700, color: "var(--dx-text)", border: "1px solid var(--dx-border)" }}>{sheetSku(r.sku_id)}</td>
                           <td style={{ padding: "5px 10px", color: "var(--dx-text-secondary)", border: "1px solid var(--dx-border)" }}>{r.name}</td>
                           <td style={{ padding: "5px 10px", textAlign: "center", color: "var(--dx-text-secondary)", border: "1px solid var(--dx-border)" }}>{unit}</td>
                           <td style={{ padding: "5px 10px", textAlign: "center", color: "var(--dx-text-secondary)", border: "1px solid var(--dx-border)" }}>{r.slots}</td>
@@ -571,7 +571,7 @@ export default function PageMachineStockView({ machines, machineStock, skus, onR
                           const isBox = r.isBox
                           return (
                             <tr key={r.sku_id + (isBox ? "_box" : "_pack")} style={{ borderBottom: "1px solid var(--dx-border)" }}>
-                              <td className="dx-mono" style={{ padding: "8px 12px", fontSize: 11, fontWeight: 600, color: "var(--dx-text)" }}>{r.sku_id}</td>
+                              <td className="dx-mono" style={{ padding: "8px 12px", fontSize: 11, fontWeight: 600, color: "var(--dx-text)" }}>{sheetSku(r.sku_id)}</td>
                               <td style={{ padding: "8px 8px", fontSize: 11, color: "var(--dx-text-muted)", maxWidth: 120, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                                 {r.product_name}
                               </td>
@@ -701,7 +701,7 @@ export default function PageMachineStockView({ machines, machineStock, skus, onR
                               : "var(--dx-success)"
                             return (
                               <tr key={r.sku_id} style={{ borderBottom: "1px solid var(--dx-border)" }}>
-                                <td className="dx-mono" style={{ padding: "8px 8px", fontSize: 11, fontWeight: 600, color: "var(--dx-text)" }}>{r.sku_id}</td>
+                                <td className="dx-mono" style={{ padding: "8px 8px", fontSize: 11, fontWeight: 600, color: "var(--dx-text)" }}>{sheetSku(r.sku_id)}</td>
                                 <td style={{ padding: "8px 8px", fontSize: 11, color: "var(--dx-text-muted)", maxWidth: 150, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                                   {r.product_name}
                                 </td>

@@ -19,6 +19,15 @@ OWNER_CHAT_ID = os.environ.get("TELEGRAM_OWNER_CHAT_ID")
 API = lambda method: f"https://api.telegram.org/bot{BOT_TOKEN}/{method}"
 
 
+# รหัสที่โชว์ในข้อความกลุ่มแอดมิน — คงรหัสเดิมที่แอดมินคุ้น (เจ้าของสั่ง 30 ต.ค. 2026 · คู่กับ SHEET_SKU_LABEL
+# ใน deploy/components/shared/constants.js) · ใช้ตอนแสดงผลเท่านั้น ห้ามใช้เขียนฐานข้อมูล
+SHEET_SKU_LABEL = {"PKM M5 Abyss Eye": "PKM Ghost"}
+
+
+def _sheet_sku(sku_id):
+    return SHEET_SKU_LABEL.get(sku_id, sku_id)
+
+
 def _esc(s):
     return _html.escape(str(s)) if s is not None else "—"
 
@@ -136,7 +145,7 @@ def alert_ship_fail(ship_fail_id, machine_id, machine_name, sku_id, qty,
     text = (
         f"📦 <b>WW Ship Fail</b>\n\n"
         f"<b>{_esc(machine_name or machine_id)}</b>\n"
-        f"SKU: <code>{_esc(sku_id)}</code> × <b>{qty}</b>\n"
+        f"SKU: <code>{_esc(_sheet_sku(sku_id))}</code> × <b>{qty}</b>\n"
     )
     if order_id:
         text += f"Order: <code>{_esc(order_id)}</code>\n"
@@ -246,7 +255,7 @@ def refill_plan_text(over, under):
     """
     def line(p, a):
         unit = "กล่อง" if p.get("is_box") else "ซอง"
-        name = p.get("sku_id") or p.get("product_name") or "—"
+        name = _sheet_sku(p.get("sku_id")) or p.get("product_name") or "—"
         return (f"\n• <b>{_esc(p['machine_id'])}</b> {_esc(name)} · "
                 f"สั่ง {p['planned_qty']} {unit} · เข้าจริง {a} {unit}")
 

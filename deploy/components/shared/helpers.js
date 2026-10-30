@@ -1,4 +1,9 @@
-import { THAI_MONTHS, SKU_SERIES_ORDER, REFILL_REPORT_SKU_ORDER } from "./constants"
+import { THAI_MONTHS, SKU_SERIES_ORDER, REFILL_REPORT_SKU_ORDER, SHEET_SKU_LABEL } from "./constants"
+
+// รหัส SKU ที่โชว์บนใบจัดของ/รายงานเติมของ — คงรหัสเดิมที่แอดมินคุ้น (ดู SHEET_SKU_LABEL) · ห้ามใช้เรียงหรือบันทึก
+// hasOwnProperty.call แทน Object.hasOwn — มือถือ/แท็บเล็ตเก่าของแอดมินบางเครื่องไม่มี Object.hasOwn
+export const sheetSku = (skuId) =>
+  (Object.prototype.hasOwnProperty.call(SHEET_SKU_LABEL, skuId ?? "") ? SHEET_SKU_LABEL[skuId] : skuId)
 
 export const fmt   = (n) => (n ?? 0).toLocaleString("th-TH")
 export const fmtB  = (n) => `฿${(n ?? 0).toLocaleString("th-TH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`

@@ -8,7 +8,7 @@ import {
   ResponsiveContainer, BarChart, Bar, CartesianGrid, XAxis, YAxis, Tooltip, Legend,
 } from "recharts"
 import { CHART_COLORS } from "../shared/constants"
-import { fmt, fmtB, getLastNDays, fmtDayLabel, today, buildBrandMap, ksherFeePct } from "../shared/helpers"
+import { fmt, fmtB, getLastNDays, fmtDayLabel, today, buildBrandMap, ksherFeePct, sheetSku } from "../shared/helpers"
 import { buildCostIndex, costOn } from "../shared/costs"
 import { KpiCard, SectionTitle } from "../shared/dx-components"
 import { authFetch } from "../../lib/authFetch"
@@ -232,7 +232,7 @@ function SalesSkuByMachine({ sales, machines, skus }) {
                                     : <span className="dx-mono" style={{ fontSize: 10, color: "var(--dx-text-muted)" }}>{i + 1}</span>}
                                 </td>
                                 <td className="dx-mono" style={{ padding: "8px 8px", fontSize: 11, fontWeight: 600, color: "var(--dx-text)" }}>
-                                  {r.sku_id}
+                                  {sheetSku(r.sku_id)}
                                 </td>
                                 <td className="hidden sm:table-cell" style={{ padding: "8px 8px", fontSize: 11, color: "var(--dx-text-muted)", maxWidth: 120, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                                   {r.name}

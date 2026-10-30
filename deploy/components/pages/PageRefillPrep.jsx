@@ -4,7 +4,7 @@ import {
   AlertTriangle, CheckCircle, X, Monitor,
   Boxes, Package, RefreshCw, Loader2, Printer,
 } from "lucide-react"
-import { fmt, getSkuSeries, compareSkuForRefillReport } from "../shared/helpers"
+import { fmt, getSkuSeries, compareSkuForRefillReport, sheetSku } from "../shared/helpers"
 import { SKU_SERIES_ORDER } from "../shared/constants"
 import { KpiCard, SectionTitle } from "../shared/dx-components"
 import { thaiDateTime } from "../../lib/thaiDate"
@@ -147,7 +147,7 @@ export default function PageRefillPrep({ machines, machineStock, machineAssignme
         return (l.lotBalance - (lotUsage[k] || 0)) >= packs
       })
       if (!lot) {
-        showToast(`${r.sku_id}: Lot เดียวไม่พอ ${fmt(packs)} ซอง — ลดจำนวนหรือเบิกแยก`, "error")
+        showToast(`${sheetSku(r.sku_id)}: Lot เดียวไม่พอ ${fmt(packs)} ซอง — ลดจำนวนหรือเบิกแยก`, "error")
         return
       }
       lotUsage[`${r.sku_id}_${lot.lot_number}`] = (lotUsage[`${r.sku_id}_${lot.lot_number}`] || 0) + packs
@@ -351,7 +351,7 @@ export default function PageRefillPrep({ machines, machineStock, machineAssignme
         const fullName = (sku?.name || r.sku_id) + (r.isBox ? " Box" : "")
         const unit = r.isBox ? "กล่อง" : "ซอง"
         return `<tr>
-          <td style="font-family:monospace;font-weight:700">${r.sku_id}</td>
+          <td style="font-family:monospace;font-weight:700">${sheetSku(r.sku_id)}</td>
           <td>${fullName}</td>
           <td style="text-align:right;font-family:monospace;font-weight:700">${r.qty} ${unit}</td>
           <td style="text-align:right;font-family:monospace">${r.remain}</td>
@@ -598,7 +598,7 @@ ${machineBlocks}
                     return (
                       <tr key={g.key} style={{ borderBottom: "1px solid var(--dx-border)" }}>
                         <td style={{ padding: "11px 10px" }}>
-                          <span className="dx-mono" style={{ fontSize: 11, fontWeight: 600, color: "var(--dx-text)" }}>{g.sku_id}</span>
+                          <span className="dx-mono" style={{ fontSize: 11, fontWeight: 600, color: "var(--dx-text)" }}>{sheetSku(g.sku_id)}</span>
                         </td>
                         <td style={{ padding: "11px 10px" }}>
                           <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
@@ -755,7 +755,7 @@ ${machineBlocks}
                     const unit = r.isBox ? "กล่อง" : "ซอง"
                     return (
                       <tr key={r.sku_id + (r.isBox ? "_b" : "_p")}>
-                        <td style={{ padding: "4px 6px", border: "1px solid #999", fontFamily: "monospace", fontWeight: 700 }}>{r.sku_id}</td>
+                        <td style={{ padding: "4px 6px", border: "1px solid #999", fontFamily: "monospace", fontWeight: 700 }}>{sheetSku(r.sku_id)}</td>
                         <td style={{ padding: "4px 6px", border: "1px solid #999", textAlign: "center" }}>{r.slotNums.join(", ")}</td>
                         <td style={{ padding: "4px 6px", border: "1px solid #999", textAlign: "right", fontFamily: "monospace" }}>{r.remain} / {r.capacity}</td>
                         <td style={{ padding: "4px 6px", border: "1px solid #999", textAlign: "right", fontFamily: "monospace", fontWeight: 700 }}>{qty}</td>
