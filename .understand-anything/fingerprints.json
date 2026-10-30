@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
-  "gitCommitHash": "649f368c3654bc2d15134745ad954a725efef822",
-  "generatedAt": "2026-10-26T06:54:11.121Z",
+  "gitCommitHash": "8b7eecdd5532d692a2a0448bcc0ea7ad52e4d8ba",
+  "generatedAt": "2026-10-30T04:54:13.129Z",
   "files": {
     ".env.example": {
       "filePath": ".env.example",
@@ -6569,7 +6569,7 @@
     },
     "deploy/agents/social_watch.py": {
       "filePath": "deploy/agents/social_watch.py",
-      "contentHash": "581bc831a67395f2d5206ecba5ecf966af786992e68e8561873dc74dcc92160a",
+      "contentHash": "100bb690c32ca8bf51f8e1239113193af3c79947ab2287f5ca30571e29e16bb2",
       "functions": [
         {
           "name": "card_related",
@@ -6625,7 +6625,7 @@
             "timeout"
           ],
           "exported": true,
-          "lineCount": 22
+          "lineCount": 23
         },
         {
           "name": "unwrap",
@@ -6709,7 +6709,7 @@
             "cfg"
           ],
           "exported": true,
-          "lineCount": 19
+          "lineCount": 20
         },
         {
           "name": "_int",
@@ -7041,7 +7041,7 @@
         "gate_open",
         "main"
       ],
-      "totalLines": 779,
+      "totalLines": 784,
       "hasStructuralAnalysis": true
     },
     "deploy/agents/source_notes.py": {
@@ -8544,7 +8544,7 @@
     },
     "deploy/agents/video/hf_bg.py": {
       "filePath": "deploy/agents/video/hf_bg.py",
-      "contentHash": "139be5c4d76c5e91fbb21afe1f9b2f8d9bbf00bff5512bb98c106b08ee4fcf9a",
+      "contentHash": "d90db6e6063b5dee6a2f87d86016a101f08c0a66c1fc24c6137677a4c0b2798f",
       "functions": [
         {
           "name": "_log",
@@ -8748,6 +8748,51 @@
           "lineCount": 32
         },
         {
+          "name": "_lib",
+          "params": [],
+          "exported": true,
+          "lineCount": 7
+        },
+        {
+          "name": "_phash",
+          "params": [
+            "prompt"
+          ],
+          "exported": true,
+          "lineCount": 2
+        },
+        {
+          "name": "library_find",
+          "params": [
+            "g",
+            "used",
+            "loose"
+          ],
+          "exported": true,
+          "lineCount": 20
+        },
+        {
+          "name": "paint_scene",
+          "params": [
+            "g",
+            "project"
+          ],
+          "exported": true,
+          "lineCount": 27
+        },
+        {
+          "name": "footage_clip",
+          "params": [
+            "g",
+            "rng",
+            "used",
+            "project",
+            "idx"
+          ],
+          "exported": true,
+          "lineCount": 23
+        },
+        {
           "name": "main",
           "params": [
             "argv"
@@ -8853,9 +8898,14 @@
         "decide",
         "_follow",
         "ensure",
+        "_lib",
+        "_phash",
+        "library_find",
+        "paint_scene",
+        "footage_clip",
         "main"
       ],
-      "totalLines": 530,
+      "totalLines": 630,
       "hasStructuralAnalysis": true
     },
     "deploy/agents/video/hf_cta.py": {
@@ -10026,7 +10076,7 @@
     },
     "deploy/agents/video/hf_timeline.py": {
       "filePath": "deploy/agents/video/hf_timeline.py",
-      "contentHash": "edbfe0b445d8d62e1f4acd65fccb05f8a80101e5fab5b42a1d1d3512a9972145",
+      "contentHash": "33d0cb682502612a1f2086bc33e120debba37ea8d9ba633d40fc3a5f9775382f",
       "functions": [
         {
           "name": "_log",
@@ -10073,7 +10123,15 @@
             "total"
           ],
           "exported": true,
-          "lineCount": 44
+          "lineCount": 56
+        },
+        {
+          "name": "_gen",
+          "params": [
+            "v"
+          ],
+          "exported": true,
+          "lineCount": 9
         },
         {
           "name": "normalize",
@@ -10081,7 +10139,7 @@
             "tl"
           ],
           "exported": true,
-          "lineCount": 64
+          "lineCount": 79
         },
         {
           "name": "clip_len",
@@ -10092,13 +10150,50 @@
           "lineCount": 2
         },
         {
+          "name": "_hold",
+          "params": [
+            "clips",
+            "i"
+          ],
+          "exported": true,
+          "lineCount": 3
+        },
+        {
           "name": "_clip_tags",
           "params": [
             "clips",
             "starts"
           ],
           "exported": true,
-          "lineCount": 25
+          "lineCount": 32
+        },
+        {
+          "name": "_layer_tags",
+          "params": [
+            "clips",
+            "starts"
+          ],
+          "exported": true,
+          "lineCount": 9
+        },
+        {
+          "name": "_resolve_gen",
+          "params": [
+            "tl",
+            "plan"
+          ],
+          "exported": true,
+          "lineCount": 68
+        },
+        {
+          "name": "_writeback",
+          "params": [
+            "plan",
+            "tl",
+            "done"
+          ],
+          "exported": true,
+          "lineCount": 28
         },
         {
           "name": "_has_audio",
@@ -10150,10 +10245,11 @@
           "name": "_captions",
           "params": [
             "proj",
-            "chunks"
+            "chunks",
+            "hype"
           ],
           "exported": true,
-          "lineCount": 8
+          "lineCount": 15
         },
         {
           "name": "_music_path",
@@ -10172,7 +10268,7 @@
             "check"
           ],
           "exported": true,
-          "lineCount": 119
+          "lineCount": 141
         },
         {
           "name": "main",
@@ -10207,6 +10303,18 @@
           "source": "pathlib",
           "specifiers": [
             "pathlib"
+          ]
+        },
+        {
+          "source": "random",
+          "specifiers": [
+            "random"
+          ]
+        },
+        {
+          "source": "re",
+          "specifiers": [
+            "re"
           ]
         },
         {
@@ -10265,9 +10373,14 @@
         "_pick",
         "_line",
         "anchor",
+        "_gen",
         "normalize",
         "clip_len",
+        "_hold",
         "_clip_tags",
+        "_layer_tags",
+        "_resolve_gen",
+        "_writeback",
         "_has_audio",
         "_prep_video",
         "_bake_fill",
@@ -10278,7 +10391,7 @@
         "build_video",
         "main"
       ],
-      "totalLines": 464,
+      "totalLines": 665,
       "hasStructuralAnalysis": true
     },
     "deploy/agents/video/make_video.py": {
@@ -16005,7 +16118,7 @@
     },
     "deploy/components/edit/EditStudio.jsx": {
       "filePath": "deploy/components/edit/EditStudio.jsx",
-      "contentHash": "ccbf0280312ed8add5ec91a3079ee7a8ef7375cd2e1fd7204ce060fbc9ecff18",
+      "contentHash": "8deab912b069b53f46f3c7f83420a1770402d045eedda1553ff29e23dd42dd20",
       "functions": [
         {
           "name": "fmtDate",
@@ -16117,7 +16230,7 @@
     },
     "deploy/components/edit/Inspector.jsx": {
       "filePath": "deploy/components/edit/Inspector.jsx",
-      "contentHash": "7e115b0257c4e5db62cef6ab436d930062ac96df4973f9d9e5b01a9b4c9c4754",
+      "contentHash": "99a10614ab61fbf5607d2b4d9831b81395b966d5abd46ce77b573240697a89b8",
       "functions": [
         {
           "name": "Chips",
@@ -16138,14 +16251,26 @@
           "lineCount": 9
         },
         {
+          "name": "GenKit",
+          "params": [],
+          "exported": false,
+          "lineCount": 50
+        },
+        {
           "name": "Inspector",
           "params": [],
           "exported": true,
-          "lineCount": 253
+          "lineCount": 275
         }
       ],
       "classes": [],
       "imports": [
+        {
+          "source": "react",
+          "specifiers": [
+            "useState"
+          ]
+        },
         {
           "source": "lucide-react",
           "specifiers": [
@@ -16157,7 +16282,11 @@
             "Music",
             "Trash2",
             "Copy",
-            "Settings2"
+            "Settings2",
+            "Upload",
+            "Check",
+            "Loader2",
+            "Sparkles"
           ]
         },
         {
@@ -16168,9 +16297,24 @@
             "ANIMS",
             "TRANSITIONS",
             "MOTIONS",
+            "LAYERS",
+            "TINTS",
             "VOICES",
             "TTS_MODELS",
-            "LIMITS"
+            "LIMITS",
+            "LAYER_TH",
+            "MOTION_TH",
+            "TRANS_TH",
+            "ANIM_TH",
+            "TINT_TH",
+            "PAINT_THB",
+            "promptKit"
+          ]
+        },
+        {
+          "source": "./Library",
+          "specifiers": [
+            "probeSeconds"
           ]
         },
         {
@@ -16192,7 +16336,7 @@
       "exports": [
         "Inspector"
       ],
-      "totalLines": 301,
+      "totalLines": 380,
       "hasStructuralAnalysis": true
     },
     "deploy/components/edit/Library.jsx": {
@@ -16289,7 +16433,7 @@
     },
     "deploy/components/edit/Preview.jsx": {
       "filePath": "deploy/components/edit/Preview.jsx",
-      "contentHash": "2e695a9c565287b323f3166554b6efb8c8b3f9a047bc5617e4e54015be73ab87",
+      "contentHash": "82c68f57940e7055dad18c717ddcd1134dcb344a25bebd015ce9b91cbee9d812",
       "functions": [
         {
           "name": "srcOf",
@@ -16298,7 +16442,7 @@
             "skuImg"
           ],
           "exported": true,
-          "lineCount": 8
+          "lineCount": 9
         },
         {
           "name": "captionAt",
@@ -16313,7 +16457,7 @@
           "name": "Preview",
           "params": [],
           "exported": true,
-          "lineCount": 169
+          "lineCount": 193
         }
       ],
       "classes": [],
@@ -16338,7 +16482,8 @@
         {
           "source": "../../lib/videoTimeline",
           "specifiers": [
-            "clipLen"
+            "clipLen",
+            "LAYER_TH"
           ]
         },
         {
@@ -16360,12 +16505,12 @@
         "srcOf",
         "Preview"
       ],
-      "totalLines": 203,
+      "totalLines": 228,
       "hasStructuralAnalysis": true
     },
     "deploy/components/edit/timelineState.js": {
       "filePath": "deploy/components/edit/timelineState.js",
-      "contentHash": "a82a882330dc01dfea5ff88556ae05e233b0838401366d24c2cf305d43a5994f",
+      "contentHash": "fe38015dc3d5d5466d9f53588090e1a20ee5581f8d55e8a3c74beae261aaab26",
       "functions": [
         {
           "name": "uid",
@@ -16469,7 +16614,7 @@
             "a"
           ],
           "exported": true,
-          "lineCount": 99
+          "lineCount": 101
         },
         {
           "name": "selected",
@@ -16518,12 +16663,12 @@
         "timelineForRender",
         "fmt"
       ],
-      "totalLines": 202,
+      "totalLines": 204,
       "hasStructuralAnalysis": true
     },
     "deploy/components/edit/Tracks.jsx": {
       "filePath": "deploy/components/edit/Tracks.jsx",
-      "contentHash": "a694f0d8ddc74efea98c77c984ffd2e278d148cfe01cba6ca5019d41e3079e99",
+      "contentHash": "b9c76620237b396d19e96dcf79b5d52625e8fc563135a5949f65ba9298fd1192",
       "functions": [
         {
           "name": "clamp",
@@ -16620,7 +16765,7 @@
       "exports": [
         "Tracks"
       ],
-      "totalLines": 308,
+      "totalLines": 311,
       "hasStructuralAnalysis": true
     },
     "deploy/components/editor/CONTRACT.md": {
@@ -19425,7 +19570,7 @@
     },
     "deploy/components/VideoStudio.jsx": {
       "filePath": "deploy/components/VideoStudio.jsx",
-      "contentHash": "e1a037f7ea6a0915ee9b960b35e0e4fb26f7c189bdc72d9e24461cde053d1d1b",
+      "contentHash": "cfc38c348cfee0e2cd580f5be278d10661cea22c163f7ac0d16420baf31eb20c",
       "functions": [
         {
           "name": "cpLen",
@@ -19496,7 +19641,7 @@
           "name": "VideoStudio",
           "params": [],
           "exported": true,
-          "lineCount": 820
+          "lineCount": 821
         },
         {
           "name": "StepTab",
@@ -19548,13 +19693,33 @@
             "k"
           ],
           "exported": false,
-          "lineCount": 2
+          "lineCount": 3
+        },
+        {
+          "name": "fileSeconds",
+          "params": [
+            "file"
+          ],
+          "exported": false,
+          "lineCount": 11
+        },
+        {
+          "name": "CopyBtn",
+          "params": [],
+          "exported": false,
+          "lineCount": 11
+        },
+        {
+          "name": "SceneKit",
+          "params": [],
+          "exported": false,
+          "lineCount": 24
         },
         {
           "name": "StoryResult",
           "params": [],
           "exported": false,
-          "lineCount": 40
+          "lineCount": 103
         },
         {
           "name": "adDays",
@@ -19622,7 +19787,9 @@
             "Scissors",
             "ListChecks",
             "Lightbulb",
-            "ExternalLink"
+            "ExternalLink",
+            "Upload",
+            "Copy"
           ]
         },
         {
@@ -19633,12 +19800,24 @@
             "getProfile",
             "signOutAndGoHome"
           ]
+        },
+        {
+          "source": "../lib/videoTimeline",
+          "specifiers": [
+            "clipLen",
+            "promptKit",
+            "LAYER_TH",
+            "MOTION_TH",
+            "CUT_TH",
+            "TINT_TH",
+            "PAINT_THB"
+          ]
         }
       ],
       "exports": [
         "VideoStudio"
       ],
-      "totalLines": 1755,
+      "totalLines": 1884,
       "hasStructuralAnalysis": true
     },
     "deploy/DEPLOY_GUIDE.md": {
@@ -22543,7 +22722,7 @@
     },
     "deploy/lib/videoTimeline.js": {
       "filePath": "deploy/lib/videoTimeline.js",
-      "contentHash": "555fddf32c8d659c56313c90f9dcffe7120d0308483c75b8158d47344b9c64f9",
+      "contentHash": "d5a66e5d1dc9740d957168888528a9743e3dd6b9dccc73774112f17f39ec6368",
       "functions": [
         {
           "name": "num",
@@ -22607,7 +22786,23 @@
             "base"
           ],
           "exported": true,
-          "lineCount": 6
+          "lineCount": 8
+        },
+        {
+          "name": "cleanGen",
+          "params": [
+            "v"
+          ],
+          "exported": true,
+          "lineCount": 9
+        },
+        {
+          "name": "promptKit",
+          "params": [
+            "g"
+          ],
+          "exported": true,
+          "lineCount": 11
         },
         {
           "name": "clipLen",
@@ -22632,7 +22827,7 @@
             "base"
           ],
           "exported": true,
-          "lineCount": 87
+          "lineCount": 93
         }
       ],
       "classes": [],
@@ -22643,6 +22838,15 @@
         "ANIMS",
         "TRANSITIONS",
         "MOTIONS",
+        "LAYERS",
+        "TINTS",
+        "GEN_KINDS",
+        "LAYER_TH",
+        "MOTION_TH",
+        "CUT_TH",
+        "ANIM_TH",
+        "TINT_TH",
+        "PAINT_THB",
         "FITS",
         "VOICES",
         "TTS_MODELS",
@@ -22651,11 +22855,13 @@
         "MEDIA_PREFIX",
         "storagePrefix",
         "okSrc",
+        "cleanGen",
+        "promptKit",
         "clipLen",
         "layout",
         "cleanTimeline"
       ],
-      "totalLines": 146,
+      "totalLines": 198,
       "hasStructuralAnalysis": true
     },
     "deploy/mcp/dvx_mcp_server.py": {
@@ -33186,7 +33392,7 @@
     },
     "deploy/app/api/video/storyboard/route.js": {
       "filePath": "deploy/app/api/video/storyboard/route.js",
-      "contentHash": "fcf8d5c1b6041dca72afe753750c105b0001d4d8c47d69e1cd116de4f160cde2",
+      "contentHash": "f8ce74ebf9ac3bd519c8cef953260bb1596f70458c60b76d414711ee724e63aa",
       "functions": [
         {
           "name": "task",
@@ -33216,7 +33422,7 @@
             "franchise"
           ],
           "exported": false,
-          "lineCount": 24
+          "lineCount": 37
         },
         {
           "name": "recentLogs",
@@ -33231,12 +33437,29 @@
           "lineCount": 2
         },
         {
+          "name": "squash",
+          "params": [
+            "s"
+          ],
+          "exported": false,
+          "lineCount": 1
+        },
+        {
+          "name": "thin",
+          "params": [
+            "summary",
+            "title"
+          ],
+          "exported": false,
+          "lineCount": 1
+        },
+        {
           "name": "pickIdea",
           "params": [
             "seed"
           ],
           "exported": false,
-          "lineCount": 11
+          "lineCount": 16
         },
         {
           "name": "GET",
@@ -33252,7 +33475,7 @@
             "req"
           ],
           "exported": true,
-          "lineCount": 130
+          "lineCount": 143
         }
       ],
       "classes": [],
@@ -33324,6 +33547,7 @@
             "choosePattern",
             "compile",
             "FREE",
+            "internalFacts",
             "nameRegex",
             "offCards",
             "parseStoryboard",
@@ -33338,12 +33562,12 @@
         "GET",
         "POST"
       ],
-      "totalLines": 260,
+      "totalLines": 296,
       "hasStructuralAnalysis": true
     },
     "deploy/lib/storyboard.js": {
       "filePath": "deploy/lib/storyboard.js",
-      "contentHash": "0c3f4f0ea52cbaf1df66023e3ff87ab66c0e89031ae0b1ccde61b28c4a1a998c",
+      "contentHash": "92b1452ed640b6049caf6bcdf12eeccafa6bba00a9c769d230fbbd876cb8fa57",
       "functions": [
         {
           "name": "sanitizeLine",
@@ -33376,7 +33600,7 @@
             "sourceLabel"
           ],
           "exported": true,
-          "lineCount": 10
+          "lineCount": 12
         },
         {
           "name": "esc",
@@ -33404,6 +33628,14 @@
           "lineCount": 1
         },
         {
+          "name": "internalFacts",
+          "params": [
+            "idea"
+          ],
+          "exported": true,
+          "lineCount": 8
+        },
+        {
           "name": "offCards",
           "params": [
             "idea"
@@ -33423,13 +33655,13 @@
           "name": "buildAssets",
           "params": [],
           "exported": true,
-          "lineCount": 27
+          "lineCount": 28
         },
         {
           "name": "buildPrompt",
           "params": [],
           "exported": true,
-          "lineCount": 69
+          "lineCount": 80
         },
         {
           "name": "parseStoryboard",
@@ -33448,13 +33680,22 @@
           "lineCount": 3
         },
         {
+          "name": "sceneOf",
+          "params": [
+            "raw",
+            "franchise"
+          ],
+          "exported": false,
+          "lineCount": 10
+        },
+        {
           "name": "compile",
           "params": [
             "sb",
             "assets"
           ],
           "exported": true,
-          "lineCount": 97
+          "lineCount": 169
         }
       ],
       "classes": [],
@@ -33469,16 +33710,20 @@
         "scrubSource",
         "nameRegex",
         "scrubNames",
+        "internalFacts",
         "offCards",
         "FREE",
         "choosePattern",
         "buildAssets",
+        "DESIGN",
+        "PAINT_MAX",
+        "PAINT_THB",
         "buildPrompt",
         "parseStoryboard",
         "bannedIn",
         "compile"
       ],
-      "totalLines": 341,
+      "totalLines": 487,
       "hasStructuralAnalysis": true
     }
   }
