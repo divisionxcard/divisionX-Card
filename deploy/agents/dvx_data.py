@@ -289,7 +289,8 @@ def resolve_skus(spec, skus):
 # ⚠️ ต้นทุน/ค่าธรรมเนียม/ตัดสาขา ดึงจาก daily_sales_digest.py ตรง ๆ ไม่เขียนซ้ำ — กำไรที่ Hermes ตอบ
 #    ต้องเท่ากับที่บอทส่งเข้ากลุ่มทุกเช้าทุกบาท (เทสต์ scripts/test_dvx_sales_calc.py เทียบให้)
 #    import ตอนใช้ ไม่ใช่บนสุด — idea_collector บน GitHub Actions ใช้ไฟล์นี้แต่ไม่ต้องคิดกำไร
-# ⚠️ ไม่ส่ง "ต้นทุนต่อซอง" รายสินค้าออกไป — ส่งแค่ผลรวม (ต้นทุนรวม · กำไร · margin)
+# ต้นทุนต่อซองรายสินค้า: เจ้าของอนุญาตให้แอดมินรู้ (31 ต.ค. 2026 เลือกในหน้าไดอารี่) → get_sku_costs + คอลัมน์ในมุมราย SKU
+# ⚠️ ตัวเลขทุนห้ามลง repo/wiki (repo สาธารณะ) — ดึงจาก DB ตอนเรียกเท่านั้น
 
 def _dg():
     import daily_sales_digest as dg  # noqa: E402 — lazy (ดูหมายเหตุด้านบน)
@@ -631,6 +632,8 @@ def breakdown_rows(group_by, groups, ctx, d1, d2, total_rev, top=10):
                 "name": (ctx["sku_meta"].get(sku) or {}).get("name") or sku,
                 **_money(b, ctx, total_rev),
                 "avg_price_per_pack": round(b["revenue"] / b["packs"]) if b["packs"] else None,
+                # ทุนที่ใช้คิดกำไร ณ วันสุดท้ายของช่วง (ช่วงคร่อม 1 ส.ค. ทุนเปลี่ยนกลางช่วง — ดู get_sku_costs)
+                **({"cost_per_pack": _cost_or_none(ctx["costs"].on(sku, d2))} if ctx["with_profit"] else {}),
                 # แยกให้เห็นว่าที่ขายได้มาจากคนซื้อยกกล่องเท่าไหร่
                 "box_orders": b["box_orders"],
                 "packs_from_box": b["box_packs"],
@@ -925,6 +928,50 @@ def query_compare(from_date=None, to_date=None, days=7, include_today=False, vs=
         "sku_gainers": up, "sku_decliners": down,
         "profit_formula": PROFIT_FORMULA,
         "notes": notes,
+    }
+
+
+# ── ต้นทุนรายสินค้า ─────────────────────────────────────────────────────
+def _cost_or_none(c):
+    return round(c, 2) if c else None
+
+
+def cost_rows(skus, costs, ids, day):
+    """ต้นทุนต่อซอง/กล่อง ณ วันที่ + ทุนก่อนหน้า (ฟังก์ชันล้วน) — กติกาเดียวกับที่ใช้คิดกำไร (Costs.on)"""
+    meta = {s["sku_id"]: s for s in skus}
+    iso = day.isoformat()
+    out = []
+    for sid in ids:
+        m = meta.get(sid) or {}
+        ppb = int(m.get("packs_per_box") or 0)
+        c = costs.on(sid, day)
+        hist = [(eff, v) for eff, v in costs.hist.get(sid, []) if eff <= iso]
+        eff = hist[-1][0] if hist else None
+        prev = next(((e, v) for e, v in reversed(hist[:-1]) if v > 0), None) if hist else None
+        out.append({
+            "sku_id": sid,
+            "cost_per_pack": _cost_or_none(c),
+            "cost_per_box": _cost_or_none(c * ppb) if c and ppb > 1 else None,
+            "packs_per_box": ppb or None,
+            "effective_from": (eff if eff and eff > "2000-01-01" else
+                               ("ทุนเดิม (ก่อนชุด 1 ส.ค. 2026)" if eff else "ค่าในตารางสินค้า")),
+            "previous_cost_per_pack": _cost_or_none(prev[1]) if prev and eff and eff > "2000-01-01" else None,
+            "note": None if c else "ยังไม่มีต้นทุนในระบบ — ยอดของสินค้านี้ไม่ถูกนับในกำไร",
+        })
+    return out
+
+
+def query_sku_costs(sku=None, date=None):
+    """ต้นทุนต่อซอง/กล่องรายสินค้า ณ วันที่ (ค่าเริ่ม = วันนี้)"""
+    dg = _dg()
+    skus = sb_get("skus?select=sku_id,name,franchise,packs_per_box,avg_cost,cost_price,is_active&order=id")
+    ids = resolve_skus(sku, skus) if sku else [s["sku_id"] for s in skus if s.get("is_active", True)]
+    day = parse_date(date) if date else th_today()
+    return {
+        "date": str(day),
+        "items": cost_rows(skus, dg.load_costs(), ids, day),
+        "note": ("ทุนต่อซองที่ใช้คิดกำไร ณ วันนั้น (ยอดตั้งแต่ 1 ส.ค. 2026 ใช้ทุนชุดใหม่ ก่อนนั้นทุนเดิม) · "
+                 "กล่อง = ทุนต่อซอง × ซองต่อกล่อง · ข้อมูลภายในทีม ห้ามใส่ในโพสต์/ข้อความถึงลูกค้า"),
     }
 
 

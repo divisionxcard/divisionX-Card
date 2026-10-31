@@ -537,5 +537,18 @@ SK5 = [{"sku_id": "OP 01", "name": "One Piece OP-01", "franchise": "OP"},
 check("ทั้งค่ายรวมตัวที่เลิกขายแล้ว", d.resolve_skus("One Piece", SK5), ["OP 01", "OP 05"])
 check("ขึ้นต้น 'OP' รวมตัวที่เลิกขายแล้ว", sorted(d.resolve_skus("OP", SK5)), ["OP 01", "OP 05"])
 
+# ── 12. ต้นทุนรายสินค้า (เจ้าของอนุญาตให้แอดมินรู้ 31 ต.ค.) — ทุนแต่งขึ้นทั้งหมด ──
+CR = d.cost_rows(SKUS, costs, ["AA 01", "BB 01", "CC 01"], D_NEW)
+crow = {r["sku_id"]: r for r in CR}
+check("ทุนใหม่ตั้งแต่ 1 ส.ค. + ทุนก่อนหน้า",
+      (crow["AA 01"]["cost_per_pack"], crow["AA 01"]["effective_from"], crow["AA 01"]["previous_cost_per_pack"]),
+      (80.0, "2026-08-01", 100.0))
+check("ทุนต่อกล่อง = ทุนต่อซอง × ซองต่อกล่อง", crow["AA 01"]["cost_per_box"], 80.0 * 24)
+check("ไม่มีประวัติ → ใช้ค่าในตารางสินค้า", (crow["BB 01"]["cost_per_pack"], crow["BB 01"]["effective_from"]),
+      (50.0, "ค่าในตารางสินค้า"))
+check("ไม่มีทุน → บอกว่าไม่นับในกำไร", (crow["CC 01"]["cost_per_pack"], crow["CC 01"]["note"] is not None), (None, True))
+old_row = d.cost_rows(SKUS, costs, ["AA 01"], D_OLD)[0]
+check("ก่อน 1 ส.ค. = ทุนเดิม", (old_row["cost_per_pack"], old_row["effective_from"].startswith("ทุนเดิม")), (100.0, True))
+
 print("\n" + ("✅ ผ่านทั้งหมด" if not fails else f"❌ ไม่ผ่าน {fails} ข้อ"))
 sys.exit(1 if fails else 0)

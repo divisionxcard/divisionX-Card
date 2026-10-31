@@ -187,6 +187,25 @@ def get_unsold_skus(machine: str = "", days: int = 30, from_date: str = "", to_d
 
 
 @server.tool(
+    description="ต้นทุนต่อซอง/ต่อกล่องรายสินค้า ณ วันที่ (ค่าเริ่ม = วันนี้) — ตัวเดียวกับที่ใช้คิดกำไร "
+                "พร้อมวันที่ทุนนี้มีผลและทุนก่อนหน้า · เจ้าของอนุญาตให้แอดมินในทีมรู้ (31 ต.ค. 2026)\n"
+                "ใช้ตอบ 'ทุนต่อซองของ OP 17 เท่าไหร่' 'กล่องละกี่บาท' · ห้ามคำนวณทุนเองจากกำไร\n"
+                "⚠️ ข้อมูลภายในทีม — ห้ามใส่ในโพสต์ แคปชั่น หรือข้อความถึงลูกค้าเด็ดขาด",
+    annotations=READ_ONLY,
+)
+def get_sku_costs(sku: str = "", date: str = "") -> dict:
+    """
+    Args:
+        sku: sku_id / รหัสสั้น / ชื่อค่าย เหมือน get_sales (ว่าง = ทุกสินค้าที่ยังขายอยู่)
+        date: ทุน ณ วันที่ YYYY-MM-DD (ว่าง = วันนี้ · ยอดก่อน 1 ส.ค. 2026 ใช้ทุนเดิม)
+    """
+    try:
+        return data.query_sku_costs(sku=sku or None, date=date or None)
+    except Exception as e:
+        return _fail(e)
+
+
+@server.tool(
     description="สต็อกหน้าตู้รายช่อง — ของเหลือแต่ละช่อง ช่องไหนว่าง "
                 "เป็นข้อมูล ณ รอบ sync ล่าสุด ไม่ใช่ real-time "
                 "ถ้าผู้ใช้ถามเชิงตัดสินใจว่าควรเติมอะไร ให้ใช้ get_restock_alerts แทน",
