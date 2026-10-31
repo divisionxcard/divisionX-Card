@@ -5,7 +5,8 @@ DivisionX MCP Server — เปิดข้อมูลตู้กดการ�
 ชั้นข้อมูลอยู่ที่ deploy/agents/dvx_data.py — ตัวนี้เป็นแค่เปลือก MCP
 
 tools ที่เปิด:
-  อ่านอย่างเดียว  list_machines · get_sales · get_stock · get_restock_alerts · get_sync_status
+  อ่านอย่างเดียว  list_machines · get_sales (มีกำไร) · compare_sales · get_unsold_skus ·
+                  get_stock · get_restock_alerts · get_sync_status
   เปลี่ยนข้อมูล    sync_data (สั่ง GitHub Actions ดึงข้อมูลใหม่)
 
 รัน:
@@ -37,8 +38,10 @@ server = MCPServer(
         "ในห้างทั่วกรุงเทพและปริมณฑล\n\n"
         "ใช้ get_restock_alerts เมื่อผู้ใช้ถามเชิงตัดสินใจว่า 'ต้องเติมอะไร' — "
         "มันคิดความเร็วขายให้แล้ว ส่วน get_stock คือข้อมูลดิบรายช่อง\n"
-        "ยอดขายจากตู้ sync วันละครั้งตอนเที่ยงคืน (ได้ยอดของเมื่อวาน) "
-        "ถ้าถามยอดวันนี้แล้วได้ 0 ให้บอกผู้ใช้ว่ายังไม่ได้ sync อย่าสรุปว่าขายไม่ได้\n"
+        "ตัวเลขเชิงวิเคราะห์ให้ tool คิดให้เสร็จ อย่าคิดเลขเอง: กำไร = get_sales (profit) · "
+        "เทียบช่วงเวลา = compare_sales · ขายไม่ออก = get_unsold_skus\n"
+        "บอทในเครื่องเจ้าของดึงยอดขาย 00:10 (ของเมื่อวานครบวัน) + 10:00 — ยอดวันนี้ยังไม่ครบวัน "
+        "ถ้าถามยอดวันนี้แล้วได้น้อย/0 อย่าสรุปว่าขายไม่ได้ · อ่าน data_status / notes ที่ tool ส่งมาเสมอ\n"
         "ทุกวันที่เป็นเวลาไทย (UTC+7) อยู่แล้ว ไม่ต้องแปลง timezone เอง"
     ),
 )
@@ -72,36 +75,113 @@ def list_machines(active_only: bool = True) -> dict:
 
 
 @server.tool(
-    description="ยอดขาย — สรุปรายรับ/จำนวนซอง แยกตามตู้ ตาม SKU หรือไล่รายวัน "
-                "ระบุช่วงด้วย days (ย้อนหลังกี่วัน) หรือ date (วันเดียว) "
-                "หรือ from_date+to_date ทุกวันที่เป็นเวลาไทย · "
-                "แยก 'ซื้อยกกล่อง' กับ 'ซื้อทีละซอง' ได้ด้วย unit=box|pack "
-                "และผลลัพธ์มี by_unit สรุปให้เสมอแม้ไม่ได้กรอง "
-                "ใช้ตอบคำถามแนว 'ขายแบบกล่องได้เท่าไหร่' 'ใครซื้อยกกล่องบ้าง'",
+    description="ยอดขาย + กำไรสุทธิ — รายรับ จำนวนซอง บิล ราคาเฉลี่ยต่อซอง และกำไร "
+                "(สูตรเดียวกับสรุปยอดบอท DVX Job ทุกเช้า: หักค่าธรรมเนียม Ksher · ต้นทุนต่อซองตามวันที่ขาย · "
+                "เงินคืนเคลม) แยกได้ตามตู้ สาขา สินค้า ค่าย รายวัน วันในสัปดาห์ หรือรายชั่วโมง\n"
+                "ถามเรื่องกำไรให้ใช้ profit.net_profit จาก tool นี้เท่านั้น — ห้ามประมาณเป็น % ของยอดขายเอง\n"
+                "ถามเป็นสาขา ให้ส่งชื่อสาขาตรง ๆ (machine='บางกะปิ') อย่าแปลงเป็นรหัสตู้เอง — "
+                "tool รวมทุกตู้ของสาขาที่เปิดอยู่ในช่วงนั้นให้ (รวมตู้ที่ปิดไปแล้ว) · "
+                "เทียบหลายตู้ในช่วงเดียวกัน: machine='wwv05,wwv08' group_by=machine · "
+                "เทียบสองช่วงเวลาให้ใช้ compare_sales\n"
+                "days = จำนวนวันที่ครบวันล่าสุด จบที่เมื่อวาน (วันนี้ยังขายอยู่ ยอดไม่ครบ) · "
+                "อ่าน data_status.notes กับ machine_notes ทุกครั้งก่อนตอบ",
     annotations=READ_ONLY,
 )
 def get_sales(days: int = 1, date: str = "", from_date: str = "", to_date: str = "",
               machine: str = "", group_by: str = "machine", top: int = 10,
-              unit: str = "") -> dict:
+              unit: str = "", sku: str = "", include_today: bool = False) -> dict:
     """
     Args:
-        days: ย้อนหลังกี่วันรวมวันนี้ (ใช้เมื่อไม่ระบุ date/from_date)
-        date: วันเดียว YYYY-MM-DD
+        days: กี่วันที่ครบวันล่าสุด จบที่เมื่อวาน (ใช้เมื่อไม่ระบุ date/from_date) · 7 = "7 วันล่าสุด"
+        date: วันเดียว YYYY-MM-DD (ถามยอดวันนี้ = ใส่วันนี้ · ยอดยังไม่ครบวัน)
         from_date: วันเริ่ม YYYY-MM-DD (ต้องคู่กับ to_date)
         to_date: วันจบ YYYY-MM-DD
-        machine: machine_id หรือคำค้นจากชื่อสาขา เช่น "ชลบุรี" (ว่าง = ทุกตู้)
-        group_by: machine (แยกตามตู้) | sku (อันดับสินค้า) | day (ไล่รายวัน)
-        top: จำนวนอันดับเมื่อ group_by=sku
+        machine: machine_id หรือชื่อสาขา เช่น "ชลบุรี" · หลายตู้คั่นด้วย , · ชื่อห้างที่มีหลายตู้
+                 (พระราม 2) = ทั้งสาขา · ว่าง = ทุกตู้
+        group_by: machine (ตู้) | branch (สาขา — รวมตู้ห้างเดียวกัน) | sku (อันดับสินค้า) |
+                  franchise (ค่าย One Piece/Dragon Ball/…) | day (ไล่รายวัน รวมวันที่ยอด 0) |
+                  weekday (วันในสัปดาห์ มียอดเฉลี่ยต่อวัน) | hour (ช่วงเวลาที่ขายดี)
+        top: จำนวนอันดับเมื่อ group_by=sku (สูงสุดที่ใช้ได้จริง ~60)
         unit: box (เฉพาะที่ซื้อยกกล่อง) | pack (เฉพาะซองเดี่ยว) | ว่าง = รวมทั้งสอง
               ⚠️ packs ของรายการ box คือ "จำนวนซองในกล่อง" ไม่ใช่จำนวนกล่อง
                  เอาไปบวกกับ pack ได้ตรง ๆ ไม่ต้องคูณ
                  อยากรู้ "กี่กล่อง" ให้ดู by_unit.box.orders
+        sku: กรองสินค้า — sku_id เช่น "OP 12" · ขึ้นต้น เช่น "FB" · ชื่อค่าย เช่น "Dragon Ball" ·
+             คั่นด้วย , ได้ (ว่าง = ทุกสินค้า)
+        include_today: True = นับวันนี้ (ที่ยังไม่จบวัน) รวมใน days ด้วย
     """
     try:
         return data.query_sales(days=days, date=date or None,
                                 from_date=from_date or None, to_date=to_date or None,
                                 machine=machine or None, group_by=group_by, top=top,
-                                unit=unit or None)
+                                unit=unit or None, sku=sku or None,
+                                with_profit=True, include_today=include_today)
+    except Exception as e:
+        return _fail(e)
+
+
+@server.tool(
+    description="เทียบยอดขาย + กำไร สองช่วงเวลา — คำนวณ % เปลี่ยน แยกตามตู้/สาขา/สินค้า/ค่าย "
+                "และบอกสินค้าที่ขายเพิ่ม/ขายลดมากสุด (เรียงตามบาท) ให้เสร็จ\n"
+                "ใช้ตอบ 'เทียบเดือนที่แล้ว' 'สัปดาห์นี้ดีขึ้นไหม' 'ยอดตกเพราะสินค้าไหน' — "
+                "ห้ามดึง get_sales สองรอบแล้วลบเลขเอง\n"
+                "อ่าน notes ก่อนสรุปทุกครั้ง: ช่วงยาวไม่เท่ากัน · จำนวนเสาร์-อาทิตย์ต่างกัน · "
+                "ฐานเล็ก % แกว่ง · วันนี้ยังไม่ครบวัน",
+    annotations=READ_ONLY,
+)
+def compare_sales(from_date: str = "", to_date: str = "", days: int = 7, include_today: bool = False,
+                  vs: str = "previous", vs_from: str = "", vs_to: str = "",
+                  machine: str = "", sku: str = "", group_by: str = "machine", top: int = 5) -> dict:
+    """
+    Args:
+        from_date: ช่วงที่ถาม วันเริ่ม YYYY-MM-DD (คู่กับ to_date) · ไม่ใส่ = ใช้ days
+        to_date: ช่วงที่ถาม วันจบ YYYY-MM-DD
+        days: ไม่ใส่วันที่ = กี่วันที่ครบวันล่าสุด จบที่เมื่อวาน
+        include_today: True = นับวันนี้ที่ยังไม่จบวันด้วย (ปกติไม่ต้อง)
+        vs: previous (ช่วงยาวเท่ากันก่อนหน้า) | last_week (สัปดาห์ก่อน วันในสัปดาห์ตรงกัน) |
+            last_month (วันที่เดียวกันของเดือนก่อน) | last_year | custom (ใส่ vs_from + vs_to)
+        vs_from: ช่วงเทียบ วันเริ่ม (เฉพาะ vs=custom)
+        vs_to: ช่วงเทียบ วันจบ (เฉพาะ vs=custom)
+        machine: เหมือน get_sales — machine_id / ชื่อสาขา / หลายตู้คั่น , (ว่าง = ทุกตู้)
+        sku: เหมือน get_sales — กรองสินค้าหรือค่าย
+        group_by: machine | branch | sku | franchise
+        top: จำนวนสินค้าขายเพิ่ม/ขายลดที่ส่งกลับ
+    """
+    try:
+        return data.query_compare(from_date=from_date or None, to_date=to_date or None, days=days,
+                                  include_today=include_today, vs=vs, vs_from=vs_from or None,
+                                  vs_to=vs_to or None, machine=machine or None, sku=sku or None,
+                                  group_by=group_by, top=top)
+    except Exception as e:
+        return _fail(e)
+
+
+@server.tool(
+    description="สินค้าขายไม่ออก — สินค้าที่อยู่ในตู้ช่วงที่ถาม แต่ขายได้ไม่เกิน max_packs ซอง "
+                "พร้อมจำนวนวันที่มีของให้ขายจริง (days_with_stock จาก period_days) ของคงเหลือตอนนี้ ช่อง "
+                "วันที่ลงตู้ และวันที่ขายได้ครั้งล่าสุด — เทียบให้เสร็จแล้ว ถามย้อนหลังเป็นเดือนได้\n"
+                "ใช้ตอบ 'ตัวไหนขายไม่ออก' 'ของค้างตู้' 'ควรเปลี่ยนสินค้าตัวไหน' — "
+                "ห้ามเอา get_sales มาเทียบกับ get_stock เอง (เคยนับสินค้าที่ขายได้เป็นขายไม่ออก)\n"
+                "status: unsold = มีของให้ขายพอแล้ว (≥14 วัน) ไม่มีใครกดเลย · slow = ขายได้บ้าง (เมื่อ max_packs > 0) · "
+                "short = มีของให้ขายไม่ถึง 14 วัน (เพิ่งลงตู้/เพิ่งเติม) ยังตัดสินไม่ได้ · "
+                "empty = อยู่ในตู้แต่ช่องว่างทั้งช่วง (ปัญหาการเติม) — รายงานแยกแต่ละแบบเสมอ อ่าน note ของแต่ละตัว\n"
+                "ถาม 'ขายไม่ออก' ใช้ max_packs=0 · ถาม 'ขายช้า' ใช้ 1–3 · "
+                "ถามทุกตู้จะได้เฉพาะ unsold/slow ตู้ละ 10 ตัว ถามทีละตู้ได้ครบ · in_several_machines นับเป็นตู้",
+    annotations=READ_ONLY,
+)
+def get_unsold_skus(machine: str = "", days: int = 30, from_date: str = "", to_date: str = "",
+                    max_packs: int = 0) -> dict:
+    """
+    Args:
+        machine: machine_id / ชื่อสาขา / หลายตู้คั่นด้วย , (ว่าง = ทุกตู้ที่ใช้งาน)
+        days: ไม่ใส่วันที่ = ย้อนหลังกี่วัน (นับวันนี้ด้วย — ยิ่งมีข้อมูลมากยิ่งไม่ตัดสินผิด)
+        from_date: วันเริ่ม YYYY-MM-DD (คู่กับ to_date) เช่น ทั้งเดือน ต.ค. = 2026-10-01
+        to_date: วันจบ YYYY-MM-DD
+        max_packs: 0 = ขายไม่ได้เลย · 2 = ขายได้ไม่เกิน 2 ซอง (หาของขายช้า)
+    """
+    try:
+        return data.query_unsold(machine=machine or None, days=days, from_date=from_date or None,
+                                 to_date=to_date or None, include_today=True, max_packs=max_packs)
     except Exception as e:
         return _fail(e)
 
@@ -115,7 +195,8 @@ def get_sales(days: int = 1, date: str = "", from_date: str = "", to_date: str =
 def get_stock(machine: str = "", low_only: bool = False, low_threshold: int = 2) -> dict:
     """
     Args:
-        machine: machine_id หรือคำค้นจากชื่อสาขา (ว่าง = ทุกตู้)
+        machine: machine_id หรือคำค้นจากชื่อสาขา · หลายตู้คั่นด้วย , · ชื่อห้างที่มีหลายตู้ = ทั้งสาขา
+                 (ว่าง = ทุกตู้)
         low_only: เอาเฉพาะช่องที่ใกล้หมด — แนะนำ True เมื่อดูทุกตู้ (ตู้ละ ~58 ช่อง)
         low_threshold: เกณฑ์ "ใกล้หมด" นับเป็นจำนวนชิ้นในช่อง
     """

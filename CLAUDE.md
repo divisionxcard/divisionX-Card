@@ -152,6 +152,8 @@ Push ไป `main` branch → Vercel auto deploy
 - แถวตั้งต้นทุก SKU = `2000-01-01` (ทุนที่เว็บใช้เดิม) · ถอยกลับ = ลบแถวทุนใหม่ · สำเนาเดิม `backups/sku-costs-before-2026-10-30/`
 - กล่อง = ทุนต่อซอง × ซองต่อกล่อง (แถวขายกล่องเก็บจำนวนเป็นซองอยู่แล้วทุกยี่ห้อ)
 - โค้ด: เว็บ `components/shared/costs.js` · สรุปยอด `agents/daily_sales_digest.py` — **กติกาต้องตรงกัน** (เทสต์ `scripts/test_costs_web.mjs` · `scripts/test_daily_digest.py`)
+  · Hermes (MCP `get_sales` / `compare_sales`) คิดกำไรใน `agents/dvx_data.py` โดย import `Costs`/ค่าธรรมเนียม จาก `daily_sales_digest.py` ตรง ๆ — ไม่มีสูตรชุดที่สาม (เทสต์ `scripts/test_dvx_sales_calc.py` · 31 ต.ค. 2026)
+    ต่างจากสรุปยอดจุดเดียว: ตัดสาขาด้วย `config.branch.display_name` (สรุปยอดใช้ location) — ตู้ที่ใช้งานอยู่แบ่งเท่ากัน · ช่วงที่ wwv02 ยังเปิด บางกะปิรวมเป็นสาขาเดียว
 - ต่างกันจุดเดียว: ทุน 0/ไม่รู้ — เว็บนับเป็น 0 (คงตัวเลขเก่า) · สรุปยอดแยกเตือน "ยังไม่มีต้นทุน" ไม่นับในกำไร
 - ⚠️ ตัวเลขต้นทุนห้ามลง repo/wiki (repo สาธารณะ) — ใส่ผ่าน REST จากเครื่องเท่านั้น
 

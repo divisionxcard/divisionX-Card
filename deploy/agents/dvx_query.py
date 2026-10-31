@@ -60,7 +60,8 @@ def cmd_sales(args):
     print(f"   รายรับ {baht(r['revenue'])} บาท · {r['packs']:,} ซอง · {r['transactions']:,} ธุรกรรม")
     if r["days"] > 1:
         print(f"   เฉลี่ย {baht(r['revenue_per_day'])} บาท/วัน")
-    if not r["breakdown"]:
+    # ดูจากยอดรวม ไม่ใช่จำนวนแถว — มุมรายวันใส่วันที่ยอด 0 ไว้ครบทุกวัน (31 ต.ค. 2026) แถวจึงไม่เคยว่าง
+    if not r["transactions"] and not r["packs"]:
         print("   (ไม่มีรายการขายในช่วงนี้ — ถ้าเป็นวันนี้/เมื่อวาน อาจยังไม่ได้ sync)")
         return
     print("─" * 46)
