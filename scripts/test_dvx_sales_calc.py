@@ -513,5 +513,29 @@ fut_notes = d.mix_notes(date(2026, 10, 30), date(2026, 10, 30), date(2026, 10, 3
 check("ช่วงเทียบเป็นวันนี้/อนาคต → เตือน ไม่บอกว่าก่อนเริ่มมีข้อมูล",
       (any("รวมวันนี้" in x for x in fut_notes), any("ก่อนเริ่มมีข้อมูล" in x for x in fut_notes)), (True, False))
 
+# ── 11. จากรีวิวรอบ 6 ──
+# ยอดขายหลังเติมของ (หลังรอบที่อ่านเลข 0) ไม่ใช่ตัวทำให้หมด — ช่วงว่างต้องเริ่มจากยอดที่ขายจนหมดจริง
+post = run([stock("v1", "PR 01", slot="050")],
+           [ev("v1", "PR 01", "refill", date(2026, 7, 20), qb=0, qa=12, slot="050", eid=1),
+            dict(ev("v1", "PR 01", "refill", date(2026, 9, 10), qb=0, qa=12, slot="050", eid=2),
+                 synced_at=utc(date(2026, 9, 10), 15), prev_synced_at=utc(date(2026, 9, 10), 1))],
+           AUG1, AUG31,
+           history=[{"machine_id": "v1", "sku_id": "PR 01", "slot_number": "050", "quantity_sold": 12,
+                     "unit": "pack", "sold_at": utc(date(2026, 7, 24), 16)},
+                    {"machine_id": "v1", "sku_id": "PR 01", "slot_number": "050", "quantity_sold": 1,
+                     "unit": "pack", "sold_at": utc(date(2026, 9, 10), 13)}])
+check("ขายหมด 24 ก.ค. · เติม 10 ก.ย. แล้วขายได้ 1 ซองก่อนซิงค์ → ส.ค. ยังว่างทั้งเดือน = empty",
+      post[("v1", "PR 01")]["status"], "empty")
+# หาตู้: 'ตู้ที่ 1' ไม่ไปโดนตู้ที่ 10–13
+M2 = MACHINES + [{"id": 10, "machine_id": "x10", "name": "ตู้ที่ 10 (x10) · ห้าง X", "location": "ห้าง X",
+                  "status": "active", "config": {"branch": {"display_name": "ห้าง X"}}}]
+check("'ตู้ที่ 1' = ตู้ที่ 1 ตัวเดียว (ไม่ตัดกลางตัวเลข)", d.resolve_machines("ตู้ที่ 1", M2), ["v1"])
+check("'พระราม 2' ยังได้ทั้งสาขา", d.resolve_machines("พระราม 2", M2), ["v2", "w6"])
+# ทั้งค่าย/ขึ้นต้น ต้องรวมตัวที่เลิกขายแล้ว (ยอดย้อนหลังยังนับ)
+SK5 = [{"sku_id": "OP 01", "name": "One Piece OP-01", "franchise": "OP"},
+       {"sku_id": "OP 05", "name": "One Piece OP-05", "franchise": "OP", "is_active": False}]
+check("ทั้งค่ายรวมตัวที่เลิกขายแล้ว", d.resolve_skus("One Piece", SK5), ["OP 01", "OP 05"])
+check("ขึ้นต้น 'OP' รวมตัวที่เลิกขายแล้ว", sorted(d.resolve_skus("OP", SK5)), ["OP 01", "OP 05"])
+
 print("\n" + ("✅ ผ่านทั้งหมด" if not fails else f"❌ ไม่ผ่าน {fails} ข้อ"))
 sys.exit(1 if fails else 0)

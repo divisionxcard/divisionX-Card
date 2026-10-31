@@ -177,7 +177,7 @@ def _resolve_one(spec, machines, since=None):
     if spec in ids:
         return [spec]
     key = _norm(spec)
-    hits = [m for m in machines if key and any(key in _norm(n) for n in _machine_names(m))]
+    hits = [m for m in machines if key and any(_digit_safe_in(key, _norm(n)) for n in _machine_names(m))]
     if not hits:
         raise DvxError(f"ไม่พบตู้ '{spec}' — เรียก list_machines ดูรายชื่อก่อน")
     active = [m for m in hits if m.get("status") == "active"]
@@ -270,11 +270,11 @@ def resolve_skus(spec, skus):
             if len(hits) > 1:
                 raise DvxError(f"'{part}' ตรงหลายสินค้า: {', '.join(hits[:8])} — ระบุ sku_id ให้ชัด")
         else:
-            hits = ([s["sku_id"] for s in skus if _sku_key(s["sku_id"]).startswith(key)]
-                    or [s["sku_id"] for s in skus if loose in _loose(s["sku_id"]) or loose in _loose(s.get("name"))])
+            hits = [s["sku_id"] for s in skus if _sku_key(s["sku_id"]).startswith(key)]
+            if not hits:
+                hits = [s["sku_id"] for s in skus if loose in _loose(s["sku_id"]) or loose in _loose(s.get("name"))]
+                hits = [h for h in hits if h in active] or hits       # จับคู่หลวม — ตัดตัวที่เลิกขายแล้วเมื่อซ้ำกัน
         hits = list(dict.fromkeys(SKU_RENAMED.get(h, h) for h in hits))
-        if len(hits) > 1:
-            hits = [h for h in hits if h in active] or hits
         if not hits:
             raise DvxError(f"ไม่พบสินค้า '{part}' — ใช้ sku_id เช่น 'OP 12' หรือชื่อค่าย เช่น 'Dragon Ball'")
         out += [h for h in hits if h not in out]
@@ -743,6 +743,11 @@ def query_sales(days=1, date=None, from_date=None, to_date=None,
         if unit:
             out["profit"]["note"] += " · กรองหน่วยอยู่ จึงไม่หักเงินคืนเคลม"
     out["data_status"] = _data_status(d1, d2, mids, ctx)
+    if with_profit and not total["bills"] and not total["revenue"]:
+        out["profit"]["note"] = ("ไม่มีแถวขายในช่วงนี้ — กำไร 0 ไม่ได้แปลว่าขาดทุนหรือขายไม่ได้ "
+                                 "ดู data_status / machine_notes ก่อนตอบ")
+    elif with_profit and not out["data_status"]["complete"]:
+        out["profit"]["note"] += " · ข้อมูลช่วงนี้ยังไม่ครบ กำไรนับเฉพาะยอดที่ซิงค์แล้ว"
     notes = machine_notes(mids, ctx)
     if notes:
         out["machine_notes"] = notes
@@ -882,7 +887,13 @@ def query_compare(from_date=None, to_date=None, days=7, include_today=False, vs=
     rows = []
     for k in set(cur_g) | set(prev_g):
         a, b = cur_g.get(k) or _bucket(), prev_g.get(k) or _bucket()
-        rows.append({"key": k, "name": names(k),
+        row = {"key": k, "name": names(k)}
+        if group_by == "machine" and (ctx["by_id"].get(k) or {}).get("status") not in (None, "active"):
+            row["status"] = "ปิดใช้งานแล้ว"
+        if group_by == "branch":
+            row["machines_before"] = sorted(b["machines"])
+            row["machines_now"] = sorted(a["machines"])
+        rows.append({**row,
                      "revenue_before": round(b["revenue"]), "revenue_now": round(a["revenue"]),
                      "diff": round(a["revenue"] - b["revenue"]),
                      "change_pct": pct_change(a["revenue"], b["revenue"]),
@@ -894,7 +905,17 @@ def query_compare(from_date=None, to_date=None, days=7, include_today=False, vs=
     up, down = sku_movers(cur_s, prev_s, ctx["sku_meta"], top)
 
     notes = mix_notes(d1, d2, p1, p2, prev["revenue"], th_today()) + _data_status(d1, d2, mids, ctx)["notes"]
-    notes += machine_notes(mids, ctx)
+    # ไม่กรองตู้ก็ต้องบอก — "ก.ย. เทียบ ส.ค." ทุกตู้ wwv02 ขึ้น -100% และบางกะปิ -58% โดยไม่มีคำอธิบาย (ตู้ปิด 19 ส.ค.)
+    seen = sorted(cur["machines"] | prev["machines"] | set(mids), key=lambda m: ctx["morder"].get(m, 999))
+    notes += machine_notes(seen, ctx)
+    for mid in seen:
+        if mid not in cur["machines"]:
+            continue
+        first = sb_get(f"sales?select=sold_at&machine_id=eq.{mid}&order=sold_at.asc&limit=1")
+        start = _th_dt(first[0]["sold_at"]).date() if first else None
+        if start and start > p1:              # เปิดหลังวันเริ่มช่วงเทียบ = ช่วงเทียบมีตู้นี้ไม่ครบ/ไม่มีเลย
+            notes.append(f"{ctx['mname'].get(mid, mid)} เริ่มขาย {start} — ช่วงเทียบมีตู้นี้ไม่ครบทั้งช่วง "
+                         "ส่วนที่เพิ่มขึ้นส่วนหนึ่งมาจากตู้เพิ่งเปิด")
     return {
         "machine": " + ".join(ctx["mname"].get(m, m) for m in mids) if mids else "ทุกตู้",
         "sku_filter": sku_ids or "ทุกสินค้า",
@@ -956,11 +977,15 @@ def _key_timeline(events, current, sale_times, floor=_FAR_PAST):
     present, empty = [], []
     qty, last_t, empty_open = None, None, None
 
-    def evidence_start(t, by_swap_out):
-        """ช่องหมดตั้งแต่เมื่อไหร่ (มีหลักฐาน) — None = ไม่มีหลักฐาน"""
+    def evidence_start(t, by_swap_out, read_at):
+        """ช่องหมดตั้งแต่เมื่อไหร่ (มีหลักฐาน) — None = ไม่มีหลักฐาน
+
+        read_at = เวลาที่อ่านได้เลข 0 (prev_synced_at ของเหตุการณ์) — ยอดขายหลังจากนั้นเกิดหลังเติมของแล้ว
+        นับเป็นตัวทำให้หมดไม่ได้ (เดิมยอดขาย 1 ซองหลังเติมกลายเป็น "ว่างตั้งแต่" แล้วซ่อนช่วงว่างหลายสัปดาห์)
+        """
         if qty == 0 and last_t:
             return last_t
-        sold = [(s, u) for s, u in sale_times if (last_t is None or s > last_t) and s < t]
+        sold = [(s, u) for s, u in sale_times if (last_t is None or s > last_t) and s <= read_at]
         if sold:
             # ต้องขายได้มากพอจะหมดจริง (เผื่อ 1 ชิ้น) — WW มีรอบรีเซ็ตหลังบ้านที่เลขก่อนเติมเป็น 0 เกือบทั้งตู้
             # (wwv04 15 ส.ค. 26 จาก 30 ช่อง) ขายไป 1 ซองจาก 12 แล้วนับว่าหมดตั้งแต่วันนั้น = ซ่อนของที่ขายไม่ออกจริงเป็น short
@@ -970,7 +995,7 @@ def _key_timeline(events, current, sale_times, floor=_FAR_PAST):
         # ถอดออกตอนเหลือ 0 เป็นเหตุการณ์แรกของช่อง และไม่เคยขายได้ = ว่างมาตั้งแต่ต้น (ของลดได้ทางเดียวคือขาย ·
         # เติมทุกครั้งมีบันทึก) — wwv04/wwv05 OP 06 · EB 01 เดิมขึ้น "ขายไม่ออก" ทั้งที่ช่องว่าง
         # ⚠️ เติมจาก 0 เป็นเหตุการณ์แรกไม่นับแบบนี้ — รอบจัดตู้ใหม่ทั้งตู้ (wwv08 16 ส.ค.) เลข 0 เชื่อไม่ได้
-        if by_swap_out and qty is None and last_t is None and not any(s < t for s, _ in sale_times):
+        if by_swap_out and qty is None and last_t is None and not any(s <= read_at for s, _ in sale_times):
             return floor
         return None
 
@@ -980,7 +1005,10 @@ def _key_timeline(events, current, sale_times, floor=_FAR_PAST):
         zero = [e for e in grp if e["change_type"] in ("refill", "swap_out") and not (e.get("qty_before") or 0)]
         if zero:
             # รวมกรณีถอด+ลงในรอบเดียว (เปลี่ยนชื่อ) ด้วย — ฝั่ง swap_in ไม่อยู่ในเงื่อนไขนี้ และไม่มีหลักฐาน = ไม่นับอยู่แล้ว
-            start = evidence_start(t, all(e["change_type"] == "swap_out" for e in zero) and "swap_in" not in types)
+            reads = [_th_dt(e["prev_synced_at"]) for e in zero if e.get("prev_synced_at")]
+            read_at = min([r for r in reads if r <= t] or [t])
+            start = evidence_start(t, all(e["change_type"] == "swap_out" for e in zero) and "swap_in" not in types,
+                                   read_at)
             if start is not None:
                 empty.append((max(start, floor), t))
         filled = [e.get("qty_after") or 0 for e in grp if e["change_type"] in ("swap_in", "refill")]
@@ -1222,7 +1250,7 @@ def query_unsold(machine=None, days=30, from_date=None, to_date=None, include_to
     period_sales = sb_get("sales?select=machine_id,sku_id,quantity_sold,unit"
                           f"&machine_id=in.{ids}&sold_at={lo}&sold_at={hi}&order=id")
     events = sb_get("slot_refill_events?select=id,machine_id,slot_number,sku_id,is_box,change_type,"
-                    f"qty_before,qty_after,synced_at&machine_id=in.{ids}&order=id")
+                    f"qty_before,qty_after,synced_at,prev_synced_at&machine_id=in.{ids}&order=id")
     sold = collections.Counter()
     for r in period_sales:
         sold[(r["machine_id"], r.get("sku_id"))] += _packs_of(r, ppb)
