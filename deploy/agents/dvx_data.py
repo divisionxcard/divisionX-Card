@@ -840,8 +840,8 @@ def sku_movers(cur_groups, prev_groups, sku_meta, n=5):
                      "diff": round(now - before), "change_pct": pct_change(now, before),
                      "packs_before": (prev_groups.get(sku) or {}).get("packs", 0),
                      "packs_now": (cur_groups.get(sku) or {}).get("packs", 0)})
-    up = sorted([r for r in rows if r["diff"] > 0], key=lambda r: -r["diff"])[:n]
-    down = sorted([r for r in rows if r["diff"] < 0], key=lambda r: r["diff"])[:n]
+    up = sorted([r for r in rows if r["diff"] > 0], key=lambda r: (-r["diff"], r["sku_id"]))[:n]
+    down = sorted([r for r in rows if r["diff"] < 0], key=lambda r: (r["diff"], r["sku_id"]))[:n]
     return up, down
 
 
@@ -888,7 +888,7 @@ def query_compare(from_date=None, to_date=None, days=7, include_today=False, vs=
                      "change_pct": pct_change(a["revenue"], b["revenue"]),
                      "packs_before": b["packs"], "packs_now": a["packs"],
                      "net_profit_before": round(_profit(b)), "net_profit_now": round(_profit(a))})
-    rows.sort(key=lambda r: -r["revenue_now"])
+    rows.sort(key=lambda r: (-r["revenue_now"], str(r["key"])))
     if group_by == "sku":
         rows = rows[:max(top, 10)]
     up, down = sku_movers(cur_s, prev_s, ctx["sku_meta"], top)
@@ -926,12 +926,18 @@ def _packs_of(r, ppb):
     return qty * n if r.get("unit") == "box" and n > 1 and 0 < qty < n else qty
 
 
+def _slot_norm(slot):
+    """'012' = '12' — เลขช่องจากตารางต่าง ๆ เติมศูนย์ไม่เท่ากัน"""
+    t = str(slot or "").strip()
+    return t.lstrip("0") or ("0" if t else None)
+
+
 def _key_timeline(events, current, sale_times, floor=_FAR_PAST):
     """ประวัติช่อง 1 คีย์ → (ช่วงที่สินค้าอยู่ในช่อง, ช่วงที่ช่องว่าง) เป็นลิสต์ (เริ่ม, จบ) เวลาไทย (ฟังก์ชันล้วน)
 
     คีย์ = (ตู้, SKU, ซอง/กล่อง, ช่อง) — VMS เก็บเหตุการณ์รายช่อง · WorldWide/Payif รวมทั้ง SKU (ช่อง = None)
     current     แถวสต็อกตอนนี้ของคีย์นี้ ({"remain", "empty_since"}) หรือ None = ไม่อยู่ในตู้แล้ว
-    sale_times  เวลาขายทั้งหมดของ SKU นี้ที่ตู้นี้ (เรียงแล้ว) — ใช้หาว่าช่องหมดเพราะขายตอนไหน
+    sale_times  [(เวลาขาย, จำนวนหน่วยของคีย์นี้)] เรียงแล้ว — ใช้หาว่าช่องหมดเพราะขายตอนไหน และขายมากพอจะหมดจริงไหม
     floor       วันที่ตู้เริ่มขาย — ของที่ไม่มีประวัติลงช่องถือว่าอยู่ตั้งแต่ตอนนั้น ไม่ใช่ก่อนตู้มีอยู่จริง (wwv08 เปิด 21 ก.ค.)
 
     ⚠️ swap_out + swap_in ในรอบซิงค์เดียว = ย้ายช่อง/หลังบ้านเปลี่ยนชื่อ ของยังอยู่ (YGH The Revals ที่ wwv05)
@@ -954,13 +960,17 @@ def _key_timeline(events, current, sale_times, floor=_FAR_PAST):
         """ช่องหมดตั้งแต่เมื่อไหร่ (มีหลักฐาน) — None = ไม่มีหลักฐาน"""
         if qty == 0 and last_t:
             return last_t
-        sold = [s for s in sale_times if (last_t is None or s > last_t) and s < t]
+        sold = [(s, u) for s, u in sale_times if (last_t is None or s > last_t) and s < t]
         if sold:
-            return sold[-1]
+            # ต้องขายได้มากพอจะหมดจริง (เผื่อ 1 ชิ้น) — WW มีรอบรีเซ็ตหลังบ้านที่เลขก่อนเติมเป็น 0 เกือบทั้งตู้
+            # (wwv04 15 ส.ค. 26 จาก 30 ช่อง) ขายไป 1 ซองจาก 12 แล้วนับว่าหมดตั้งแต่วันนั้น = ซ่อนของที่ขายไม่ออกจริงเป็น short
+            if qty is None or sum(u for _, u in sold) >= qty - 1:
+                return sold[-1][0]
+            return None
         # ถอดออกตอนเหลือ 0 เป็นเหตุการณ์แรกของช่อง และไม่เคยขายได้ = ว่างมาตั้งแต่ต้น (ของลดได้ทางเดียวคือขาย ·
         # เติมทุกครั้งมีบันทึก) — wwv04/wwv05 OP 06 · EB 01 เดิมขึ้น "ขายไม่ออก" ทั้งที่ช่องว่าง
         # ⚠️ เติมจาก 0 เป็นเหตุการณ์แรกไม่นับแบบนี้ — รอบจัดตู้ใหม่ทั้งตู้ (wwv08 16 ส.ค.) เลข 0 เชื่อไม่ได้
-        if by_swap_out and qty is None and last_t is None and not any(s < t for s in sale_times):
+        if by_swap_out and qty is None and last_t is None and not any(s < t for s, _ in sale_times):
             return floor
         return None
 
@@ -999,7 +1009,7 @@ def _key_timeline(events, current, sale_times, floor=_FAR_PAST):
             elif since:
                 start = _th_dt(since)
             else:
-                sold = [s for s in sale_times if last_t is None or s > last_t]
+                sold = [s for s, _ in sale_times if last_t is None or s > last_t]
                 start = sold[-1] if sold else (last_t or floor)
             empty.append((max(start, floor), _FAR_FUTURE))
         elif empty_open is not None:
@@ -1040,7 +1050,7 @@ def unsold_core(stock_rows, period_sales, history_sales, events, track_start, d1
         return "box" if _is_box(s.get("product_name")) else "pack"
 
     def key(mid, sku, unit, slot):
-        return (mid, sku, unit, slot if mid in slot_grain else None)
+        return (mid, sku, unit, _slot_norm(slot) if mid in slot_grain else None)
 
     cur = {}
     for s in stock_rows:
@@ -1064,14 +1074,26 @@ def unsold_core(stock_rows, period_sales, history_sales, events, track_start, d1
     sold = collections.Counter()
     for r in period_sales:
         sold[(r["machine_id"], r.get("sku_id"))] += _packs_of(r, ppb)
-    sale_times = collections.defaultdict(list)
+    sale_times = collections.defaultdict(list)          # รายสินค้า — วันขายล่าสุด
+    key_sales = collections.defaultdict(list)           # รายคีย์ (ซอง/กล่อง · ช่อง VMS) — หลักฐานว่าขายจนหมด
     for r in history_sales:
-        sale_times[(r["machine_id"], r.get("sku_id"))].append(_th_dt(r["sold_at"]))
+        t = _th_dt(r["sold_at"])
+        sale_times[(r["machine_id"], r.get("sku_id"))].append(t)
+        unit = r.get("unit") or ("box" if _is_box(r.get("product_name_raw")) else "pack")
+        packs = _packs_of(r, ppb)
+        n = int((ppb or {}).get(r.get("sku_id")) or 0)
+        units = packs / n if unit == "box" and n > 1 else packs
+        slot = r.get("slot_number")
+        key_sales[(r["machine_id"], r.get("sku_id"), unit,
+                   _slot_norm(slot) if r["machine_id"] in slot_grain else None)].append((t, units))
     for v in sale_times.values():
+        v.sort()
+    for v in key_sales.values():
         v.sort()
 
     keys_of = collections.defaultdict(list)
-    for k in set(cur) | set(ev):
+    # เรียงตายตัว — เดิมวนจาก set ลำดับเปลี่ยนตาม hash seed รายการที่ตัดเหลือ 10 ตัวจึงไม่เหมือนกันแต่ละรอบ
+    for k in sorted(set(cur) | set(ev), key=lambda k: (k[0], k[1], k[2], k[3] or "")):
         keys_of[k[:2]].append(k)
 
     def noon(day):
@@ -1088,7 +1110,7 @@ def unsold_core(stock_rows, period_sales, history_sales, events, track_start, d1
             continue
         times = sale_times.get((mid, sku), [])
         floor = (machine_start or {}).get(mid, _FAR_PAST)
-        lines = [_key_timeline(ev.get(k, []), cur.get(k), times, floor) for k in ks]
+        lines = [_key_timeline(ev.get(k, []), cur.get(k), key_sales.get(k, []), floor) for k in ks]
         present = [(day, any(_inside(noon(day), p) for p, _ in lines)) for day in days]
         on_sale = {day for day in days
                    if any(_inside(noon(day), p) and not _inside(noon(day), e) for p, e in lines)}
@@ -1154,7 +1176,8 @@ def unsold_core(stock_rows, period_sales, history_sales, events, track_start, d1
 
     order = {"unsold": 0, "slow": 1, "short": 2, "empty": 3}
     items.sort(key=lambda i: (order[i["status"]],
-                              -(i["days_since_last_sale"] if i["days_since_last_sale"] is not None else 10 ** 6)))
+                              -(i["days_since_last_sale"] if i["days_since_last_sale"] is not None else 10 ** 6),
+                              i["machine_id"], i["sku_id"]))
     return items
 
 
@@ -1168,7 +1191,7 @@ def query_unsold(machine=None, days=30, from_date=None, to_date=None, include_to
     machines = load_machines(active_only=False)
     by_id = {m["machine_id"]: m for m in machines}
     active = [m["machine_id"] for m in machines if m.get("status") == "active"]
-    asked = resolve_machines(machine, machines) if machine else active
+    asked = resolve_machines(machine, machines, d1) if machine else active   # ตู้ที่ปิดแล้วของสาขา → ขึ้นหมายเหตุ
     mids = [m for m in asked if m in active]
     notes = [f"เกณฑ์: ขายได้ไม่เกิน {max_packs} ซองในช่วง {d1} → {end}",
              "status: " + " · ".join(f"{k} = {v}" for k, v in STATUS_TH.items())
@@ -1221,8 +1244,8 @@ def query_unsold(machine=None, days=30, from_date=None, to_date=None, include_to
                         today, ppb=ppb, slot_grain=slot_grain, machine_start=start)
     keep = {(i["machine_id"], i["sku_id"]) for i in rough}
     cand = sorted({sku for _, sku in keep})
-    history = (sb_get(f"sales?select=machine_id,sku_id,sold_at&machine_id=in.{ids}"
-                      f"&sku_id=in.{_quote_in(cand)}&order=id") if cand else [])
+    history = (sb_get(f"sales?select=machine_id,sku_id,sold_at,quantity_sold,unit,slot_number,product_name_raw"
+                      f"&machine_id=in.{ids}&sku_id=in.{_quote_in(cand)}&order=id") if cand else [])
     # รอบสองต้องเห็นเหตุการณ์ช่องชุดเดียวกับรอบแรก (เดิมกรองทิ้ง → ของที่ลงตู้หลังช่วงที่ถามกลับมาเป็น "ขายไม่ออกทั้งเดือน")
     items = [i for i in unsold_core(stock, period_sales, history, events, track, d1, end, max_packs,
                                     today, ppb=ppb, slot_grain=slot_grain, machine_start=start)

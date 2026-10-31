@@ -404,7 +404,8 @@ check("กรองตู้เดียว แถวสาขาไม่อ้
 # ขายหมดแล้วถอดทีหลัง (swap_out ตอนเหลือ 0) = ช่องว่างตั้งแต่ขายหมด ไม่ใช่มีของจนวันถอด (เคส EB 02 wwv05)
 sold_out = run([], [ev("w5", "SO 01", "refill", date(2026, 6, 19), qb=0, qa=12),
                     ev("w5", "SO 01", "swap_out", date(2026, 8, 26), qb=0, qa=0)],
-               AUG1, AUG31, history=[{"machine_id": "w5", "sku_id": "SO 01", "sold_at": utc(date(2026, 7, 9), 19)}])
+               AUG1, AUG31, history=[{"machine_id": "w5", "sku_id": "SO 01", "sold_at": utc(date(2026, 7, 9), 19),
+                                       "quantity_sold": 12, "unit": "pack"}])
 check("ขายหมด 9 ก.ค. แล้วถอด 26 ส.ค. → ส.ค. ไม่มีของเลย = empty", sold_out[("w5", "SO 01")]["status"], "empty")
 # ลงช่องด้วยจำนวน 0 = ตั้งช่องไว้แต่ไม่มีของ (เคส TF Overdrive 01 wwv07)
 zero_in = run([], [ev("w5", "ZI 01", "swap_in", date(2026, 8, 23), qb=0, qa=0),
@@ -491,7 +492,8 @@ renamed = run([stock("w5", "RN 01")],
                ev("w5", "RN 01", "swap_out", date(2026, 8, 20), qb=0, qa=0, eid=2),
                ev("w5", "RN 01", "swap_in", date(2026, 8, 20), qb=0, qa=0, eid=3),
                ev("w5", "RN 01", "refill", date(2026, 9, 10), qb=0, qa=12, eid=4)],
-              AUG1, AUG31, history=[{"machine_id": "w5", "sku_id": "RN 01", "sold_at": utc(date(2026, 7, 15), 15)}])
+              AUG1, AUG31, history=[{"machine_id": "w5", "sku_id": "RN 01", "sold_at": utc(date(2026, 7, 15), 15),
+                                     "quantity_sold": 2, "unit": "pack"}])
 check("ขายหมดแล้วหลังบ้านเปลี่ยนชื่อในรอบเดียว → ยังนับว่าช่องว่าง (empty)", renamed[("w5", "RN 01")]["status"], "empty")
 back = run([stock("v1", "BK 01", slot="005")],
            [ev("v1", "BK 01", "swap_out", date(2026, 9, 1), qb=12, qa=0, slot="005", eid=1),
@@ -499,6 +501,14 @@ back = run([stock("v1", "BK 01", slot="005")],
             ev("v1", "BK 01", "refill", date(2026, 10, 20), qb=6, qa=12, slot="005", eid=3)], OCT1, OCT29)
 check("ถอดแล้วกลับมามีการเติมโดยไม่มี swap_in → อยู่ในตู้ตั้งแต่เติมครั้งแรก (25 วัน)",
       back[("v1", "BK 01")]["days_with_stock"], 25)
+# รอบรีเซ็ตหลังบ้าน WW: เลขก่อนเติมเป็น 0 ทั้งที่ขายไปแค่ 1 ซองจาก 12 → ไม่ใช่ขายหมด (เคส wwv04 OP 01 ส.ค.)
+reset = run([], [ev("w5", "RS 01", "refill", date(2026, 6, 14), qb=11, qa=12, eid=1),
+                 ev("w5", "RS 01", "refill", date(2026, 8, 15), qb=0, qa=12, eid=2),
+                 ev("w5", "RS 01", "swap_out", date(2026, 8, 25), qb=12, qa=0, eid=3)],
+            AUG1, AUG31, history=[{"machine_id": "w5", "sku_id": "RS 01", "sold_at": utc(date(2026, 7, 21), 17),
+                                   "quantity_sold": 1, "unit": "pack"}])
+check("รอบรีเซ็ต (0 ก่อนเติม แต่ขายไปแค่ 1 จาก 12) → ไม่นับว่าว่าง = unsold 24 วัน",
+      (reset[("w5", "RS 01")]["status"], reset[("w5", "RS 01")]["days_with_stock"]), ("unsold", 24))
 fut_notes = d.mix_notes(date(2026, 10, 30), date(2026, 10, 30), date(2026, 10, 31), date(2026, 10, 31), 0, today)
 check("ช่วงเทียบเป็นวันนี้/อนาคต → เตือน ไม่บอกว่าก่อนเริ่มมีข้อมูล",
       (any("รวมวันนี้" in x for x in fut_notes), any("ก่อนเริ่มมีข้อมูล" in x for x in fut_notes)), (True, False))
