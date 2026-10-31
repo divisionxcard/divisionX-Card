@@ -89,8 +89,8 @@
     {
       "id": "check-first-digest",
       "owner": "claude",
-      "text": "ดูสรุปรายวันรอบแรก 31 ต.ค. 08:00 ว่าส่งถึงจริง",
-      "done": false
+      "text": "ดูสรุปรายวันรอบแรก 31 ต.ค. 08:00 ว่าส่งถึงจริง — ส่งแล้ว (บอทดึงยอด 07:46 · บันทึกส่งสำเร็จวันที่ 31)",
+      "done": true
     },
     {
       "id": "old-weekly-cron",
@@ -134,7 +134,7 @@
       "id": "picking-sheet-same",
       "owner": "claude",
       "text": "ใบจัดยอด/รายงานเติมของแสดงรหัส PKM Ghost เหมือนเดิม (เจ้าของสั่งคงรูปแบบเดิม) — ตรวจผ่านแล้ว deploy",
-      "done": false
+      "done": true
     },
     {
       "id": "admin-f5",
