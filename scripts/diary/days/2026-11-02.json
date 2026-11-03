@@ -25,15 +25,46 @@
     }
   ],
   "decisions": [
-    { "topic": "แหล่งที่ robots/ToS ของแพลตฟอร์มห้าม (Google News RSS · YouTube RSS + yt-dlp · Reddit · อ่านเพจ FB) — ระบบเดิม", "chose": "ใช้แบบเดิม ไม่แก้", "rejected": "ย้ายไป YouTube Data API / ฟีดของสำนักข่าวเอง" },
-    { "topic": "แหล่งเดียวกันในโปรเจกต์อสังหาฯ", "chose": "ใช้แบบเดียวกัน (เจ้าของคนเดียวกันตัดสิน)", "rejected": "ให้คนดูเอง" },
-    { "topic": "ธุรกิจของโปรเจกต์อสังหาฯ", "chose": "ขายฝาก/จำนอง + นายหน้าซื้อขาย", "rejected": "โครงการ/ผู้พัฒนา · ปล่อยเช่า" }
+    {
+      "topic": "แหล่งที่ robots/ToS ของแพลตฟอร์มห้าม (Google News RSS · YouTube RSS + yt-dlp · Reddit · อ่านเพจ FB) — ระบบเดิม",
+      "chose": "ใช้แบบเดิม ไม่แก้",
+      "rejected": "ย้ายไป YouTube Data API / ฟีดของสำนักข่าวเอง"
+    },
+    {
+      "topic": "แหล่งเดียวกันในโปรเจกต์อสังหาฯ",
+      "chose": "ใช้แบบเดียวกัน (เจ้าของคนเดียวกันตัดสิน)",
+      "rejected": "ให้คนดูเอง"
+    },
+    {
+      "topic": "ธุรกิจของโปรเจกต์อสังหาฯ",
+      "chose": "ขายฝาก/จำนอง + นายหน้าซื้อขาย",
+      "rejected": "โครงการ/ผู้พัฒนา · ปล่อยเช่า"
+    }
   ],
   "pending": [
-    { "id": "social-watch-bridge", "owner": "you", "text": "เปิด Chrome profile \"Research\" ค้างไว้ แล้วเช็กว่าส่วนเสริม OpenCLI เปิดอยู่ — ตัวเฝ้าเพจข้ามรอบตั้งแต่ 31 ต.ค.", "done": false },
-    { "id": "re-tos-check", "owner": "you", "text": "ก่อนเปิดเลน ⏳ ในโปรเจกต์อสังหาฯ อ่าน ToS ของประชาชาติ / กรุงเทพธุรกิจ / Pantip / SAM / กรมที่ดิน (รายการในโปรไฟล์ข้อ 14)", "done": false }
+    {
+      "id": "social-watch-bridge",
+      "owner": "you",
+      "text": "เปิด Chrome profile \"Research\" ค้างไว้ แล้วเช็กว่าส่วนเสริม OpenCLI เปิดอยู่ — ตัวเฝ้าเพจข้ามรอบตั้งแต่ 31 ต.ค.",
+      "done": true
+    },
+    {
+      "id": "re-tos-check",
+      "owner": "you",
+      "text": "ก่อนเปิดเลน ⏳ ในโปรเจกต์อสังหาฯ อ่าน ToS ของประชาชาติ / กรุงเทพธุรกิจ / Pantip / SAM / กรมที่ดิน (รายการในโปรไฟล์ข้อ 14)",
+      "done": false
+    }
   ],
-  "stats": { "commits": 0, "files": 0, "added": 0, "deleted": 0 },
-  "areas": ["marketing", "research", "skill"],
+  "stats": {
+    "commits": 0,
+    "files": 0,
+    "added": 0,
+    "deleted": 0
+  },
+  "areas": [
+    "marketing",
+    "research",
+    "skill"
+  ],
   "source": "wiki/daily/2026-11-02.md"
 }
