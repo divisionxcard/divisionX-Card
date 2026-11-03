@@ -195,5 +195,32 @@ check("บอกว่าตัดเพราะส่วนของเรา"
 plan, notes = sw.shared_limits([("facebook", fb6)], {}, {"facebook": 11}, {"facebook": 12}, {"facebook": 2}, {"facebook": 8})
 check("ส่วนของเราเหลือ 6 แต่รวมเหลือ 1 = อ่าน 1 (ตัวที่น้อยกว่าชนะ)", len(plan[0][1]), 1)
 
+# ── bridge: daemon ไม่ขึ้นเองหลังเปิดเครื่อง (31 ต.ค.–3 พ.ย. 2026 ข้ามทุกรอบ) — ของปลอมแทน OpenCLI ไม่เปิด Chrome จริง ──
+def fake_bridge(states):
+    """states = ลำดับผล profile list [(daemonRunning, connected), ...] · คืน (oc ปลอม, รายการคำสั่งที่ถูกเรียก)"""
+    seq, calls = list(states), []
+
+    def oc(*args, timeout=150, beat=True):
+        calls.append(args[:2])
+        if args[:2] == ("profile", "list"):
+            run, conn = seq.pop(0) if len(seq) > 1 else seq[0]
+            return {"ok": True, "data": {"daemonRunning": run, "profiles": [{"alias": "research", "connected": conn}]}}
+        return {"ok": True, "data": {"action": "started"}}
+    return oc, calls
+
+
+real_oc, real_sleep, real_paths = sw.oc, sw.time.sleep, sw.CHROME_PATHS
+sw.time.sleep, sw.CHROME_PATHS = (lambda s: None), []
+try:
+    sw.oc, calls = fake_bridge([(True, True)])
+    check("ต่ออยู่แล้ว = พร้อม ไม่แตะ daemon", (sw.ensure_bridge({}), ("daemon", "restart") in calls), ((True, False), False))
+    sw.oc, calls = fake_bridge([(False, False), (True, True)])
+    check("daemon ไม่รัน = สั่ง restart แล้วต่อได้", (sw.ensure_bridge({}), calls.count(("daemon", "restart"))), ((True, False), 1))
+    sw.oc, calls = fake_bridge([(True, False)])
+    check("daemon รันแต่ส่วนเสริมไม่ต่อ (ไม่มี Chrome) = ไม่พร้อม · ไม่ restart", (sw.ensure_bridge({}), ("daemon", "restart") in calls),
+          ((False, False), False))
+finally:
+    sw.oc, sw.time.sleep, sw.CHROME_PATHS = real_oc, real_sleep, real_paths
+
 print(f"\n{'ผ่านครบ' if not fails else f'ไม่ผ่าน {fails} ข้อ'}")
 sys.exit(1 if fails else 0)

@@ -174,19 +174,38 @@ def unwrap(res):
     return d
 
 
-def bridge_ready(alias):
+def bridge_info(alias):
+    """→ (daemon รันอยู่ไหม — None = ถามไม่ได้, ส่วนเสริมของ profile นั้นต่ออยู่ไหม)"""
     try:
         info = unwrap(oc("profile", "list", timeout=60)) or {}
     except WatchError:
-        return False
-    return any(p.get("alias") == alias and p.get("connected") for p in info.get("profiles") or [])
+        return None, False
+    return (info.get("daemonRunning"),
+            any(p.get("alias") == alias and p.get("connected") for p in info.get("profiles") or []))
+
+
+def bridge_ready(alias):
+    return bridge_info(alias)[1]
 
 
 def ensure_bridge(cfg, deadline=None):
     """→ (พร้อมไหม, เปิด Chrome ให้เองไหม) · เปิดแบบ --no-startup-window = ไม่มีหน้าต่างเด้งใส่หน้าจอ"""
     alias = cfg.get("bridge_profile", "research")
-    if bridge_ready(alias):
+    running, ok = bridge_info(alias)
+    if ok:
         return True, False
+    if running is False:
+        # ⚠️ 31 ต.ค.–3 พ.ย. 2026 ข้ามทุกรอบเพราะ daemon ของ OpenCLI ไม่ขึ้นเองหลังเปิดเครื่อง — `profile list` ไม่สตาร์ตให้
+        #    เจ้าของเปิด Chrome profile Research แล้วก็ยังไม่ต่อ · `daemon restart` สตาร์ตจากสถานะหยุดได้ ส่วนเสริมต่อเองทันที
+        log("[social] OpenCLI daemon ไม่ได้รัน (เครื่องเพิ่งเปิด?) — สั่งสตาร์ตให้เอง")
+        try:
+            oc("daemon", "restart", timeout=60)
+        except WatchError as e:
+            log(f"⚠️ [social] สตาร์ต OpenCLI daemon ไม่สำเร็จ: {e}")
+        for _ in range(3):
+            time.sleep(3)
+            if bridge_ready(alias):
+                return True, False
     chrome = next((c for c in CHROME_PATHS if c.exists()), None)
     if not chrome:
         return False, False
