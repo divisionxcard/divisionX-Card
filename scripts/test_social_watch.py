@@ -222,5 +222,43 @@ try:
 finally:
     sw.oc, sw.time.sleep, sw.CHROME_PATHS = real_oc, real_sleep, real_paths
 
+
+# ── หน้าต่างถูกซ่อน (3 พ.ย. 2026 ต้นเหตุ "เพจละ 1 โพสต์") — ของปลอมแทน OpenCLI ──
+def fake_fb(vis_seq, posts_per_eval):
+    seen, calls = {"n": 0}, []
+
+    def oc(*args, timeout=150, beat=True):
+        calls.append(args[:2])
+        if args[:2] == ("browser", "eval"):
+            i = seen["n"]
+            seen["n"] += 1
+            posts = [{"pos": j + 1, "vid": f"{j}", "fbids": [], "perma": None, "ext": None, "format": "video",
+                      "caption": f"โพสต์ {j}", "m": {"reactions": 1, "comments": 0, "shares": 0, "views": None}}
+                     for j in range(min(posts_per_eval * (i + 1), 12))]
+            return {"ok": True, "data": {"blocked": None, "posts": posts, "vis": vis_seq[min(i, len(vis_seq) - 1)]}}
+        return {"ok": True, "data": {}}
+    return oc, calls
+
+
+real_oc, real_sleep = sw.oc, sw.time.sleep
+sw.time.sleep = lambda s: None
+fbcfg = {"fb_scroll_steps": 10, "fb_max_posts": 12, "fb_low_posts": 3}
+page = {"name": "x", "url": "https://www.facebook.com/x/"}
+try:
+    sw.oc, calls = fake_fb(["hidden"], 1)
+    try:
+        sw.read_facebook(page, fbcfg)
+        check("หน้าต่างถูกซ่อน + ได้ 1 โพสต์ = โยน Hidden", "ไม่โยน", "Hidden")
+    except sw.Hidden:
+        check("หน้าต่างถูกซ่อน + ได้ 1 โพสต์ = โยน Hidden", "Hidden", "Hidden")
+    check("ซ่อนอยู่ = ไม่เลื่อนต่อ (อ่านครั้งเดียว)", (calls.count(("browser", "eval")), ("browser", "scroll") in calls), (1, False))
+    check("Hidden ไม่ใช่ Blocked (ไม่พักบัญชี 3 วัน)", issubclass(sw.Hidden, sw.Blocked), False)
+    sw.oc, calls = fake_fb(["visible"], 4)
+    check("หน้าต่างมองเห็น = เลื่อนโหลดต่อจนครบ 12", len(sw.read_facebook(page, fbcfg)), 12)
+    sw.oc, calls = fake_fb(["hidden"], 4)
+    check("ซ่อนแต่ได้ ≥ 3 โพสต์แล้ว = เก็บที่ได้ ไม่โยน", len(sw.read_facebook(page, fbcfg)), 4)
+finally:
+    sw.oc, sw.time.sleep = real_oc, real_sleep
+
 print(f"\n{'ผ่านครบ' if not fails else f'ไม่ผ่าน {fails} ข้อ'}")
 sys.exit(1 if fails else 0)

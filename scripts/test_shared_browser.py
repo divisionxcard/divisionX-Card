@@ -159,6 +159,7 @@ sw.CFG_FILE, sw.STORE = cfg_file, TMP / "store"
 sw.random.uniform = lambda lo, hi: 0
 sw.time.sleep = lambda s: None
 sw.ensure_bridge = lambda cfg, deadline=None: (True, False)
+sw.chrome_flags_active = lambda: None                            # ไม่ถาม Chrome จริงของเครื่อง
 calls = []
 
 
@@ -327,6 +328,21 @@ check("หมดงบตอนจะเปิดซ้ำ = ไม่เปิ�
 check("ไม่รายงานหลอกว่าลองซ้ำแล้ว", "แม้ลองซ้ำแล้ว" in out, False)
 check("บอกว่าหมดงบ ไม่ได้เปิดซ้ำ", "หมดงบเวลารอบ ไม่ได้เปิดซ้ำ" in out, True)
 check("แถวสรุปผล budget", sb.usage_rows(base)[-1]["result"], "budget")
+
+
+def hidden_reader(t, cfg):
+    sw.oc("browser", "open", t["url"])
+    raise sw.Hidden("หน้าต่าง browser ถูกซ่อน (จอล็อก/ถูกหน้าต่างอื่นบัง) — Chrome หยุดวาดหน้า Facebook ไม่โหลดโพสต์ต่อ (เห็น 1 โพสต์)")
+
+
+base = TMP / "run-hidden"
+del CFG["shared_browser"]["run_budget_sec"]
+cfg_file.write_text(json.dumps(CFG, ensure_ascii=False), encoding="utf-8")
+rc, out = run_main(base, hidden_reader)
+check("หน้าต่างถูกซ่อน = หยุดเลนหลังเพจแรก (ไม่เปลืองโควตา)", len([c for c in calls if c[0] == ("browser", "open")]), 1)
+check("ไม่ตั้งพักร่วม (ไม่ใช่บัญชีโดนบล็อก)", sb.blocked_for("facebook", today, base), None)
+check("แถวสรุปผล hidden:facebook", sb.usage_rows(base)[-1]["result"], "hidden:facebook")
+check("รายงาน ⚠️ บอกเหตุ", "⚠️ [social] หน้าต่าง browser ถูกซ่อน" in out, True)
 
 print(f"\n{'ผ่านครบ' if not fails else f'ไม่ผ่าน {fails} ข้อ'}")
 sys.exit(1 if fails else 0)

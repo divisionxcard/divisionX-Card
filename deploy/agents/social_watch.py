@@ -65,6 +65,9 @@ CHROME_PATHS = [
     Path(os.environ.get("PROGRAMFILES(X86)", r"C:\Program Files (x86)")) / "Google" / "Chrome" / "Application" / "chrome.exe",
     Path(os.environ.get("LOCALAPPDATA", "")) / "Google" / "Chrome" / "Application" / "chrome.exe",
 ]
+# Chrome ต้องเปิดด้วยค่านี้ ไม่งั้นหน้าต่างโหมด background ที่ถูกบัง/จอล็อก = hidden → FB ไม่โหลดโพสต์ต่อ (3 พ.ย. 2026)
+# ไอคอน Chrome ของเจ้าของใส่ไว้แล้ว (สำรองไอคอนเดิมที่ ~/.research-browser/chrome-shortcut-backup) · ค่าใช้ทั้ง process ทุก profile
+CHROME_FLAGS = ["--disable-backgrounding-occluded-windows", "--disable-features=CalculateNativeWinOcclusion"]
 SESSION = "dvxwatch"
 NO_WINDOW = getattr(subprocess, "CREATE_NO_WINDOW", 0)
 _LOCK = None             # กุญแจ browser ร่วม (shared_browser.Lock) ระหว่างรอบ · oc() แตะสัญญาณชีพให้ทุกคำสั่ง
@@ -109,6 +112,11 @@ class WatchError(Exception):
 
 class Blocked(WatchError):
     """แพลตฟอร์มขอให้ล็อกอิน/ยืนยันตัวตน — หยุดเลนนั้นทันที อย่ารัวต่อ (เสี่ยงบัญชีโดนแบน)"""
+
+
+class Hidden(WatchError):
+    """หน้าต่าง browser ถูกซ่อน (จอล็อก/ถูกหน้าต่างอื่นบัง) — Chrome หยุดวาดหน้า FB จึงไม่โหลดโพสต์ถัดไป
+    หยุดเลน FB รอบนี้ (เปิดเพจต่อก็ได้เพจละ 1 โพสต์ เปลืองโควตาบัญชีร่วม) · ไม่ใช่บัญชีโดนบล็อก ไม่ต้องพัก 3 วัน"""
 
 
 def log(msg=""):
@@ -209,7 +217,7 @@ def ensure_bridge(cfg, deadline=None):
     chrome = next((c for c in CHROME_PATHS if c.exists()), None)
     if not chrome:
         return False, False
-    subprocess.Popen([str(chrome), f"--profile-directory={cfg.get('chrome_profile_dir', 'Profile 9')}",
+    subprocess.Popen([str(chrome), f"--profile-directory={cfg.get('chrome_profile_dir', 'Profile 9')}", *CHROME_FLAGS,
                       "--no-startup-window"], creationflags=NO_WINDOW, close_fds=True,
                      stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     for _ in range(15):
@@ -219,6 +227,24 @@ def ensure_bridge(cfg, deadline=None):
         if bridge_ready(alias):
             return True, True
     return False, True
+
+
+def chrome_flags_active():
+    """Chrome ที่รันอยู่เปิดด้วย CHROME_FLAGS ไหม → True / False / None (ไม่มี Chrome หรือเช็กไม่ได้)
+
+    ค่าพวกนี้ติดตอนเปิด process แรกเท่านั้น — เปิด Chrome จากเมนู Start/ลิงก์ของแอปอื่นตอน Chrome ปิดอยู่ = ไม่มีค่า
+    """
+    ps = ("Get-CimInstance Win32_Process | Where-Object { $_.Name -eq 'chrome.exe' -and $_.CommandLine -notmatch '--type=' }"
+          " | Select-Object -ExpandProperty CommandLine")
+    try:
+        p = subprocess.run(["powershell", "-NoProfile", "-Command", ps], capture_output=True, text=True,
+                           encoding="utf-8", errors="replace", timeout=30, creationflags=NO_WINDOW)
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    lines = [ln for ln in (p.stdout or "").splitlines() if ln.strip()]
+    if not lines:
+        return None
+    return all(CHROME_FLAGS[0] in ln for ln in lines)
 
 
 # ── Facebook: อ่าน DOM หน้าเพจ ──────────────────────────────────────────────
@@ -279,7 +305,7 @@ FB_JS = r"""
     posts.push({ pos: Number(a.getAttribute('aria-posinset')) || null, vid, fbids: fbids.slice(0, 4), perma, ext,
       format, caption: caption.slice(0, 700), m });
   }
-  return { blocked: null, posts };
+  return { blocked: null, posts, vis: document.visibilityState };
 })()
 """
 
@@ -332,6 +358,13 @@ def read_facebook(target, cfg):
                 continue
             if k not in got or _richness(p) > _richness(got[k]):
                 got[k] = p
+        if res.get("vis") == "hidden":
+            # ⚠️ 3 พ.ย. 2026 ต้นเหตุ "เพจละ 1 โพสต์" (7 จาก 11 รอบ): หน้าต่างโหมด background ถูกบัง/จอล็อก → visibilityState hidden ·
+            #    requestAnimationFrame ไม่ทำงาน → FB ไม่โหลดโพสต์ถัดไปแม้เลื่อนสุด · ทดสอบแล้ว: หน้าต่างที่มองเห็นโหลดปกติ (1 → 7 ใน 3 ครั้ง)
+            if len(got) < int(cfg.get("fb_low_posts", 3)):
+                raise Hidden(f"หน้าต่าง browser ถูกซ่อน (จอล็อก/ถูกหน้าต่างอื่นบัง) — Chrome หยุดวาดหน้า Facebook "
+                             f"ไม่โหลดโพสต์ต่อ (เห็น {len(got)} โพสต์)")
+            break
         if len(got) >= int(cfg.get("fb_max_posts", 12)):
             break
         stale = stale + 1 if len(got) == before else 0
@@ -847,6 +880,16 @@ def main():
                         outcome.append(f"blocked:{platform}")
                         log(f"⚠️ [social] {e} — หยุดเลน {PLATFORM_LABEL[platform]} ทันที (แจ้ง AssetX ให้พักด้วยแล้ว)")
                         stats["fails"].append(f"{t['name']}: blocked")
+                        break
+                    except Hidden as e:
+                        outcome.append(f"hidden:{platform}")
+                        flags = chrome_flags_active()
+                        hint = (" · Chrome ที่รันอยู่เปิดโดยไม่มีค่ากันหยุดวาด — ปิด Chrome ทุกหน้าต่างแล้วเปิดใหม่จากไอคอนบนเดสก์ท็อป"
+                                if flags is False else
+                                " · Chrome มีค่ากันหยุดวาดแล้วแต่ยังถูกซ่อน (หน้าต่างถูกย่อเล็กสุด/จอดับ?)" if flags else "")
+                        log(f"⚠️ [social] {e} — หยุดเลน {PLATFORM_LABEL[platform]} รอบนี้ · เพจที่ถึงรอบยังไม่นับว่าอ่าน (รอบหน้าอ่านก่อน)"
+                            + hint)
+                        stats["fails"].append(f"{t['name']}: hidden")
                         break
                     except WatchError as e:
                         log(f"⚠️ [social] อ่าน {t['name']} ไม่สำเร็จ: {e}")
