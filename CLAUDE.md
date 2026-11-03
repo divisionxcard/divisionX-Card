@@ -179,6 +179,9 @@ Push ไป `main` branch → Vercel auto deploy
 > · 👀 ต่อท้ายด้วย**ตัวเฝ้าเพจโซเชียล** `deploy/agents/social_watch.py` (21 ต.ค. 2026) — อ่านเพจที่ติดตามผ่าน OpenCLI
 > ใน Chrome profile Research (บัญชีสำรอง · อ่านอย่างเดียว) · ข้อมูลดิบ `research/social/` (gitignored)
 > · **รายงานบทเรียนรายสัปดาห์** `social_insight.py` ส่งเข้าห้องสัปดาห์ละครั้ง · IG/Reddit เปิด 28 ต.ค.
+> · 🤝 **Chrome profile Research ใช้ร่วมกับโปรเจกต์ AssetX** (เฉพาะ Facebook · 3 พ.ย. 2026) — ถือกุญแจกลาง
+> `%USERPROFILE%\.research-browser\` ก่อนแตะ browser (`agents/shared_browser.py`) · เพดาน FB รวม 12 เพจ/วัน ·
+> ข้อตกลงในสกิล `social-research` → `profiles/shared-browser-dvx-assetx.md` · แก้ฝั่งเดียวไม่ได้
 >
 > 💾 **สำรองข้อมูล (ทุก 7 วัน · `/backup`) และโพสต์อัตโนมัติ (เคาะ publish-due ทุก 15 นาที · `/autopost`)
 > ก็ย้ายมาอยู่ในบอทแล้ว** (16 ก.ย. 2026) · ไฟล์สำรองอยู่ `<repo>/backups/` **นอก `deploy/` เสมอ**

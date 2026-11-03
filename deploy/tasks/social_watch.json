@@ -10,6 +10,17 @@
     "reddit": "2026-10-28"
   },
 
+  "shared_browser": {
+    "_about": "Chrome profile Research + บัญชีสำรองชุดนี้ใช้ร่วมกับโปรเจกต์ AssetX (เฉพาะ Facebook · เจ้าของตัดสิน 3 พ.ย. 2026) — กุญแจกลาง/สถานะพักร่วม/บันทึกการใช้ อยู่ที่ %USERPROFILE%\\.research-browser (deploy/agents/shared_browser.py) · ข้อตกลงเต็มอยู่ในสกิล social-research profiles/shared-browser-dvx-assetx.md",
+    "wait_minutes": 8,
+    "_wait_note": "AssetX ถือ browser อยู่ = รอได้สูงสุดเท่านี้แล้วข้ามรอบ · บอทให้ตัวเฝ้าเพจรันได้ 25 นาที (รอ 8 + อ่านเอง ~10–15)",
+    "daily_cap": { "facebook": 12 },
+    "own_daily_cap": { "facebook": 8 },
+    "_cap_note": "daily_cap = เพจ Facebook ที่บัญชีนี้เปิดได้ต่อวัน นับรวมทุกโปรเจกต์ (นับจาก usage.jsonl ทีละเพจก่อนเปิด) · own_daily_cap = ส่วนของเรา 8 (รอบเช้า 6 + เผื่อ /ideas 2) กันอีก 4 ไว้ให้ AssetX — เพดานรวมเป็นใครมาก่อนได้ก่อน · IG/Reddit มีแค่ DVX ใช้ จึงไม่ตั้ง",
+    "run_budget_sec": 1200,
+    "_budget_note": "ทั้งรอบรวมเวลารอกุญแจ — หมดแล้วหยุดเปิดเพจใหม่ จบตามปกติ (ปิด session · จดการใช้ · ปล่อยกุญแจ · ส่งคิว) ก่อนบอทฆ่าที่ 1500 วิ (โดนฆ่า = ไม่มี finally)"
+  },
+
   "max_targets_per_run": { "facebook": 6, "instagram": 4, "reddit": 5 },
   "fb_scroll_steps": 10,
   "fb_max_posts": 12,

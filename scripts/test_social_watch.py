@@ -171,5 +171,29 @@ dirty["posts"]["a"]["caption"] = junk                     # ของที่�
 sw.merge(dirty, [dict(post("a", 5), caption="ประกาศปิดปรับปรุง")], iso)
 check("ของเก่าที่มีขยะ ห้ามชนะเพราะยาวกว่า", dirty["posts"]["a"]["caption"], "ประกาศปิดปรับปรุงเว็บไซต์")
 
+# ── ของร่วมกับ AssetX: สถานะพักร่วม + เพดานรวมต่อวัน (3 พ.ย. 2026) ──
+fb6 = [{"name": f"p{i}"} for i in range(6)]
+rd2 = [{"name": "r1"}, {"name": "r2"}]
+plan, notes = sw.shared_limits([("facebook", fb6), ("reddit", rd2)], {}, {}, {"facebook": 12})
+check("ไม่มีอะไรร่วม = แผนเดิม", [(p, len(t)) for p, t in plan], [("facebook", 6), ("reddit", 2)])
+check("ไม่มีอะไรร่วม = ไม่มีข้อความ", notes, [])
+plan, notes = sw.shared_limits([("facebook", fb6), ("reddit", rd2)],
+                               {"facebook": {"at": "2026-11-03", "why": "Facebook ขอ checkpoint", "by": "assetx"}},
+                               {}, {"facebook": 12})
+check("AssetX เจอบล็อก FB = เราพัก FB ด้วย เลนอื่นเดินต่อ", [p for p, _ in plan], ["reddit"])
+check("ข้อความบอกว่าใครเจอ", "assetx เจอ" in notes[0] and notes[0].startswith("⚠️ [social]"), True)
+plan, notes = sw.shared_limits([("facebook", fb6)], {}, {"facebook": 9}, {"facebook": 12})
+check("เหลือโควตา 3 = อ่าน 3 เพจแรก (ค้างนานสุดก่อน)", [x["name"] for x in plan[0][1]], ["p0", "p1", "p2"])
+check("บอกว่าตัดเพราะโควตา", "อ่าน 3 จาก 6" in notes[0], True)
+plan, notes = sw.shared_limits([("facebook", fb6), ("reddit", rd2)], {}, {"facebook": 12, "reddit": 40},
+                               {"facebook": 12})
+check("ครบเพดาน FB = ไม่อ่าน FB · Reddit ไม่มีเพดาน", [p for p, _ in plan], ["reddit"])
+check("ครบเพดานไม่ใช่ ⚠️ (เป็นเรื่องปกติ)", notes[0].startswith("[social]"), True)
+plan, notes = sw.shared_limits([("facebook", fb6)], {}, {"facebook": 6}, {"facebook": 12}, {"facebook": 6}, {"facebook": 8})
+check("รวมเหลือ 6 แต่ส่วนของเราเหลือ 2 = อ่าน 2 (กันที่ให้ AssetX)", len(plan[0][1]), 2)
+check("บอกว่าตัดเพราะส่วนของเรา", "เหลือโควตาส่วนของเราวันนี้ 2 เพจ" in notes[0], True)
+plan, notes = sw.shared_limits([("facebook", fb6)], {}, {"facebook": 11}, {"facebook": 12}, {"facebook": 2}, {"facebook": 8})
+check("ส่วนของเราเหลือ 6 แต่รวมเหลือ 1 = อ่าน 1 (ตัวที่น้อยกว่าชนะ)", len(plan[0][1]), 1)
+
 print(f"\n{'ผ่านครบ' if not fails else f'ไม่ผ่าน {fails} ข้อ'}")
 sys.exit(1 if fails else 0)

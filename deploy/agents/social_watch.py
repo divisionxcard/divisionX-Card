@@ -6,7 +6,7 @@
 วงจร: เก็บทุกวัน (ไฟล์นี้) → สรุปบทเรียนรายสัปดาห์ → เจ้าของอนุมัติ → ทดลองจริง → เก็บ/ทิ้ง
 
   python deploy/agents/social_watch.py                 # รอบปกติ (เพจที่ถึงรอบ)
-  python deploy/agents/social_watch.py --dry-run       # อ่านจริงแต่ไม่เขียนอะไรเลย
+  python deploy/agents/social_watch.py --dry-run       # อ่านจริงแต่ไม่เขียนคลัง/สถานะ/คิวของเรา (ของร่วมใน ~/.research-browser ยังเขียน)
   python deploy/agents/social_watch.py --target "Nut Card"   # เพจเดียว ไม่สนรอบ
   python deploy/agents/social_watch.py --only facebook
 
@@ -20,6 +20,11 @@
 ⚠️ ไอเดียใช้ source 'manual' + subtype social_fb / social_ig / social_reddit
    (ตารางไม่มี source โซเชียลแยก แบบเดียวกับ scripts/hermes/competitor_radar.py)
    หน้าเว็บตัดสินโลโก้จากโดเมนลิงก์ (lib/ideaPlatform.js) จึงขึ้นใต้โลโก้ FB/IG/Reddit เอง
+⚠️ Chrome profile Research ใช้ร่วมกับโปรเจกต์ AssetX (เฉพาะ Facebook · เจ้าของตัดสิน 3 พ.ย. 2026) → shared_browser.py
+   ถือกุญแจกลางก่อนแตะ browser (ไม่ว่าง = รอสูงสุด wait_minutes แล้วข้ามรอบ) · บัญชีโดนขอยืนยันตัวตน = แจ้งอีกฝั่งด้วย ·
+   เปิดเพจรวมทั้งสองโปรเจกต์ไม่เกิน daily_cap ต่อวัน (ของเราเองไม่เกิน own_daily_cap — กันที่ให้ AssetX) ·
+   จดการใช้ทีละเพจก่อนเปิด · ทั้งรอบ (รวมรอกุญแจ) ไม่เกิน run_budget_sec ให้จบเองก่อนบอทฆ่าที่ 1500 วิ ·
+   session ของเรา "dvxwatch" (ปิดเฉพาะของเรา) · --dry-run / --target ก็ต้องถือกุญแจและจดการใช้เหมือนรอบจริง
 
 Facebook ไม่มีคำสั่งอ่านโพสต์ของเพจใน OpenCLI → เปิดหน้าเพจแล้วอ่าน DOM เอง (FB_JS) · กับดักที่เจอ:
   - FB ล้างเนื้อหาโพสต์ที่เลื่อนพ้นจอ (เหลือกรอบ aria-posinset เปล่า) → ต้องอ่านทีละจอระหว่างเลื่อน
@@ -48,6 +53,7 @@ if hasattr(sys.stdout, "reconfigure"):
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import dvx_data as data  # noqa: E402
+import shared_browser as sb  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[2]
 CFG_FILE = ROOT / "deploy" / "tasks" / "social_watch.json"
@@ -61,6 +67,7 @@ CHROME_PATHS = [
 ]
 SESSION = "dvxwatch"
 NO_WINDOW = getattr(subprocess, "CREATE_NO_WINDOW", 0)
+_LOCK = None             # กุญแจ browser ร่วม (shared_browser.Lock) ระหว่างรอบ · oc() แตะสัญญาณชีพให้ทุกคำสั่ง
 TH = timezone(timedelta(hours=7))
 
 PLATFORM_LABEL = {"facebook": "Facebook", "instagram": "Instagram", "reddit": "Reddit"}
@@ -132,11 +139,14 @@ def short_num(n):
 
 
 # ── OpenCLI ─────────────────────────────────────────────────────────────────
-def oc(*args, timeout=150):
+def oc(*args, timeout=150, beat=True):
     """เรียก OpenCLI (node main.js ตรง ๆ — เลี่ยง opencli.cmd ที่ทำเครื่องหมายคำพูดเพี้ยน) → JSON
 
     รันจากโฟลเดอร์บ้าน ไม่ใช่ใน repo · ห้ามส่งคำสั่ง [write] เข้ามาที่นี่
+    ถือกุญแจ browser ร่วมอยู่ = แตะสัญญาณชีพก่อนทุกคำสั่ง · กุญแจหลุดมือ = LostLock (ห้ามใช้ browser ต่อ)
     """
+    if beat and _LOCK is not None:
+        _LOCK.require()
     if not OPENCLI.exists():
         raise WatchError(f"ไม่พบ OpenCLI ({OPENCLI}) — ติดตั้งด้วย npm i -g @jackwener/opencli@2.0.2")
     try:
@@ -172,7 +182,7 @@ def bridge_ready(alias):
     return any(p.get("alias") == alias and p.get("connected") for p in info.get("profiles") or [])
 
 
-def ensure_bridge(cfg):
+def ensure_bridge(cfg, deadline=None):
     """→ (พร้อมไหม, เปิด Chrome ให้เองไหม) · เปิดแบบ --no-startup-window = ไม่มีหน้าต่างเด้งใส่หน้าจอ"""
     alias = cfg.get("bridge_profile", "research")
     if bridge_ready(alias):
@@ -184,6 +194,8 @@ def ensure_bridge(cfg):
                       "--no-startup-window"], creationflags=NO_WINDOW, close_fds=True,
                      stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     for _ in range(15):
+        if deadline is not None and time.monotonic() > deadline:
+            break
         time.sleep(4)
         if bridge_ready(alias):
             return True, True
@@ -618,13 +630,55 @@ def gate_open(platform, cfg, today):
     return not g or today >= date.fromisoformat(g)
 
 
+def shared_limits(plan, blocked, used_today, caps, used_own=None, own_caps=None):
+    """ตัดแผนตามของร่วมกับ AssetX (ฟังก์ชันล้วน — ทดสอบได้) → (แผนใหม่, ข้อความเข้ารายงาน)
+
+    blocked = {platform: แถวที่ยังไม่ครบ 3 วัน} · used_today = เพจที่ทุกโปรเจกต์เปิดวันนี้ ·
+    caps = เพดานรวมต่อวันของบัญชี (แพลตฟอร์มที่ไม่มีในนี้ = ไม่จำกัดเพิ่ม) ·
+    used_own / own_caps = ของ DVX เอง — กันโควตาส่วนของ AssetX ไว้ (เพดานรวมเป็นใครมาก่อนได้ก่อน
+    ถ้าไม่กัน /ideas กดซ้ำวันเดียวกันจะกินจนหมด · 22 ต.ค. เราเคยเปิด FB 12 เพจในวันเดียว)
+    """
+    out, notes = [], []
+    for platform, picks in plan:
+        label = PLATFORM_LABEL[platform]
+        b = blocked.get(platform)
+        if b:
+            notes.append(f"⚠️ [social] {label} พักไว้ตั้งแต่ {thai_day(b['at'])} — {b.get('by', '?')} เจอ: "
+                         f"{str(b.get('why', ''))[:160]} · บัญชีใช้ร่วมกับ AssetX · เจ้าของเปิด Chrome profile Research "
+                         "เช็กบัญชีก่อน (ลองใหม่เองหลัง 3 วัน)")
+            continue
+        cap, own = caps.get(platform), (own_caps or {}).get(platform)
+        lefts = []                                   # (เหลือกี่เพจ, ข้อความตอนเต็ม, ข้อความตอนตัด)
+        if cap is not None:
+            n = int(cap) - int(used_today.get(platform, 0))
+            lefts.append((n, f"วันนี้บัญชีร่วมเปิดครบ {cap} เพจแล้ว (นับรวม AssetX)",
+                          f"เหลือโควตาบัญชีร่วมวันนี้ {n} เพจ (นับรวม AssetX)"))
+        if own is not None:
+            n = int(own) - int((used_own or {}).get(platform, 0))
+            lefts.append((n, f"วันนี้เราเปิดครบส่วนของเรา {own} เพจแล้ว (ที่เหลือกันไว้ให้ AssetX)",
+                          f"เหลือโควตาส่วนของเราวันนี้ {n} เพจ (ที่เหลือกันไว้ให้ AssetX)"))
+        if lefts:
+            left, say_full, say_left = min(lefts)
+            if left <= 0:
+                notes.append(f"[social] {label}: {say_full} — รอบนี้ไม่อ่าน")
+                continue
+            if len(picks) > left:
+                notes.append(f"[social] {label}: {say_left} — อ่าน {left} จาก {len(picks)} ที่ถึงรอบ")
+                picks = picks[:left]
+        out.append((platform, picks))
+    return out, notes
+
+
 def main():
+    global _LOCK
     ap = argparse.ArgumentParser(description="เฝ้าเพจโซเชียลที่ติดตามไว้ → โพสต์แรงผิดปกติเข้าคิวไอเดีย")
-    ap.add_argument("--dry-run", action="store_true", help="อ่านจริงแต่ไม่เขียนคลัง/สถานะ/ฐานข้อมูล")
+    ap.add_argument("--dry-run", action="store_true",
+                    help="อ่านจริงแต่ไม่เขียนคลัง/สถานะ/ฐานข้อมูลของเรา (การใช้บัญชีร่วมยังจดใน ~/.research-browser)")
     ap.add_argument("--only", choices=list(READERS), help="เฉพาะแพลตฟอร์มเดียว")
     ap.add_argument("--target", help="เฉพาะเพจที่ชื่อ/ลิงก์มีคำนี้ (ไม่สนรอบ)")
     ap.add_argument("--ignore-gate", action="store_true", help="เปิดเลน IG/Reddit ก่อนวันใน gates (เจ้าของสั่งเท่านั้น)")
     args = ap.parse_args()
+    t_start = time.monotonic()
 
     cfg = json.loads(CFG_FILE.read_text(encoding="utf-8-sig"))
     today = th_today()
@@ -652,7 +706,7 @@ def main():
                 f" · เจ้าของเปิด Chrome profile Research เช็กบัญชีก่อน (ลองใหม่เองหลัง 3 วัน)")
             continue
         limit = int((cfg.get("max_targets_per_run") or {}).get(platform, 5))
-        pick = targets if args.target else due_targets(platform, targets, state["visits"], today, limit)
+        pick = targets[:limit] if args.target else due_targets(platform, targets, state["visits"], today, limit)
         if pick:
             plan.append((platform, pick))
         else:
@@ -660,84 +714,178 @@ def main():
     if not plan:
         return 0
 
-    ready, launched = ensure_bridge(cfg)
-    if launched:
-        log("[social] เปิด Chrome profile Research ให้เอง (ไม่มีหน้าต่าง)")
-    if not ready:
-        log("⚠️ [social] ต่อ Chrome profile Research ไม่ได้ — เปิด Chrome profile นั้นค้างไว้"
-            " แล้วเช็กว่าส่วนเสริม OpenCLI เปิดอยู่ · รอบนี้ข้ามไปก่อน")
+    # ── ของร่วมกับ AssetX (shared_browser.py) — อีกฝั่งเจอบัญชีโดนขอยืนยันตัวตน = พักด้วย · เพดานรวมต่อวัน
+    #    --target ไม่ตัด (เจ้าของ/Claude ตรวจเพจด้วยมือ · บอทไม่เคยใช้) แต่ยังถือกุญแจและจดการใช้ตามปกติ
+    sbc = cfg.get("shared_browser") or {}
+
+    def num_map(key):
+        return {k: int(v) for k, v in (sbc.get(key) or {}).items() if not str(k).startswith("_")}
+
+    caps, own_caps = num_map("daily_cap"), num_map("own_daily_cap")
+    # ทั้งรอบ (รวมเวลารอกุญแจ) จบเองก่อนบอทฆ่าที่ 1500 วิ — โดนฆ่า = ไม่มี finally (สถานะ/คิว/ปล่อยกุญแจหายหมด)
+    deadline = t_start + float(sbc.get("run_budget_sec", 1200))
+
+    def out_of_time():
+        return time.monotonic() >= deadline        # >= : นาฬิกา Windows ละเอียดแค่ ~16 ms งบ 0 ต้องหมดทันที
+
+    def apply_shared(p, say):
+        if args.target:
+            return p
+        blocked = {}
+        for platform in READERS:
+            b = sb.blocked_for(platform, today)
+            if b:
+                blocked[platform] = b
+        used = sb.usage_rows()
+        p, notes = shared_limits(p, blocked, sb.pages_on(today_iso, rows=used), caps,
+                                 sb.pages_on(today_iso, rows=[r for r in used if r.get("project") == "dvx"]), own_caps)
+        for line in notes if say else ():
+            log(line)
+        return p
+
+    if not apply_shared(plan, say=False):        # ไม่มีอะไรให้อ่านแน่ ๆ — ไม่ต้องรอกุญแจ
+        apply_shared(plan, say=True)
         return 0
+
+    lock = sb.Lock("dvx", purpose="social_watch" + (" --dry-run" if args.dry_run else ""))
+    # รอกุญแจได้ไม่เกิน wait_minutes และต้องเหลือเวลาอ่านเองอย่างน้อย 10 นาทีในงบของรอบ
+    wait = min(float(sbc.get("wait_minutes", 8)) * 60, max(0.0, deadline - time.monotonic() - 600))
+    h0, t0 = lock.holder(), time.monotonic()
+    if not lock.acquire(wait_sec=wait):
+        h = lock.holder() or h0 or {}
+        log(f"⚠️ [social] Chrome profile Research ถูกใช้อยู่ ({h.get('project', '?')} {h.get('purpose', '')}"
+            f" · เริ่ม {str(h.get('started_at', '?'))[11:16]}) — รอ {wait / 60:.0f} นาทีแล้วยังไม่ว่าง ·"
+            " รอบนี้ข้าม (เพจที่ถึงรอบได้อ่านรอบหน้า)")
+        return 0
+    _LOCK = lock
+    waited = time.monotonic() - t0
+    if lock.stolen_from is not None:
+        log(f"[social] กุญแจ browser ค้างจาก {lock.stolen_from.get('project', '?')} (เงียบเกิน 10 นาที) — ยึดต่อ")
+    elif h0 and waited >= 30:
+        log(f"[social] รอ {h0.get('project', '?')} ใช้ browser เสร็จ {waited / 60:.0f} นาที")
 
     rows, picked_lines, total_new_posts = [], [], 0
     run_log = {"at": datetime.now(TH).isoformat(timespec="seconds"), "dry_run": args.dry_run, "lanes": {}}
+    opened, outcome, touched = {}, [], False      # ยอดเพจที่เปิด + ผลรอบ → แถวสรุปใน usage.jsonl ตอนปล่อยกุญแจ
+    cleared = set()                               # แพลตฟอร์มที่อ่านสำเร็จ = บัญชีใช้ได้ (ล้างแถวพักของเราแม้ --dry-run)
     try:
-        for platform, targets in plan:
-            stats = {"pages": 0, "posts": 0, "new": 0, "hits": 0, "fails": [], "low": []}
-            for n, t in enumerate(targets):
-                if n:
-                    time.sleep(random.uniform(6, 14))     # เว้นจังหวะระหว่างเพจ ไม่รัว
-                tid = target_id(platform, t)
-                spath = STORE / platform / f"{tid}.json"
-                store = load_json(spath, {"target": t.get("name"), "posts": {}})
-                low = False
-                try:
-                    posts = READERS[platform](t, cfg)
-                    # ⚠️ 22 ต.ค. 2026 — รอบ 07:00 ได้เพจละ 1 โพสต์ทั้ง 6 เพจ (เมื่อวาน ~12) แต่รายงานว่าสำเร็จ
-                    #    ตรวจแล้วเพจโหลดต่อได้ปกติเมื่ออ่านซ้ำ = หน้าต่างเบื้องหลังบางช่วงไม่โหลดโพสต์ถัดไปตอนเลื่อน
-                    #    (น่าจะตอนจอดับ/Chrome เพิ่งเปิด · ยังพิสูจน์ไม่ได้ 100%) → ได้น้อยผิดปกติให้เปิดใหม่ลองอีกรอบ
-                    #    ยังน้อยอยู่ = เตือนเข้ารายงาน และไม่นับว่าอ่านแล้ว รอบหน้าจะอ่านเพจนี้ก่อน
-                    #    (เพจที่โพสต์ไม่ถึง 3 โพสต์จริง ๆ จะโดนเตือนทุกรอบ — เจอแบบนั้นให้ถอดออกจากรายชื่อ)
-                    few = int(cfg.get("fb_low_posts", 3))
-                    if platform == "facebook" and len(posts) < few:
-                        log(f"[social] {t['name']}: อ่านได้ {len(posts)} โพสต์ — เปิดใหม่ลองอีกรอบ")
-                        time.sleep(random.uniform(8, 12))
-                        again = READERS[platform](t, cfg)
-                        posts = again if len(again) > len(posts) else posts
-                        low = len(posts) < few
-                except Blocked as e:
-                    state["blocked"][platform] = {"at": today_iso, "why": str(e)}
-                    log(f"⚠️ [social] {e} — หยุดเลน {PLATFORM_LABEL[platform]} ทันที")
-                    stats["fails"].append(f"{t['name']}: blocked")
-                    break
-                except WatchError as e:
-                    log(f"⚠️ [social] อ่าน {t['name']} ไม่สำเร็จ: {e}")
-                    stats["fails"].append(f"{t['name']}: {str(e)[:120]}")
-                    continue
-                state["blocked"].pop(platform, None)
-                before = len(store["posts"])
-                seen = merge(store, posts, today_iso)
-                new = len(store["posts"]) - before
-                prune(store, today, int(cfg.get("keep_days", 120)))
-                hits = outliers(platform, store, seen, today, cfg)
-                stats["pages"] += 1
-                stats["posts"] += len(seen)
-                stats["new"] += new
-                stats["hits"] += len(hits)
-                total_new_posts += new
-                for h in hits:
-                    rec = store["posts"][h["key"]]
-                    rows.append((platform, t, tid, spath, h, idea_row(platform, t, rec, h, today_iso)))
-                if not posts:
-                    log(f"⚠️ [social] {t['name']}: ไม่เจอโพสต์เลย (เพจย้าย/ปิด/โหลดไม่ขึ้น?)")
-                elif low:
-                    stats["low"].append(t["name"])
-                    log(f"⚠️ [social] {t['name']}: อ่านได้แค่ {len(posts)} โพสต์แม้ลองซ้ำแล้ว — "
-                        "หน้าเพจไม่ยอมโหลดต่อ · รอบหน้าอ่านเพจนี้ซ้ำ")
-                if not args.dry_run:
-                    if not low:                          # อ่านได้น้อยผิดปกติ = ยังไม่นับว่าอ่านแล้ว
-                        state["visits"][tid] = today_iso
-                    store["target"] = t.get("name")
-                    save_json(spath, store)
-            run_log["lanes"][platform] = stats
-            log(f"[social] {PLATFORM_LABEL[platform]}: อ่าน {stats['pages']} เพจ · โพสต์ {stats['posts']}"
-                f" (ใหม่ {stats['new']}) · แรงผิดปกติ {stats['hits']}"
-                + (f" · ล้ม {len(stats['fails'])}" if stats["fails"] else "")
-                + (f" · ได้น้อยผิดปกติ {len(stats['low'])} เพจ" if stats["low"] else ""))
-    finally:
+        plan = apply_shared(plan, say=True)        # ตรวจซ้ำหลังได้กุญแจ — ระหว่างรอ อีกฝั่งอาจใช้โควตา/เจอบล็อก
+        if not plan:
+            return 0
+        touched = True
+        ready, launched = ensure_bridge(cfg, deadline)
+        if launched:
+            log("[social] เปิด Chrome profile Research ให้เอง (ไม่มีหน้าต่าง)")
+        if not ready:
+            log("⚠️ [social] ต่อ Chrome profile Research ไม่ได้ — เปิด Chrome profile นั้นค้างไว้"
+                " แล้วเช็กว่าส่วนเสริม OpenCLI เปิดอยู่ · รอบนี้ข้ามไปก่อน (AssetX อ่านเพจไม่ได้เหมือนกัน)")
+            outcome.append("bridge_down")
+            return 0
         try:
-            oc("browser", "close", "--session", SESSION, "--profile", cfg.get("bridge_profile", "research"), timeout=40)
-        except WatchError:
-            pass
+            for platform, targets in plan:
+                if out_of_time():
+                    log(f"[social] หมดงบเวลารอบ ({sbc.get('run_budget_sec', 1200)} วิ รวมรอกุญแจ) —"
+                        f" {PLATFORM_LABEL[platform]} อ่านรอบหน้า")
+                    outcome.append("budget")
+                    continue
+                stats = {"pages": 0, "posts": 0, "new": 0, "hits": 0, "fails": [], "low": []}
+                for n, t in enumerate(targets):
+                    if out_of_time():
+                        log(f"[social] หมดงบเวลารอบ ({sbc.get('run_budget_sec', 1200)} วิ รวมรอกุญแจ) —"
+                            f" {PLATFORM_LABEL[platform]} ที่เหลือ {len(targets) - n} เพจอ่านรอบหน้า")
+                        outcome.append("budget")
+                        break
+                    if n:
+                        time.sleep(random.uniform(6, 14))     # เว้นจังหวะระหว่างเพจ ไม่รัว
+                    tid = target_id(platform, t)
+                    spath = STORE / platform / f"{tid}.json"
+                    store = load_json(spath, {"target": t.get("name"), "posts": {}})
+                    low = no_time = False
+                    # จดก่อนเปิด (ใต้กุญแจ) — รอบที่โดนฆ่า/กุญแจหลุดกลางทางก็ยังนับเพจที่เปิดไปแล้ว · รวมที่อ่านล้ม
+                    lock.log_usage({platform: 1}, "open")
+                    opened[platform] = opened.get(platform, 0) + 1
+                    try:
+                        posts = READERS[platform](t, cfg)
+                        # ⚠️ 22 ต.ค. 2026 — รอบ 07:00 ได้เพจละ 1 โพสต์ทั้ง 6 เพจ (เมื่อวาน ~12) แต่รายงานว่าสำเร็จ
+                        #    ตรวจแล้วเพจโหลดต่อได้ปกติเมื่ออ่านซ้ำ = หน้าต่างเบื้องหลังบางช่วงไม่โหลดโพสต์ถัดไปตอนเลื่อน
+                        #    (น่าจะตอนจอดับ/Chrome เพิ่งเปิด · ยังพิสูจน์ไม่ได้ 100%) → ได้น้อยผิดปกติให้เปิดใหม่ลองอีกรอบ
+                        #    ยังน้อยอยู่ = เตือนเข้ารายงาน และไม่นับว่าอ่านแล้ว รอบหน้าจะอ่านเพจนี้ก่อน
+                        #    (เพจที่โพสต์ไม่ถึง 3 โพสต์จริง ๆ จะโดนเตือนทุกรอบ — เจอแบบนั้นให้ถอดออกจากรายชื่อ)
+                        few = int(cfg.get("fb_low_posts", 3))
+                        if platform == "facebook" and len(posts) < few:
+                            if out_of_time():                 # ไม่มีเวลาเปิดซ้ำ — ยังไม่นับว่าอ่านแล้ว รอบหน้าอ่านก่อน
+                                low = no_time = True
+                                outcome.append("budget")
+                            else:
+                                log(f"[social] {t['name']}: อ่านได้ {len(posts)} โพสต์ — เปิดใหม่ลองอีกรอบ")
+                                time.sleep(random.uniform(8, 12))
+                                again = READERS[platform](t, cfg)
+                                posts = again if len(again) > len(posts) else posts
+                                low = len(posts) < few
+                    except Blocked as e:
+                        state["blocked"][platform] = {"at": today_iso, "why": str(e)}
+                        lock.set_blocked(platform, str(e), today_iso)    # ให้ AssetX พักด้วย (บัญชีเดียวกัน)
+                        outcome.append(f"blocked:{platform}")
+                        log(f"⚠️ [social] {e} — หยุดเลน {PLATFORM_LABEL[platform]} ทันที (แจ้ง AssetX ให้พักด้วยแล้ว)")
+                        stats["fails"].append(f"{t['name']}: blocked")
+                        break
+                    except WatchError as e:
+                        log(f"⚠️ [social] อ่าน {t['name']} ไม่สำเร็จ: {e}")
+                        stats["fails"].append(f"{t['name']}: {str(e)[:120]}")
+                        continue
+                    state["blocked"].pop(platform, None)
+                    cleared.add(platform)
+                    lock.clear_blocked(platform)
+                    before = len(store["posts"])
+                    seen = merge(store, posts, today_iso)
+                    new = len(store["posts"]) - before
+                    prune(store, today, int(cfg.get("keep_days", 120)))
+                    hits = outliers(platform, store, seen, today, cfg)
+                    stats["pages"] += 1
+                    stats["posts"] += len(seen)
+                    stats["new"] += new
+                    stats["hits"] += len(hits)
+                    total_new_posts += new
+                    for h in hits:
+                        rec = store["posts"][h["key"]]
+                        rows.append((platform, t, tid, spath, h, idea_row(platform, t, rec, h, today_iso)))
+                    if not posts:
+                        log(f"⚠️ [social] {t['name']}: ไม่เจอโพสต์เลย (เพจย้าย/ปิด/โหลดไม่ขึ้น?)")
+                    elif low and no_time:
+                        stats["low"].append(t["name"])
+                        log(f"[social] {t['name']}: อ่านได้ {len(posts)} โพสต์ · หมดงบเวลารอบ ไม่ได้เปิดซ้ำ — "
+                            "รอบหน้าอ่านเพจนี้ก่อน")
+                    elif low:
+                        stats["low"].append(t["name"])
+                        log(f"⚠️ [social] {t['name']}: อ่านได้แค่ {len(posts)} โพสต์แม้ลองซ้ำแล้ว — "
+                            "หน้าเพจไม่ยอมโหลดต่อ · รอบหน้าอ่านเพจนี้ซ้ำ")
+                    if not args.dry_run:
+                        if not low:                          # อ่านได้น้อยผิดปกติ = ยังไม่นับว่าอ่านแล้ว
+                            state["visits"][tid] = today_iso
+                        store["target"] = t.get("name")
+                        save_json(spath, store)
+                run_log["lanes"][platform] = stats
+                log(f"[social] {PLATFORM_LABEL[platform]}: อ่าน {stats['pages']} เพจ · โพสต์ {stats['posts']}"
+                    f" (ใหม่ {stats['new']}) · แรงผิดปกติ {stats['hits']}"
+                    + (f" · ล้ม {len(stats['fails'])}" if stats["fails"] else "")
+                    + (f" · ได้น้อยผิดปกติ {len(stats['low'])} เพจ" if stats["low"] else ""))
+        finally:
+            try:          # ปิดเฉพาะ session ของเรา — ไม่แตะ session ของ AssetX · ไม่แตะสัญญาณชีพ (กุญแจอาจหลุดแล้ว)
+                oc("browser", "close", "--session", SESSION, "--profile", cfg.get("bridge_profile", "research"),
+                   timeout=40, beat=False)
+            except WatchError:
+                pass
+    except sb.LostLock as e:
+        outcome.append("lost_lock")
+        log(f"⚠️ [social] {e} — หยุดอ่านทันที · ของที่อ่านแล้วยังเก็บ/ส่งเข้าคิวตามปกติ")
+    finally:
+        if touched and lock.held:
+            try:          # แถวสรุป — pages ว่าง (นับไปแล้วทีละเพจ) · opened ไว้ให้คนอ่าน
+                lock.log_usage({}, ",".join(dict.fromkeys(outcome)) or "ok", opened=opened)
+            except (sb.LostLock, OSError):
+                pass
+        lock.release()
+        _LOCK = None
 
     # คัดเข้าคิว: แรงสุดก่อน · เพดานต่อรอบ · คิวโซเชียลค้างเกินเพดาน = ไม่เติม
     rows.sort(key=lambda r: -r[4]["ratio"])
@@ -769,6 +917,15 @@ def main():
         log(line)
     if args.dry_run:
         log(f"[social] DRY RUN — เจอแรงผิดปกติ {len(rows)} ชิ้น ไม่ได้เขียนอะไร")
+        stale = [p for p in cleared if p in (load_json(STORE / "state.json", {}).get("blocked") or {})]
+        if stale:
+            # อ่านสำเร็จ = แถวพักร่วมถูกล้างแล้ว (AssetX อ่านต่อได้) → ล้างแถวพักของเราด้วย เขียนแค่นี้อย่างเดียว
+            # ไม่งั้น `--target … --dry-run` ที่ใช้เช็กบัญชีหลังแก้ checkpoint ทำให้ DVX พักต่อเองอีก ≤ 3 วัน
+            st = load_json(STORE / "state.json", {"visits": {}, "blocked": {}})
+            for p in stale:
+                st["blocked"].pop(p, None)
+            save_json(STORE / "state.json", st)
+            log(f"[social] ล้างสถานะพัก {', '.join(PLATFORM_LABEL[p] for p in stale)} ของเรา (อ่านสำเร็จแล้ว)")
     else:
         log(f"[social] ✅ เข้าคิวไอเดีย {len(created)} ชิ้น" + (f" (จากที่เจอ {len(rows)})" if len(rows) != len(created) else ""))
         run_log["ideas"] = len(created)
