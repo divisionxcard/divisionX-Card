@@ -1,4 +1,5 @@
 import "./globals.css"
+import TelegramMiniApp from "../components/TelegramMiniApp"
 
 // ค่าเริ่มต้นของทุกหน้าที่ไม่ตั้งเอง — รวมหน้าล็อกอิน "/" ที่คนนอกอาจได้ลิงก์ไปเปิด (แท็บเบราว์เซอร์ · ตัวอย่างลิงก์ในแชต)
 // จึงไม่บอกว่าข้างในเป็นระบบหลังบ้าน (เจ้าของขอ 17 ต.ค. 2026 · เดิม "ระบบจัดการสต็อกและวิเคราะห์ยอดขาย")
@@ -11,7 +12,10 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <html lang="th">
-      <body className="dx-theme">{children}</body>
+      <body className="dx-theme">
+        <TelegramMiniApp />
+        {children}
+      </body>
     </html>
   )
 }
