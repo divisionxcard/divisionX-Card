@@ -2,7 +2,7 @@
 type: worklog
 date: 2026-11-11
 tags: [social-watch, instagram, opencli, research]
-commits: []
+commits: [39e8b5a]
 status: ✅ เลน Instagram อ่านได้แล้ว (dry-run จริง 1 เพจ ได้ 12 โพสต์) · สถานะพักล้างแล้ว · รอบเต็มรอบแรก = 07:00 พรุ่งนี้
 ---
 

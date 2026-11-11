@@ -13,6 +13,7 @@ import argparse
 import json
 import re
 import sys
+import time
 import urllib.request
 from pathlib import Path
 
@@ -71,11 +72,18 @@ def main():
             print(f"{name}: ไม่มี {BOTS[name]} ใน deploy/.env.local — ข้าม")
             continue
         me = call(token, "getMe")["username"]
+        now = call(token, "getChatMenuButton")
         if not a.show:
             button = ({"type": "commands"} if a.remove else
                       {"type": "web_app", "text": a.text, "web_app": {"url": a.url}})
             call(token, "setChatMenuButton", {"menu_button": button})
-        print(f"{name} (@{me}): {json.dumps(call(token, 'getChatMenuButton'), ensure_ascii=False)}")
+            # Telegram ตอบ ok ทันทีแต่อ่านกลับได้ค่าใหม่หลัง ~10–15 วิ (ลอง 11 พ.ย.) — รอก่อน ไม่งั้นนึกว่าตั้งไม่ติด
+            for _ in range(10):
+                now = call(token, "getChatMenuButton")
+                if now.get("type") == button["type"]:
+                    break
+                time.sleep(3)
+        print(f"{name} (@{me}): {json.dumps(now, ensure_ascii=False)}")
 
 
 if __name__ == "__main__":
