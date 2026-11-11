@@ -15,19 +15,35 @@
       "result": "เทสต์ 108 ข้อผ่าน · ให้ agent รีวิวหลายมุม ยืนยัน 6 ข้อ แก้ครบ · ลองรันจริงแบบไม่บันทึก 2 เพจ ได้เพจละ 12 โพสต์ · เจอระหว่างลองว่าบางร้านมีแต่โพสต์ร่วม (collab) ที่ลูกค้าเป็นคนโพสต์ → แก้ให้รับแล้ว · สถานะพัก Instagram ล้างแล้ว",
       "outside": "คู่มือตัวเฝ้าเพจในสกิล social-research อัปเดตวิธีอ่าน Instagram ใหม่",
       "refs": [
-        { "type": "commit", "id": "39e8b5a" },
-        { "type": "worklog", "id": "2026-11-11-instagram-reader-endpoint-404" }
+        {
+          "type": "commit",
+          "id": "39e8b5a"
+        },
+        {
+          "type": "worklog",
+          "id": "2026-11-11-instagram-reader-endpoint-404"
+        }
       ]
     },
     {
       "title": "ปุ่ม \"เปิดหน้าเว็บ\" ในบอท DVX Job",
       "what": "แชตส่วนตัวกับ @dvx_marketing_bot มีปุ่มล่างซ้าย \"เปิดหน้าเว็บ\" → หน้าเว็บ DivisionX เด้งขึ้นเป็นมินิแอป → ล็อกอินด้วยชื่อผู้ใช้/รหัสผ่านตามปกติ · บนมือถือขยายเต็มจอ ปัดลงเป็นการเลื่อนหน้า ไม่ปิดมินิแอป · ปรับค่าความปลอดภัยให้เฉพาะ Telegram Web ฝังหน้าเว็บได้ (เว็บอื่นยังฝังไม่ได้)",
       "why": "เจ้าของอยากได้ปุ่มแบบบอท AssetX ให้เข้าเว็บจากใน Telegram ได้เลย ทั้งมือถือและคอม",
-      "result": "build ผ่าน · deploy สำเร็จ · ค่าความปลอดภัยบนเว็บจริงถูกต้อง · พรีวิวหน้าเว็บแบบที่ Telegram เปิดไม่มี error · ยังไม่ได้ลองกดจากแอป Telegram จริง",
+      "result": "build ผ่าน · deploy สำเร็จ · ค่าความปลอดภัยบนเว็บจริงถูกต้อง · พรีวิวหน้าเว็บแบบที่ Telegram เปิดไม่มี error · ยังไม่ได้ลองกดจากแอป Telegram จริง · เจ้าของแจ้งว่าต้องเป็นกลุ่ม DVX_Admin — ในกลุ่ม Telegram ไม่ให้ปุ่มมินิแอปตรง ๆ จึงใช้ปุ่มลิงก์ไป \"แอปหลัก\" ของบอท ซึ่งเจ้าของต้องเปิดใน BotFather ก่อน",
       "outside": "ตั้งปุ่มเมนูของบอทผ่าน Bot API (scripts/set_telegram_web_button.py)",
       "refs": [
-        { "type": "commit", "id": "13150fb" },
-        { "type": "worklog", "id": "2026-11-11-telegram-mini-app-button" }
+        {
+          "type": "commit",
+          "id": "13150fb"
+        },
+        {
+          "type": "commit",
+          "id": "1a26815"
+        },
+        {
+          "type": "worklog",
+          "id": "2026-11-11-telegram-mini-app-button"
+        }
       ]
     },
     {
@@ -36,21 +52,71 @@
       "why": "เจ้าของสั่ง commit + push งาน",
       "result": "4–6 พ.ย. ระบบหยุดเลนตามออกแบบเพราะ Chrome ยังไม่ได้เปิดใหม่ · ตั้งแต่ 7 พ.ย. อ่านได้ครบและหมุนเพจแล้ว",
       "refs": [
-        { "type": "commit", "id": "2e6fcdd" },
-        { "type": "commit", "id": "8f34c21" },
-        { "type": "worklog", "id": "2026-11-03-shared-research-browser-assetx" }
+        {
+          "type": "commit",
+          "id": "2e6fcdd"
+        },
+        {
+          "type": "commit",
+          "id": "8f34c21"
+        },
+        {
+          "type": "worklog",
+          "id": "2026-11-03-shared-research-browser-assetx"
+        }
       ]
     }
   ],
   "decisions": [
-    { "topic": "ปุ่มเปิดเว็บในบอท Telegram", "chose": "ใส่บอท DVX Job (@dvx_marketing_bot)", "rejected": "DvX-Owner (@Divisionx_Owner_bot) · บอทแจ้งเตือนสต็อก" },
-    { "topic": "ปุ่มนี้เปิดหน้าไหน", "chose": "หน้าเว็บ DivisionX (ล็อกอินตามปกติ)", "rejected": "หน้าไดอารี่งาน" }
+    {
+      "topic": "ปุ่มเปิดเว็บในบอท Telegram",
+      "chose": "กลุ่ม DVX_Admin (บอท DVX Job) — แก้จากตอนแรกที่ตอบเป็นแชตส่วนตัวกับบอท",
+      "rejected": "DvX-Owner · บอทแจ้งเตือนสต็อก"
+    },
+    {
+      "topic": "ปุ่มนี้เปิดหน้าไหน",
+      "chose": "หน้าเว็บ DivisionX (ล็อกอินตามปกติ)",
+      "rejected": "หน้าไดอารี่งาน"
+    }
   ],
   "pending": [
-    { "id": "tg-web-button-try", "owner": "you", "text": "ลองกดปุ่ม \"เปิดหน้าเว็บ\" ในแชตส่วนตัวกับ DVX Job ทั้งมือถือและคอม แล้วล็อกอินดู — ไม่เห็นปุ่มให้ปิดแชตแล้วเปิดใหม่", "done": false },
-    { "id": "ig-first-full-run", "owner": "claude", "text": "ตรวจรอบเช้า 07:00 พรุ่งนี้ว่าเลน Instagram อ่านได้ (รอบเต็มรอบแรกหลังแก้)", "done": false }
+    {
+      "id": "tg-web-button-try",
+      "owner": "you",
+      "text": "ลองกดปุ่ม \"เปิดหน้าเว็บ\" ในแชตส่วนตัวกับ DVX Job — ยกเลิก: เจ้าของแจ้งว่าต้องเป็นกลุ่ม DVX_Admin",
+      "done": true
+    },
+    {
+      "id": "ig-first-full-run",
+      "owner": "claude",
+      "text": "ตรวจรอบเช้า 07:00 พรุ่งนี้ว่าเลน Instagram อ่านได้ (รอบเต็มรอบแรกหลังแก้)",
+      "done": false
+    },
+    {
+      "id": "tg-main-mini-app",
+      "owner": "you",
+      "text": "เปิดแอปหลักของบอทใน BotFather: /mybots → @dvx_marketing_bot → Bot Settings → Configure Mini App → Enable Mini App → ส่ง https://division-x-card.vercel.app/ แล้วบอก Claude",
+      "done": false
+    },
+    {
+      "id": "tg-group-panel",
+      "owner": "claude",
+      "text": "หลังเปิดแอปหลัก: แก้ปุ่มในแผงที่ปักหมุดในกลุ่ม DVX_Admin + ส่งแผงปุ่มใต้ช่องพิมพ์ชื่อใหม่ แล้วให้เจ้าของลองกดทั้งมือถือและคอม",
+      "done": false
+    }
   ],
-  "stats": { "commits": 4, "files": 15, "added": 733, "deleted": 55 },
-  "areas": ["social-watch", "instagram", "telegram", "web", "docs"],
+  "stats": {
+    "commits": 7,
+    "files": 16,
+    "added": 904,
+    "deleted": 92
+  },
+  "areas": [
+    "social-watch",
+    "instagram",
+    "telegram",
+    "web",
+    "docs"
+  ],
   "source": "wiki/daily/2026-11-11.md"
 }
