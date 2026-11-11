@@ -2,7 +2,7 @@
 type: worklog
 date: 2026-11-11
 tags: [telegram, web, mini-app, security-headers]
-commits: [13150fb, PENDING]
+commits: [13150fb, 1a26815]
 status: ⏳ เจ้าของต้องการปุ่มใน**กลุ่ม DVX_Admin** (ไม่ใช่แชตส่วนตัว) · โค้ดพร้อมแล้ว · รอเจ้าของเปิดแอปหลัก (Main Mini App) ของบอทใน BotFather
 ---
 
