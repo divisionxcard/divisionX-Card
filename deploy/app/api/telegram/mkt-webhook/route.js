@@ -41,6 +41,9 @@ const WEB_LINK = { inline_keyboard: [
   [{ text: "🌐 เปิดหน้าเว็บ", url: MINI_APP }],
   [{ text: "🧭 เปิดในเบราว์เซอร์", url: `${SITE}/` }],
 ] }
+// 11 พ.ย. 2026 เจ้าของเลือกถอดแผงปุ่มนี้ออกจากกลุ่ม (ปุ่มใต้ช่องพิมพ์ในกลุ่มเปิดมินิแอปตรงไม่ได้ ต้องมีบอทตอบ) —
+// ใช้ปุ่มเดียวบนแถบปักหมุดแทน (scripts/set_telegram_web_button.py) · ด้านบนยังรับข้อความปุ่มไว้เผื่อแอปที่ยังค้างแผงเก่า
+// · /panel ยังเรียกแผงกลับมาได้ถ้าเจ้าของเปลี่ยนใจ
 const PANEL_KEYBOARD = { keyboard: [[{ text: WEB_BUTTON_TEXT }]], resize_keyboard: true, is_persistent: true }
 
 async function tgSend(chatId, text, markup, replyTo) {

@@ -7,8 +7,11 @@ python scripts/set_telegram_web_button.py --show                 # ดูว่�
 
 กลุ่ม DVX_Admin (เจ้าของต้องการที่นี่) — Telegram ไม่ให้ปุ่มเมนู/ปุ่ม web_app ในกลุ่ม ทางเดียวคือปุ่มลิงก์
 t.me/dvx_marketing_bot?startapp → เปิด "แอปหลัก" ของบอท (Main Mini App · เจ้าของต้องเปิดใน BotFather เอง ไม่มี API):
-python scripts/set_telegram_web_button.py --group-panel          # แก้ปุ่มในข้อความแผงที่ปักหมุดอยู่ (ไม่โพสต์ใหม่)
-python scripts/set_telegram_web_button.py --group-keyboard       # ส่งแผงปุ่มใต้ช่องพิมพ์ชื่อใหม่ (โพสต์ 1 ข้อความ)
+python scripts/set_telegram_web_button.py --group-panel          # แก้แผงที่ปักหมุดอยู่ (ไม่โพสต์ใหม่) — ปุ่มเดียว โชว์บนแถบปักหมุด
+python scripts/set_telegram_web_button.py --group-remove-keyboard  # ถอดแผงปุ่มใต้ช่องพิมพ์ (โพสต์ 1 ข้อความ · เจ้าของเลือก 11 พ.ย.)
+python scripts/set_telegram_web_button.py --group-keyboard       # เอาแผงปุ่มใต้ช่องพิมพ์กลับมา (โพสต์ 1 ข้อความ)
+  ปุ่มใต้ช่องพิมพ์ในกลุ่มเปิดมินิแอปตรงไม่ได้ (KeyboardButton.web_app ใช้ได้แค่แชตส่วนตัว) — กดแล้วส่งข้อความ บอทต้องตอบ
+  จึงถอดออก ใช้ปุ่มบนแถบปักหมุดแทน · ข้อความถอดแผงห้ามลบ — ลบแล้วบางแอปอาจกลับไปโชว์แผงเก่า
 
 - ล็อกอินด้วยชื่อผู้ใช้/รหัสผ่านของเว็บตามปกติ — ไม่ได้ผูกกับบัญชี Telegram
 - ปุ่มเมนูแชตส่วนตัวแทนที่ปุ่มรายการคำสั่ง · คำสั่ง /xxx ยังพิมพ์ได้เหมือนเดิม
@@ -36,11 +39,17 @@ BOTS = {                       # ชื่อเรียก → ชื่อต
 }
 GROUP_ENV = "TELEGRAM_DVX_ADMIN_CHAT_ID"
 MINI_APP = "https://t.me/dvx_marketing_bot?startapp"
-# ⚠️ ข้อความ/ปุ่มชุดนี้ต้องตรงกับ deploy/app/api/telegram/mkt-webhook/route.js (WEB_BUTTON_TEXT · WEB_LINK)
+# แผงที่ปักหมุดต้องมีปุ่ม "ปุ่มเดียว" (1 แถว × 1 ปุ่ม) — แอป Telegram (มือถือ/คอม/เว็บ) ถึงจะโชว์ปุ่มนั้นบนแถบปักหมุดด้านบน
+# กดครั้งเดียวมินิแอปเด้ง ไม่มีข้อความตอบ (ค้นจากซอร์สแอป 11 พ.ย. 2026) · ลิงก์สำรองจึงอยู่ในตัวข้อความแทนปุ่มที่สอง
+# · Telegram Desktop ถามยืนยันทุกครั้งที่กดปุ่มของบอทที่ไม่ verified — ลิงก์ที่เห็นเป็นตัวอักษรถามแค่ครั้งแรก
+# ⚠️ ปุ่มใต้ช่องพิมพ์ต้องตรงกับ deploy/app/api/telegram/mkt-webhook/route.js (WEB_BUTTON_TEXT)
 GROUP_TEXT = ("🎛 <b>แผงควบคุม DivisionX</b>\n"
-              "กด 🌐 เปิดหน้าเว็บ — หน้าเว็บเด้งขึ้นในแอป Telegram ล็อกอินด้วยชื่อผู้ใช้ได้เลย (ยังไม่มีบัญชีแจ้งเจ้าของ)")
-GROUP_BUTTONS = {"inline_keyboard": [[{"text": "🌐 เปิดหน้าเว็บ", "url": MINI_APP}],
-                                     [{"text": "🧭 เปิดในเบราว์เซอร์", "url": SITE}]]}
+              "กด <b>🌐 เปิดหน้าเว็บ</b> (ปุ่มบนแถบปักหมุดด้านบน) — หน้าเว็บเด้งขึ้นในแอป Telegram "
+              "ล็อกอินด้วยชื่อผู้ใช้ได้เลย (ยังไม่มีบัญชีแจ้งเจ้าของ)\n\n"
+              f"💻 บนคอม กดลิงก์นี้ ถามยืนยันแค่ครั้งแรก: {MINI_APP}\n"
+              f"🧭 เปิดในเบราว์เซอร์: {SITE}")
+GROUP_BUTTONS = {"inline_keyboard": [[{"text": "🌐 เปิดหน้าเว็บ", "url": MINI_APP}]]}
+NO_PREVIEW = {"is_disabled": True}
 KEYBOARD_TEXT = "🌐 เปิดหน้าเว็บ @dvx_marketing_bot"   # ต้องมีชื่อบอท — Hermes ในกลุ่มข้ามข้อความที่ระบุบอทอื่น
 
 
@@ -75,11 +84,12 @@ def group(toks, a):
         pin = call(token, "getChat", {"chat_id": chat}).get("pinned_message") or {}
         if (pin.get("from") or {}).get("id") == me["id"]:
             call(token, "editMessageText", {"chat_id": chat, "message_id": pin["message_id"], "text": GROUP_TEXT,
-                                            "parse_mode": "HTML", "reply_markup": GROUP_BUTTONS})
+                                            "parse_mode": "HTML", "link_preview_options": NO_PREVIEW,
+                                            "reply_markup": GROUP_BUTTONS})
             print(f"แก้ข้อความที่ปักหมุด #{pin['message_id']} แล้ว")
         else:
             msg = call(token, "sendMessage", {"chat_id": chat, "text": GROUP_TEXT, "parse_mode": "HTML",
-                                              "reply_markup": GROUP_BUTTONS})
+                                              "link_preview_options": NO_PREVIEW, "reply_markup": GROUP_BUTTONS})
             call(token, "pinChatMessage", {"chat_id": chat, "message_id": msg["message_id"], "disable_notification": True})
             print(f"ข้อความที่ปักหมุดไม่ใช่ของบอทนี้ — ส่งใหม่แล้วปักหมุด #{msg['message_id']}")
     if a.group_keyboard:
@@ -88,6 +98,12 @@ def group(toks, a):
                                     "reply_markup": {"keyboard": [[{"text": KEYBOARD_TEXT}]],
                                                      "resize_keyboard": True, "is_persistent": True}})
         print("ส่งแผงปุ่มใต้ช่องพิมพ์ชื่อใหม่แล้ว")
+    if a.group_remove_keyboard:
+        msg = call(token, "sendMessage", {"chat_id": chat, "parse_mode": "HTML",
+                                          "text": "🎛 ถอดปุ่มใต้ช่องพิมพ์แล้ว — เปิดหน้าเว็บได้ที่ปุ่ม <b>🌐 เปิดหน้าเว็บ</b> "
+                                                  "บนแถบปักหมุดด้านบนของกลุ่ม กดครั้งเดียวหน้าเว็บเด้งขึ้นมาเลย",
+                                          "reply_markup": {"remove_keyboard": True}})
+        print(f"ถอดแผงปุ่มใต้ช่องพิมพ์แล้ว (ข้อความ #{msg['message_id']} — อย่าลบ)")
 
 
 def main():
@@ -97,13 +113,14 @@ def main():
     ap.add_argument("--show", action="store_true", help="ดูอย่างเดียว")
     ap.add_argument("--group-panel", action="store_true", help="แก้ปุ่มในแผงที่ปักหมุดในกลุ่ม DVX_Admin")
     ap.add_argument("--group-keyboard", action="store_true", help="ส่งแผงปุ่มใต้ช่องพิมพ์ชื่อใหม่เข้ากลุ่ม DVX_Admin")
+    ap.add_argument("--group-remove-keyboard", action="store_true", help="ถอดแผงปุ่มใต้ช่องพิมพ์ในกลุ่ม DVX_Admin")
     ap.add_argument("--force", action="store_true", help="ทำกับกลุ่มแม้บอทยังไม่เปิดแอปหลัก")
     ap.add_argument("--text", default="เปิดหน้าเว็บ")
     ap.add_argument("--url", default=SITE)
     a = ap.parse_args()
 
     toks = env_tokens()
-    if a.group_panel or a.group_keyboard:
+    if a.group_panel or a.group_keyboard or a.group_remove_keyboard:
         group(toks, a)
         return
     names = list(BOTS) if a.show or a.bot == "all" else [b.strip() for b in a.bot.split(",") if b.strip()]
