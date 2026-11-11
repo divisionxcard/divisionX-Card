@@ -2,7 +2,7 @@
 type: worklog
 date: 2026-11-11
 tags: [telegram, web, mini-app, security-headers]
-commits: [13150fb, 1a26815]
+commits: [13150fb, 1a26815, 8f6fed1]
 status: ✅ กลุ่ม DVX_Admin — ปุ่มเดียวบนแถบปักหมุด กดครั้งเดียวมินิแอปเด้ง ไม่มีบอทตอบ · ถอดปุ่มใต้ช่องพิมพ์แล้ว (เจ้าของเลือก) · ⏳ รอเจ้าของลองกดจากมือถือ/คอม
 ---
 
