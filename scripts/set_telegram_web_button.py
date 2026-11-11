@@ -1,12 +1,17 @@
-"""ตั้งปุ่มเมนูล่างซ้ายในแชตบอท Telegram ให้เปิดเว็บ DivisionX เป็นมินิแอป (11 พ.ย. 2026 · แบบเดียวกับบอท AssetX)
+"""ปุ่มเปิดเว็บ DivisionX เป็นมินิแอปใน Telegram (11 พ.ย. 2026 · แบบเดียวกับบอท AssetX)
 
+แชตส่วนตัวกับบอท — ปุ่มเมนูล่างซ้าย:
 python scripts/set_telegram_web_button.py --bot owner,job        # ตั้งปุ่ม "เปิดหน้าเว็บ"
 python scripts/set_telegram_web_button.py --bot job --remove     # คืนเป็นปุ่มเมนูคำสั่ง (/) เหมือนเดิม
-python scripts/set_telegram_web_button.py --show                 # ดูว่าแต่ละบอทตั้งไว้อะไร
+python scripts/set_telegram_web_button.py --show                 # ดูว่าแต่ละบอทตั้งไว้อะไร + เปิดแอปหลักแล้วหรือยัง
 
-- ปุ่มนี้ขึ้นเฉพาะแชตส่วนตัวกับบอท (ในกลุ่ม Telegram ไม่แสดงปุ่มมินิแอป) · ตั้งครั้งเดียวมีผลกับทุกคนที่แชตกับบอทนั้น
+กลุ่ม DVX_Admin (เจ้าของต้องการที่นี่) — Telegram ไม่ให้ปุ่มเมนู/ปุ่ม web_app ในกลุ่ม ทางเดียวคือปุ่มลิงก์
+t.me/dvx_marketing_bot?startapp → เปิด "แอปหลัก" ของบอท (Main Mini App · เจ้าของต้องเปิดใน BotFather เอง ไม่มี API):
+python scripts/set_telegram_web_button.py --group-panel          # แก้ปุ่มในข้อความแผงที่ปักหมุดอยู่ (ไม่โพสต์ใหม่)
+python scripts/set_telegram_web_button.py --group-keyboard       # ส่งแผงปุ่มใต้ช่องพิมพ์ชื่อใหม่ (โพสต์ 1 ข้อความ)
+
 - ล็อกอินด้วยชื่อผู้ใช้/รหัสผ่านของเว็บตามปกติ — ไม่ได้ผูกกับบัญชี Telegram
-- ปุ่มเว็บแทนที่ปุ่มรายการคำสั่ง · คำสั่ง /xxx ยังพิมพ์ได้เหมือนเดิม
+- ปุ่มเมนูแชตส่วนตัวแทนที่ปุ่มรายการคำสั่ง · คำสั่ง /xxx ยังพิมพ์ได้เหมือนเดิม
 - token อ่านจาก deploy/.env.local · ไม่พิมพ์ออกจอ
 """
 import argparse
@@ -26,9 +31,17 @@ ENV = ROOT / "deploy" / ".env.local"
 SITE = "https://division-x-card.vercel.app/"
 BOTS = {                       # ชื่อเรียก → ชื่อตัวแปร token ใน .env.local
     "owner": "SYNC_BOT_TOKEN",          # @Divisionx_Owner_bot (DvX-Owner · บอทซิงค์)
-    "job": "TELEGRAM_MKT_BOT_TOKEN",    # @dvx_marketing_bot (DVX Job · ทีมการตลาด + สรุปยอด)
+    "job": "TELEGRAM_MKT_BOT_TOKEN",    # @dvx_marketing_bot (DVX Job · ทีมการตลาด + สรุปยอด · อยู่ในกลุ่ม DVX_Admin)
     "alert": "TELEGRAM_BOT_TOKEN",      # @Divisionx_scynbot (แจ้งเตือนสต็อก)
 }
+GROUP_ENV = "TELEGRAM_DVX_ADMIN_CHAT_ID"
+MINI_APP = "https://t.me/dvx_marketing_bot?startapp"
+# ⚠️ ข้อความ/ปุ่มชุดนี้ต้องตรงกับ deploy/app/api/telegram/mkt-webhook/route.js (WEB_BUTTON_TEXT · WEB_LINK)
+GROUP_TEXT = ("🎛 <b>แผงควบคุม DivisionX</b>\n"
+              "กด 🌐 เปิดหน้าเว็บ — หน้าเว็บเด้งขึ้นในแอป Telegram ล็อกอินด้วยชื่อผู้ใช้ได้เลย (ยังไม่มีบัญชีแจ้งเจ้าของ)")
+GROUP_BUTTONS = {"inline_keyboard": [[{"text": "🌐 เปิดหน้าเว็บ", "url": MINI_APP}],
+                                     [{"text": "🧭 เปิดในเบราว์เซอร์", "url": SITE}]]}
+KEYBOARD_TEXT = "🌐 เปิดหน้าเว็บ @dvx_marketing_bot"   # ต้องมีชื่อบอท — Hermes ในกลุ่มข้ามข้อความที่ระบุบอทอื่น
 
 
 def env_tokens():
@@ -50,28 +63,61 @@ def call(token, method, payload=None):
     return res["result"]
 
 
+def group(toks, a):
+    token, chat = toks.get(BOTS["job"]), toks.get(GROUP_ENV)
+    if not token or not chat:
+        sys.exit(f"ไม่มี {BOTS['job']} หรือ {GROUP_ENV} ใน deploy/.env.local")
+    me = call(token, "getMe")
+    if not me.get("has_main_web_app") and not a.force:
+        sys.exit("บอทยังไม่ได้เปิดแอปหลัก (Main Mini App) ใน BotFather — ปุ่ม t.me/…?startapp จะแค่เปิดแชตบอท "
+                 "ไม่ใช่มินิแอป · ตั้งให้เสร็จก่อน (หรือใส่ --force)")
+    if a.group_panel:
+        pin = call(token, "getChat", {"chat_id": chat}).get("pinned_message") or {}
+        if (pin.get("from") or {}).get("id") == me["id"]:
+            call(token, "editMessageText", {"chat_id": chat, "message_id": pin["message_id"], "text": GROUP_TEXT,
+                                            "parse_mode": "HTML", "reply_markup": GROUP_BUTTONS})
+            print(f"แก้ข้อความที่ปักหมุด #{pin['message_id']} แล้ว")
+        else:
+            msg = call(token, "sendMessage", {"chat_id": chat, "text": GROUP_TEXT, "parse_mode": "HTML",
+                                              "reply_markup": GROUP_BUTTONS})
+            call(token, "pinChatMessage", {"chat_id": chat, "message_id": msg["message_id"], "disable_notification": True})
+            print(f"ข้อความที่ปักหมุดไม่ใช่ของบอทนี้ — ส่งใหม่แล้วปักหมุด #{msg['message_id']}")
+    if a.group_keyboard:
+        call(token, "sendMessage", {"chat_id": chat, "parse_mode": "HTML",
+                                    "text": f"🎛 แผงปุ่มใหม่ — กด <b>{KEYBOARD_TEXT}</b> ด้านล่างช่องพิมพ์ได้เลย",
+                                    "reply_markup": {"keyboard": [[{"text": KEYBOARD_TEXT}]],
+                                                     "resize_keyboard": True, "is_persistent": True}})
+        print("ส่งแผงปุ่มใต้ช่องพิมพ์ชื่อใหม่แล้ว")
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--bot", default="", help="owner,job,alert หรือ all")
     ap.add_argument("--remove", action="store_true", help="คืนเป็นปุ่มเมนูคำสั่ง")
     ap.add_argument("--show", action="store_true", help="ดูอย่างเดียว")
+    ap.add_argument("--group-panel", action="store_true", help="แก้ปุ่มในแผงที่ปักหมุดในกลุ่ม DVX_Admin")
+    ap.add_argument("--group-keyboard", action="store_true", help="ส่งแผงปุ่มใต้ช่องพิมพ์ชื่อใหม่เข้ากลุ่ม DVX_Admin")
+    ap.add_argument("--force", action="store_true", help="ทำกับกลุ่มแม้บอทยังไม่เปิดแอปหลัก")
     ap.add_argument("--text", default="เปิดหน้าเว็บ")
     ap.add_argument("--url", default=SITE)
     a = ap.parse_args()
 
+    toks = env_tokens()
+    if a.group_panel or a.group_keyboard:
+        group(toks, a)
+        return
     names = list(BOTS) if a.show or a.bot == "all" else [b.strip() for b in a.bot.split(",") if b.strip()]
     bad = [b for b in names if b not in BOTS]
     if not names or bad:
         sys.exit(f"ระบุ --bot เป็น {', '.join(BOTS)} หรือ all" + (f" (ไม่รู้จัก: {', '.join(bad)})" if bad else ""))
     if not a.url.startswith("https://"):
         sys.exit("มินิแอปต้องเป็นลิงก์ https://")
-    toks = env_tokens()
     for name in names:
         token = toks.get(BOTS[name])
         if not token:
             print(f"{name}: ไม่มี {BOTS[name]} ใน deploy/.env.local — ข้าม")
             continue
-        me = call(token, "getMe")["username"]
+        me = call(token, "getMe")
         now = call(token, "getChatMenuButton")
         if not a.show:
             button = ({"type": "commands"} if a.remove else
@@ -83,7 +129,7 @@ def main():
                 if now.get("type") == button["type"]:
                     break
                 time.sleep(3)
-        print(f"{name} (@{me}): {json.dumps(now, ensure_ascii=False)}")
+        print(f"{name} (@{me['username']}): เมนู {json.dumps(now, ensure_ascii=False)} · แอปหลัก {bool(me.get('has_main_web_app'))}")
 
 
 if __name__ == "__main__":
