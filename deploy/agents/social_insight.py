@@ -134,6 +134,8 @@ def observations(stores, today, window=WINDOW_DAYS, baseline_days=60):
         for p in posts:
             if sw.days_between(p.get("last_seen", p["first_seen"]), today) > window:
                 continue
+            if p.get("posted") and sw.days_between(p["posted"], today) > baseline_days:
+                continue    # โพสต์ปักหมุด/เก่าของ IG โผล่ทุกสัปดาห์ ยอดสะสมนาน — ไม่ใช่บทเรียนของสัปดาห์นี้
             # ฐานเทียบใช้ทุกโพสต์ของเพจ แต่ตารางนับเฉพาะเรื่องการ์ด (Hi-Top โพสต์เครื่องสแกนนิ้วปนมา)
             if platform != "reddit" and not sw.card_related(p.get("caption")):
                 continue

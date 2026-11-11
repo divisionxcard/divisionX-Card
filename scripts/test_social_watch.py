@@ -260,5 +260,182 @@ try:
 finally:
     sw.oc, sw.time.sleep = real_oc, real_sleep
 
+
+# ── Instagram: อ่านจากคำตอบที่หน้าโปรไฟล์โหลดเอง (11 พ.ย. 2026 — endpoint เดิมตอบ 404 แล้วโดนนับเป็นบล็อก) ──
+# รูปข้อมูลปลอมทำตาม `browser network` ของ OpenCLI 2.0.2 จริง: รายการ = key/url/status/timestamp/shape · --detail = body เต็ม
+IG_GQL = "https://www.instagram.com/api/graphql"
+
+
+def ig_node(code, owner="op_en", ts=1794189677, likes=100, comments=5, media=1, product="feed", **kw):
+    n = {"code": code, "taken_at": ts, "like_count": likes, "comment_count": comments, "media_type": media,
+         "product_type": product, "caption": {"text": f"แคปชั่น {code}"}, "user": {"username": owner}}
+    n.update(kw)
+    return n
+
+
+def ig_entry(key, nodes, status=200, ts="2026-11-11T08:40:07.007Z"):
+    body = {"data": {sw.IG_TIMELINE: {"edges": [{"node": n} for n in nodes], "page_info": {"has_next_page": True}}},
+            "extensions": {"is_final": True}}
+    listing = {"key": key, "method": "POST", "url": IG_GQL, "status": status, "timestamp": ts, "ct": "text/javascript",
+               "shape": {"$": "object", "$.data": "object", f"$.data.{sw.IG_TIMELINE}": "object",
+                         f"$.data.{sw.IG_TIMELINE}.edges": f"array({len(nodes)})"}}
+    return listing, {"key": key, "url": IG_GQL, "status": status, "body": body}
+
+
+def ig_err(key, status, shape=None, url=IG_GQL):
+    """คำตอบที่ถูกจำกัด/ให้ล็อกอิน — ไม่มีชุดโพสต์ใน shape (OpenCLI ทำ shape จากเนื้อคำตอบจริง)"""
+    return {"key": key, "method": "POST", "url": url, "status": status, "timestamp": "2026-11-11T08:40:07.100Z",
+            "shape": shape or {"$": "object", "$.message": "string", "$.status": "string"}}, None
+
+
+def fake_ig(pages, batches):
+    """pages = ลำดับผล eval ของหน้า · batches = ลำดับผล `browser network` (list ของ (listing, detail) หรือ {"reused": True, "items": …})"""
+    pseq, seq, calls = list(pages), list(batches), []
+    every = [it for b in batches for it in (b["items"] if isinstance(b, dict) else b)]
+
+    def oc(*args, timeout=150, beat=True):
+        calls.append(args[:3])
+        if args[:2] == ("browser", "eval"):
+            return {"ok": True, "data": pseq.pop(0) if len(pseq) > 1 else pseq[0]}
+        if args[:2] == ("browser", "network"):
+            if args[2] == "--detail":
+                for listing, detail in every:
+                    if listing["key"] == args[3] and detail is not None:
+                        return {"ok": True, "data": detail}
+                raise sw.WatchError("OpenCLI browser network: key_not_found")
+            cur = seq.pop(0) if len(seq) > 1 else seq[0]
+            items = cur["items"] if isinstance(cur, dict) else cur
+            viewer = {"key": "POST www.instagram.com/api/graphql#2", "url": IG_GQL, "status": 200,
+                      "shape": {"$.data.xdt_viewer": "object"}}
+            data = {"session": "dvxwatch", "entries": [viewer] + [listing for listing, _ in items]}
+            if isinstance(cur, dict) and cur.get("reused"):
+                data["cache_reused"] = True
+            return {"ok": True, "data": data}
+        return {"ok": True, "data": {}}
+    return oc, calls
+
+
+def raises(fn, exc):
+    try:
+        fn()
+    except exc:
+        return exc.__name__
+    except sw.WatchError as e:
+        return f"{type(e).__name__}: {e}"
+    return "ไม่โยน"
+
+
+import json  # noqa: E402
+import tempfile  # noqa: E402
+
+OK = {"missing": False, "grid": 12}
+real_oc, real_sleep, real_cache = sw.oc, sw.time.sleep, sw.NET_CACHE
+sw.time.sleep = lambda s: None
+tmp = pathlib.Path(tempfile.mkdtemp())
+sw.NET_CACHE = tmp
+igt = {"name": "ONE PIECE CARD GAME English", "user": "op_en"}
+try:
+    reel = ig_node("R1", media=2, product="clips", likes=900, comments=40, ts=1794189677)
+    car = ig_node("C1", media=8, product="carousel_container", ts=1794103282)
+    old = ig_node("P1", ts=1793757616, caption=None)
+    (tmp / "7t3asn4t_dvxwatch.json").write_text("{}")
+    (tmp / "44wkjy4p_assetxwatch.json").write_text("{}")
+    sw.oc, calls = fake_ig([OK], [[ig_entry("POST www.instagram.com/api/graphql#6", [car, old, reel])]])
+    got = sw.read_instagram(igt, {})
+    check("IG อ่านจากคำตอบของหน้า: ได้ครบ 3 โพสต์ เรียงใหม่ → เก่า", [p["key"] for p in got], ["R1", "C1", "P1"])
+    check("IG รูปแบบ: clips = reel · 8 = carousel · 1 = photo", [p["format"] for p in got], ["reel", "carousel", "photo"])
+    check("IG ตัวเลข + ลิงก์ + วันโพสต์ (เวลาไทย)", (got[0]["m"], got[0]["link"], got[0]["posted"]),
+          ({"reactions": 900, "comments": 40, "shares": None, "views": None}, "https://www.instagram.com/p/R1/", "2026-11-09"))
+    check("IG แคปชั่นว่าง (caption = null) ไม่ล้ม", got[2]["caption"], "")
+    check("IG ไม่ยิงคำขอเอง — อ่านได้แล้วมีแค่ open / network (ไม่ eval ระหว่างหน้าโหลด)", sorted({c[:2] for c in calls}),
+          [("browser", "network"), ("browser", "open")])
+    check("IG อ่านเสร็จลบแคชเครือข่ายของ session เรา · ไม่แตะของ AssetX",
+          sorted(f.name for f in tmp.iterdir()), ["44wkjy4p_assetxwatch.json"])
+
+    sw.oc, _ = fake_ig([OK], [[ig_entry("k1", [ig_node("A", owner="someone_else")])]])
+    check("IG ชุดโพสต์ของเพจอื่น = ไม่รับ · ไม่ใช่บล็อก",
+          raises(lambda: sw.read_instagram(igt, {}), sw.Blocked).startswith("WatchError"), True)
+    sw.oc, _ = fake_ig([OK], [{"reused": True, "items": [ig_entry("k1b", [ig_node("A1")])]}])
+    check("IG ชุดที่ OpenCLI คืนจากแคชเก่า (cache_reused) = ไม่รับแม้เจ้าของตรง",
+          raises(lambda: sw.read_instagram(igt, {}), sw.Blocked).startswith("WatchError"), True)
+
+    sw.oc, calls = fake_ig([OK], [[], [ig_entry("k2", [ig_node("B")])]])
+    check("IG รอบแรกยังไม่มี timeline = รอแล้วดูใหม่ 1 ครั้ง", [p["key"] for p in sw.read_instagram(igt, {})], ["B"])
+
+    sw.oc, calls = fake_ig([OK], [[]])
+    msg = raises(lambda: sw.read_instagram(igt, {}), sw.Blocked)
+    check("IG ไม่เจอ timeline เลย = WatchError (ไม่พักเลน 3 วัน) · เปิดหน้าครั้งเดียว · ดูด ≤ 2 ครั้ง",
+          (msg.startswith("WatchError"), calls.count(("browser", "open", "https://www.instagram.com/op_en/")),
+           sum(1 for c in calls if c == ("browser", "network", "--session"))), (True, 1, 2))
+    check("IG ข้อความล้มบอกว่าหน้าโชว์โพสต์แต่จดไม่ทัน", "หน้าโชว์ 12 โพสต์" in msg, True)
+    first_net = next(i for i, c in enumerate(calls) if c[:2] == ("browser", "network"))
+    first_eval = next(i for i, c in enumerate(calls) if c[:2] == ("browser", "eval"))
+    check("IG ดูดเครือข่ายก่อนสั่ง eval (eval ระหว่างหน้าโหลด = debugger ต่อใหม่ ชุดโพสต์หาย)", first_net < first_eval, True)
+
+    sw.oc, calls = fake_ig([{"missing": True, "grid": 0}], [[]])
+    msg = raises(lambda: sw.read_instagram(igt, {}), sw.Blocked)
+    check("IG ไม่มีเพจนี้ = บอกว่าไม่มีเพจ", "ไม่มีเพจนี้" in msg, True)
+
+    collab = [ig_node(f"S{i}", owner=f"customer{i}", coauthor_producers=[{"username": f"customer{i}"}, {"username": "op_en"}])
+              for i in range(3)]
+    sw.oc, _ = fake_ig([OK], [[ig_entry("k2c", collab)]])
+    check("IG เพจที่มีแต่โพสต์ร่วม (ลูกค้าโพสต์ ใส่เพจเป็นผู้ร่วม) = รับ (Sanctuary 11 พ.ย.)",
+          len(sw.read_instagram(igt, {})), 3)
+
+    for label in ("accounts/login", "challenge", "accounts/suspended", "logged out"):
+        sw.oc, _ = fake_ig([{"blocked": label}], [[]])
+        check(f"IG หน้า {label} = Blocked", raises(lambda: sw.read_instagram(igt, {}), sw.Blocked), "Blocked")
+    check("IG ป้ายบล็อกเป็นค่าคงที่ ไม่เอา path ต่อท้าย (รหัสบัญชีในหน้า challenge)",
+          "split('/')" in sw.IG_PAGE_JS or "slice(0, 2)" in sw.IG_PAGE_JS, False)
+
+    sw.oc, _ = fake_ig([OK], [[ig_err("POST www.instagram.com/api/graphql#6", 429)]])
+    check("IG หน้าโหลดโพสต์แล้วได้ 429 (ไม่มีชุดโพสต์) = Blocked", raises(lambda: sw.read_instagram(igt, {}), sw.Blocked), "Blocked")
+    sw.oc, _ = fake_ig([OK], [[ig_err("POST www.instagram.com/api/graphql#6", 200,
+                                       {"$": "object", "$.message": "string", "$.require_login": "boolean"})]])
+    check("IG คำตอบ require_login = Blocked", raises(lambda: sw.read_instagram(igt, {}), sw.Blocked), "Blocked")
+    web403 = "https://www.instagram.com/api/v1/web/x/"
+    sw.oc, _ = fake_ig([OK], [[ig_err("POST www.instagram.com/api/v1/web/x/", 403, url=web403), ig_entry("k4", [ig_node("D")])]])
+    check("IG คำขอเบื้องหลังตัวอื่นล้ม แต่อ่านโพสต์ได้ = ไม่บล็อก", [p["key"] for p in sw.read_instagram(igt, {})], ["D"])
+    sw.oc, _ = fake_ig([OK], [[ig_err("POST www.instagram.com/api/v1/web/x/", 403, url=web403)]])
+    check("IG 403 ของคำขอ /api/v1/web (ไม่ใช่ graphql) อย่างเดียว ≠ บล็อก",
+          raises(lambda: sw.read_instagram(igt, {}), sw.Blocked).startswith("WatchError"), True)
+    sw.oc, _ = fake_ig([OK], [[ig_entry("k4b", [ig_node("D2")], status=500)]])
+    check("IG ชุดโพสต์ตอบ 500 = ข้าม (WatchError ไม่ใช่บล็อก)",
+          raises(lambda: sw.read_instagram(igt, {}), sw.Blocked).startswith("WatchError"), True)
+
+    check("IG body เป็นข้อความ JSON = แปลงได้", sorted(sw._ig_body({"body": json.dumps({"data": {}})})), ["data"])
+    check("IG body หลายก้อนคั่นบรรทัด = เอาก้อนแรก", sw._ig_body({"body": '{"data": {"a": 1}}\n{"x": 2}'}), {"data": {"a": 1}})
+    check("IG body ถูกตัด = None (ไม่ล้ม)", sw._ig_body({"body": '{"data": {"a', "body_truncated": True}), None)
+
+    sw.oc, _ = fake_ig([OK], [[ig_entry("k7", [ig_node("G", like_and_view_counts_disabled=True)])]])
+    check("IG เจ้าของซ่อนยอดไลก์ = ไม่เอาไลก์ไปเทียบ", sw.read_instagram(igt, {})[0]["m"]["reactions"], None)
+
+    sw.oc, _ = fake_ig([OK], [[ig_entry("k8", [ig_node("H", owner="partner_shop"), ig_node("I")])]])
+    check("IG โพสต์ร่วม (คนโพสต์เป็นอีกบัญชี) อยู่ในชุดของเพจ = เก็บด้วย", sorted(p["key"] for p in sw.read_instagram(igt, {})),
+          ["H", "I"])
+    sw.oc, _ = fake_ig([OK], [[ig_entry("k9a", [ig_node("N1", ts=1794000001)], ts="2026-11-11T08:40:07.000Z"),
+                               ig_entry("k9b", [ig_node("N1", ts=1794000001), ig_node("N2", ts=1794000002)],
+                                        ts="2026-11-11T08:40:09.000Z")]])
+    check("IG หลายชุด = รวมกันไม่ซ้ำ", [p["key"] for p in sw.read_instagram(igt, {})], ["N2", "N1"])
+
+    many = [ig_node(f"M{i}", ts=1794000000 + i) for i in range(20)]
+    sw.oc, _ = fake_ig([OK], [[ig_entry("k9", many)]])
+    check("IG เกิน ig_max_posts = เก็บใหม่สุดตามจำนวน", [p["key"] for p in sw.read_instagram(igt, {"ig_max_posts": 3})],
+          ["M19", "M18", "M17"])
+finally:
+    sw.oc, sw.time.sleep, sw.NET_CACHE = real_oc, real_sleep, real_cache
+
+# โพสต์ปักหมุด/เก่าที่ IG ส่งมาในชุดแรก — ยอดสะสมนาน ห้ามนับว่า "แรงกว่าปกติ"
+ocfg = {"baseline_days": 60, "outlier_ratio": 2.0, "min_engagement": 10, "min_views": 3000, "max_ideas_per_target": 5}
+today = date(2026, 11, 11)
+posts = {f"r{i}": {"first_seen": "2026-11-05", "posted": f"2026-11-0{i + 1}", "caption": "การ์ด One Piece",
+                   "m": {"reactions": 20, "comments": 1, "shares": None, "views": None}} for i in range(5)}
+posts["pin"] = {"first_seen": "2026-11-11", "posted": "2026-03-01", "caption": "การ์ด One Piece โพสต์ปักหมุด",
+                "m": {"reactions": 5000, "comments": 90, "shares": None, "views": None}}
+posts["hot"] = {"first_seen": "2026-11-11", "posted": "2026-11-10", "caption": "การ์ด One Piece ชุดใหม่",
+                "m": {"reactions": 400, "comments": 30, "shares": None, "views": None}}
+check("โพสต์ปักหมุดเก่ากว่าฐานเทียบ ไม่นับว่าแรง · โพสต์ใหม่ที่แรงยังนับ",
+      [h["key"] for h in sw.outliers("instagram", {"posts": posts}, ["pin", "hot"], today, ocfg)], ["hot"])
+
 print(f"\n{'ผ่านครบ' if not fails else f'ไม่ผ่าน {fails} ข้อ'}")
 sys.exit(1 if fails else 0)

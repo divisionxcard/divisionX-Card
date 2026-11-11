@@ -381,47 +381,136 @@ def read_facebook(target, cfg):
 
 
 # ── Instagram (ปิดไว้จนถึงวันใน gates) ──────────────────────────────────────
-# endpoint เดียวกับที่ `opencli instagram user` ใช้ (หน้าเว็บ IG เรียกเองตอนเปิดโปรไฟล์)
-# แต่คืน code (ทำลิงก์โพสต์) + taken_at + ยอดวิวด้วย ซึ่งคำสั่งสำเร็จรูปตัดทิ้ง
-IG_JS = r"""
-(async () => {
-  const U = %s;
-  if (/^\/(accounts\/login|challenge)/.test(location.pathname)) return { blocked: location.pathname.split('/')[1] };
-  const r = await fetch('/api/v1/feed/user/' + encodeURIComponent(U) + '/username/?count=12',
-    { credentials: 'include', headers: { 'X-IG-App-ID': '936619743392459' } });
-  if (r.status === 401 || r.status === 403 || r.status === 429) return { blocked: 'http ' + r.status };
-  // 28 ต.ค. 2026 รอบแรก: ล็อกอินอยู่แต่ endpoint นี้เด้งกลับหน้าแรก (ได้ HTML) + web_profile_info ตอบ 429
-  // = IG จำกัดบัญชี Research → นับเป็น blocked ให้เลนพัก 3 วัน ห้ามวนหา endpoint อื่นมาเลี่ยง
-  if (r.redirected || !(r.headers.get('content-type') || '').includes('json')) return { blocked: 'redirect' };
-  if (!r.ok) return { error: 'HTTP ' + r.status };
-  const d = await r.json();
-  return { posts: (d.items || []).map(p => ({ code: p.code, caption: ((p.caption && p.caption.text) || '').slice(0, 700),
-    likes: p.like_count ?? null, comments: p.comment_count ?? null, views: p.play_count ?? p.view_count ?? null,
-    media_type: p.media_type, product: p.product_type || '', taken_at: p.taken_at || null })) };
+# ⚠️ 11 พ.ย. 2026 — endpoint เดิม /api/v1/feed/user/<user>/username/ (ตัวเดียวกับ `opencli instagram user` 2.0.2) ตอบ 404 "Page Not Found"
+#    โค้ดเดิมนับ HTML ที่ได้เป็น blocked:redirect → พักเลน 3 วันวนทุกรอบตั้งแต่ 28 ต.ค. ทั้งที่บัญชีล็อกอินอยู่ปกติ
+#    (สรุปเดิมว่า "IG จำกัดบัญชี" ผิด · เจ้าของเปิดดูหน้าเว็บ 28 ต.ค. ไม่มีแจ้งเตือน · ตรวจ 11 พ.ย. ล็อกอินอยู่ หน้าโปรไฟล์โชว์โพสต์ปกติ)
+#    ตอนนี้อ่านคำตอบที่หน้าโปรไฟล์โหลดเองตอนเปิด: `browser open` เริ่มจดเครือข่ายก่อนนำทาง → `browser network` ดึงออกมา
+#    เราไม่ยิงคำขอไป IG เองเลยสักครั้ง · ห้ามหา endpoint อื่นมายิงแทน
+IG_TIMELINE = "xdt_api__v1__feed__user_timeline_graphql_connection"
+# ป้ายบล็อกเป็นค่าคงที่ — path หน้า challenge มีรหัสบัญชีต่อท้าย ห้ามหลุดไปรายงาน/ไฟล์ร่วม
+IG_PAGE_JS = r"""
+(() => {
+  const m = location.pathname.match(/^\/(?:accounts\/(login|suspended|disabled)|(challenge))(?:\/|$)/);
+  if (m) return { blocked: m[2] || 'accounts/' + m[1] };
+  if (!document.cookie.split(';').some(c => c.trim().startsWith('ds_user_id='))) return { blocked: 'logged out' };
+  const body = (document.body && document.body.innerText) || '';
+  return { missing: /Sorry, this page isn't available|ขออภัย หน้านี้ไม่พร้อมใช้งาน/.test(body),
+           grid: document.querySelectorAll('a[href*="/p/"], a[href*="/reel/"]').length };
 })()
 """
+# `browser network` เขียนทุกอย่างที่หน้าโหลดลงดิสก์ (token ของหน้าเว็บ · ชื่อบัญชีคนอื่น · ไฟล์ละหลายสิบ MB) แล้วไม่ลบเอง
+# → อ่านเสร็จลบไฟล์ของ session เราทิ้ง (ชื่อไฟล์ <context>_<session>.json · ไม่แตะของ AssetX)
+NET_CACHE = Path(os.environ.get("OPENCLI_CACHE_DIR") or Path.home() / ".opencli" / "cache") / "browser-network"
+
+
+def _drop_net_cache():
+    for f in [*NET_CACHE.glob(f"*_{SESSION}.json"), NET_CACHE / f"{SESSION}.json"]:
+        try:
+            f.unlink(missing_ok=True)
+        except OSError:
+            pass
+
+
+def _ig_body(detail):
+    body = detail.get("body") if isinstance(detail, dict) else None
+    if isinstance(body, str):
+        for chunk in (body, body.lstrip().split("\n", 1)[0]):   # graphql บางชุดส่งหลายก้อนคั่นบรรทัด — ก้อนแรกคือ data
+            try:
+                body = json.loads(chunk)
+                break
+            except ValueError:
+                continue
+    return body if isinstance(body, dict) else None
+
+
+def _ig_authors(node):
+    """ชื่อบัญชีเจ้าของโพสต์ + ผู้ร่วมโพสต์ (collab) — หน้าโปรไฟล์ร้านเล็กบางเพจมีแต่โพสต์ร่วมที่ลูกค้าเป็นคนโพสต์
+    (Sanctuary Gallery 11 พ.ย. ทั้ง 12 โพสต์) → ดูแค่คนโพสต์จะนึกว่าเป็นชุดของเพจอื่น"""
+    people = [node.get("user"), node.get("owner"), *(node.get("coauthor_producers") or [])]
+    return {str(p.get("username") or "").lower() for p in people if isinstance(p, dict)} - {""}
+
+
+def ig_timeline(user, W, cfg):
+    """→ node ของโพสต์ที่หน้าโปรไฟล์ `user` โหลดเอง (จาก network capture ของ OpenCLI) · None = ไม่เจอ
+
+    `browser network` ดูดของที่จดไว้ออกทั้งหมด · รอบที่ว่างจะคืนชุดเก่าที่เก็บไว้ (`cache_reused` — ของเพจก่อนหน้า) → ข้าม
+    ถูกจำกัด/ให้ล็อกอินใหม่ (429 · require_login) = คำตอบไม่มีชุดโพสต์ใน shape → ดูจากทุกคำขอของ IG ที่หน้าโหลด
+    แต่โยน Blocked เฉพาะเมื่อไม่ได้ชุดโพสต์เลย (คำขอเบื้องหลังตัวอื่นล้มทั้งที่อ่านได้ ≠ บัญชีโดนจำกัด)
+    """
+    want, nodes, limited = user.lower(), {}, None
+    for attempt in range(2):
+        if attempt:
+            time.sleep(random.uniform(3, 5))                 # หน้ายังโหลดไม่ถึง timeline — รออีกนิดแล้วดูใหม่ครั้งเดียว
+        res = unwrap(oc("browser", "network", *W)) or {}
+        if res.get("cache_reused") or res.get("cache_warning"):
+            continue        # ชุดเก่าที่ OpenCLI คืนมา / บันทึกแคชไม่ได้ (--detail จะอ่านไฟล์เก่า) — ไม่ใช่ของหน้านี้
+        ents = [e for e in (res.get("entries") or []) if isinstance(e, dict) and e.get("key")]
+        limited = limited or next((e for e in ents if "instagram.com/" in str(e.get("url") or "") and (
+            ("/graphql" in str(e.get("url")) and e.get("status") in (401, 403, 429))
+            or ("/api/" in str(e.get("url")) and e.get("status") == 429)
+            or any(k in (e.get("shape") or {}) for k in ("$.require_login", "$.checkpoint_url")))), None)
+        cands = [e for e in ents if any(IG_TIMELINE in k for k in (e.get("shape") or {}))]
+        cands.sort(key=lambda e: str(e.get("timestamp") or ""), reverse=True)
+        for e in cands[:4]:
+            if e.get("status") != 200:
+                continue
+            detail = unwrap(oc("browser", "network", "--detail", e["key"], *W)) or {}
+            body = _ig_body(detail)
+            if body is None:
+                if detail.get("body_truncated"):
+                    log(f"⚠️ [social] Instagram {user}: ข้อมูลโพสต์ถูกตัด ({detail.get('body_full_size')} ไบต์) อ่านไม่ได้")
+                continue
+            conn = (body.get("data") or {}).get(IG_TIMELINE) if isinstance(body.get("data"), dict) else None
+            got = [ed["node"] for ed in (conn or {}).get("edges") or []
+                   if isinstance(ed, dict) and isinstance(ed.get("node"), dict) and ed["node"].get("code")]
+            if any(want in _ig_authors(n) for n in got):
+                for n in got:
+                    nodes.setdefault(n["code"], n)
+        if nodes:
+            break
+    if not nodes:
+        if limited:
+            raise Blocked(f"Instagram ตอบ HTTP {limited.get('status')} ตอนหน้าโปรไฟล์โหลดโพสต์ (ถูกจำกัด/ให้ล็อกอินใหม่)")
+        return None
+    return sorted(nodes.values(), key=lambda n: -(n.get("taken_at") or 0))[: int(cfg.get("ig_max_posts", 12))]
 
 
 def read_instagram(target, cfg):
     W = ["--session", SESSION, "--window", "background", "--profile", cfg.get("bridge_profile", "research")]
     user = target["user"]
     oc("browser", "open", f"https://www.instagram.com/{urllib.parse.quote(user)}/", *W)
-    time.sleep(random.uniform(4.5, 6.5))
-    res = unwrap(oc("browser", "eval", IG_JS % json.dumps(user), *W)) or {}
-    if res.get("blocked"):
-        raise Blocked(f"Instagram ขอ {res['blocked']} (บัญชี Research อาจหลุดล็อกอิน/ถูกขอยืนยันตัวตน)")
-    if res.get("error"):
-        raise WatchError(f"Instagram {user}: {res['error']}")
+    # รอหน้านิ่งแล้วดูดเครือข่ายก่อน ค่อยตรวจหน้า — ระหว่างหน้า IG ประมวลผลชุดโพสต์ (~700 KB) คำสั่ง eval ของ OpenCLI
+    # ตรวจการเชื่อมต่อไม่ทัน 2 วิแล้วต่อ debugger ใหม่ (ส่วนเสริม 1.0.27 ensureAttached) คำตอบที่มาระหว่างนั้นหายได้ ·
+    # การดูดเครือข่ายไม่แตะ debugger · เปิดลิงก์เดิมซ้ำในแท็บเดิมหน้าไม่โหลดใหม่ (ลอง 11 พ.ย.) จึงไม่มีเปิดซ้ำ
+    time.sleep(random.uniform(7, 9))
+    page = {}
+    try:
+        nodes = ig_timeline(user, W, cfg)
+        if nodes is None:
+            page = unwrap(oc("browser", "eval", IG_PAGE_JS, *W)) or {}
+            if page.get("blocked"):
+                raise Blocked(f"Instagram ขอ {page['blocked']} (บัญชี Research หลุดล็อกอิน/ถูกขอยืนยันตัวตน)")
+    finally:
+        _drop_net_cache()
+    if nodes is None:
+        # ไม่ใช่บล็อก — ไม่พักเลน 3 วัน · ไม่นับว่าอ่านแล้ว รอบหน้าลองใหม่
+        raise WatchError(f"Instagram {user}: ไม่เจอชุดโพสต์ที่หน้าโปรไฟล์โหลด"
+                         + (" (ไม่มีเพจนี้แล้ว?)" if page.get("missing") else
+                            f" (หน้าโชว์ {page['grid']} โพสต์แต่ OpenCLI จดคำตอบไม่ทัน?)" if page.get("grid") else
+                            " (หน้าโหลดไม่ขึ้น/IG เปลี่ยนรูปแบบ?)"))
     out = []
-    for p in res.get("posts") or []:
-        if not p.get("code"):
-            continue
-        fmt = "reel" if p.get("product") == "clips" else {1: "photo", 2: "video", 8: "carousel"}.get(p.get("media_type"), "photo")
-        posted = (datetime.fromtimestamp(p["taken_at"], TH).date().isoformat() if p.get("taken_at") else None)
-        out.append({"key": p["code"], "format": fmt, "link": f"https://www.instagram.com/p/{p['code']}/",
-                    "caption": p.get("caption") or "", "posted": posted,
-                    "m": {"reactions": p.get("likes"), "comments": p.get("comments"), "shares": None,
-                          "views": p.get("views")}})
+    for n in nodes:
+        cap = n.get("caption") if isinstance(n.get("caption"), dict) else {}
+        fmt = ("reel" if n.get("product_type") == "clips"
+               else {1: "photo", 2: "video", 8: "carousel"}.get(n.get("media_type"), "photo"))
+        ts = n.get("taken_at")
+        posted = datetime.fromtimestamp(ts, TH).date().isoformat() if isinstance(ts, (int, float)) and ts > 0 else None
+        hidden = bool(n.get("like_and_view_counts_disabled"))      # เจ้าของโพสต์ซ่อนยอดไลก์ — ไม่เอาตัวเลขไปเทียบ
+        out.append({"key": n["code"], "format": fmt, "link": f"https://www.instagram.com/p/{n['code']}/",
+                    "caption": (cap.get("text") or "")[:700], "posted": posted,
+                    "m": {"reactions": None if hidden else n.get("like_count"), "comments": n.get("comment_count"),
+                          "shares": None,
+                          "views": None if hidden else (n.get("play_count") or n.get("ig_play_count") or n.get("view_count"))}})
     return out
 
 
@@ -569,6 +658,8 @@ def outliers(platform, store, seen, today, cfg):
         r = store["posts"][k]
         if r.get("idea") or not card_related(r.get("caption")):
             continue
+        if r.get("posted") and days_between(r["posted"], today) > window:
+            continue    # โพสต์ปักหมุด/เก่าที่ IG ส่งมาในชุดแรก — ยอดสะสมนานกว่าฐานเทียบ ไม่ใช่ของแรง (FB ไม่มีวันโพสต์ = ไม่โดน)
         e, v = eng(r["m"]), r["m"].get("views") or 0
         re_ = e / max(base_e, 1) if base_e is not None else 0
         rv = v / max(base_v, 1) if base_v and v else 0
