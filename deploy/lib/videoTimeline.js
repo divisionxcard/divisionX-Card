@@ -28,7 +28,8 @@ export const TINT_TH = { cyan: "ฟ้า", gold: "ทอง", purple: "ม่�
 export const PAINT_THB = 1.4
 export const FITS = ["cover", "contain"]
 export const VOICES = ["Aoede", "Kore", "Puck", "Charon"]
-export const TTS_MODELS = ["gemini-2.5-flash-preview-tts", "gemini-3.8-flash-tts"]
+// 2.5 ถอดออก 14 พ.ย. 2026 (Google ปิด 17 พ.ย.) — ร่างเก่าที่เลือก 2.5 ไว้ตกเป็นค่าเริ่มต้น (3.8) ผ่าน pick()
+export const TTS_MODELS = ["gemini-3.8-flash-tts"]
 export const VOICE_TAIL = 0.6
 
 const num = (v, lo, hi, d) => {

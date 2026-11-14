@@ -39,6 +39,19 @@ VOICES = {
 }
 
 
+# รุ่นที่ Google ปิดแล้ว → สลับเป็นรุ่นปัจจุบันเอง (14 พ.ย. 2026 · 2.5 ปิด 17 พ.ย.)
+# แผน/ร่างห้องตัดต่อเก่าที่เคยเลือก 2.5 ไว้จะได้ไม่ล้มทั้งคลิป
+RETIRED = {
+    "gemini-2.5-flash-preview-tts": "gemini-3.8-flash-tts",
+    "gemini-2.5-pro-preview-tts": "gemini-3.8-flash-tts",
+}
+
+
+def resolve_model(model):
+    model = model or config.TTS_MODEL
+    return RETIRED.get(model, model)
+
+
 def _interactions(model):
     return model.startswith("gemini-3")
 
@@ -79,7 +92,7 @@ def synth(text, out_wav, voice=None, model=None, retries=3, style=None):
     """
     out_wav = pathlib.Path(out_wav)
     voice = voice or config.TTS_VOICE
-    model = model or config.TTS_MODEL
+    model = resolve_model(model)
     text = pronounce(text)
     meta = (style or "").strip()
     if meta and not _interactions(model):

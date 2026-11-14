@@ -18,7 +18,7 @@ const TEXT_ANIMS = ANIMS.filter(a => !["slam", "spin", "tilt"].includes(a))
 const IMG_ANIMS = ANIMS.filter(a => !["punch", "type", "words"].includes(a))
 const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 2]
 const VOICE_TH = { Puck: "Puck · ชายสดใส", Kore: "Kore · หญิงหนักแน่น", Aoede: "Aoede · หญิงนุ่ม", Charon: "Charon · ชายทุ้ม" }
-const MODEL_TH = { "gemini-2.5-flash-preview-tts": "2.5 (รุ่นเก่า · ปิดบริการ 17 พ.ย.)", "gemini-3.8-flash-tts": "3.8 (ค่าเริ่มต้น)" }
+const MODEL_TH = { "gemini-3.8-flash-tts": "3.8 (ค่าเริ่มต้น)" }
 const COLORS = ["#ffffff", "#3ddcff", "#ffc24a", "#ff5277", "#3ee08f"]
 
 function Chips({ value, options, labels, onPick }) {

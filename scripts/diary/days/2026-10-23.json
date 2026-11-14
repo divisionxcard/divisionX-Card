@@ -60,6 +60,11 @@
       "topic": "ไฟล์ต้นฉบับใน Supabase หลังย้ายไป R2",
       "chose": "เก็บไว้ก่อน ยังไม่ลบ",
       "rejected": "ลบทันทีหลังตรวจครบ"
+    },
+    {
+      "topic": "โพสต์ Reels/วิดีโออัตโนมัติ — ต้องได้อนุญาตทดสอบโพสต์จริงบนเ (Claude เลือกแทน 14 พ.ย.)",
+      "chose": "ยังไม่ทำ โพสต์วิดีโอเองไปก่อน",
+      "rejected": "ทดสอบโพสต์จริง 1 คลิปบนเพจ"
     }
   ],
   "highlights": [
@@ -108,13 +113,14 @@
       "acted": true
     },
     {
-      "done": false,
+      "done": true,
       "id": "video-footage-shoot",
-      "text": "ฟุตเทจจริง — ถ่ายตาม wiki/marketing/video-footage-shotlist.md (ช็อตแกะซองต้องอนุมัติก่อน)",
-      "owner": "you"
+      "text": "ฟุตเทจจริง — ถ่ายตาม wiki/marketing/video-footage-shotlist.md (ช็อตแกะซองต้องอนุมัติก่อน) — รวมเข้าข้อ \"เมื่อมีเวลา\" วันที่ 14 พ.ย.",
+      "owner": "you",
+      "done_at": "2026-11-14T10:00:00.000Z"
     },
     {
-      "done": false,
+      "done": true,
       "id": "video-reels-autopost",
       "text": "โพสต์ Reels/วิดีโออัตโนมัติ — ต้องได้อนุญาตทดสอบโพสต์จริงบนเพจก่อนสร้าง",
       "owner": "decide",
@@ -129,7 +135,12 @@
           "label": "ยังไม่ทำ โพสต์วิดีโอเองไปก่อน"
         }
       ],
-      "recommended": "a"
+      "recommended": "a",
+      "choice": "b",
+      "chose_at": "2026-11-14T10:00:00.000Z",
+      "choice_note": "Claude เลือกแทน (เจ้าของมอบให้ 14 พ.ย.) — ยังไม่ใช้ระบบวิดีโอช่วงนี้ ไม่โพสต์อะไรออกเพจเอง · พร้อมเมื่อไหร่บอก Claude",
+      "acted": true,
+      "done_at": "2026-11-14T10:00:00.000Z"
     },
     {
       "done": true,
@@ -161,16 +172,18 @@
       "acted": true
     },
     {
-      "done": false,
+      "done": true,
       "id": "video-listen-ab",
-      "text": "ฟังคลิปเทียบก่อน/หลัง research/video-tests/2026-10-23-rank-{before,after-audio}.mp4 (อยู่ในเครื่อง ไม่ขึ้น git)",
-      "owner": "you"
+      "text": "ฟังคลิปเทียบก่อน/หลัง research/video-tests/2026-10-23-rank-{before,after-audio}.mp4 (อยู่ในเครื่อง ไม่ขึ้น git) — รวมเข้าข้อ \"เมื่อมีเวลา\" วันที่ 14 พ.ย.",
+      "owner": "you",
+      "done_at": "2026-11-14T10:00:00.000Z"
     },
     {
-      "done": false,
+      "done": true,
       "id": "video-pronounce-words",
-      "text": "คำที่ยังได้ยินอ่านผิด → เพิ่มใน deploy/tasks/tts_pronounce.json (เช่น SEC อ่านว่าอะไร)",
-      "owner": "you"
+      "text": "คำที่ยังได้ยินอ่านผิด → เพิ่มใน deploy/tasks/tts_pronounce.json (เช่น SEC อ่านว่าอะไร) — ไม่ต้องค้าง (14 พ.ย.): ได้ยินคำอ่านผิดเมื่อไหร่บอก Claude เติมในไฟล์ได้ทันที",
+      "owner": "you",
+      "done_at": "2026-11-14T10:00:00.000Z"
     },
     {
       "done": true,
@@ -246,10 +259,11 @@
       "owner": "claude"
     },
     {
-      "done": false,
+      "done": true,
       "id": "editor-first-render",
-      "text": "ลองตัดคลิปแรกในห้องตัดต่อ (/video/editor) แล้วกด \"สร้างคลิป\" — รอบแรกบน production · ติดตรงไหนบอกได้เลย",
-      "owner": "you"
+      "text": "ลองตัดคลิปแรกในห้องตัดต่อ (/video/editor) แล้วกด \"สร้างคลิป\" — รอบแรกบน production · ติดตรงไหนบอกได้เลย — รวมเข้าข้อ \"เมื่อมีเวลา\" วันที่ 14 พ.ย.",
+      "owner": "you",
+      "done_at": "2026-11-14T10:00:00.000Z"
     },
     {
       "done": true,

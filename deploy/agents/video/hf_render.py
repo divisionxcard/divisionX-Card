@@ -99,7 +99,7 @@ def prepare(plan, work):
     # ย่อช่วงเงียบยาวกลางประโยค (23 ต.ค. 2026 · คลิปจริงเงียบสนิท 0.6–1.6 วิ ระหว่างบรรทัด) — ก่อน whisper จับเวลา
     # ภาพทุกฉากจึงตามเสียงที่ย่อแล้ว · ปิดได้ด้วย plan["keep_pauses"] = true
     # เสียงรุ่น 3.x ไม่ย่อ — หยุดตามจังหวะพูดจริงอยู่แล้ว (คลิปทดสอบ 0.32–0.64 วิ) · บางรอบเว้นลุ้นก่อนเฉลยเอง ~1.3 วิ ซึ่งต้องเก็บไว้
-    tighten = not plan.get("keep_pauses") and         not voice_mod._interactions(plan.get("tts_model") or config.TTS_MODEL)
+    tighten = not plan.get("keep_pauses") and         not voice_mod._interactions(voice_mod.resolve_model(plan.get("tts_model")))
     if tighten:
         try:
             if sound.tighten_pauses(wav):
