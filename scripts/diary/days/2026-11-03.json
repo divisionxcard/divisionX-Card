@@ -105,8 +105,9 @@
     {
       "id": "assetx-read-agreement",
       "owner": "you",
-      "text": "บอก session ของ AssetX ให้อ่าน ~/.claude/skills/social-research/profiles/shared-browser-dvx-assetx.md ก่อนสร้างตัวเฝ้าเพจ Facebook (ขั้น 7)",
-      "done": false
+      "text": "บอก session ของ AssetX ให้อ่าน ~/.claude/skills/social-research/profiles/shared-browser-dvx-assetx.md ก่อนสร้างตัวเฝ้าเพจ Facebook (ขั้น 7) — จบแล้ว (ตรวจ 14 พ.ย.): AssetX ใช้ข้อตกลงจริงแล้ว (บันทึกการใช้ browser ร่วม 8 พ.ย. อยู่ในเพดาน) · 9 พ.ย. ย้ายไปบัญชีของตัวเอง",
+      "done": true,
+      "done_at": "2026-11-14T08:00:00.000Z"
     },
     {
       "id": "shared-lock-first-run",
