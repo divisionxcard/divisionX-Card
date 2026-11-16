@@ -67,6 +67,8 @@ CASES = [
     ("ONE PIECE EB - 04 Pack", "EB 04", "payif"),
     ("One Piece EB - 04", "EB 04", "vms,worldwide"),
     ("One Piece EB - 04 Pack", "EB 04", "vms"),
+    # EB-05 ลงตู้ chukes01-03 + wwv01/03/06/08 (16 พ.ย. 2026 · ชื่อจริงจาก machine_stock ทั้งสองแบรนด์)
+    ("One Piece EB - 05", "EB 05", "vms,worldwide"),
     ("Dragon Ball FB - 01", "FB 01", "payif"),
     ("Dragonball FB - 01", "FB 01", "vms,worldwide"),
     ("Dragonball FB-01", "FB 01", "vms"),
