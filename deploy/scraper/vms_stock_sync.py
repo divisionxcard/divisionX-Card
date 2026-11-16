@@ -226,6 +226,26 @@ def get_slots(token: str, kiosk_record_id: int, num_tabs: int = 1) -> list[dict]
             print(f"  ⚠️  Tab {tab} returned {res.status_code}")
     return all_slots
 
+def null_unknown_skus(supabase, records: list[dict]):
+    """set sku_id = None สำหรับ sku ที่ยังไม่มีในตาราง skus (กัน FK violation)
+
+    16 พ.ย. 2026: EB-05 ลงตู้ chukes · ยังไม่มีแถว 'EB 05' ใน skus → FK ตีกลับทั้งชุด
+    สต็อกหน้าตู้ VMS ไม่อัปเดตทั้ง 4 ตู้ (ตู้ WW/Payif มีด่านนี้อยู่แล้ว ฝั่ง VMS ไม่มี)
+    เก็บ product_name ไว้ แค่ไม่ผูก sku — สินค้าเดียวที่ไม่รู้จักต้องไม่ทำให้ save ล้มทั้งชุด
+    ⚠️ ไม่กระทบยอดขาย: vms_sales_api ช่องที่ sku ว่างจะ map จากชื่อสินค้าเอง (fetch_slot_lookup)"""
+    res = supabase.table("skus").select("sku_id").execute()
+    valid = {r["sku_id"] for r in (res.data or [])}
+    unknown = {}
+    for rec in records:
+        sid = rec.get("sku_id")
+        if sid and sid not in valid:
+            unknown[sid] = unknown.get(sid, 0) + 1
+            rec["sku_id"] = None
+    if unknown:
+        print("⚠️  sku ยังไม่มีในตาราง skus (set NULL · เก็บ product_name ไว้): "
+              + ", ".join(f"{k}×{v}" for k, v in sorted(unknown.items())))
+
+
 def save_to_supabase(records: list[dict]):
     """บันทึกลง Supabase (upsert by machine_id + slot_number)"""
     if not records:
@@ -453,6 +473,10 @@ def main():
             "VMS API อาจ down หรือ kiosk_record_id เปลี่ยน · "
             "ตรวจ KIOSKS ใน deploy/scraper/vms_stock_sync.py และ workflow log"
         )
+
+    # สินค้าใหม่ที่ยังไม่มีแถวใน skus → sku_id NULL ก่อนทุกขั้นที่เขียนลงตารางที่มี FK
+    # (slot_products_history · machine_stock) — ไม่งั้นทั้งรอบล้ม
+    null_unknown_skus(supabase, all_records)
 
     # Layer 3: Track slot product changes (ก่อน save_to_supabase เพื่อ snapshot remain ของสินค้าเก่า)
     try:
