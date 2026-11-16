@@ -42,6 +42,9 @@ def load_env():
         if "=" in line and not line.strip().startswith("#"):
             k, v = line.split("=", 1)
             env[k.strip()] = v.strip()
+    # .env.local ในเครื่องเจ้าของไม่มีบรรทัดนี้แล้ว (16 พ.ย. 2026 อัปรูป EB 05 ล้ม KeyError)
+    # URL โปรเจกต์ไม่ใช่ความลับ (อยู่ใน CLAUDE.md) จึงใส่ค่าตั้งต้นไว้
+    env.setdefault("NEXT_PUBLIC_SUPABASE_URL", "https://xethnqqmpvlpmafvphky.supabase.co")
     return env
 
 

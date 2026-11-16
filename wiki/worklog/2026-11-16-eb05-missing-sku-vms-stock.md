@@ -3,7 +3,7 @@ type: worklog
 date: 2026-11-16
 tags: [sku, foreign-key, silent-failure, vms, worldwide, stock-sync, backfill, telegram-bot]
 commits: [566561b]
-status: ✅ ซิงค์สต็อก VMS กลับมาแล้ว · EB 05 เพิ่มแล้ว · ยอดขาย WW ที่หล่นได้คืนครบ — รอทุน + รูปซอง/กล่อง · wwv05 รอเจ้าของเช็กกับแอดมิน
+status: ✅ ซิงค์สต็อก VMS กลับมาแล้ว · EB 05 เพิ่มแล้ว (ทุน + รูปซอง/กล่องครบ) · ยอดขาย WW ที่หล่นได้คืนครบ — wwv05 รอเจ้าของเช็กกับแอดมิน
 ---
 
 # EB-05 ลงตู้แล้วแต่ไม่มีใน `skus` — ซิงค์สต็อก VMS ล้มทั้งชุด
@@ -65,7 +65,8 @@ EB-05 ลง [[wwv01]] / [[wwv08]] ตั้งแต่ 14 พ.ย. (เติ�
 ## ยังค้าง
 
 - ~~**ทุน EB 05**~~ — ✅ เจ้าของส่งมาวันเดียวกัน · ใส่ `sku_costs` ผ่าน REST แล้ว (แถว `2000-01-01` แถวเดียว เพราะเป็น SKU ใหม่ ไม่มีทุนเดิมให้แยกช่วง) + `skus.cost_price` ให้ตรง (แบบเดียวกับ EB 04) · `avg_cost` ไม่แตะ · ตัวเลขไม่ลงรีโป
-- **รูปซอง/กล่อง EB-05** — `scripts/add_sku_image.py` (ต้องโปร่งใส)
+- ~~**รูปซอง/กล่อง EB-05**~~ — ✅ เจ้าของส่งมาวันเดียวกัน (โปร่งใสอยู่แล้ว) · `add_sku_image.py --apply` → `EB05-pack.webp` / `EB05-box.webp`
+  · สคริปต์ล้มรอบแรก `KeyError: NEXT_PUBLIC_SUPABASE_URL` — `.env.local` ในเครื่องไม่มีบรรทัดนี้แล้ว → ใส่ค่าตั้งต้นในสคริปต์ (URL ไม่ใช่ความลับ)
 - **[[wwv05]] ซีคอน บางแค** — ตั้งแต่ 10 พ.ย. ชื่อสินค้าเป็นแบบใหม่ จับคู่ไม่ได้ 5 ชื่อ:
   `Ninja spinner loose packs` · `Mega Dreams loose pack` / `Box` (มี SKU อยู่แล้ว: PKM Ninja / PKM Dream EX) ·
   `Mega brave` · `Mega synphonia` · `Inferno x loose packs` (ชุดใหม่ ยังไม่มี SKU)
