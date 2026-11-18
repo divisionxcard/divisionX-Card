@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
-  "gitCommitHash": "8b7eecdd5532d692a2a0448bcc0ea7ad52e4d8ba",
-  "generatedAt": "2026-10-30T04:54:13.129Z",
+  "gitCommitHash": "16f6d9a07981e10a863641850e88be1e446dcb56",
+  "generatedAt": "2026-11-18T05:28:56.880Z",
   "files": {
     ".env.example": {
       "filePath": ".env.example",
@@ -145,7 +145,7 @@
     },
     ".github/workflows/stock-low-alert.yml": {
       "filePath": ".github/workflows/stock-low-alert.yml",
-      "contentHash": "9107f52e7813725ff75a01f806356066c2ac3d973e1e4d264f2ab90de67d0506",
+      "contentHash": "6b8540c8174b24c90bf9b922e0c97d01bb99f978d2391ca95ac91ccac04ece38",
       "functions": [],
       "classes": [],
       "imports": [],
@@ -165,12 +165,12 @@
     },
     ".github/workflows/video-render.yml": {
       "filePath": ".github/workflows/video-render.yml",
-      "contentHash": "4f45378cad35046d1288a2f458ceda949be4501a33025162813c038f8b758254",
+      "contentHash": "9071a927f7d3888255c8f8ba20252cdfe924d3c5a3f6fb965316fd5995505bb4",
       "functions": [],
       "classes": [],
       "imports": [],
       "exports": [],
-      "totalLines": 301,
+      "totalLines": 316,
       "hasStructuralAnalysis": true
     },
     ".github/workflows/vms-stock-sync.yml": {
@@ -205,7 +205,7 @@
     },
     ".github/workflows/weekly-sales-digest.yml": {
       "filePath": ".github/workflows/weekly-sales-digest.yml",
-      "contentHash": "7a34e0de50675740f3d31160531bbb08de34eb0a286ff151820b0cabaedaa7e2",
+      "contentHash": "d1a81250e4dd29630ebd6855ed144e39827c5eb652dbd58b4cb6f17a95592359",
       "functions": [],
       "classes": [],
       "imports": [],
@@ -1607,6 +1607,26 @@
       "totalLines": 157,
       "hasStructuralAnalysis": true
     },
+    "backend/database/migrations/082_video_jobs_qa_plan.sql": {
+      "filePath": "backend/database/migrations/082_video_jobs_qa_plan.sql",
+      "contentHash": "90d55b406ab0bc8515bd4a6ea5f9f5a27252d41ec93a4c174d5560dae0fbc7be",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 51,
+      "hasStructuralAnalysis": true
+    },
+    "backend/database/migrations/083_sku_costs.sql": {
+      "filePath": "backend/database/migrations/083_sku_costs.sql",
+      "contentHash": "9a040393ec0bc9930d22f083fa283bd2e4547ae6baeb1eb5899ebef3743a5d32",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 58,
+      "hasStructuralAnalysis": true
+    },
     "backend/database/migrations/README.md": {
       "filePath": "backend/database/migrations/README.md",
       "contentHash": "451b82e8df66c0cdcefde8fd9c82662973d16daeedea0cf43ff151632da20599",
@@ -1759,7 +1779,7 @@
     },
     "backend/tools/generate_daily_template.py": {
       "filePath": "backend/tools/generate_daily_template.py",
-      "contentHash": "4bdb66d97ebde8286c9c5d4cd34f341d5acbbe92265481727584880c20dff5ad",
+      "contentHash": "e37576c3f4a55698dddc790d3a09883ab7a05d30842ddc83d55d1aec6b82d969",
       "functions": [
         {
           "name": "_sort_key",
@@ -1776,7 +1796,7 @@
           ],
           "returnType": "str",
           "exported": true,
-          "lineCount": 14
+          "lineCount": 15
         },
         {
           "name": "fill",
@@ -1995,7 +2015,7 @@
         "upload_to_gdrive",
         "main"
       ],
-      "totalLines": 947,
+      "totalLines": 948,
       "hasStructuralAnalysis": true
     },
     "backend/tools/README.md": {
@@ -2020,12 +2040,12 @@
     },
     "CLAUDE.md": {
       "filePath": "CLAUDE.md",
-      "contentHash": "f69344eafd28bffd01deadbf130f2b22e01cb8da7c3c8f4e378a8238165186a2",
+      "contentHash": "c626b0cedfbb70f9d99665eda88eb3f5f9a78c2f4a8cc9c0ac9c9b96ced76860",
       "functions": [],
       "classes": [],
       "imports": [],
       "exports": [],
-      "totalLines": 326,
+      "totalLines": 349,
       "hasStructuralAnalysis": true
     },
     "deploy/.env.example": {
@@ -2199,6 +2219,306 @@
         "main"
       ],
       "totalLines": 244,
+      "hasStructuralAnalysis": true
+    },
+    "deploy/agents/daily_sales_digest.py": {
+      "filePath": "deploy/agents/daily_sales_digest.py",
+      "contentHash": "d444cb6f3e75030f6c19ba91ef36883d0c0071a646e4358e677262204e1ae17e",
+      "functions": [
+        {
+          "name": "_env_file",
+          "params": [],
+          "exported": true,
+          "lineCount": 11
+        },
+        {
+          "name": "env",
+          "params": [
+            "*keys"
+          ],
+          "exported": true,
+          "lineCount": 11
+        },
+        {
+          "name": "sb_get",
+          "params": [
+            "path"
+          ],
+          "exported": true,
+          "lineCount": 14
+        },
+        {
+          "name": "utc_window",
+          "params": [
+            "first",
+            "last"
+          ],
+          "exported": true,
+          "lineCount": 6
+        },
+        {
+          "name": "thai_day",
+          "params": [
+            "sold_at"
+          ],
+          "exported": true,
+          "lineCount": 7
+        },
+        {
+          "name": "sales_between",
+          "params": [
+            "first",
+            "last"
+          ],
+          "exported": true,
+          "lineCount": 5
+        },
+        {
+          "name": "load_costs",
+          "params": [],
+          "exported": true,
+          "lineCount": 10
+        },
+        {
+          "name": "_blank",
+          "params": [],
+          "exported": true,
+          "lineCount": 2
+        },
+        {
+          "name": "summarize",
+          "params": [
+            "sales",
+            "claims",
+            "brand",
+            "costs"
+          ],
+          "exported": true,
+          "lineCount": 32
+        },
+        {
+          "name": "branch_map",
+          "params": [
+            "machines"
+          ],
+          "exported": true,
+          "lineCount": 14
+        },
+        {
+          "name": "by_branch",
+          "params": [
+            "per",
+            "bmap"
+          ],
+          "exported": true,
+          "lineCount": 11
+        },
+        {
+          "name": "pct",
+          "params": [
+            "cur",
+            "prev"
+          ],
+          "exported": true,
+          "lineCount": 2
+        },
+        {
+          "name": "arrow",
+          "params": [
+            "cur",
+            "prev"
+          ],
+          "exported": true,
+          "lineCount": 10
+        },
+        {
+          "name": "fmt",
+          "params": [
+            "n"
+          ],
+          "exported": true,
+          "lineCount": 2
+        },
+        {
+          "name": "period_of",
+          "params": [
+            "today",
+            "week",
+            "anchor"
+          ],
+          "exported": true,
+          "lineCount": 13
+        },
+        {
+          "name": "fit",
+          "params": [
+            "lines",
+            "limit"
+          ],
+          "exported": true,
+          "lineCount": 10
+        },
+        {
+          "name": "sku_movers",
+          "params": [
+            "cur_sales",
+            "prev_sales",
+            "n"
+          ],
+          "exported": true,
+          "lineCount": 17
+        },
+        {
+          "name": "build_message",
+          "params": [
+            "first",
+            "last",
+            "per",
+            "tot",
+            "unknown",
+            "prev_per",
+            "prev_tot",
+            "movers",
+            "bmap",
+            "active",
+            "note"
+          ],
+          "exported": true,
+          "lineCount": 73
+        },
+        {
+          "name": "web_button",
+          "params": [],
+          "exported": true,
+          "lineCount": 7
+        },
+        {
+          "name": "tg_send",
+          "params": [
+            "token",
+            "chat_id",
+            "text",
+            "markup"
+          ],
+          "exported": true,
+          "lineCount": 15
+        },
+        {
+          "name": "main",
+          "params": [],
+          "exported": true,
+          "lineCount": 65
+        }
+      ],
+      "classes": [
+        {
+          "name": "Costs",
+          "methods": [
+            "__init__",
+            "on",
+            "packs"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 39
+        }
+      ],
+      "imports": [
+        {
+          "source": "argparse",
+          "specifiers": [
+            "argparse"
+          ]
+        },
+        {
+          "source": "html",
+          "specifiers": [
+            "html"
+          ]
+        },
+        {
+          "source": "json",
+          "specifiers": [
+            "json"
+          ]
+        },
+        {
+          "source": "os",
+          "specifiers": [
+            "os"
+          ]
+        },
+        {
+          "source": "pathlib",
+          "specifiers": [
+            "pathlib"
+          ]
+        },
+        {
+          "source": "sys",
+          "specifiers": [
+            "sys"
+          ]
+        },
+        {
+          "source": "urllib.error",
+          "specifiers": [
+            "urllib.error"
+          ]
+        },
+        {
+          "source": "urllib.parse",
+          "specifiers": [
+            "urllib.parse"
+          ]
+        },
+        {
+          "source": "urllib.request",
+          "specifiers": [
+            "urllib.request"
+          ]
+        },
+        {
+          "source": "datetime",
+          "specifiers": [
+            "date",
+            "datetime",
+            "timedelta",
+            "timezone"
+          ]
+        },
+        {
+          "source": "_console",
+          "specifiers": [
+            "_console"
+          ]
+        }
+      ],
+      "exports": [
+        "_env_file",
+        "env",
+        "sb_get",
+        "utc_window",
+        "thai_day",
+        "sales_between",
+        "Costs",
+        "load_costs",
+        "_blank",
+        "summarize",
+        "branch_map",
+        "by_branch",
+        "pct",
+        "arrow",
+        "fmt",
+        "period_of",
+        "fit",
+        "sku_movers",
+        "build_message",
+        "web_button",
+        "tg_send",
+        "main"
+      ],
+      "totalLines": 492,
       "hasStructuralAnalysis": true
     },
     "deploy/agents/dbfw_kb.py": {
@@ -2405,7 +2725,7 @@
     },
     "deploy/agents/dvx_data.py": {
       "filePath": "deploy/agents/dvx_data.py",
-      "contentHash": "a939bf22b661f78ef74830855a881bb0e7d17bd899e97065ab191e479459d979",
+      "contentHash": "58f4178ceade13fda931263f9e41076f038054aeba1d99712dd0d715ae799549",
       "functions": [
         {
           "name": "sb_get",
@@ -2474,13 +2794,325 @@
           "lineCount": 2
         },
         {
+          "name": "_norm",
+          "params": [
+            "s"
+          ],
+          "exported": true,
+          "lineCount": 3
+        },
+        {
+          "name": "_branch_info",
+          "params": [
+            "m"
+          ],
+          "exported": true,
+          "lineCount": 2
+        },
+        {
+          "name": "branch_id",
+          "params": [
+            "m"
+          ],
+          "exported": true,
+          "lineCount": 8
+        },
+        {
+          "name": "branch_map",
+          "params": [
+            "machines"
+          ],
+          "exported": true,
+          "lineCount": 7
+        },
+        {
+          "name": "_machine_names",
+          "params": [
+            "m"
+          ],
+          "exported": true,
+          "lineCount": 4
+        },
+        {
+          "name": "_ran_since",
+          "params": [
+            "m",
+            "since"
+          ],
+          "exported": true,
+          "lineCount": 6
+        },
+        {
+          "name": "_resolve_one",
+          "params": [
+            "spec",
+            "machines",
+            "since"
+          ],
+          "exported": true,
+          "lineCount": 25
+        },
+        {
           "name": "resolve_machine",
           "params": [
             "mid",
             "machines"
           ],
           "exported": true,
-          "lineCount": 14
+          "lineCount": 8
+        },
+        {
+          "name": "resolve_machines",
+          "params": [
+            "spec",
+            "machines",
+            "since"
+          ],
+          "exported": true,
+          "lineCount": 9
+        },
+        {
+          "name": "_loose",
+          "params": [
+            "s"
+          ],
+          "exported": true,
+          "lineCount": 5
+        },
+        {
+          "name": "_sku_key",
+          "params": [
+            "s"
+          ],
+          "exported": true,
+          "lineCount": 3
+        },
+        {
+          "name": "_digit_safe_in",
+          "params": [
+            "needle",
+            "hay"
+          ],
+          "exported": true,
+          "lineCount": 3
+        },
+        {
+          "name": "resolve_skus",
+          "params": [
+            "spec",
+            "skus"
+          ],
+          "exported": true,
+          "lineCount": 38
+        },
+        {
+          "name": "_dg",
+          "params": [],
+          "exported": true,
+          "lineCount": 3
+        },
+        {
+          "name": "_th_dt",
+          "params": [
+            "sold_at"
+          ],
+          "exported": true,
+          "lineCount": 7
+        },
+        {
+          "name": "_quote_in",
+          "params": [
+            "values"
+          ],
+          "exported": true,
+          "lineCount": 4
+        },
+        {
+          "name": "last_full_days",
+          "params": [
+            "n",
+            "include_today",
+            "today"
+          ],
+          "exported": true,
+          "lineCount": 9
+        },
+        {
+          "name": "pick_range",
+          "params": [
+            "days",
+            "date",
+            "from_date",
+            "to_date",
+            "include_today"
+          ],
+          "exported": true,
+          "lineCount": 5
+        },
+        {
+          "name": "_sales_context",
+          "params": [
+            "with_profit"
+          ],
+          "exported": true,
+          "lineCount": 18
+        },
+        {
+          "name": "_row_money",
+          "params": [
+            "r",
+            "ctx"
+          ],
+          "exported": true,
+          "lineCount": 12
+        },
+        {
+          "name": "_bucket",
+          "params": [],
+          "exported": true,
+          "lineCount": 5
+        },
+        {
+          "name": "sum_buckets",
+          "params": [
+            "buckets"
+          ],
+          "exported": true,
+          "lineCount": 11
+        },
+        {
+          "name": "merge_buckets",
+          "params": [
+            "buckets"
+          ],
+          "exported": true,
+          "lineCount": 13
+        },
+        {
+          "name": "tally",
+          "params": [
+            "rows",
+            "key_of",
+            "ctx",
+            "claims",
+            "claim_key"
+          ],
+          "exported": true,
+          "lineCount": 40
+        },
+        {
+          "name": "_profit",
+          "params": [
+            "b"
+          ],
+          "exported": true,
+          "lineCount": 2
+        },
+        {
+          "name": "grouped",
+          "params": [
+            "rows",
+            "group_by",
+            "ctx",
+            "claims"
+          ],
+          "exported": true,
+          "lineCount": 15
+        },
+        {
+          "name": "_money",
+          "params": [
+            "b",
+            "ctx",
+            "total_rev"
+          ],
+          "exported": true,
+          "lineCount": 10
+        },
+        {
+          "name": "profit_block",
+          "params": [
+            "b",
+            "sku_meta"
+          ],
+          "exported": true,
+          "lineCount": 17
+        },
+        {
+          "name": "_fetch_sales",
+          "params": [
+            "d1",
+            "d2",
+            "mids",
+            "skus"
+          ],
+          "exported": true,
+          "lineCount": 11
+        },
+        {
+          "name": "_fetch_claims",
+          "params": [
+            "d1",
+            "d2",
+            "mids",
+            "skus"
+          ],
+          "exported": true,
+          "lineCount": 5
+        },
+        {
+          "name": "sync_notes",
+          "params": [
+            "last_sync",
+            "d2",
+            "now",
+            "single_machine"
+          ],
+          "exported": true,
+          "lineCount": 29
+        },
+        {
+          "name": "_data_status",
+          "params": [
+            "d1",
+            "d2",
+            "mids",
+            "ctx"
+          ],
+          "exported": true,
+          "lineCount": 16
+        },
+        {
+          "name": "machine_notes",
+          "params": [
+            "mids",
+            "ctx"
+          ],
+          "exported": true,
+          "lineCount": 15
+        },
+        {
+          "name": "_group_key",
+          "params": [
+            "group_by",
+            "ctx"
+          ],
+          "exported": true,
+          "lineCount": 21
+        },
+        {
+          "name": "breakdown_rows",
+          "params": [
+            "group_by",
+            "groups",
+            "ctx",
+            "d1",
+            "d2",
+            "total_rev",
+            "top"
+          ],
+          "exported": true,
+          "lineCount": 62
         },
         {
           "name": "query_sales",
@@ -2492,10 +3124,193 @@
             "machine",
             "group_by",
             "top",
-            "unit"
+            "unit",
+            "sku",
+            "with_profit",
+            "include_today"
           ],
           "exported": true,
-          "lineCount": 118
+          "lineCount": 83
+        },
+        {
+          "name": "_month_last",
+          "params": [
+            "y",
+            "m"
+          ],
+          "exported": true,
+          "lineCount": 2
+        },
+        {
+          "name": "_shift_month",
+          "params": [
+            "d",
+            "months",
+            "keep_month_end"
+          ],
+          "exported": true,
+          "lineCount": 11
+        },
+        {
+          "name": "compare_range",
+          "params": [
+            "d1",
+            "d2",
+            "vs",
+            "vs_from",
+            "vs_to"
+          ],
+          "exported": true,
+          "lineCount": 31
+        },
+        {
+          "name": "pct_change",
+          "params": [
+            "cur",
+            "prev"
+          ],
+          "exported": true,
+          "lineCount": 3
+        },
+        {
+          "name": "mix_notes",
+          "params": [
+            "d1",
+            "d2",
+            "p1",
+            "p2",
+            "prev_rev",
+            "today"
+          ],
+          "exported": true,
+          "lineCount": 21
+        },
+        {
+          "name": "sku_movers",
+          "params": [
+            "cur_groups",
+            "prev_groups",
+            "sku_meta",
+            "n"
+          ],
+          "exported": true,
+          "lineCount": 15
+        },
+        {
+          "name": "query_compare",
+          "params": [
+            "from_date",
+            "to_date",
+            "days",
+            "include_today",
+            "vs",
+            "vs_from",
+            "vs_to",
+            "machine",
+            "sku",
+            "group_by",
+            "top"
+          ],
+          "exported": true,
+          "lineCount": 76
+        },
+        {
+          "name": "_cost_or_none",
+          "params": [
+            "c"
+          ],
+          "exported": true,
+          "lineCount": 2
+        },
+        {
+          "name": "cost_rows",
+          "params": [
+            "skus",
+            "costs",
+            "ids",
+            "day"
+          ],
+          "exported": true,
+          "lineCount": 23
+        },
+        {
+          "name": "query_sku_costs",
+          "params": [
+            "sku",
+            "date"
+          ],
+          "exported": true,
+          "lineCount": 12
+        },
+        {
+          "name": "_packs_of",
+          "params": [
+            "r",
+            "ppb"
+          ],
+          "exported": true,
+          "lineCount": 5
+        },
+        {
+          "name": "_slot_norm",
+          "params": [
+            "slot"
+          ],
+          "exported": true,
+          "lineCount": 4
+        },
+        {
+          "name": "_key_timeline",
+          "params": [
+            "events",
+            "current",
+            "sale_times",
+            "floor"
+          ],
+          "exported": true,
+          "lineCount": 93
+        },
+        {
+          "name": "_inside",
+          "params": [
+            "t",
+            "spans"
+          ],
+          "exported": true,
+          "lineCount": 2
+        },
+        {
+          "name": "unsold_core",
+          "params": [
+            "stock_rows",
+            "period_sales",
+            "history_sales",
+            "events",
+            "track_start",
+            "d1",
+            "d2",
+            "max_packs",
+            "today",
+            "now",
+            "ppb",
+            "slot_grain",
+            "machine_start"
+          ],
+          "exported": true,
+          "lineCount": 155
+        },
+        {
+          "name": "query_unsold",
+          "params": [
+            "machine",
+            "days",
+            "from_date",
+            "to_date",
+            "include_today",
+            "max_packs"
+          ],
+          "exported": true,
+          "lineCount": 105
         },
         {
           "name": "_is_box",
@@ -2513,7 +3328,7 @@
             "low_threshold"
           ],
           "exported": true,
-          "lineCount": 54
+          "lineCount": 67
         },
         {
           "name": "query_restock_alerts",
@@ -2697,6 +3512,12 @@
           ]
         },
         {
+          "source": "re",
+          "specifiers": [
+            "re"
+          ]
+        },
+        {
           "source": "sys",
           "specifiers": [
             "sys"
@@ -2757,8 +3578,58 @@
         "resolve_range",
         "load_machines",
         "machine_label",
+        "_norm",
+        "_branch_info",
+        "branch_id",
+        "branch_map",
+        "_machine_names",
+        "_ran_since",
+        "_resolve_one",
         "resolve_machine",
+        "resolve_machines",
+        "_loose",
+        "_sku_key",
+        "_digit_safe_in",
+        "resolve_skus",
+        "_dg",
+        "_th_dt",
+        "_quote_in",
+        "last_full_days",
+        "pick_range",
+        "_sales_context",
+        "_row_money",
+        "_bucket",
+        "sum_buckets",
+        "merge_buckets",
+        "tally",
+        "_profit",
+        "grouped",
+        "_money",
+        "profit_block",
+        "_fetch_sales",
+        "_fetch_claims",
+        "sync_notes",
+        "_data_status",
+        "machine_notes",
+        "_group_key",
+        "breakdown_rows",
         "query_sales",
+        "_month_last",
+        "_shift_month",
+        "compare_range",
+        "pct_change",
+        "mix_notes",
+        "sku_movers",
+        "query_compare",
+        "_cost_or_none",
+        "cost_rows",
+        "query_sku_costs",
+        "_packs_of",
+        "_slot_norm",
+        "_key_timeline",
+        "_inside",
+        "unsold_core",
+        "query_unsold",
         "_is_box",
         "query_stock",
         "query_restock_alerts",
@@ -2780,12 +3651,12 @@
         "add_marketing_idea",
         "note_for_dev"
       ],
-      "totalLines": 1005,
+      "totalLines": 2130,
       "hasStructuralAnalysis": true
     },
     "deploy/agents/dvx_query.py": {
       "filePath": "deploy/agents/dvx_query.py",
-      "contentHash": "46a3de304da374ebf65b0f803041d2abd7e571f6e8044ec9c2ce990c8624ce51",
+      "contentHash": "824afda4daa62a6c7ac1942ebc8c06e0a0411661ef1c09bebed1855fbbe55199",
       "functions": [
         {
           "name": "baht",
@@ -2809,7 +3680,7 @@
             "args"
           ],
           "exported": true,
-          "lineCount": 34
+          "lineCount": 35
         },
         {
           "name": "cmd_stock",
@@ -2878,7 +3749,7 @@
         "cmd_stock",
         "main"
       ],
-      "totalLines": 156,
+      "totalLines": 157,
       "hasStructuralAnalysis": true
     },
     "deploy/agents/envload.py": {
@@ -4206,7 +5077,7 @@
     },
     "deploy/agents/pkm_jp_kb.py": {
       "filePath": "deploy/agents/pkm_jp_kb.py",
-      "contentHash": "77cf6f8bf02f7231b4f3e0094e60e80c442b5cf6dd24b414b1dfe900c686469f",
+      "contentHash": "f7e7d61d0920f6b2afc3d10fd8ed10b1d4a80c6563d71ca7cc339f8644038983",
       "functions": [
         {
           "name": "log",
@@ -4326,7 +5197,7 @@
     },
     "deploy/agents/pkm_kb.py": {
       "filePath": "deploy/agents/pkm_kb.py",
-      "contentHash": "0ce8d99e3248214b3c20dbda9153a2147a019130393a92ce24c80378d2814792",
+      "contentHash": "5251aacc941a7d6d74a986c9a01667078e5735f65e303235fdcb391f8203dd06",
       "functions": [
         {
           "name": "log",
@@ -5943,9 +6814,187 @@
       "totalLines": 154,
       "hasStructuralAnalysis": true
     },
+    "deploy/agents/shared_browser.py": {
+      "filePath": "deploy/agents/shared_browser.py",
+      "contentHash": "896f5cdefa86469c2d26853ea7e479795cd9d63e7a7d4dceaa38a3c004962296",
+      "functions": [
+        {
+          "name": "default_dir",
+          "params": [],
+          "exported": true,
+          "lineCount": 2
+        },
+        {
+          "name": "now_iso",
+          "params": [],
+          "exported": true,
+          "lineCount": 2
+        },
+        {
+          "name": "today_iso",
+          "params": [],
+          "exported": true,
+          "lineCount": 2
+        },
+        {
+          "name": "_retry",
+          "params": [
+            "fn",
+            "tries",
+            "wait"
+          ],
+          "exported": true,
+          "lineCount": 9
+        },
+        {
+          "name": "_read_json",
+          "params": [
+            "path"
+          ],
+          "exported": true,
+          "lineCount": 5
+        },
+        {
+          "name": "_write_json",
+          "params": [
+            "path",
+            "obj"
+          ],
+          "exported": true,
+          "lineCount": 5
+        },
+        {
+          "name": "read_state",
+          "params": [
+            "base"
+          ],
+          "exported": true,
+          "lineCount": 7
+        },
+        {
+          "name": "blocked_for",
+          "params": [
+            "platform",
+            "today",
+            "base"
+          ],
+          "exported": true,
+          "lineCount": 10
+        },
+        {
+          "name": "usage_rows",
+          "params": [
+            "base"
+          ],
+          "exported": true,
+          "lineCount": 19
+        },
+        {
+          "name": "pages_on",
+          "params": [
+            "day_iso",
+            "base",
+            "rows"
+          ],
+          "exported": true,
+          "lineCount": 10
+        }
+      ],
+      "classes": [
+        {
+          "name": "LostLock",
+          "methods": [],
+          "properties": [],
+          "exported": true,
+          "lineCount": 3
+        },
+        {
+          "name": "Lock",
+          "methods": [
+            "__init__",
+            "try_acquire",
+            "acquire",
+            "_clear_if_stale",
+            "holder",
+            "beat",
+            "require",
+            "release",
+            "set_blocked",
+            "clear_blocked",
+            "log_usage"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 165
+        }
+      ],
+      "imports": [
+        {
+          "source": "json",
+          "specifiers": [
+            "json"
+          ]
+        },
+        {
+          "source": "os",
+          "specifiers": [
+            "os"
+          ]
+        },
+        {
+          "source": "secrets",
+          "specifiers": [
+            "secrets"
+          ]
+        },
+        {
+          "source": "socket",
+          "specifiers": [
+            "socket"
+          ]
+        },
+        {
+          "source": "time",
+          "specifiers": [
+            "time"
+          ]
+        },
+        {
+          "source": "datetime",
+          "specifiers": [
+            "date",
+            "datetime",
+            "timedelta",
+            "timezone"
+          ]
+        },
+        {
+          "source": "pathlib",
+          "specifiers": [
+            "Path"
+          ]
+        }
+      ],
+      "exports": [
+        "default_dir",
+        "now_iso",
+        "today_iso",
+        "LostLock",
+        "_retry",
+        "_read_json",
+        "_write_json",
+        "read_state",
+        "blocked_for",
+        "usage_rows",
+        "pages_on",
+        "Lock"
+      ],
+      "totalLines": 290,
+      "hasStructuralAnalysis": true
+    },
     "deploy/agents/shared.py": {
       "filePath": "deploy/agents/shared.py",
-      "contentHash": "5d99aacaddcedca9c8ad79420550fb13f62799cba26edc3a0e2cae2ff17cbb29",
+      "contentHash": "c32816900802f69c3bc59ddf4f2e3c6734b5a88f1abea0bb6177241682bc7085",
       "functions": [
         {
           "name": "map_product_to_sku",
@@ -6284,7 +7333,7 @@
     },
     "deploy/agents/social_insight.py": {
       "filePath": "deploy/agents/social_insight.py",
-      "contentHash": "8e8bda45b948b37b25379847374a39d68e3c39a3bbba3971062adce5926ab47d",
+      "contentHash": "d8eee37a6e7f83800b7529990db4107cfa3b84565846761180b3d175721ca872",
       "functions": [
         {
           "name": "log",
@@ -6334,7 +7383,7 @@
             "baseline_days"
           ],
           "exported": true,
-          "lineCount": 34
+          "lineCount": 36
         },
         {
           "name": "_agg",
@@ -6564,12 +7613,12 @@
         "tg_send",
         "main"
       ],
-      "totalLines": 504,
+      "totalLines": 506,
       "hasStructuralAnalysis": true
     },
     "deploy/agents/social_watch.py": {
       "filePath": "deploy/agents/social_watch.py",
-      "contentHash": "100bb690c32ca8bf51f8e1239113193af3c79947ab2287f5ca30571e29e16bb2",
+      "contentHash": "1866852b9e4dd8d911db795d9d50ea322434394c1d9c4b1a15faa1958bcd1444",
       "functions": [
         {
           "name": "card_related",
@@ -6622,10 +7671,11 @@
           "name": "oc",
           "params": [
             "*args",
-            "timeout"
+            "timeout",
+            "beat"
           ],
           "exported": true,
-          "lineCount": 23
+          "lineCount": 26
         },
         {
           "name": "unwrap",
@@ -6636,18 +7686,33 @@
           "lineCount": 5
         },
         {
+          "name": "bridge_info",
+          "params": [
+            "alias"
+          ],
+          "exported": true,
+          "lineCount": 8
+        },
+        {
           "name": "bridge_ready",
           "params": [
             "alias"
           ],
           "exported": true,
-          "lineCount": 6
+          "lineCount": 2
         },
         {
           "name": "ensure_bridge",
           "params": [
-            "cfg"
+            "cfg",
+            "deadline"
           ],
+          "exported": true,
+          "lineCount": 31
+        },
+        {
+          "name": "chrome_flags_active",
+          "params": [],
           "exported": true,
           "lineCount": 16
         },
@@ -6691,7 +7756,39 @@
             "cfg"
           ],
           "exported": true,
-          "lineCount": 29
+          "lineCount": 36
+        },
+        {
+          "name": "_drop_net_cache",
+          "params": [],
+          "exported": true,
+          "lineCount": 6
+        },
+        {
+          "name": "_ig_body",
+          "params": [
+            "detail"
+          ],
+          "exported": true,
+          "lineCount": 10
+        },
+        {
+          "name": "_ig_authors",
+          "params": [
+            "node"
+          ],
+          "exported": true,
+          "lineCount": 5
+        },
+        {
+          "name": "ig_timeline",
+          "params": [
+            "user",
+            "W",
+            "cfg"
+          ],
+          "exported": true,
+          "lineCount": 43
         },
         {
           "name": "read_instagram",
@@ -6700,7 +7797,7 @@
             "cfg"
           ],
           "exported": true,
-          "lineCount": 21
+          "lineCount": 37
         },
         {
           "name": "read_reddit",
@@ -6800,7 +7897,7 @@
             "cfg"
           ],
           "exported": true,
-          "lineCount": 42
+          "lineCount": 44
         },
         {
           "name": "metrics_th",
@@ -6878,10 +7975,23 @@
           "lineCount": 3
         },
         {
+          "name": "shared_limits",
+          "params": [
+            "plan",
+            "blocked",
+            "used_today",
+            "caps",
+            "used_own",
+            "own_caps"
+          ],
+          "exported": true,
+          "lineCount": 37
+        },
+        {
           "name": "main",
           "params": [],
           "exported": true,
-          "lineCount": 159
+          "lineCount": 275
         }
       ],
       "classes": [
@@ -6898,6 +8008,13 @@
           "properties": [],
           "exported": true,
           "lineCount": 2
+        },
+        {
+          "name": "Hidden",
+          "methods": [],
+          "properties": [],
+          "exported": true,
+          "lineCount": 3
         }
       ],
       "imports": [
@@ -6999,12 +8116,19 @@
           "specifiers": [
             "data"
           ]
+        },
+        {
+          "source": "shared_browser",
+          "specifiers": [
+            "sb"
+          ]
         }
       ],
       "exports": [
         "card_related",
         "WatchError",
         "Blocked",
+        "Hidden",
         "log",
         "th_today",
         "thai_day",
@@ -7012,13 +8136,19 @@
         "short_num",
         "oc",
         "unwrap",
+        "bridge_info",
         "bridge_ready",
         "ensure_bridge",
+        "chrome_flags_active",
         "_hash",
         "fb_key",
         "fb_link",
         "_richness",
         "read_facebook",
+        "_drop_net_cache",
+        "_ig_body",
+        "_ig_authors",
+        "ig_timeline",
         "read_instagram",
         "read_reddit",
         "_int",
@@ -7039,9 +8169,10 @@
         "push_ideas",
         "due_targets",
         "gate_open",
+        "shared_limits",
         "main"
       ],
-      "totalLines": 784,
+      "totalLines": 1094,
       "hasStructuralAnalysis": true
     },
     "deploy/agents/source_notes.py": {
@@ -8485,7 +9616,7 @@
     },
     "deploy/agents/video/config.py": {
       "filePath": "deploy/agents/video/config.py",
-      "contentHash": "c9d2f0509e608e932b2c88d48099ea331827833c4e5f5a2bda915161b3da1e60",
+      "contentHash": "5515d2887e72a1f3a1a869951b24bf89d3ceee61fcadf4b907211f411229d4c0",
       "functions": [
         {
           "name": "env",
@@ -9492,7 +10623,7 @@
     },
     "deploy/agents/video/hf_render.py": {
       "filePath": "deploy/agents/video/hf_render.py",
-      "contentHash": "3078f3389618dae7cb0400db1b8d164524959659346f1b8ddef9b426896ef57f",
+      "contentHash": "ce3294582cee9db6fb821ac47c0ffb18f3ad958d1c97f51fde9c93857694d70c",
       "functions": [
         {
           "name": "_log",
@@ -11051,14 +12182,312 @@
       "totalLines": 500,
       "hasStructuralAnalysis": true
     },
+    "deploy/agents/video/qa.py": {
+      "filePath": "deploy/agents/video/qa.py",
+      "contentHash": "878f1a1ffc63c824732ac4fcd342e98d38269867621592221b044dd688c3f5ec",
+      "functions": [
+        {
+          "name": "_run",
+          "params": [
+            "args",
+            "timeout",
+            "binary"
+          ],
+          "exported": true,
+          "lineCount": 5
+        },
+        {
+          "name": "_check",
+          "params": [
+            "cid",
+            "label",
+            "status",
+            "detail"
+          ],
+          "exported": true,
+          "lineCount": 2
+        },
+        {
+          "name": "script_sha",
+          "params": [
+            "script"
+          ],
+          "exported": true,
+          "lineCount": 3
+        },
+        {
+          "name": "probe",
+          "params": [
+            "mp4"
+          ],
+          "exported": true,
+          "lineCount": 6
+        },
+        {
+          "name": "check_file",
+          "params": [
+            "info",
+            "expected",
+            "need_audio"
+          ],
+          "exported": true,
+          "lineCount": 26
+        },
+        {
+          "name": "_rank",
+          "params": [
+            "s"
+          ],
+          "exported": true,
+          "lineCount": 2
+        },
+        {
+          "name": "frame",
+          "params": [
+            "mp4",
+            "t"
+          ],
+          "exported": true,
+          "lineCount": 7
+        },
+        {
+          "name": "check_frames",
+          "params": [
+            "mp4",
+            "dur",
+            "step"
+          ],
+          "exported": true,
+          "lineCount": 29
+        },
+        {
+          "name": "_pearson",
+          "params": [
+            "xs",
+            "ys"
+          ],
+          "exported": true,
+          "lineCount": 9
+        },
+        {
+          "name": "logo_score",
+          "params": [
+            "img",
+            "box"
+          ],
+          "exported": true,
+          "lineCount": 13
+        },
+        {
+          "name": "logo_targets",
+          "params": [
+            "plan",
+            "dur"
+          ],
+          "exported": true,
+          "lineCount": 21
+        },
+        {
+          "name": "check_logo",
+          "params": [
+            "mp4",
+            "plan",
+            "dur"
+          ],
+          "exported": true,
+          "lineCount": 17
+        },
+        {
+          "name": "contact_sheet",
+          "params": [
+            "mp4",
+            "dur",
+            "out",
+            "cols",
+            "rows"
+          ],
+          "exported": true,
+          "lineCount": 24
+        },
+        {
+          "name": "check_audio",
+          "params": [
+            "mp4",
+            "plan",
+            "dur",
+            "has_audio"
+          ],
+          "exported": true,
+          "lineCount": 29
+        },
+        {
+          "name": "check_captions",
+          "params": [
+            "plan",
+            "work",
+            "dur"
+          ],
+          "exported": true,
+          "lineCount": 32
+        },
+        {
+          "name": "_texts",
+          "params": [
+            "node",
+            "key"
+          ],
+          "exported": true,
+          "lineCount": 10
+        },
+        {
+          "name": "check_brief",
+          "params": [
+            "plan",
+            "dur"
+          ],
+          "exported": true,
+          "lineCount": 26
+        },
+        {
+          "name": "run",
+          "params": [
+            "mp4",
+            "plan",
+            "expected",
+            "work",
+            "sheet"
+          ],
+          "exported": true,
+          "lineCount": 38
+        },
+        {
+          "name": "summary",
+          "params": [
+            "report"
+          ],
+          "exported": true,
+          "lineCount": 4
+        },
+        {
+          "name": "main",
+          "params": [
+            "argv"
+          ],
+          "exported": true,
+          "lineCount": 14
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "argparse",
+          "specifiers": [
+            "argparse"
+          ]
+        },
+        {
+          "source": "datetime",
+          "specifiers": [
+            "dt"
+          ]
+        },
+        {
+          "source": "hashlib",
+          "specifiers": [
+            "hashlib"
+          ]
+        },
+        {
+          "source": "io",
+          "specifiers": [
+            "io"
+          ]
+        },
+        {
+          "source": "json",
+          "specifiers": [
+            "json"
+          ]
+        },
+        {
+          "source": "math",
+          "specifiers": [
+            "math"
+          ]
+        },
+        {
+          "source": "pathlib",
+          "specifiers": [
+            "pathlib"
+          ]
+        },
+        {
+          "source": "re",
+          "specifiers": [
+            "re"
+          ]
+        },
+        {
+          "source": "subprocess",
+          "specifiers": [
+            "subprocess"
+          ]
+        },
+        {
+          "source": "sys",
+          "specifiers": [
+            "sys"
+          ]
+        },
+        {
+          "source": "PIL",
+          "specifiers": [
+            "Image",
+            "ImageDraw",
+            "ImageFont",
+            "ImageStat"
+          ]
+        },
+        {
+          "source": ".",
+          "specifiers": [
+            "config"
+          ]
+        }
+      ],
+      "exports": [
+        "_run",
+        "_check",
+        "script_sha",
+        "probe",
+        "check_file",
+        "_rank",
+        "frame",
+        "check_frames",
+        "_pearson",
+        "logo_score",
+        "logo_targets",
+        "check_logo",
+        "contact_sheet",
+        "check_audio",
+        "check_captions",
+        "_texts",
+        "check_brief",
+        "run",
+        "summary",
+        "main"
+      ],
+      "totalLines": 421,
+      "hasStructuralAnalysis": true
+    },
     "deploy/agents/video/README.md": {
       "filePath": "deploy/agents/video/README.md",
-      "contentHash": "b0233dcff1cbea72d279e1e9c6c631441b4ff49294e2f5abd4de69165cd2d63d",
+      "contentHash": "ac86aefbcd10da705d4e0959297361261fcd327a292af832bccbc3ead0b74cb8",
       "functions": [],
       "classes": [],
       "imports": [],
       "exports": [],
-      "totalLines": 216,
+      "totalLines": 249,
       "hasStructuralAnalysis": true
     },
     "deploy/agents/video/segments.py": {
@@ -11356,12 +12785,12 @@
     },
     "deploy/agents/video/TIMELINE.md": {
       "filePath": "deploy/agents/video/TIMELINE.md",
-      "contentHash": "e816d5feb976e27f6cccad38f279ea2df2396c6cda6d2c3559a78783ebcad4e4",
+      "contentHash": "45b6efe795ed0351bda9526aed2d74fadea8f0dea3f4879f27861eafe5e7ee9d",
       "functions": [],
       "classes": [],
       "imports": [],
       "exports": [],
-      "totalLines": 61,
+      "totalLines": 99,
       "hasStructuralAnalysis": true
     },
     "deploy/agents/video/visuals.py": {
@@ -11484,8 +12913,16 @@
     },
     "deploy/agents/video/voice.py": {
       "filePath": "deploy/agents/video/voice.py",
-      "contentHash": "509bd5571468db8323ccabf077fee4fd146a6911b7752471d7feaa499f6641a7",
+      "contentHash": "80cf27542f78fc54a2269fe71cb3433402fe599fb50439ee4ad1a3c479d8cb19",
       "functions": [
+        {
+          "name": "resolve_model",
+          "params": [
+            "model"
+          ],
+          "exported": true,
+          "lineCount": 3
+        },
         {
           "name": "_interactions",
           "params": [
@@ -11588,12 +13025,13 @@
         }
       ],
       "exports": [
+        "resolve_model",
         "_interactions",
         "pronounce",
         "synth",
         "duration"
       ],
-      "totalLines": 189,
+      "totalLines": 202,
       "hasStructuralAnalysis": true
     },
     "deploy/agents/weekly_marketing_brief.py": {
@@ -11860,7 +13298,7 @@
     },
     "deploy/agents/ygo_kb.py": {
       "filePath": "deploy/agents/ygo_kb.py",
-      "contentHash": "376116e4f5e8f4889dfddd1a9bc836fa78380286f3f5496527441779038af1fc",
+      "contentHash": "47ffa26f62172d352a729d244baafe608fd675008ced7361cc7b66625e1e51d6",
       "functions": [
         {
           "name": "log",
@@ -11915,7 +13353,7 @@
           "name": "main",
           "params": [],
           "exported": true,
-          "lineCount": 12
+          "lineCount": 10
         }
       ],
       "classes": [],
@@ -11951,15 +13389,15 @@
           ]
         },
         {
-          "source": "sys",
-          "specifiers": [
-            "sys"
-          ]
-        },
-        {
           "source": "re",
           "specifiers": [
             "re"
+          ]
+        },
+        {
+          "source": "sys",
+          "specifiers": [
+            "sys"
           ]
         },
         {
@@ -11990,7 +13428,7 @@
         "build",
         "main"
       ],
-      "totalLines": 204,
+      "totalLines": 207,
       "hasStructuralAnalysis": true
     },
     "deploy/app/api/admin/users/route.js": {
@@ -14040,7 +15478,7 @@
     },
     "deploy/app/api/telegram/mkt-webhook/route.js": {
       "filePath": "deploy/app/api/telegram/mkt-webhook/route.js",
-      "contentHash": "a27af544d16666426ea7a930be3ce4b08d0b0d9a8168c6aa34c1f46db615562e",
+      "contentHash": "edd5b4673a544f79c81aae691b51ef9830201a57bc6e70030438d3f2629e32ab",
       "functions": [
         {
           "name": "tgReply",
@@ -14050,6 +15488,17 @@
           ],
           "exported": false,
           "lineCount": 8
+        },
+        {
+          "name": "tgSend",
+          "params": [
+            "chatId",
+            "text",
+            "markup",
+            "replyTo"
+          ],
+          "exported": false,
+          "lineCount": 12
         },
         {
           "name": "dispatch",
@@ -14065,7 +15514,7 @@
             "req"
           ],
           "exported": true,
-          "lineCount": 46
+          "lineCount": 62
         }
       ],
       "classes": [],
@@ -14080,7 +15529,7 @@
       "exports": [
         "POST"
       ],
-      "totalLines": 81,
+      "totalLines": 136,
       "hasStructuralAnalysis": true
     },
     "deploy/app/api/telegram/webhook/route.js": {
@@ -14128,6 +15577,140 @@
         "POST"
       ],
       "totalLines": 205,
+      "hasStructuralAnalysis": true
+    },
+    "deploy/app/api/video/ads/route.js": {
+      "filePath": "deploy/app/api/video/ads/route.js",
+      "contentHash": "dbac7e49a56359c1a1056b1b3547b41b5e033682e6b84c590fdcdfa6edb0d5c0",
+      "functions": [
+        {
+          "name": "extOf",
+          "params": [
+            "n"
+          ],
+          "exported": false,
+          "lineCount": 1
+        },
+        {
+          "name": "kindOf",
+          "params": [
+            "ext"
+          ],
+          "exported": false,
+          "lineCount": 1
+        },
+        {
+          "name": "str",
+          "params": [
+            "v",
+            "n"
+          ],
+          "exported": false,
+          "lineCount": 1
+        },
+        {
+          "name": "bkk",
+          "params": [],
+          "exported": false,
+          "lineCount": 1
+        },
+        {
+          "name": "readJson",
+          "params": [
+            "key"
+          ],
+          "exported": false,
+          "lineCount": 5
+        },
+        {
+          "name": "daysSince",
+          "params": [
+            "d"
+          ],
+          "exported": false,
+          "lineCount": 4
+        },
+        {
+          "name": "askVision",
+          "params": [
+            "parts",
+            "system"
+          ],
+          "exported": false,
+          "lineCount": 27
+        },
+        {
+          "name": "analysisPrompt",
+          "params": [
+            "ad"
+          ],
+          "exported": false,
+          "lineCount": 23
+        },
+        {
+          "name": "analyze",
+          "params": [
+            "ad"
+          ],
+          "exported": false,
+          "lineCount": 17
+        },
+        {
+          "name": "toPattern",
+          "params": [
+            "ad"
+          ],
+          "exported": false,
+          "lineCount": 20
+        },
+        {
+          "name": "GET",
+          "params": [
+            "req"
+          ],
+          "exported": true,
+          "lineCount": 12
+        },
+        {
+          "name": "POST",
+          "params": [
+            "req"
+          ],
+          "exported": true,
+          "lineCount": 77
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "next/server",
+          "specifiers": [
+            "NextResponse"
+          ]
+        },
+        {
+          "source": "../../../../lib/apiAuth",
+          "specifiers": [
+            "requireMarketing"
+          ]
+        },
+        {
+          "source": "../../../../lib/r2",
+          "specifiers": [
+            "getObject",
+            "listObjects",
+            "presign",
+            "putObject"
+          ]
+        }
+      ],
+      "exports": [
+        "dynamic",
+        "maxDuration",
+        "GET",
+        "POST"
+      ],
+      "totalLines": 237,
       "hasStructuralAnalysis": true
     },
     "deploy/app/api/video/assets/route.js": {
@@ -14761,6 +16344,181 @@
       "totalLines": 496,
       "hasStructuralAnalysis": true
     },
+    "deploy/app/api/video/storyboard/route.js": {
+      "filePath": "deploy/app/api/video/storyboard/route.js",
+      "contentHash": "f8ce74ebf9ac3bd519c8cef953260bb1596f70458c60b76d414711ee724e63aa",
+      "functions": [
+        {
+          "name": "task",
+          "params": [
+            "name"
+          ],
+          "exported": false,
+          "lineCount": 1
+        },
+        {
+          "name": "otherNames",
+          "params": [
+            "idea"
+          ],
+          "exported": false,
+          "lineCount": 12
+        },
+        {
+          "name": "allPatterns",
+          "params": [],
+          "exported": false,
+          "lineCount": 9
+        },
+        {
+          "name": "backgroundsFor",
+          "params": [
+            "franchise"
+          ],
+          "exported": false,
+          "lineCount": 37
+        },
+        {
+          "name": "recentLogs",
+          "params": [],
+          "exported": false,
+          "lineCount": 6
+        },
+        {
+          "name": "recentPatterns",
+          "params": [],
+          "exported": false,
+          "lineCount": 2
+        },
+        {
+          "name": "squash",
+          "params": [
+            "s"
+          ],
+          "exported": false,
+          "lineCount": 1
+        },
+        {
+          "name": "thin",
+          "params": [
+            "summary",
+            "title"
+          ],
+          "exported": false,
+          "lineCount": 1
+        },
+        {
+          "name": "pickIdea",
+          "params": [
+            "seed"
+          ],
+          "exported": false,
+          "lineCount": 16
+        },
+        {
+          "name": "GET",
+          "params": [
+            "req"
+          ],
+          "exported": true,
+          "lineCount": 14
+        },
+        {
+          "name": "POST",
+          "params": [
+            "req"
+          ],
+          "exported": true,
+          "lineCount": 143
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "next/server",
+          "specifiers": [
+            "NextResponse"
+          ]
+        },
+        {
+          "source": "@supabase/supabase-js",
+          "specifiers": [
+            "createClient"
+          ]
+        },
+        {
+          "source": "node:fs/promises",
+          "specifiers": [
+            "readFile"
+          ]
+        },
+        {
+          "source": "node:path",
+          "specifiers": [
+            "path"
+          ]
+        },
+        {
+          "source": "../../../../lib/apiAuth",
+          "specifiers": [
+            "requireMarketing"
+          ]
+        },
+        {
+          "source": "../../../../lib/geminiText",
+          "specifiers": [
+            "askGeminiText"
+          ]
+        },
+        {
+          "source": "../../../../lib/r2",
+          "specifiers": [
+            "getObject",
+            "listObjects",
+            "mediaUrl",
+            "putObject"
+          ]
+        },
+        {
+          "source": "../../../../lib/videoTimeline",
+          "specifiers": [
+            "cleanTimeline",
+            "VOICES"
+          ]
+        },
+        {
+          "source": "../../../../lib/franchiseDetect",
+          "specifiers": [
+            "detectFranchise",
+            "FRANCHISE_LABEL"
+          ]
+        },
+        {
+          "source": "../../../../lib/storyboard",
+          "specifiers": [
+            "buildAssets",
+            "buildPrompt",
+            "choosePattern",
+            "compile",
+            "FREE",
+            "internalFacts",
+            "nameRegex",
+            "offCards",
+            "parseStoryboard",
+            "scrubNames",
+            "scrubSource"
+          ]
+        }
+      ],
+      "exports": [
+        "dynamic",
+        "maxDuration",
+        "GET",
+        "POST"
+      ],
+      "totalLines": 296,
+      "hasStructuralAnalysis": true
+    },
     "deploy/app/api/vms-sync/route.js": {
       "filePath": "deploy/app/api/vms-sync/route.js",
       "contentHash": "d1da0f1a5b1084a8598db72fb1dd88fbd020e2562db147bfe425b83c69c48595",
@@ -15199,13 +16957,13 @@
     },
     "deploy/app/layout.jsx": {
       "filePath": "deploy/app/layout.jsx",
-      "contentHash": "c5ee33ab68ce852d08abb331ca2b27926332d76eca5862284f42a373cc172206",
+      "contentHash": "550329485fdb2970936119fa1cb44d5e7fd8683b9161ebf8e92ceb79dd3cc3eb",
       "functions": [
         {
           "name": "RootLayout",
           "params": [],
           "exported": true,
-          "lineCount": 7
+          "lineCount": 10
         }
       ],
       "classes": [],
@@ -15213,13 +16971,19 @@
         {
           "source": "./globals.css",
           "specifiers": []
+        },
+        {
+          "source": "../components/TelegramMiniApp",
+          "specifiers": [
+            "TelegramMiniApp"
+          ]
         }
       ],
       "exports": [
         "metadata",
         "RootLayout"
       ],
-      "totalLines": 18,
+      "totalLines": 22,
       "hasStructuralAnalysis": true
     },
     "deploy/app/marketing/layout.jsx": {
@@ -15787,7 +17551,7 @@
     },
     "deploy/components/DivisionXApp.jsx": {
       "filePath": "deploy/components/DivisionXApp.jsx",
-      "contentHash": "ed1bd08b3cb4b54bdd7baa11c30fb76be16608ec23d213f3d673e401bbc1a9b8",
+      "contentHash": "b57f68b8803bbc6c4ced8c97ec352fac10456166e17c5e3788585e28fe7a1a45",
       "functions": [
         {
           "name": "RealtimeClock",
@@ -15835,7 +17599,7 @@
           "name": "DivisionXApp",
           "params": [],
           "exported": true,
-          "lineCount": 572
+          "lineCount": 575
         }
       ],
       "classes": [],
@@ -15923,6 +17687,7 @@
             "getMachines",
             "getSalesByMachine",
             "getSkus",
+            "getSkuCosts",
             "dbAddSku",
             "dbDeactivateSku",
             "updateSkuAvgCost",
@@ -16075,7 +17840,7 @@
       "exports": [
         "DivisionXApp"
       ],
-      "totalLines": 957,
+      "totalLines": 960,
       "hasStructuralAnalysis": true
     },
     "deploy/components/edit/compress.js": {
@@ -16108,12 +17873,12 @@
     },
     "deploy/components/edit/edit.module.css": {
       "filePath": "deploy/components/edit/edit.module.css",
-      "contentHash": "7b8b38bf908084fc71d0c35869b659fac58d25820ddb8b13d181e365ed6c4fb5",
+      "contentHash": "727e4f943d56e966b1e8ef927a46e85873097df82a0753fe122e110177b21165",
       "functions": [],
       "classes": [],
       "imports": [],
       "exports": [],
-      "totalLines": 261,
+      "totalLines": 277,
       "hasStructuralAnalysis": false
     },
     "deploy/components/edit/EditStudio.jsx": {
@@ -16230,7 +17995,7 @@
     },
     "deploy/components/edit/Inspector.jsx": {
       "filePath": "deploy/components/edit/Inspector.jsx",
-      "contentHash": "99a10614ab61fbf5607d2b4d9831b81395b966d5abd46ce77b573240697a89b8",
+      "contentHash": "2ce44fbec32c96ef053732389d060c18b8cc47893671cb73d75dd630870782e9",
       "functions": [
         {
           "name": "Chips",
@@ -17835,13 +19600,13 @@
     },
     "deploy/components/pages/PageAnalytics.jsx": {
       "filePath": "deploy/components/pages/PageAnalytics.jsx",
-      "contentHash": "23ba1b9cb49e50b557e013896cae68abb62d935181004ff44f4a84d6524b43a9",
+      "contentHash": "af3d3c9dd03c75dd09cc369413b610731a0ed557cfb564f10751e1b6ff7eda61",
       "functions": [
         {
           "name": "PageAnalytics",
           "params": [],
           "exported": true,
-          "lineCount": 207
+          "lineCount": 214
         },
         {
           "name": "Th",
@@ -17901,6 +19666,13 @@
           ]
         },
         {
+          "source": "../shared/costs",
+          "specifiers": [
+            "buildCostIndex",
+            "costOn"
+          ]
+        },
+        {
           "source": "../shared/dx-components",
           "specifiers": [
             "Badge",
@@ -17911,7 +19683,7 @@
       "exports": [
         "PageAnalytics"
       ],
-      "totalLines": 243,
+      "totalLines": 251,
       "hasStructuralAnalysis": true
     },
     "deploy/components/pages/PageClaims.jsx": {
@@ -18189,7 +19961,7 @@
     },
     "deploy/components/pages/PageMachineStockView.jsx": {
       "filePath": "deploy/components/pages/PageMachineStockView.jsx",
-      "contentHash": "9c21171afaaf7f9ad69576fdfb83a037ccdfa04e5239096b279ab4357d537f59",
+      "contentHash": "2b4135043a554925404aac40e1bc6cefae36a7a3bb5762b72d0beabf48a23879",
       "functions": [
         {
           "name": "LocalSyncButton",
@@ -18244,7 +20016,8 @@
           "source": "../shared/helpers",
           "specifiers": [
             "fmt",
-            "sortSkus"
+            "sortSkus",
+            "sheetSku"
           ]
         },
         {
@@ -18378,7 +20151,7 @@
     },
     "deploy/components/pages/PageRefillPrep.jsx": {
       "filePath": "deploy/components/pages/PageRefillPrep.jsx",
-      "contentHash": "866e0a643dafa5d97631d6ecd2d6830f4502d18685758a04243e64c5b8971239",
+      "contentHash": "c650ac444fe3615548abce3a30b91aadf5b72d3c58c3b4a7529de8567da33265",
       "functions": [
         {
           "name": "PageRefillPrep",
@@ -18445,7 +20218,8 @@
           "specifiers": [
             "fmt",
             "getSkuSeries",
-            "compareSkuForRefillReport"
+            "compareSkuForRefillReport",
+            "sheetSku"
           ]
         },
         {
@@ -18476,7 +20250,7 @@
     },
     "deploy/components/pages/PageSales.jsx": {
       "filePath": "deploy/components/pages/PageSales.jsx",
-      "contentHash": "5465129354e655a1dad15428eb55c9ca917accf39222eb2345f2747d4cab166f",
+      "contentHash": "3b8379228a5850f8da2b2f13f59d03e5572fa9b62ffc1504217a294037f88a50",
       "functions": [
         {
           "name": "skuRank",
@@ -18496,7 +20270,7 @@
           "name": "PageSales",
           "params": [],
           "exported": true,
-          "lineCount": 226
+          "lineCount": 227
         },
         {
           "name": "Th",
@@ -18557,7 +20331,15 @@
             "fmtDayLabel",
             "today",
             "buildBrandMap",
-            "ksherFeePct"
+            "ksherFeePct",
+            "sheetSku"
+          ]
+        },
+        {
+          "source": "../shared/costs",
+          "specifiers": [
+            "buildCostIndex",
+            "costOn"
           ]
         },
         {
@@ -18577,7 +20359,7 @@
       "exports": [
         "PageSales"
       ],
-      "totalLines": 561,
+      "totalLines": 563,
       "hasStructuralAnalysis": true
     },
     "deploy/components/pages/PageSlots.jsx": {
@@ -18981,7 +20763,7 @@
     },
     "deploy/components/pages/RestockSessionPanel.jsx": {
       "filePath": "deploy/components/pages/RestockSessionPanel.jsx",
-      "contentHash": "4fcdec2340f79c98bbee60aec01fbb29126a0876da1c38fa35f7515cc8c78c76",
+      "contentHash": "56898754fa5e0bf814a283836f0e2de23de052460e61d898b185b05d8b309044",
       "functions": [
         {
           "name": "sleep",
@@ -19040,7 +20822,8 @@
         {
           "source": "../shared/helpers",
           "specifiers": [
-            "fmt"
+            "fmt",
+            "sheetSku"
           ]
         },
         {
@@ -19173,7 +20956,7 @@
     },
     "deploy/components/shared/constants.js": {
       "filePath": "deploy/components/shared/constants.js",
-      "contentHash": "0287da2cbc3020b06b56f5bf1666cfb65a39adfc06b38425d8f8094df4b04238",
+      "contentHash": "1ae451082652de65799ef185ef19b308e2c7429928a2b2f53763f0dd6d7afafe",
       "functions": [],
       "classes": [],
       "imports": [],
@@ -19184,9 +20967,51 @@
         "THAI_MONTHS",
         "SKU_SERIES_ORDER",
         "REFILL_REPORT_SKU_ORDER",
+        "SHEET_SKU_LABEL",
         "UNIT_LABEL"
       ],
-      "totalLines": 79,
+      "totalLines": 86,
+      "hasStructuralAnalysis": true
+    },
+    "deploy/components/shared/costs.js": {
+      "filePath": "deploy/components/shared/costs.js",
+      "contentHash": "387d55ee89194f256a03e50ee939b93ad5a143b9b8ae2d8d247594ce382259f5",
+      "functions": [
+        {
+          "name": "num",
+          "params": [
+            "v"
+          ],
+          "exported": false,
+          "lineCount": 4
+        },
+        {
+          "name": "buildCostIndex",
+          "params": [
+            "skuCosts",
+            "skus"
+          ],
+          "exported": true,
+          "lineCount": 23
+        },
+        {
+          "name": "costOn",
+          "params": [
+            "index",
+            "skuId",
+            "bkkDate"
+          ],
+          "exported": true,
+          "lineCount": 13
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [
+        "buildCostIndex",
+        "costOn"
+      ],
+      "totalLines": 57,
       "hasStructuralAnalysis": true
     },
     "deploy/components/shared/design-tokens.js": {
@@ -19260,8 +21085,16 @@
     },
     "deploy/components/shared/helpers.js": {
       "filePath": "deploy/components/shared/helpers.js",
-      "contentHash": "8c5cdbee1325f9323fe46df42a05c6a9994afd733cc57842c0cddefc1e487912",
+      "contentHash": "9939c7e722436e38e0fdc83b08aa6d86a8e180833e7ddb440daf866881ab3bff",
       "functions": [
+        {
+          "name": "sheetSku",
+          "params": [
+            "skuId"
+          ],
+          "exported": true,
+          "lineCount": 2
+        },
         {
           "name": "fmt",
           "params": [
@@ -19395,11 +21228,13 @@
           "specifiers": [
             "THAI_MONTHS",
             "SKU_SERIES_ORDER",
-            "REFILL_REPORT_SKU_ORDER"
+            "REFILL_REPORT_SKU_ORDER",
+            "SHEET_SKU_LABEL"
           ]
         }
       ],
       "exports": [
+        "sheetSku",
         "fmt",
         "fmtB",
         "today",
@@ -19417,7 +21252,7 @@
         "calcKsherFee",
         "buildBrandMap"
       ],
-      "totalLines": 103,
+      "totalLines": 108,
       "hasStructuralAnalysis": true
     },
     "deploy/components/shared/KpiCard.jsx": {
@@ -19566,6 +21401,38 @@
         "StatusDot"
       ],
       "totalLines": 9,
+      "hasStructuralAnalysis": true
+    },
+    "deploy/components/TelegramMiniApp.jsx": {
+      "filePath": "deploy/components/TelegramMiniApp.jsx",
+      "contentHash": "25a9a63231646b26247d5bd02042f0e9c6adafed2a1216b4db2e0909120de54b",
+      "functions": [
+        {
+          "name": "launchedFromTelegram",
+          "params": [],
+          "exported": false,
+          "lineCount": 12
+        },
+        {
+          "name": "TelegramMiniApp",
+          "params": [],
+          "exported": true,
+          "lineCount": 22
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "react",
+          "specifiers": [
+            "useEffect"
+          ]
+        }
+      ],
+      "exports": [
+        "TelegramMiniApp"
+      ],
+      "totalLines": 49,
       "hasStructuralAnalysis": true
     },
     "deploy/components/VideoStudio.jsx": {
@@ -21311,9 +23178,170 @@
       "totalLines": 87,
       "hasStructuralAnalysis": true
     },
+    "deploy/lib/storyboard.js": {
+      "filePath": "deploy/lib/storyboard.js",
+      "contentHash": "92b1452ed640b6049caf6bcdf12eeccafa6bba00a9c769d230fbbd876cb8fa57",
+      "functions": [
+        {
+          "name": "sanitizeLine",
+          "params": [
+            "line"
+          ],
+          "exported": true,
+          "lineCount": 9
+        },
+        {
+          "name": "splitVo",
+          "params": [
+            "text"
+          ],
+          "exported": true,
+          "lineCount": 13
+        },
+        {
+          "name": "estSec",
+          "params": [
+            "line"
+          ],
+          "exported": false,
+          "lineCount": 1
+        },
+        {
+          "name": "scrubSource",
+          "params": [
+            "text",
+            "sourceLabel"
+          ],
+          "exported": true,
+          "lineCount": 12
+        },
+        {
+          "name": "esc",
+          "params": [
+            "s"
+          ],
+          "exported": false,
+          "lineCount": 1
+        },
+        {
+          "name": "nameRegex",
+          "params": [
+            "names"
+          ],
+          "exported": true,
+          "lineCount": 5
+        },
+        {
+          "name": "scrubNames",
+          "params": [
+            "text",
+            "re"
+          ],
+          "exported": true,
+          "lineCount": 1
+        },
+        {
+          "name": "internalFacts",
+          "params": [
+            "idea"
+          ],
+          "exported": true,
+          "lineCount": 8
+        },
+        {
+          "name": "offCards",
+          "params": [
+            "idea"
+          ],
+          "exported": true,
+          "lineCount": 4
+        },
+        {
+          "name": "choosePattern",
+          "params": [
+            "patterns"
+          ],
+          "exported": true,
+          "lineCount": 27
+        },
+        {
+          "name": "buildAssets",
+          "params": [],
+          "exported": true,
+          "lineCount": 28
+        },
+        {
+          "name": "buildPrompt",
+          "params": [],
+          "exported": true,
+          "lineCount": 80
+        },
+        {
+          "name": "parseStoryboard",
+          "params": [
+            "text"
+          ],
+          "exported": true,
+          "lineCount": 9
+        },
+        {
+          "name": "bannedIn",
+          "params": [
+            "s"
+          ],
+          "exported": true,
+          "lineCount": 3
+        },
+        {
+          "name": "sceneOf",
+          "params": [
+            "raw",
+            "franchise"
+          ],
+          "exported": false,
+          "lineCount": 10
+        },
+        {
+          "name": "compile",
+          "params": [
+            "sb",
+            "assets"
+          ],
+          "exported": true,
+          "lineCount": 169
+        }
+      ],
+      "classes": [],
+      "imports": [],
+      "exports": [
+        "BRANCH_PHOTOS",
+        "MAX_VO",
+        "CHARS_PER_SEC",
+        "END_CARD",
+        "sanitizeLine",
+        "splitVo",
+        "scrubSource",
+        "nameRegex",
+        "scrubNames",
+        "internalFacts",
+        "offCards",
+        "FREE",
+        "choosePattern",
+        "buildAssets",
+        "DESIGN",
+        "PAINT_MAX",
+        "PAINT_THB",
+        "buildPrompt",
+        "parseStoryboard",
+        "bannedIn",
+        "compile"
+      ],
+      "totalLines": 487,
+      "hasStructuralAnalysis": true
+    },
     "deploy/lib/supabase.js": {
       "filePath": "deploy/lib/supabase.js",
-      "contentHash": "67d809d92cdd426d276a1d4b361f66dfb79ff0954adcd6555ec23b81fc2fe7e8",
+      "contentHash": "e3c2f9f0c579d67785b8302cd44c0d09442be730f2252d177a6fa552ddb4c47a",
       "functions": [
         {
           "name": "signIn",
@@ -21506,6 +23534,12 @@
           "params": [],
           "exported": true,
           "lineCount": 9
+        },
+        {
+          "name": "getSkuCosts",
+          "params": [],
+          "exported": true,
+          "lineCount": 8
         },
         {
           "name": "addSku",
@@ -21883,6 +23917,7 @@
         "deleteStockOutByClaim",
         "getMachines",
         "getSkus",
+        "getSkuCosts",
         "addSku",
         "updateSkuAvgCost",
         "deactivateSku",
@@ -21928,7 +23963,7 @@
         "updateRefillEventQty",
         "getLatestStockSyncedAt"
       ],
-      "totalLines": 1164,
+      "totalLines": 1177,
       "hasStructuralAnalysis": true
     },
     "deploy/lib/tcgcsv.js": {
@@ -22014,7 +24049,7 @@
     },
     "deploy/lib/tcgKnowledge.js": {
       "filePath": "deploy/lib/tcgKnowledge.js",
-      "contentHash": "916485d801d18e447cc1e270df8cab7b34ffa6cfe080f83e2c94359f7755b5e1",
+      "contentHash": "c566fdc49e490cae6786addcf57a5d651e45aebbde9d74e7c28f4b325ac996ca",
       "functions": [
         {
           "name": "loadDbfwCards",
@@ -22722,7 +24757,7 @@
     },
     "deploy/lib/videoTimeline.js": {
       "filePath": "deploy/lib/videoTimeline.js",
-      "contentHash": "d5a66e5d1dc9740d957168888528a9743e3dd6b9dccc73774112f17f39ec6368",
+      "contentHash": "da8e66c379ba71188b331c16ce321df1ae3b65e548d511fbbe47a87b5cf4cd4c",
       "functions": [
         {
           "name": "num",
@@ -22861,12 +24896,12 @@
         "layout",
         "cleanTimeline"
       ],
-      "totalLines": 198,
+      "totalLines": 199,
       "hasStructuralAnalysis": true
     },
     "deploy/mcp/dvx_mcp_server.py": {
       "filePath": "deploy/mcp/dvx_mcp_server.py",
-      "contentHash": "6328b55e1f01f0461921cf7b833ad4ef2bcbc883a4b419f62b5119a338882d43",
+      "contentHash": "6cd1c01c0b08f3925c8d93140736ec0ba184a41ceba1e88266e4d558f0e4eaae",
       "functions": [
         {
           "name": "_fail",
@@ -22895,11 +24930,55 @@
             "machine",
             "group_by",
             "top",
-            "unit"
+            "unit",
+            "sku",
+            "include_today"
           ],
           "returnType": "dict",
           "exported": true,
-          "lineCount": 24
+          "lineCount": 31
+        },
+        {
+          "name": "compare_sales",
+          "params": [
+            "from_date",
+            "to_date",
+            "days",
+            "include_today",
+            "vs",
+            "vs_from",
+            "vs_to",
+            "machine",
+            "sku",
+            "group_by",
+            "top"
+          ],
+          "returnType": "dict",
+          "exported": true,
+          "lineCount": 25
+        },
+        {
+          "name": "get_unsold_skus",
+          "params": [
+            "machine",
+            "days",
+            "from_date",
+            "to_date",
+            "max_packs"
+          ],
+          "returnType": "dict",
+          "exported": true,
+          "lineCount": 15
+        },
+        {
+          "name": "get_sku_costs",
+          "params": [
+            "sku",
+            "date"
+          ],
+          "returnType": "dict",
+          "exported": true,
+          "lineCount": 10
         },
         {
           "name": "get_stock",
@@ -22910,7 +24989,7 @@
           ],
           "returnType": "dict",
           "exported": true,
-          "lineCount": 12
+          "lineCount": 13
         },
         {
           "name": "get_restock_alerts",
@@ -23092,6 +25171,9 @@
         "_fail",
         "list_machines",
         "get_sales",
+        "compare_sales",
+        "get_unsold_skus",
+        "get_sku_costs",
         "get_stock",
         "get_restock_alerts",
         "get_marketing_ideas",
@@ -23106,27 +25188,27 @@
         "get_sync_status",
         "sync_data"
       ],
-      "totalLines": 427,
+      "totalLines": 527,
       "hasStructuralAnalysis": true
     },
     "deploy/mcp/README.md": {
       "filePath": "deploy/mcp/README.md",
-      "contentHash": "baa4b44a1d787ed26ccc7af1918ac942f636ba60fc0c4734e3d5b137c92fe29e",
+      "contentHash": "6392aa621b56579d654264b641f71463357af2c5982dff33c8752f690305fd06",
       "functions": [],
       "classes": [],
       "imports": [],
       "exports": [],
-      "totalLines": 146,
+      "totalLines": 148,
       "hasStructuralAnalysis": true
     },
     "deploy/next.config.js": {
       "filePath": "deploy/next.config.js",
-      "contentHash": "d3883cd9aa9a5b0829f5eb9c06b98c5598fc899e735454f4e1d92bed817e6f5e",
+      "contentHash": "4df2dea015c62a9e8ab4623b77a60448a415129be0a67dd52f0aa32e7284c925",
       "functions": [],
       "classes": [],
       "imports": [],
       "exports": [],
-      "totalLines": 49,
+      "totalLines": 51,
       "hasStructuralAnalysis": true
     },
     "deploy/package.json": {
@@ -23167,6 +25249,16 @@
       "imports": [],
       "exports": [],
       "totalLines": 14,
+      "hasStructuralAnalysis": true
+    },
+    "deploy/public/video-assets/README.md": {
+      "filePath": "deploy/public/video-assets/README.md",
+      "contentHash": "fdaba6261cd3fbeca225702abbea8df594aeaf17e3bcf62e287f2361aca81687",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 7,
       "hasStructuralAnalysis": true
     },
     "deploy/scraper/marketing_reminder.py": {
@@ -23356,7 +25448,7 @@
     },
     "deploy/scraper/payif_sales_sync.py": {
       "filePath": "deploy/scraper/payif_sales_sync.py",
-      "contentHash": "480299db7b7d1d4b5fd2638f4c2929e8820e004f698cdc172249e7c95cec7862",
+      "contentHash": "62a4724f5852a984d3e79e80318b4d9f01dd02706794425edc47a4e57897f2f9",
       "functions": [
         {
           "name": "dec",
@@ -23535,7 +25627,7 @@
     },
     "deploy/scraper/payif_stock_sync.py": {
       "filePath": "deploy/scraper/payif_stock_sync.py",
-      "contentHash": "f4564be02c9de6afd957e3e8ad4b97236a8c6dd75471f3e18e842bf7f4ca4b9b",
+      "contentHash": "c6e3c3ffa49772ffe64b3ce5ddedb9f34c81b08a6b03d27c9ad44cd1c8ed95ad",
       "functions": [
         {
           "name": "map_name_to_sku",
@@ -24494,8 +26586,16 @@
     },
     "deploy/scraper/telegram_alert.py": {
       "filePath": "deploy/scraper/telegram_alert.py",
-      "contentHash": "e86ba7981364afefd87e6b2e197575b203f73978accc9433e1504077413263ff",
+      "contentHash": "632e11f2b0f8ffd848b4648c7dfd9c601ad483c8c64c2fcecec589e468aa2c8d",
       "functions": [
+        {
+          "name": "_sheet_sku",
+          "params": [
+            "sku_id"
+          ],
+          "exported": true,
+          "lineCount": 2
+        },
         {
           "name": "_esc",
           "params": [
@@ -24670,6 +26770,7 @@
         }
       ],
       "exports": [
+        "_sheet_sku",
         "_esc",
         "send_message",
         "alert_slot_change",
@@ -24683,12 +26784,12 @@
         "overfilled_text",
         "alert_slot_overfilled"
       ],
-      "totalLines": 336,
+      "totalLines": 345,
       "hasStructuralAnalysis": true
     },
     "deploy/scraper/test_sku_mapping.py": {
       "filePath": "deploy/scraper/test_sku_mapping.py",
-      "contentHash": "2fb4b4eaac68663adbdd899326024d3e6ec7e1c8da003f5959679a41cce600bf",
+      "contentHash": "7bc7e67d93f523c0f472c73617d1bb877df3a8abb2520aad277bbd373d95ccdc",
       "functions": [
         {
           "name": "load",
@@ -24743,12 +26844,12 @@
         "load",
         "main"
       ],
-      "totalLines": 301,
+      "totalLines": 307,
       "hasStructuralAnalysis": true
     },
     "deploy/scraper/vms_sales_api.py": {
       "filePath": "deploy/scraper/vms_sales_api.py",
-      "contentHash": "813156e4585d362e14cc9d28a72c2eb7f19bd897e398155fa0eced950ac16216",
+      "contentHash": "38d3d5bcf229745f70e2bf27bd3d9605c3d31632e4c03a5cb74ad9cf804855ec",
       "functions": [
         {
           "name": "map_product_to_sku",
@@ -24941,7 +27042,7 @@
     },
     "deploy/scraper/vms_scraper.py": {
       "filePath": "deploy/scraper/vms_scraper.py",
-      "contentHash": "e8cb58ec92d24862b5fd24185a55eadad1503e7a5c6eec3cb61dfbae56dfb8c4",
+      "contentHash": "fb0cb2bc0faebd1e8bb1c9a3d2bc83a43aad8df59c87f9b483b712ffc31348e6",
       "functions": [
         {
           "name": "normalize",
@@ -25085,7 +27186,7 @@
     },
     "deploy/scraper/vms_stock_sync.py": {
       "filePath": "deploy/scraper/vms_stock_sync.py",
-      "contentHash": "52164069f72f586f172924c530825eb652e48d8f92da29513604d7300059f3b2",
+      "contentHash": "fc2ce4d910f7c18d1513be1e667101b3461fe3c6d6ebf0844c8727a227ee5aa6",
       "functions": [
         {
           "name": "cache_vms_image",
@@ -25143,6 +27244,15 @@
           "lineCount": 17
         },
         {
+          "name": "null_unknown_skus",
+          "params": [
+            "supabase",
+            "records"
+          ],
+          "exported": true,
+          "lineCount": 18
+        },
+        {
           "name": "save_to_supabase",
           "params": [
             "records"
@@ -25164,7 +27274,7 @@
           "name": "main",
           "params": [],
           "exported": true,
-          "lineCount": 105
+          "lineCount": 109
         }
       ],
       "classes": [],
@@ -25221,16 +27331,17 @@
         "_num",
         "_has_sell_price",
         "get_slots",
+        "null_unknown_skus",
         "save_to_supabase",
         "detect_slot_changes",
         "main"
       ],
-      "totalLines": 494,
+      "totalLines": 518,
       "hasStructuralAnalysis": true
     },
     "deploy/scraper/worldwide_sales_api.py": {
       "filePath": "deploy/scraper/worldwide_sales_api.py",
-      "contentHash": "bac6dd33f36f2c171cc4e7591891b19ed14ebf267768132fb6d2f6eff401f9fe",
+      "contentHash": "d516ad7654c16a8ccd66e927b13369e23ab4f3c4a913abec9426ba884d5810b2",
       "functions": [
         {
           "name": "map_goods_to_sku",
@@ -25422,7 +27533,7 @@
     },
     "deploy/scraper/worldwide_stock_sync.py": {
       "filePath": "deploy/scraper/worldwide_stock_sync.py",
-      "contentHash": "00dc4e27b7b366ee34702500c149360b036a0892f1b22823aa46025651bbdded",
+      "contentHash": "c35b9dd0c10f602abeed9281d8e7303c4a5f84640740ba7d62c0b1204310c253",
       "functions": [
         {
           "name": "map_goods_to_sku",
@@ -25557,7 +27668,7 @@
     },
     "deploy/scripts/backup-tables.js": {
       "filePath": "deploy/scripts/backup-tables.js",
-      "contentHash": "c4c0464c45498d9d69f0f4d7ee6887557dd81899d45531fd7bcbf77525d34c3b",
+      "contentHash": "1c6cf1047ac6af60a68aa6a727b1e9d81e22e115c663aa13cbfc7c86b85bd28e",
       "functions": [
         {
           "name": "fetchAllRows",
@@ -25578,7 +27689,7 @@
       "classes": [],
       "imports": [],
       "exports": [],
-      "totalLines": 110,
+      "totalLines": 111,
       "hasStructuralAnalysis": true
     },
     "deploy/supabase/schema.sql": {
@@ -25853,7 +27964,7 @@
     },
     "deploy/tasks/pkm_cards.json": {
       "filePath": "deploy/tasks/pkm_cards.json",
-      "contentHash": "65885a43c6d76ae180bc1b55e5165154ae9ff8c5a6787efed85816163f4fc068",
+      "contentHash": "fa2610a283ae8dcb305de0d775080e204b31cd5b999126e09d683a54508cb2e8",
       "functions": [],
       "classes": [],
       "imports": [],
@@ -25863,7 +27974,7 @@
     },
     "deploy/tasks/pkm_jp_cards.json": {
       "filePath": "deploy/tasks/pkm_jp_cards.json",
-      "contentHash": "86daeeae123b92d4f18ec2b4e8ca4bad7c05e661667e76098e1b04aa52e54277",
+      "contentHash": "cd8101826145acc31539890341562f08ec9b9b35383cf2af4ffbfdf8001327ab",
       "functions": [],
       "classes": [],
       "imports": [],
@@ -25953,12 +28064,12 @@
     },
     "deploy/tasks/social_watch.json": {
       "filePath": "deploy/tasks/social_watch.json",
-      "contentHash": "6741bf4c5a16449213affdb666d213d59b80b3d447d72d9ac2c26094bd73db67",
+      "contentHash": "d6db9fc7aa4904c6f4d93ff36d4b143ef79a1ddc1db113e56183c26e5f05d5d9",
       "functions": [],
       "classes": [],
       "imports": [],
       "exports": [],
-      "totalLines": 77,
+      "totalLines": 88,
       "hasStructuralAnalysis": true
     },
     "deploy/tasks/subtitle_template.html": {
@@ -26009,6 +28120,16 @@
       "imports": [],
       "exports": [],
       "totalLines": 177,
+      "hasStructuralAnalysis": true
+    },
+    "deploy/tasks/video_patterns.json": {
+      "filePath": "deploy/tasks/video_patterns.json",
+      "contentHash": "a4914d577fe30b1a2e637d9bfc38f84c5e390f9133a80ef0a8e724423e07f16d",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 636,
       "hasStructuralAnalysis": true
     },
     "deploy/tasks/video_plan_example.json": {
@@ -26363,12 +28484,12 @@
     },
     "hyperframes/templates/dvx-promo/scaffold/captions.template.html": {
       "filePath": "hyperframes/templates/dvx-promo/scaffold/captions.template.html",
-      "contentHash": "e01f12d4e281af5f572b9c168788914f51a38d95c4149a83ee2cbb422b599fe2",
+      "contentHash": "7d6555e38cd6ec02577061d0a7dfb668880eafffc16ab6e2f16c55c0dcf93614",
       "functions": [],
       "classes": [],
       "imports": [],
       "exports": [],
-      "totalLines": 52,
+      "totalLines": 63,
       "hasStructuralAnalysis": false
     },
     "hyperframes/templates/dvx-promo/scaffold/host.template.html": {
@@ -26383,12 +28504,12 @@
     },
     "hyperframes/templates/dvx-promo/scaffold/timeline.template.html": {
       "filePath": "hyperframes/templates/dvx-promo/scaffold/timeline.template.html",
-      "contentHash": "eece49a1e82dc0889939dddb9859100a88b7e415db3ec599aa352499d7c17278",
+      "contentHash": "4e7673d8aeabd06dac0f8d16690ddf5322585af79c3fdae5a6401d7cf65101c3",
       "functions": [],
       "classes": [],
       "imports": [],
       "exports": [],
-      "totalLines": 123,
+      "totalLines": 524,
       "hasStructuralAnalysis": false
     },
     "marketing-model/examples.json": {
@@ -27232,13 +29353,13 @@
     },
     "scripts/add_sku_image.py": {
       "filePath": "scripts/add_sku_image.py",
-      "contentHash": "9add8365c9e7dc8cefbfd683f66b1fc1c65b6be7c22b555dca6579dafeeba8ba",
+      "contentHash": "918d398801bff75388eed7721791d8fc69f60e6d415ee9714d1ab17c203ec7d1",
       "functions": [
         {
           "name": "load_env",
           "params": [],
           "exported": true,
-          "lineCount": 7
+          "lineCount": 10
         },
         {
           "name": "cut_background",
@@ -27363,7 +29484,7 @@
         "patch_sku",
         "main"
       ],
-      "totalLines": 189,
+      "totalLines": 192,
       "hasStructuralAnalysis": true
     },
     "scripts/backfill_vms_bill_split.py": {
@@ -27534,32 +29655,132 @@
     },
     "scripts/diary/days/2026-10-22.json": {
       "filePath": "scripts/diary/days/2026-10-22.json",
-      "contentHash": "153693d8942281714cabe0d80e1f42f3a374448c98032496f090568921a375a4",
+      "contentHash": "f09e4da5b361f998728b18ab47fcaa41599b02c991cd64b56dc16f6fdea60244",
       "functions": [],
       "classes": [],
       "imports": [],
       "exports": [],
-      "totalLines": 370,
+      "totalLines": 375,
       "hasStructuralAnalysis": true
     },
     "scripts/diary/days/2026-10-23.json": {
       "filePath": "scripts/diary/days/2026-10-23.json",
-      "contentHash": "97a8df1ddb57d3b6dff8711c455a124ee78bf1e59f829465229c1b99efee5d0d",
+      "contentHash": "f340f21332d1c985b5e6a75238ce92300fe0f704c0d9b833dd28a85ff8d275f5",
       "functions": [],
       "classes": [],
       "imports": [],
       "exports": [],
-      "totalLines": 453,
+      "totalLines": 467,
       "hasStructuralAnalysis": true
     },
     "scripts/diary/days/2026-10-24.json": {
       "filePath": "scripts/diary/days/2026-10-24.json",
-      "contentHash": "e451ff2f9b80de71807044f8a211c067c53c2b4ea6fd254335b62048115d02e2",
+      "contentHash": "8bba2372949b51554f65f1cf662ca4ef1dc242829f68e6285a21d5b34e831ea8",
       "functions": [],
       "classes": [],
       "imports": [],
       "exports": [],
-      "totalLines": 216,
+      "totalLines": 218,
+      "hasStructuralAnalysis": true
+    },
+    "scripts/diary/days/2026-10-25.json": {
+      "filePath": "scripts/diary/days/2026-10-25.json",
+      "contentHash": "685d085d801e2f0ee88480ecea85c29941267f7c8c8a18a8a6fdd697f4cdfe4e",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 77,
+      "hasStructuralAnalysis": true
+    },
+    "scripts/diary/days/2026-10-26.json": {
+      "filePath": "scripts/diary/days/2026-10-26.json",
+      "contentHash": "a9aa2a122faa0eb1b13f1c0da5c0649be80a0f5523f3b369fa852ebe01aedb5d",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 223,
+      "hasStructuralAnalysis": true
+    },
+    "scripts/diary/days/2026-10-28.json": {
+      "filePath": "scripts/diary/days/2026-10-28.json",
+      "contentHash": "bfdaa690dd378419bdf6b7a63cae76cdc3e91f27bf578f4f0d8dcbd7da3af6fe",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 45,
+      "hasStructuralAnalysis": true
+    },
+    "scripts/diary/days/2026-10-30.json": {
+      "filePath": "scripts/diary/days/2026-10-30.json",
+      "contentHash": "68db7034bd56451f15410deddbe3f3f4202f6552fd5e4c25845c21a7cdf75d5d",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 179,
+      "hasStructuralAnalysis": true
+    },
+    "scripts/diary/days/2026-10-31.json": {
+      "filePath": "scripts/diary/days/2026-10-31.json",
+      "contentHash": "1c6ce3b0bade687cb4fa62b301efb6823fe8c96d46673e88b277c0d417929935",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 199,
+      "hasStructuralAnalysis": true
+    },
+    "scripts/diary/days/2026-11-02.json": {
+      "filePath": "scripts/diary/days/2026-11-02.json",
+      "contentHash": "02ad8c0e89e299f4435fbba093bc67f288b4f0be8f5db939e8f5599b5f3ffa60",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 71,
+      "hasStructuralAnalysis": true
+    },
+    "scripts/diary/days/2026-11-03.json": {
+      "filePath": "scripts/diary/days/2026-11-03.json",
+      "contentHash": "a227686bbf7c175b8fe4d9ec8575a5b411f1ee907dc60d5af62dc25703faa968",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 160,
+      "hasStructuralAnalysis": true
+    },
+    "scripts/diary/days/2026-11-11.json": {
+      "filePath": "scripts/diary/days/2026-11-11.json",
+      "contentHash": "d4b3db35bbaa50996bfb7c5734b98e39ffaf3c027d97829c94402b841639ea6f",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 140,
+      "hasStructuralAnalysis": true
+    },
+    "scripts/diary/days/2026-11-14.json": {
+      "filePath": "scripts/diary/days/2026-11-14.json",
+      "contentHash": "4073c62510dd23008f078bdf11e0124bf5c5dd20f48101ebdbb09d7925b8bfe8",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 148,
+      "hasStructuralAnalysis": true
+    },
+    "scripts/diary/days/2026-11-16.json": {
+      "filePath": "scripts/diary/days/2026-11-16.json",
+      "contentHash": "fe414a5838c04ca2ce939139731fc4c78b06ae8b83f0170912e518cfb66c3be9",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 98,
       "hasStructuralAnalysis": true
     },
     "scripts/diary/diary.html": {
@@ -28132,6 +30353,96 @@
       "totalLines": 147,
       "hasStructuralAnalysis": true
     },
+    "scripts/set_telegram_web_button.py": {
+      "filePath": "scripts/set_telegram_web_button.py",
+      "contentHash": "c82ff3d1d55d374ebb0919bc7da55f58d7a650a69608f9d81d874559e7b92eb7",
+      "functions": [
+        {
+          "name": "env_tokens",
+          "params": [],
+          "exported": true,
+          "lineCount": 7
+        },
+        {
+          "name": "call",
+          "params": [
+            "token",
+            "method",
+            "payload"
+          ],
+          "exported": true,
+          "lineCount": 8
+        },
+        {
+          "name": "group",
+          "params": [
+            "toks",
+            "a"
+          ],
+          "exported": true,
+          "lineCount": 32
+        },
+        {
+          "name": "main",
+          "params": [],
+          "exported": true,
+          "lineCount": 41
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "argparse",
+          "specifiers": [
+            "argparse"
+          ]
+        },
+        {
+          "source": "json",
+          "specifiers": [
+            "json"
+          ]
+        },
+        {
+          "source": "re",
+          "specifiers": [
+            "re"
+          ]
+        },
+        {
+          "source": "sys",
+          "specifiers": [
+            "sys"
+          ]
+        },
+        {
+          "source": "time",
+          "specifiers": [
+            "time"
+          ]
+        },
+        {
+          "source": "urllib.request",
+          "specifiers": [
+            "urllib.request"
+          ]
+        },
+        {
+          "source": "pathlib",
+          "specifiers": [
+            "Path"
+          ]
+        }
+      ],
+      "exports": [
+        "env_tokens",
+        "call",
+        "group",
+        "main"
+      ],
+      "totalLines": 154,
+      "hasStructuralAnalysis": true
+    },
     "scripts/start_sync_bot.vbs": {
       "filePath": "scripts/start_sync_bot.vbs",
       "contentHash": "cec4852ff06a62faa42efd5e3032d7030c5abdfda6bbb168be63ff398d1ea460",
@@ -28228,7 +30539,7 @@
     },
     "scripts/telegram_sync_bot.py": {
       "filePath": "scripts/telegram_sync_bot.py",
-      "contentHash": "84333602cea9afc6dface5c8c03e39ff115fbdc667d8d7b6c3ff7e2ef9a8dcf1",
+      "contentHash": "77bb871c1d92867da199bc7d730d84feb8c784818ac0d0e134266ac172d04468",
       "functions": [
         {
           "name": "env",
@@ -28639,6 +30950,68 @@
           "lineCount": 75
         },
         {
+          "name": "digest_due",
+          "params": [
+            "now",
+            "state"
+          ],
+          "exported": true,
+          "lineCount": 12
+        },
+        {
+          "name": "weekly_target",
+          "params": [
+            "now"
+          ],
+          "exported": true,
+          "lineCount": 4
+        },
+        {
+          "name": "weekly_due",
+          "params": [
+            "now",
+            "state"
+          ],
+          "exported": true,
+          "lineCount": 20
+        },
+        {
+          "name": "digest_wait_sec",
+          "params": [
+            "now",
+            "send_at"
+          ],
+          "exported": true,
+          "lineCount": 5
+        },
+        {
+          "name": "_digest_mark",
+          "params": [
+            "kind",
+            "now"
+          ],
+          "exported": true,
+          "lineCount": 3
+        },
+        {
+          "name": "digest_period_arg",
+          "params": [
+            "kind",
+            "now"
+          ],
+          "exported": true,
+          "lineCount": 9
+        },
+        {
+          "name": "run_digest",
+          "params": [
+            "manual",
+            "kinds"
+          ],
+          "exported": true,
+          "lineCount": 99
+        },
+        {
           "name": "autopost_due",
           "params": [
             "now",
@@ -28693,13 +31066,13 @@
           "name": "scheduler",
           "params": [],
           "exported": true,
-          "lineCount": 28
+          "lineCount": 31
         },
         {
           "name": "auto_status",
           "params": [],
           "exported": true,
-          "lineCount": 29
+          "lineCount": 34
         },
         {
           "name": "handle",
@@ -28707,7 +31080,7 @@
             "u"
           ],
           "exported": true,
-          "lineCount": 168
+          "lineCount": 185
         },
         {
           "name": "who",
@@ -28862,6 +31235,13 @@
         "ideas_due",
         "ideas_summary",
         "run_ideas",
+        "digest_due",
+        "weekly_target",
+        "weekly_due",
+        "digest_wait_sec",
+        "_digest_mark",
+        "digest_period_arg",
+        "run_digest",
         "autopost_due",
         "autopost_report",
         "run_autopost",
@@ -28875,7 +31255,7 @@
         "handle_callback",
         "main"
       ],
-      "totalLines": 1517,
+      "totalLines": 1746,
       "hasStructuralAnalysis": true
     },
     "scripts/test_bot_jobs.py": {
@@ -28953,6 +31333,222 @@
         "has"
       ],
       "totalLines": 115,
+      "hasStructuralAnalysis": true
+    },
+    "scripts/test_costs_web.mjs": {
+      "filePath": "scripts/test_costs_web.mjs",
+      "contentHash": "189f159849e4faee74afb6a343bd11a61a729c098048ea3a9bc1653ee57ab82d",
+      "functions": [
+        {
+          "name": "check",
+          "params": [
+            "name",
+            "got",
+            "want"
+          ],
+          "exported": false,
+          "lineCount": 5
+        },
+        {
+          "name": "oldCost",
+          "params": [
+            "id"
+          ],
+          "exported": false,
+          "lineCount": 1
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "node:url",
+          "specifiers": [
+            "pathToFileURL",
+            "fileURLToPath"
+          ]
+        }
+      ],
+      "exports": [],
+      "totalLines": 101,
+      "hasStructuralAnalysis": true
+    },
+    "scripts/test_daily_digest.py": {
+      "filePath": "scripts/test_daily_digest.py",
+      "contentHash": "5f2d253caa9f7feadd661d55a0fcb616d76312598556555720c0674374f74a31",
+      "functions": [
+        {
+          "name": "check",
+          "params": [
+            "name",
+            "got",
+            "want"
+          ],
+          "exported": true,
+          "lineCount": 5
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "importlib.util",
+          "specifiers": [
+            "importlib.util"
+          ]
+        },
+        {
+          "source": "pathlib",
+          "specifiers": [
+            "pathlib"
+          ]
+        },
+        {
+          "source": "sys",
+          "specifiers": [
+            "sys"
+          ]
+        },
+        {
+          "source": "datetime",
+          "specifiers": [
+            "date",
+            "datetime"
+          ]
+        }
+      ],
+      "exports": [
+        "check"
+      ],
+      "totalLines": 195,
+      "hasStructuralAnalysis": true
+    },
+    "scripts/test_dvx_sales_calc.py": {
+      "filePath": "scripts/test_dvx_sales_calc.py",
+      "contentHash": "11868755196be2cadef7c2debe26baa68f943a576277f9f2aae2c4c5d6bb0400",
+      "functions": [
+        {
+          "name": "check",
+          "params": [
+            "name",
+            "got",
+            "want"
+          ],
+          "exported": true,
+          "lineCount": 5
+        },
+        {
+          "name": "utc",
+          "params": [
+            "day",
+            "hh"
+          ],
+          "exported": true,
+          "lineCount": 3
+        },
+        {
+          "name": "ev",
+          "params": [
+            "mid",
+            "sku",
+            "kind",
+            "day",
+            "qb",
+            "qa",
+            "slot",
+            "box",
+            "eid"
+          ],
+          "exported": true,
+          "lineCount": 3
+        },
+        {
+          "name": "stock",
+          "params": [
+            "mid",
+            "sku",
+            "remain",
+            "cap",
+            "slot",
+            "name",
+            "empty_since"
+          ],
+          "exported": true,
+          "lineCount": 3
+        },
+        {
+          "name": "run",
+          "params": [
+            "stock_rows",
+            "events",
+            "d1",
+            "d2",
+            "period",
+            "history",
+            "max_packs",
+            "ppb"
+          ],
+          "exported": true,
+          "lineCount": 4
+        },
+        {
+          "name": "fake_get",
+          "params": [
+            "path"
+          ],
+          "exported": true,
+          "lineCount": 12
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "pathlib",
+          "specifiers": [
+            "pathlib"
+          ]
+        },
+        {
+          "source": "sys",
+          "specifiers": [
+            "sys"
+          ]
+        },
+        {
+          "source": "datetime",
+          "specifiers": [
+            "date",
+            "datetime",
+            "timedelta",
+            "timezone"
+          ]
+        },
+        {
+          "source": "dvx_data",
+          "specifiers": [
+            "d"
+          ]
+        },
+        {
+          "source": "daily_sales_digest",
+          "specifiers": [
+            "dg"
+          ]
+        },
+        {
+          "source": "random",
+          "specifiers": [
+            "random"
+          ]
+        }
+      ],
+      "exports": [
+        "check",
+        "utc",
+        "ev",
+        "stock",
+        "run",
+        "fake_get"
+      ],
+      "totalLines": 555,
       "hasStructuralAnalysis": true
     },
     "scripts/test_format_line.mjs": {
@@ -29408,6 +32004,181 @@
       "totalLines": 74,
       "hasStructuralAnalysis": true
     },
+    "scripts/test_shared_browser.py": {
+      "filePath": "scripts/test_shared_browser.py",
+      "contentHash": "68709fab0eb18af8b58cff6dbe469b9d940c6697f06ad01b7c11801f5a39cd7a",
+      "functions": [
+        {
+          "name": "check",
+          "params": [
+            "name",
+            "got",
+            "want"
+          ],
+          "exported": true,
+          "lineCount": 5
+        },
+        {
+          "name": "age",
+          "params": [
+            "path",
+            "sec"
+          ],
+          "exported": true,
+          "lineCount": 3
+        },
+        {
+          "name": "fake_sleep",
+          "params": [
+            "s"
+          ],
+          "exported": true,
+          "lineCount": 5
+        },
+        {
+          "name": "fake_oc",
+          "params": [
+            "*args",
+            "timeout",
+            "beat"
+          ],
+          "exported": true,
+          "lineCount": 5
+        },
+        {
+          "name": "page_reader",
+          "params": [
+            "t",
+            "cfg"
+          ],
+          "exported": true,
+          "lineCount": 4
+        },
+        {
+          "name": "run_main",
+          "params": [
+            "base",
+            "reader",
+            "argv"
+          ],
+          "exported": true,
+          "lineCount": 9
+        },
+        {
+          "name": "blocked_reader",
+          "params": [
+            "t",
+            "cfg"
+          ],
+          "exported": true,
+          "lineCount": 3
+        },
+        {
+          "name": "thief_reader",
+          "params": [
+            "t",
+            "cfg"
+          ],
+          "exported": true,
+          "lineCount": 6
+        },
+        {
+          "name": "one_post_slow",
+          "params": [
+            "t",
+            "cfg"
+          ],
+          "exported": true,
+          "lineCount": 4
+        },
+        {
+          "name": "hidden_reader",
+          "params": [
+            "t",
+            "cfg"
+          ],
+          "exported": true,
+          "lineCount": 3
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "contextlib",
+          "specifiers": [
+            "contextlib"
+          ]
+        },
+        {
+          "source": "io",
+          "specifiers": [
+            "io"
+          ]
+        },
+        {
+          "source": "json",
+          "specifiers": [
+            "json"
+          ]
+        },
+        {
+          "source": "os",
+          "specifiers": [
+            "os"
+          ]
+        },
+        {
+          "source": "pathlib",
+          "specifiers": [
+            "pathlib"
+          ]
+        },
+        {
+          "source": "sys",
+          "specifiers": [
+            "sys"
+          ]
+        },
+        {
+          "source": "tempfile",
+          "specifiers": [
+            "tempfile"
+          ]
+        },
+        {
+          "source": "time",
+          "specifiers": [
+            "time"
+          ]
+        },
+        {
+          "source": "shared_browser",
+          "specifiers": [
+            "sb"
+          ]
+        },
+        {
+          "source": "social_watch",
+          "specifiers": [
+            "sw"
+          ]
+        }
+      ],
+      "exports": [
+        "check",
+        "age",
+        "fake_sleep",
+        "fake_oc",
+        "page_reader",
+        "run_main",
+        "blocked_reader",
+        "thief_reader",
+        "one_post_slow",
+        "hidden_reader"
+      ],
+      "totalLines": 349,
+      "hasStructuralAnalysis": true
+    },
     "scripts/test_sku_detect.mjs": {
       "filePath": "scripts/test_sku_detect.mjs",
       "contentHash": "dc25e58c72446be94a35865b56b85ca19a0f8142b9577622b8165998bb6553bf",
@@ -29605,7 +32376,7 @@
     },
     "scripts/test_social_watch.py": {
       "filePath": "scripts/test_social_watch.py",
-      "contentHash": "0c09db808400af06c744596ebfdcadf92e34ee12793874342c5d41e833fca6c1",
+      "contentHash": "7e9970590530fde9f0c8847675ce8552cf358bb6edc97880bab058422c03940a",
       "functions": [
         {
           "name": "check",
@@ -29629,6 +32400,78 @@
           ],
           "exported": true,
           "lineCount": 3
+        },
+        {
+          "name": "fake_bridge",
+          "params": [
+            "states"
+          ],
+          "exported": true,
+          "lineCount": 11
+        },
+        {
+          "name": "fake_fb",
+          "params": [
+            "vis_seq",
+            "posts_per_eval"
+          ],
+          "exported": true,
+          "lineCount": 14
+        },
+        {
+          "name": "ig_node",
+          "params": [
+            "code",
+            "owner",
+            "ts",
+            "likes",
+            "comments",
+            "media",
+            "product",
+            "**kw"
+          ],
+          "exported": true,
+          "lineCount": 5
+        },
+        {
+          "name": "ig_entry",
+          "params": [
+            "key",
+            "nodes",
+            "status",
+            "ts"
+          ],
+          "exported": true,
+          "lineCount": 7
+        },
+        {
+          "name": "ig_err",
+          "params": [
+            "key",
+            "status",
+            "shape",
+            "url"
+          ],
+          "exported": true,
+          "lineCount": 4
+        },
+        {
+          "name": "fake_ig",
+          "params": [
+            "pages",
+            "batches"
+          ],
+          "exported": true,
+          "lineCount": 25
+        },
+        {
+          "name": "raises",
+          "params": [
+            "fn",
+            "exc"
+          ],
+          "exported": true,
+          "lineCount": 8
         }
       ],
       "classes": [],
@@ -29662,18 +32505,37 @@
           "specifiers": [
             "si"
           ]
+        },
+        {
+          "source": "json",
+          "specifiers": [
+            "json"
+          ]
+        },
+        {
+          "source": "tempfile",
+          "specifiers": [
+            "tempfile"
+          ]
         }
       ],
       "exports": [
         "check",
-        "post"
+        "post",
+        "fake_bridge",
+        "fake_fb",
+        "ig_node",
+        "ig_entry",
+        "ig_err",
+        "fake_ig",
+        "raises"
       ],
-      "totalLines": 176,
+      "totalLines": 442,
       "hasStructuralAnalysis": true
     },
     "scripts/test_stock_rounds.py": {
       "filePath": "scripts/test_stock_rounds.py",
-      "contentHash": "0de1591390c05cb35cd81c288550b5134678e8e08747db8bf56ecdbb3dfdfdc7",
+      "contentHash": "6bbca0275432e93c53162c044ef0c9676bb460b6e754c6ea33ff9db0145978e9",
       "functions": [
         {
           "name": "check",
@@ -30250,7 +33112,7 @@
     },
     "wiki/daily/2026-10-22.md": {
       "filePath": "wiki/daily/2026-10-22.md",
-      "contentHash": "5d3796f6fc84d36ee641a9372da92ce2d2712fac1e073d817fe4641234767bdd",
+      "contentHash": "ad7eda1cceab123374fc3d0de786c3f95ad0aa06c77a76b24b569af44b41ec69",
       "functions": [],
       "classes": [],
       "imports": [],
@@ -30260,7 +33122,7 @@
     },
     "wiki/daily/2026-10-23.md": {
       "filePath": "wiki/daily/2026-10-23.md",
-      "contentHash": "8527f514d3037b9fb632e1bf10159415a0fc9e40f7cdee6ddf79029b14dec492",
+      "contentHash": "f128faab56204d55ba2ea924f55b8eb2077a164f04e7e673ef87c86c766bc37a",
       "functions": [],
       "classes": [],
       "imports": [],
@@ -30270,7 +33132,7 @@
     },
     "wiki/daily/2026-10-24.md": {
       "filePath": "wiki/daily/2026-10-24.md",
-      "contentHash": "bd775edc1877973c446a2a54549383bb554c122bcfdddf3182cc938e05487c09",
+      "contentHash": "1c3a40a003d084479b4e07e75f536eb6fcfd7deec9fcd366d7853eb26b2c5c5c",
       "functions": [],
       "classes": [],
       "imports": [],
@@ -30278,14 +33140,114 @@
       "totalLines": 126,
       "hasStructuralAnalysis": true
     },
-    "wiki/daily/index.md": {
-      "filePath": "wiki/daily/index.md",
-      "contentHash": "4ee6e031507094189ffcf162f9e1e53e2348c807ac9acc7bfcba72bab763221c",
+    "wiki/daily/2026-10-25.md": {
+      "filePath": "wiki/daily/2026-10-25.md",
+      "contentHash": "bb59e29b5e06f2c1c0024c3294f6e3247a9e9a83a021e99383b4d367f28fc1c3",
       "functions": [],
       "classes": [],
       "imports": [],
       "exports": [],
-      "totalLines": 15,
+      "totalLines": 49,
+      "hasStructuralAnalysis": true
+    },
+    "wiki/daily/2026-10-26.md": {
+      "filePath": "wiki/daily/2026-10-26.md",
+      "contentHash": "ebf6129ce6462f0fb3c7df8eae8c64562e64563aec5929ee00076db630fd021b",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 111,
+      "hasStructuralAnalysis": true
+    },
+    "wiki/daily/2026-10-28.md": {
+      "filePath": "wiki/daily/2026-10-28.md",
+      "contentHash": "ab13dc74ee7dd3b42356a6f90d04ebe878bd5317c74fe481f06467030365a877",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 43,
+      "hasStructuralAnalysis": true
+    },
+    "wiki/daily/2026-10-30.md": {
+      "filePath": "wiki/daily/2026-10-30.md",
+      "contentHash": "e82f6dfa3b04363d47fba9ead157610319fb83490a8cdfee478dcdc908dd186c",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 68,
+      "hasStructuralAnalysis": true
+    },
+    "wiki/daily/2026-10-31.md": {
+      "filePath": "wiki/daily/2026-10-31.md",
+      "contentHash": "b0742cf12da878b5d0cb5ba878fd73ea2bc060e68f065a1b6dd2a36c9290bfab",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 68,
+      "hasStructuralAnalysis": true
+    },
+    "wiki/daily/2026-11-02.md": {
+      "filePath": "wiki/daily/2026-11-02.md",
+      "contentHash": "0eec6f904efffe172eaa5b763f17e95d82561f252848d90d1e354700f2338184",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 52,
+      "hasStructuralAnalysis": true
+    },
+    "wiki/daily/2026-11-03.md": {
+      "filePath": "wiki/daily/2026-11-03.md",
+      "contentHash": "8f36f2e775dfca9d57c467d14416bad1a1b1b574092f680ab6326e8351e30a06",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 86,
+      "hasStructuralAnalysis": true
+    },
+    "wiki/daily/2026-11-11.md": {
+      "filePath": "wiki/daily/2026-11-11.md",
+      "contentHash": "394c00b0c8296e51062ff0fb8331cd04432a09fe1f33e029bd05f52548450d99",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 75,
+      "hasStructuralAnalysis": true
+    },
+    "wiki/daily/2026-11-14.md": {
+      "filePath": "wiki/daily/2026-11-14.md",
+      "contentHash": "7e3cb6285b6bdbb392b8b57e707c11395062e08f4f2826097cec674e99cf0cec",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 78,
+      "hasStructuralAnalysis": true
+    },
+    "wiki/daily/2026-11-16.md": {
+      "filePath": "wiki/daily/2026-11-16.md",
+      "contentHash": "aa20754001a559c56ac2144fba435c4f4cdfea1aeaedf9252d1dc1ea581538ed",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 51,
+      "hasStructuralAnalysis": true
+    },
+    "wiki/daily/index.md": {
+      "filePath": "wiki/daily/index.md",
+      "contentHash": "463cde919542d524c97d270c4c963cad6a153e0486b45a533dc94f0449b05c79",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 25,
       "hasStructuralAnalysis": true
     },
     "wiki/discrepancies/2026-05-21-chukes01-OP01.md": {
@@ -31298,9 +34260,9 @@
       "totalLines": 85,
       "hasStructuralAnalysis": true
     },
-    "wiki/skus/PKMGhost.md": {
-      "filePath": "wiki/skus/PKMGhost.md",
-      "contentHash": "89f9027d8374cb3e228cc61d47b08fa03f3d9468aa01af4722f02756b3baf494",
+    "wiki/skus/PKMM5AbyssEye.md": {
+      "filePath": "wiki/skus/PKMM5AbyssEye.md",
+      "contentHash": "33ba94cb3978b1ec336ce5ac57f3630790b10934a0b79837e49f8ad4cdac019d",
       "functions": [],
       "classes": [],
       "imports": [],
@@ -32948,6 +35910,116 @@
       "totalLines": 64,
       "hasStructuralAnalysis": true
     },
+    "wiki/worklog/2026-10-25-poster-headline-mid-word.md": {
+      "filePath": "wiki/worklog/2026-10-25-poster-headline-mid-word.md",
+      "contentHash": "2e36ccdff2fdf7321560082e8e56b30ef4ab25629db5310384dc588166bbedc4",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 50,
+      "hasStructuralAnalysis": true
+    },
+    "wiki/worklog/2026-10-26-motion-design-scenes.md": {
+      "filePath": "wiki/worklog/2026-10-26-motion-design-scenes.md",
+      "contentHash": "afd98fbe8c231640afe8e4ea3e9b147cba239884156d5c18b4c986bbd7c3b91a",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 99,
+      "hasStructuralAnalysis": true
+    },
+    "wiki/worklog/2026-10-26-storyboard-adbox.md": {
+      "filePath": "wiki/worklog/2026-10-26-storyboard-adbox.md",
+      "contentHash": "a15197eb2328bd89d1dbef33a97c78edd8f8a5caf4f49ed477cc30db7876acaf",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 130,
+      "hasStructuralAnalysis": true
+    },
+    "wiki/worklog/2026-10-26-video-qa-plan-gate.md": {
+      "filePath": "wiki/worklog/2026-10-26-video-qa-plan-gate.md",
+      "contentHash": "7b467d06695eef776eaf8138b311f6e7723ec64649528a2e827b0073fdf34021",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 72,
+      "hasStructuralAnalysis": true
+    },
+    "wiki/worklog/2026-10-28-social-ig-reddit-first-run.md": {
+      "filePath": "wiki/worklog/2026-10-28-social-ig-reddit-first-run.md",
+      "contentHash": "a489befe84ffd077504c09d4f8ee159bd3275624973feb339c39108569e51459",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 31,
+      "hasStructuralAnalysis": true
+    },
+    "wiki/worklog/2026-10-30-daily-digest-costs-abyss-eye.md": {
+      "filePath": "wiki/worklog/2026-10-30-daily-digest-costs-abyss-eye.md",
+      "contentHash": "72f85efd2cf7e90374fe3449b1540f71e129266dba276b7e54f5ba3f7c4fa107",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 93,
+      "hasStructuralAnalysis": true
+    },
+    "wiki/worklog/2026-10-31-hermes-sales-calc-tools.md": {
+      "filePath": "wiki/worklog/2026-10-31-hermes-sales-calc-tools.md",
+      "contentHash": "4fcbf033d9a160d9a62545b260a3e2ad190203d0b593edc0a993ce2c13a612fb",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 115,
+      "hasStructuralAnalysis": true
+    },
+    "wiki/worklog/2026-11-03-shared-research-browser-assetx.md": {
+      "filePath": "wiki/worklog/2026-11-03-shared-research-browser-assetx.md",
+      "contentHash": "4ee78c85e2caf071ffb07ad95c3ca945e5fa6317cddfed1ccecc8e6e42960d18",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 82,
+      "hasStructuralAnalysis": true
+    },
+    "wiki/worklog/2026-11-11-instagram-reader-endpoint-404.md": {
+      "filePath": "wiki/worklog/2026-11-11-instagram-reader-endpoint-404.md",
+      "contentHash": "261e9ca93d5d3decafb07299742229c543e2df73df584ab6e87702d67e444d81",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 54,
+      "hasStructuralAnalysis": true
+    },
+    "wiki/worklog/2026-11-11-telegram-mini-app-button.md": {
+      "filePath": "wiki/worklog/2026-11-11-telegram-mini-app-button.md",
+      "contentHash": "b74ffbff87010f449706ce764fa84e33f11ed6c543279a04c06023a3b864931d",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 81,
+      "hasStructuralAnalysis": true
+    },
+    "wiki/worklog/2026-11-16-eb05-missing-sku-vms-stock.md": {
+      "filePath": "wiki/worklog/2026-11-16-eb05-missing-sku-vms-stock.md",
+      "contentHash": "7920924d1b73f32a13c89fecf15de162261a51b88feadabe9f7febaefbe895f1",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 91,
+      "hasStructuralAnalysis": true
+    },
     "wiki/worklog/README.md": {
       "filePath": "wiki/worklog/README.md",
       "contentHash": "3fbd80dff9dc21e3694a2efc075dcd4676581228ab3b2a856b1d6fc1b8a86a1d",
@@ -32956,774 +36028,6 @@
       "imports": [],
       "exports": [],
       "totalLines": 46,
-      "hasStructuralAnalysis": true
-    },
-    "deploy/agents/video/qa.py": {
-      "filePath": "deploy/agents/video/qa.py",
-      "contentHash": "878f1a1ffc63c824732ac4fcd342e98d38269867621592221b044dd688c3f5ec",
-      "functions": [
-        {
-          "name": "_run",
-          "params": [
-            "args",
-            "timeout",
-            "binary"
-          ],
-          "exported": true,
-          "lineCount": 5
-        },
-        {
-          "name": "_check",
-          "params": [
-            "cid",
-            "label",
-            "status",
-            "detail"
-          ],
-          "exported": true,
-          "lineCount": 2
-        },
-        {
-          "name": "script_sha",
-          "params": [
-            "script"
-          ],
-          "exported": true,
-          "lineCount": 3
-        },
-        {
-          "name": "probe",
-          "params": [
-            "mp4"
-          ],
-          "exported": true,
-          "lineCount": 6
-        },
-        {
-          "name": "check_file",
-          "params": [
-            "info",
-            "expected",
-            "need_audio"
-          ],
-          "exported": true,
-          "lineCount": 26
-        },
-        {
-          "name": "_rank",
-          "params": [
-            "s"
-          ],
-          "exported": true,
-          "lineCount": 2
-        },
-        {
-          "name": "frame",
-          "params": [
-            "mp4",
-            "t"
-          ],
-          "exported": true,
-          "lineCount": 7
-        },
-        {
-          "name": "check_frames",
-          "params": [
-            "mp4",
-            "dur",
-            "step"
-          ],
-          "exported": true,
-          "lineCount": 29
-        },
-        {
-          "name": "_pearson",
-          "params": [
-            "xs",
-            "ys"
-          ],
-          "exported": true,
-          "lineCount": 9
-        },
-        {
-          "name": "logo_score",
-          "params": [
-            "img",
-            "box"
-          ],
-          "exported": true,
-          "lineCount": 13
-        },
-        {
-          "name": "logo_targets",
-          "params": [
-            "plan",
-            "dur"
-          ],
-          "exported": true,
-          "lineCount": 21
-        },
-        {
-          "name": "check_logo",
-          "params": [
-            "mp4",
-            "plan",
-            "dur"
-          ],
-          "exported": true,
-          "lineCount": 17
-        },
-        {
-          "name": "contact_sheet",
-          "params": [
-            "mp4",
-            "dur",
-            "out",
-            "cols",
-            "rows"
-          ],
-          "exported": true,
-          "lineCount": 24
-        },
-        {
-          "name": "check_audio",
-          "params": [
-            "mp4",
-            "plan",
-            "dur",
-            "has_audio"
-          ],
-          "exported": true,
-          "lineCount": 29
-        },
-        {
-          "name": "check_captions",
-          "params": [
-            "plan",
-            "work",
-            "dur"
-          ],
-          "exported": true,
-          "lineCount": 32
-        },
-        {
-          "name": "_texts",
-          "params": [
-            "node",
-            "key"
-          ],
-          "exported": true,
-          "lineCount": 10
-        },
-        {
-          "name": "check_brief",
-          "params": [
-            "plan",
-            "dur"
-          ],
-          "exported": true,
-          "lineCount": 26
-        },
-        {
-          "name": "run",
-          "params": [
-            "mp4",
-            "plan",
-            "expected",
-            "work",
-            "sheet"
-          ],
-          "exported": true,
-          "lineCount": 38
-        },
-        {
-          "name": "summary",
-          "params": [
-            "report"
-          ],
-          "exported": true,
-          "lineCount": 4
-        },
-        {
-          "name": "main",
-          "params": [
-            "argv"
-          ],
-          "exported": true,
-          "lineCount": 14
-        }
-      ],
-      "classes": [],
-      "imports": [
-        {
-          "source": "argparse",
-          "specifiers": [
-            "argparse"
-          ]
-        },
-        {
-          "source": "datetime",
-          "specifiers": [
-            "dt"
-          ]
-        },
-        {
-          "source": "hashlib",
-          "specifiers": [
-            "hashlib"
-          ]
-        },
-        {
-          "source": "io",
-          "specifiers": [
-            "io"
-          ]
-        },
-        {
-          "source": "json",
-          "specifiers": [
-            "json"
-          ]
-        },
-        {
-          "source": "math",
-          "specifiers": [
-            "math"
-          ]
-        },
-        {
-          "source": "pathlib",
-          "specifiers": [
-            "pathlib"
-          ]
-        },
-        {
-          "source": "re",
-          "specifiers": [
-            "re"
-          ]
-        },
-        {
-          "source": "subprocess",
-          "specifiers": [
-            "subprocess"
-          ]
-        },
-        {
-          "source": "sys",
-          "specifiers": [
-            "sys"
-          ]
-        },
-        {
-          "source": "PIL",
-          "specifiers": [
-            "Image",
-            "ImageDraw",
-            "ImageFont",
-            "ImageStat"
-          ]
-        },
-        {
-          "source": ".",
-          "specifiers": [
-            "config"
-          ]
-        }
-      ],
-      "exports": [
-        "_run",
-        "_check",
-        "script_sha",
-        "probe",
-        "check_file",
-        "_rank",
-        "frame",
-        "check_frames",
-        "_pearson",
-        "logo_score",
-        "logo_targets",
-        "check_logo",
-        "contact_sheet",
-        "check_audio",
-        "check_captions",
-        "_texts",
-        "check_brief",
-        "run",
-        "summary",
-        "main"
-      ],
-      "totalLines": 421,
-      "hasStructuralAnalysis": true
-    },
-    "deploy/app/api/video/ads/route.js": {
-      "filePath": "deploy/app/api/video/ads/route.js",
-      "contentHash": "dbac7e49a56359c1a1056b1b3547b41b5e033682e6b84c590fdcdfa6edb0d5c0",
-      "functions": [
-        {
-          "name": "extOf",
-          "params": [
-            "n"
-          ],
-          "exported": false,
-          "lineCount": 1
-        },
-        {
-          "name": "kindOf",
-          "params": [
-            "ext"
-          ],
-          "exported": false,
-          "lineCount": 1
-        },
-        {
-          "name": "str",
-          "params": [
-            "v",
-            "n"
-          ],
-          "exported": false,
-          "lineCount": 1
-        },
-        {
-          "name": "bkk",
-          "params": [],
-          "exported": false,
-          "lineCount": 1
-        },
-        {
-          "name": "readJson",
-          "params": [
-            "key"
-          ],
-          "exported": false,
-          "lineCount": 5
-        },
-        {
-          "name": "daysSince",
-          "params": [
-            "d"
-          ],
-          "exported": false,
-          "lineCount": 4
-        },
-        {
-          "name": "askVision",
-          "params": [
-            "parts",
-            "system"
-          ],
-          "exported": false,
-          "lineCount": 27
-        },
-        {
-          "name": "analysisPrompt",
-          "params": [
-            "ad"
-          ],
-          "exported": false,
-          "lineCount": 23
-        },
-        {
-          "name": "analyze",
-          "params": [
-            "ad"
-          ],
-          "exported": false,
-          "lineCount": 17
-        },
-        {
-          "name": "toPattern",
-          "params": [
-            "ad"
-          ],
-          "exported": false,
-          "lineCount": 20
-        },
-        {
-          "name": "GET",
-          "params": [
-            "req"
-          ],
-          "exported": true,
-          "lineCount": 12
-        },
-        {
-          "name": "POST",
-          "params": [
-            "req"
-          ],
-          "exported": true,
-          "lineCount": 77
-        }
-      ],
-      "classes": [],
-      "imports": [
-        {
-          "source": "next/server",
-          "specifiers": [
-            "NextResponse"
-          ]
-        },
-        {
-          "source": "../../../../lib/apiAuth",
-          "specifiers": [
-            "requireMarketing"
-          ]
-        },
-        {
-          "source": "../../../../lib/r2",
-          "specifiers": [
-            "getObject",
-            "listObjects",
-            "presign",
-            "putObject"
-          ]
-        }
-      ],
-      "exports": [
-        "dynamic",
-        "maxDuration",
-        "GET",
-        "POST"
-      ],
-      "totalLines": 237,
-      "hasStructuralAnalysis": true
-    },
-    "deploy/app/api/video/storyboard/route.js": {
-      "filePath": "deploy/app/api/video/storyboard/route.js",
-      "contentHash": "f8ce74ebf9ac3bd519c8cef953260bb1596f70458c60b76d414711ee724e63aa",
-      "functions": [
-        {
-          "name": "task",
-          "params": [
-            "name"
-          ],
-          "exported": false,
-          "lineCount": 1
-        },
-        {
-          "name": "otherNames",
-          "params": [
-            "idea"
-          ],
-          "exported": false,
-          "lineCount": 12
-        },
-        {
-          "name": "allPatterns",
-          "params": [],
-          "exported": false,
-          "lineCount": 9
-        },
-        {
-          "name": "backgroundsFor",
-          "params": [
-            "franchise"
-          ],
-          "exported": false,
-          "lineCount": 37
-        },
-        {
-          "name": "recentLogs",
-          "params": [],
-          "exported": false,
-          "lineCount": 6
-        },
-        {
-          "name": "recentPatterns",
-          "params": [],
-          "exported": false,
-          "lineCount": 2
-        },
-        {
-          "name": "squash",
-          "params": [
-            "s"
-          ],
-          "exported": false,
-          "lineCount": 1
-        },
-        {
-          "name": "thin",
-          "params": [
-            "summary",
-            "title"
-          ],
-          "exported": false,
-          "lineCount": 1
-        },
-        {
-          "name": "pickIdea",
-          "params": [
-            "seed"
-          ],
-          "exported": false,
-          "lineCount": 16
-        },
-        {
-          "name": "GET",
-          "params": [
-            "req"
-          ],
-          "exported": true,
-          "lineCount": 14
-        },
-        {
-          "name": "POST",
-          "params": [
-            "req"
-          ],
-          "exported": true,
-          "lineCount": 143
-        }
-      ],
-      "classes": [],
-      "imports": [
-        {
-          "source": "next/server",
-          "specifiers": [
-            "NextResponse"
-          ]
-        },
-        {
-          "source": "@supabase/supabase-js",
-          "specifiers": [
-            "createClient"
-          ]
-        },
-        {
-          "source": "node:fs/promises",
-          "specifiers": [
-            "readFile"
-          ]
-        },
-        {
-          "source": "node:path",
-          "specifiers": [
-            "path"
-          ]
-        },
-        {
-          "source": "../../../../lib/apiAuth",
-          "specifiers": [
-            "requireMarketing"
-          ]
-        },
-        {
-          "source": "../../../../lib/geminiText",
-          "specifiers": [
-            "askGeminiText"
-          ]
-        },
-        {
-          "source": "../../../../lib/r2",
-          "specifiers": [
-            "getObject",
-            "listObjects",
-            "mediaUrl",
-            "putObject"
-          ]
-        },
-        {
-          "source": "../../../../lib/videoTimeline",
-          "specifiers": [
-            "cleanTimeline",
-            "VOICES"
-          ]
-        },
-        {
-          "source": "../../../../lib/franchiseDetect",
-          "specifiers": [
-            "detectFranchise",
-            "FRANCHISE_LABEL"
-          ]
-        },
-        {
-          "source": "../../../../lib/storyboard",
-          "specifiers": [
-            "buildAssets",
-            "buildPrompt",
-            "choosePattern",
-            "compile",
-            "FREE",
-            "internalFacts",
-            "nameRegex",
-            "offCards",
-            "parseStoryboard",
-            "scrubNames",
-            "scrubSource"
-          ]
-        }
-      ],
-      "exports": [
-        "dynamic",
-        "maxDuration",
-        "GET",
-        "POST"
-      ],
-      "totalLines": 296,
-      "hasStructuralAnalysis": true
-    },
-    "deploy/lib/storyboard.js": {
-      "filePath": "deploy/lib/storyboard.js",
-      "contentHash": "92b1452ed640b6049caf6bcdf12eeccafa6bba00a9c769d230fbbd876cb8fa57",
-      "functions": [
-        {
-          "name": "sanitizeLine",
-          "params": [
-            "line"
-          ],
-          "exported": true,
-          "lineCount": 9
-        },
-        {
-          "name": "splitVo",
-          "params": [
-            "text"
-          ],
-          "exported": true,
-          "lineCount": 13
-        },
-        {
-          "name": "estSec",
-          "params": [
-            "line"
-          ],
-          "exported": false,
-          "lineCount": 1
-        },
-        {
-          "name": "scrubSource",
-          "params": [
-            "text",
-            "sourceLabel"
-          ],
-          "exported": true,
-          "lineCount": 12
-        },
-        {
-          "name": "esc",
-          "params": [
-            "s"
-          ],
-          "exported": false,
-          "lineCount": 1
-        },
-        {
-          "name": "nameRegex",
-          "params": [
-            "names"
-          ],
-          "exported": true,
-          "lineCount": 5
-        },
-        {
-          "name": "scrubNames",
-          "params": [
-            "text",
-            "re"
-          ],
-          "exported": true,
-          "lineCount": 1
-        },
-        {
-          "name": "internalFacts",
-          "params": [
-            "idea"
-          ],
-          "exported": true,
-          "lineCount": 8
-        },
-        {
-          "name": "offCards",
-          "params": [
-            "idea"
-          ],
-          "exported": true,
-          "lineCount": 4
-        },
-        {
-          "name": "choosePattern",
-          "params": [
-            "patterns"
-          ],
-          "exported": true,
-          "lineCount": 27
-        },
-        {
-          "name": "buildAssets",
-          "params": [],
-          "exported": true,
-          "lineCount": 28
-        },
-        {
-          "name": "buildPrompt",
-          "params": [],
-          "exported": true,
-          "lineCount": 80
-        },
-        {
-          "name": "parseStoryboard",
-          "params": [
-            "text"
-          ],
-          "exported": true,
-          "lineCount": 9
-        },
-        {
-          "name": "bannedIn",
-          "params": [
-            "s"
-          ],
-          "exported": true,
-          "lineCount": 3
-        },
-        {
-          "name": "sceneOf",
-          "params": [
-            "raw",
-            "franchise"
-          ],
-          "exported": false,
-          "lineCount": 10
-        },
-        {
-          "name": "compile",
-          "params": [
-            "sb",
-            "assets"
-          ],
-          "exported": true,
-          "lineCount": 169
-        }
-      ],
-      "classes": [],
-      "imports": [],
-      "exports": [
-        "BRANCH_PHOTOS",
-        "MAX_VO",
-        "CHARS_PER_SEC",
-        "END_CARD",
-        "sanitizeLine",
-        "splitVo",
-        "scrubSource",
-        "nameRegex",
-        "scrubNames",
-        "internalFacts",
-        "offCards",
-        "FREE",
-        "choosePattern",
-        "buildAssets",
-        "DESIGN",
-        "PAINT_MAX",
-        "PAINT_THB",
-        "buildPrompt",
-        "parseStoryboard",
-        "bannedIn",
-        "compile"
-      ],
-      "totalLines": 487,
       "hasStructuralAnalysis": true
     }
   }

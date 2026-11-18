@@ -47,3 +47,4 @@ ww-backfill.bat
 # --- Agent tooling configs (like .claude) ---
 openclaw/
 .mcp.json
+.grock/
