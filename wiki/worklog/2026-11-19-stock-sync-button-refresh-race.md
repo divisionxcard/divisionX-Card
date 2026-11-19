@@ -2,7 +2,7 @@
 type: worklog
 date: 2026-11-19
 tags: [web, stock-sync, payif, github-actions, race-condition, ux]
-commits: []
+commits: [9d2a9ee]
 status: ✅ ข้อมูลเข้าถูกตั้งแต่แรก · ปุ่มดึงข้อมูลรอจนข้อมูลลงจริงแล้วค่อยรีเฟรช
 ---
 
