@@ -9,7 +9,26 @@ import { fmt, sortSkus, sheetSku } from "../shared/helpers"
 import { SectionTitle } from "../shared/dx-components"
 import RestockSessionPanel from "./RestockSessionPanel"
 import { authFetch } from "../../lib/authFetch"
+import { supabase } from "../../lib/supabase"
 import { thaiDateTime } from "../../lib/thaiDate"
+
+// ── ปุ่ม "ดึงข้อมูล VMS/WW/Payif" สั่ง GitHub Actions แล้วตอบกลับทันที — งานจริงเสร็จทีหลัง ──
+// (เข้าคิว + ติดตั้ง + ดึงยอดขายก่อน ≈ 40 วิ ถึงหลายนาทีตอน GitHub คิวยาว)
+// เดิมรีเฟรชครั้งเดียวที่ 30 วิ → 19 พ.ย. 2026 แอดมินกด Payif 09:24:00 หน้ารีเฟรช 09:24:30
+// แต่ข้อมูลลงฐาน 09:24:42 → เห็นของเดิม (EB-05 ช่อง 39–40 ยังไม่ขึ้น) นึกว่าดึงไม่เข้า
+// ตอนนี้เฝ้า synced_at ล่าสุดของตู้ยี่ห้อนั้นจนกว่าจะขยับ แล้วค่อยรีเฟรช + บอกว่าเสร็จแล้ว
+const SYNC_POLL_MS = 10_000
+const SYNC_POLL_MAX_MS = 5 * 60_000
+
+async function latestSyncedAt(machineIds) {
+  if (!machineIds.length) return ""
+  const { data, error } = await supabase
+    .from("machine_stock").select("synced_at")
+    .in("machine_id", machineIds)
+    .order("synced_at", { ascending: false }).limit(1)
+  if (error) throw error
+  return data?.[0]?.synced_at || ""
+}
 
 // ช่องที่ของหมดต่อเนื่องเกินกี่วัน ถึงจะถือว่า "เติมไม่ได้จริง" ไม่ใช่แค่เพิ่งหมด
 // 3 วัน = ผ่านรอบเติมปกติไปแล้วอย่างน้อย 1 รอบ · ต่ำกว่านี้จะติดธงของที่เพิ่งหมดเมื่อวาน
@@ -94,19 +113,49 @@ export default function PageMachineStockView({ machines, machineStock, skus, onR
   const [showSkuDetail, setShowSkuDetail] = useState(false)
   const [showRefill, setShowRefill] = useState(false)
 
-  const triggerStockSync = async (endpoint, label, setBusy) => {
+  const pollRef = useRef(null)
+  useEffect(() => () => clearTimeout(pollRef.current), [])
+
+  const triggerStockSync = async (endpoint, label, brand, setBusy) => {
+    clearTimeout(pollRef.current)
+    setBusy(true); setSyncMsg(null)
+    const ids = machines.filter(m => m.brand === brand).map(m => m.machine_id)
     try {
-      setBusy(true); setSyncMsg(null)
+      // จำเวลาซิงค์ล่าสุดไว้ก่อนกด — อ่านไม่ได้ก็ยังกดได้ แค่ถอยไปรีเฟรชตามเวลาแบบเดิม
+      const before = await latestSyncedAt(ids).catch(() => null)
       const res = await authFetch(endpoint, { method: "POST" })
       const data = await res.json()
-      if (data.success) {
-        setSyncMsg({ type: "success", msg: `กำลังดึงข้อมูลสต็อก ${label}... รอสักครู่แล้วกด Refresh` })
-        setTimeout(() => onRefresh?.(), 30000)
-      } else {
+      if (!data.success) {
         setSyncMsg({ type: "error", msg: data.error || "เกิดข้อผิดพลาด" })
+        setBusy(false)
+        return
       }
-    } catch (err) { setSyncMsg({ type: "error", msg: err.message }) }
-    finally { setBusy(false) }
+      setSyncMsg({ type: "success", msg: `กำลังดึงข้อมูลสต็อก ${label}... ปกติไม่ถึง 1 นาที · หน้านี้จะอัปเดตเองเมื่อข้อมูลเข้า` })
+      const started = Date.now()
+      const tick = async () => {
+        const now = before === null ? null : await latestSyncedAt(ids).catch(() => null)
+        if (now && now > before) {
+          onRefresh?.()
+          setSyncMsg({ type: "success", msg: `อัปเดตสต็อก ${label} แล้ว · ข้อมูล ณ ${thaiDateTime(now)}` })
+          setBusy(false)
+          return
+        }
+        if (before === null || Date.now() - started >= SYNC_POLL_MAX_MS) {
+          onRefresh?.()
+          if (before !== null) {
+            setSyncMsg({ type: "error", msg: `ยังไม่เห็นข้อมูล ${label} ชุดใหม่ใน 5 นาที — GitHub อาจคิวนาน ลองกด Refresh อีกครั้งภายหลัง` })
+          }
+          setBusy(false)
+          return
+        }
+        pollRef.current = setTimeout(tick, SYNC_POLL_MS)
+      }
+      // อ่านเวลาไม่ได้ → รีเฟรชครั้งเดียวที่ 60 วิ (เดิม 30 วิ สั้นกว่างานจริง)
+      pollRef.current = setTimeout(tick, before === null ? 60_000 : SYNC_POLL_MS)
+    } catch (err) {
+      setSyncMsg({ type: "error", msg: err.message })
+      setBusy(false)
+    }
   }
 
   const machineNames = {}
@@ -239,17 +288,17 @@ export default function PageMachineStockView({ machines, machineStock, skus, onR
         actions={
           <>
             <LocalSyncButton setSyncMsg={setSyncMsg} onRefresh={onRefresh} />
-            <button onClick={() => triggerStockSync("/api/stock-sync", "VMS", setSyncingVms)} disabled={syncingVms} className="dx-btn dx-btn-primary"
+            <button onClick={() => triggerStockSync("/api/stock-sync", "VMS", "vms", setSyncingVms)} disabled={syncingVms} className="dx-btn dx-btn-primary"
               style={{ opacity: syncingVms ? 0.5 : 1, cursor: syncingVms ? "not-allowed" : "pointer" }}>
               <RefreshCw size={13} className={syncingVms ? "animate-spin" : ""}/>
               {syncingVms ? "กำลังดึง..." : "ดึงข้อมูล VMS"}
             </button>
-            <button onClick={() => triggerStockSync("/api/worldwide-stock-sync", "WW", setSyncingWw)} disabled={syncingWw} className="dx-btn dx-btn-primary"
+            <button onClick={() => triggerStockSync("/api/worldwide-stock-sync", "WW", "worldwide", setSyncingWw)} disabled={syncingWw} className="dx-btn dx-btn-primary"
               style={{ opacity: syncingWw ? 0.5 : 1, cursor: syncingWw ? "not-allowed" : "pointer" }}>
               <RefreshCw size={13} className={syncingWw ? "animate-spin" : ""}/>
               {syncingWw ? "กำลังดึง..." : "ดึงข้อมูล WW"}
             </button>
-            <button onClick={() => triggerStockSync("/api/payif-stock-sync", "Payif", setSyncingPayif)} disabled={syncingPayif} className="dx-btn dx-btn-primary"
+            <button onClick={() => triggerStockSync("/api/payif-stock-sync", "Payif", "payif", setSyncingPayif)} disabled={syncingPayif} className="dx-btn dx-btn-primary"
               style={{ opacity: syncingPayif ? 0.5 : 1, cursor: syncingPayif ? "not-allowed" : "pointer" }}>
               <RefreshCw size={13} className={syncingPayif ? "animate-spin" : ""}/>
               {syncingPayif ? "กำลังดึง..." : "ดึงข้อมูล Payif"}
