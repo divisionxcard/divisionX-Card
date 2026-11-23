@@ -246,6 +246,9 @@ GitHub Actions → VMS Daily Sync → Run workflow:
 - **Backfill อย่าเกิน 5 วัน/ครั้ง** — XLSX จาก VMS อาจถูกตัดถ้าข้อมูลมาก
 - ถ้ายอดไม่ตรง → ตรวจสอบทีละวัน → ดาวน์โหลด XLSX จาก VMS เองแล้ว import ผ่าน SQL
 - Sales API ใช้งานได้แล้ว (เคยถูก block 403) → ถ้าล้มระบบยัง fallback ไป Playwright อัตโนมัติ
+- **สินค้าใหม่ที่ยังไม่มีแถวใน `skus`** (23 พ.ย. 2026) — ตัวดึงยอดขายทั้ง 3 ยี่ห้อไม่ล้มและไม่ทิ้งแล้ว:
+  พักแถวไว้ในตาราง `sales_pending_sku` (migration 084) + แจ้งกลุ่มแอดมิน · เพิ่ม SKU แล้วซิงค์รอบถัดไปย้ายเข้า `sales` เอง
+  โค้ด `deploy/scraper/sales_pending.py` · เทสต์ `scripts/test_sales_pending.py`
 - **stock sync จะดึงยอดขายล่าสุดก่อนเสมอ** — `slot_refill_events` ต้องใช้ `sold_between` คำนวณ `qty_added`
   ถ้ายอดขายยังไม่เข้า DB ตัวเลขการเติมจะต่ำกว่าจริง (workflow `refill-recompute` คอยซ่อมให้อีกชั้น)
 

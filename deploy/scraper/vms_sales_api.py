@@ -20,6 +20,7 @@ SUPABASE_KEY = os.environ["SUPABASE_SERVICE_KEY"]
 # แล้วหลุดชื่อที่มีอักขระแปลกปน เช่น "PRB - 02 (ฺBox)" (มี U+0E3A ก่อนคำว่า Box)
 # ทำให้ 31 รายการนับเป็นซองเดี่ยว ได้ 1 แทนที่จะเป็น 10 ซอง
 from sales_unit import unit_of, add_unit, upsert_sales  # noqa: E402
+from sales_pending import hold_unknown_skus, release_pending  # noqa: E402
 
 PACKS_PER_BOX = {
     "OP 01": 24, "OP 02": 24, "OP 03": 24, "OP 04": 24, "OP 05": 24,
@@ -528,10 +529,11 @@ def save_to_supabase(records: list[dict], repair: bool = False):
        โหมดซ่อมยอมทับได้เพราะเราชี้สินค้าจาก **รหัส** ไม่ใช่จากช่อง — รหัสไม่ขยับตามช่อง
        และมีด่าน _confident กันไว้อีกชั้น (บิลไหนไม่ชัวร์ ไม่แตะ)
     """
+    supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+    release_pending(supabase)        # แถวที่พักรอ SKU ไว้ · SKU มีแล้วก็ย้ายเข้า sales (ดู sales_pending.py)
     if not records:
         print("⚠️ ไม่มีข้อมูลที่จะบันทึก")
         return
-    supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
     if repair:
         keep, skipped = [], []
@@ -549,6 +551,13 @@ def save_to_supabase(records: list[dict], repair: bool = False):
     else:
         for r in records:
             r.pop("_confident", None)
+
+    # สินค้าใหม่ที่ยังไม่มีแถวใน skus ต้องไม่ทำให้ upsert ล้มทั้งชุด (FK) — พักไว้ + แจ้งเตือน
+    # เคส OP 18 · 22–23 พ.ย. 2026: ยอดขาย VMS ทุกตู้ไม่เข้า 2 วันเพราะสินค้าตัวเดียว
+    records = hold_unknown_skus(supabase, records, "vms")
+    if not records:
+        print("⚠️ ไม่เหลือรายการที่บันทึกได้ (ทั้งหมดรอ SKU)")
+        return
 
     print(f"💾 บันทึก {len(records)} รายการลง Supabase...")
     batch_size = 100

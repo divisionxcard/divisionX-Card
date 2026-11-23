@@ -49,6 +49,7 @@ UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
 # แล้วหลุดชื่อที่มีอักขระแปลกปน เช่น "PRB - 02 (ฺBox)" (มี U+0E3A ก่อนคำว่า Box)
 # ทำให้ 31 รายการนับเป็นซองเดี่ยว ได้ 1 แทนที่จะเป็น 10 ซอง
 from sales_unit import unit_of, add_unit, upsert_sales  # noqa: E402
+from sales_pending import hold_unknown_skus, release_pending  # noqa: E402
 
 PACKS_PER_BOX = {
     "OP 01": 24, "OP 02": 24, "OP 03": 24, "OP 04": 24, "OP 05": 24,
@@ -216,19 +217,9 @@ def order_to_records(detail: dict, machine_lookup: dict) -> list[dict]:
 
 
 def filter_unknown_skus(supabase, records: list[dict]) -> list[dict]:
-    """drop record ที่ sku ไม่อยู่ใน skus (sales.sku_id = NOT NULL FK)"""
-    res = supabase.table("skus").select("sku_id").execute()
-    valid = {r["sku_id"] for r in (res.data or [])}
-    kept, dropped = [], {}
-    for r in records:
-        if r["sku_id"] in valid:
-            kept.append(r)
-        else:
-            dropped[r["sku_id"]] = dropped.get(r["sku_id"], 0) + 1
-    if dropped:
-        print("⚠️ sku ไม่รู้จัก → ข้าม (เพิ่มใน skus ก่อน แล้ว backfill): "
-              + ", ".join(f"{k}×{v}" for k, v in sorted(dropped.items())))
-    return kept
+    """แถวที่ sku ไม่อยู่ใน skus (sales.sku_id = NOT NULL FK) → พักไว้ใน sales_pending_sku + แจ้งเตือน
+    เดิมทิ้งเงียบ ๆ · SKU ถูกเพิ่มแล้วซิงค์รอบถัดไปย้ายเข้า sales เอง (ดู sales_pending.py)"""
+    return hold_unknown_skus(supabase, records, "payif")
 
 
 def save_to_supabase(supabase, records: list[dict]):
@@ -314,6 +305,7 @@ def main():
         total_baht = sum(r["grand_total"] for r in records)
         print(f"  ── รวม {mapped} รายการ · ฿{total_baht:,.2f}")
     else:
+        release_pending(supabase)    # แถวที่พักรอ SKU ไว้ · SKU มีแล้วก็ย้ายเข้า sales
         records = filter_unknown_skus(supabase, records)
         save_to_supabase(supabase, records)
 
