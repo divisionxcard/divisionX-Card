@@ -47,6 +47,7 @@ PACKS_PER_BOX = {
     "NRT Jin - 2": 10,
     "OP 16": 24,
     "OP 17": 24,
+    "OP 18": 24,
 }
 
 # ── VMS Product Name → SKU ID Mapping ───────────────────────────

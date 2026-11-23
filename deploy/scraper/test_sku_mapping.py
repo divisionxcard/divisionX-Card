@@ -201,6 +201,8 @@ CASES = [
     ("One Piece OP - 16 Box", "OP 16", "vms,worldwide"),
     ("One Piece OP - 17", "OP 17", "vms,worldwide"),
     ("One Piece OP - 17 Box", "OP 17", "vms,worldwide"),
+    ("One Piece OP - 18", "OP 18", "vms,worldwide"),
+    ("One Piece OP - 18 Box", "OP 18", "vms,worldwide"),
     ("POKEMON Dream EX", "PKM Dream EX", "vms"),
     ("POKEMON MAGA EX", "PKM Dream EX", "vms"),
     ("Pokemon  Dream EX", "PKM Dream EX", "payif"),
