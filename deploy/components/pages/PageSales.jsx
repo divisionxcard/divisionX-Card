@@ -28,7 +28,7 @@ const SKU_ORDER = [
   "OP 17",
   "OP 18",
   "PRB 01", "PRB 02",
-  "EB 01", "EB 02", "EB 03", "EB 04",
+  "EB 01", "EB 02", "EB 03", "EB 04", "EB 05",
   // Dragon Ball
   "FB 01", "FB 02", "FB 03", "FB 04", "FB 05", "FB 06", "FB 07", "FB 08", "FB 09", "B29",
   // Naruto

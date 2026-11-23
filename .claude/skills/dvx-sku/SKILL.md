@@ -108,6 +108,13 @@ franchise, set_code, item_type, language, is_active, image_url, image_url_box
 
 ### 4. แก้ mapper ทั้ง 6 ไฟล์
 
+### 4.2 ใส่ลำดับการแสดงผล 2 ที่ (ไม่ใส่ = ไม่ error แต่ตกไปท้ายตารางเงียบ ๆ)
+
+- `deploy/components/shared/constants.js` → `REFILL_REPORT_SKU_ORDER` (ใบเตรียมของเติมตู้ — แอดมินเดินหยิบตามลำดับนี้)
+- `deploy/components/pages/PageSales.jsx` → `SKU_ORDER`
+
+EB 05 เพิ่ม SKU เมื่อ 16 พ.ย. 2026 แต่ลืมสองที่นี้ → ไปโผล่ท้ายใบหลัง Yu-Gi-Oh จนเจ้าของทัก (23 พ.ย.)
+
 ### 4.5 เพิ่มรูปซอง/กล่อง
 
 รูปเก็บใน Supabase Storage bucket `sku-images` ชื่อไฟล์ `<SLUG>-pack.webp` / `<SLUG>-box.webp`
