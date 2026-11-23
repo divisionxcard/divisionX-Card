@@ -2050,7 +2050,7 @@
       "type": "file",
       "name": "PageMachineStockView.jsx",
       "filePath": "deploy/components/pages/PageMachineStockView.jsx",
-      "summary": "หน้าดูสต็อกหน้าตู้รายสล็อต เตรียมแผนเติมของ ปุ่มซิงค์สต็อก VMS/WW/Payif และปุ่มซิงค์ในเครื่อง (dev) พร้อมแผงรอบเติมของ",
+      "summary": "หน้าดูสต็อกหน้าตู้รายสล็อต เตรียมแผนเติมของ ปุ่มซิงค์สต็อก VMS/WW/Payif (รอจนข้อมูลลงฐานจริงแล้วค่อยรีเฟรช) และปุ่มซิงค์ในเครื่อง (dev) พร้อมแผงรอบเติมของ",
       "tags": [
         "component",
         "stock",
@@ -2061,13 +2061,31 @@
       "complexity": "complex"
     },
     {
+      "id": "function:deploy/components/pages/PageMachineStockView.jsx:latestSyncedAt",
+      "type": "function",
+      "name": "latestSyncedAt",
+      "filePath": "deploy/components/pages/PageMachineStockView.jsx",
+      "lineRange": [
+        23,
+        31
+      ],
+      "summary": "อ่านเวลาซิงค์ล่าสุดของกลุ่มตู้จาก machine_stock — ใช้เฝ้าว่าข้อมูลชุดใหม่ลงฐานแล้วหรือยังหลังกดปุ่มดึงข้อมูล",
+      "tags": [
+        "helper",
+        "sync",
+        "supabase",
+        "polling"
+      ],
+      "complexity": "simple"
+    },
+    {
       "id": "function:deploy/components/pages/PageMachineStockView.jsx:LocalSyncButton",
       "type": "function",
       "name": "LocalSyncButton",
       "filePath": "deploy/components/pages/PageMachineStockView.jsx",
       "lineRange": [
-        23,
-        85
+        42,
+        104
       ],
       "summary": "ปุ่มซิงค์ในเครื่อง เรียก /api/sync/local เฉพาะ dev และ poll สถานะงาน",
       "tags": [
@@ -2083,10 +2101,10 @@
       "name": "PageMachineStockView",
       "filePath": "deploy/components/pages/PageMachineStockView.jsx",
       "lineRange": [
-        87,
-        854
+        106,
+        903
       ],
-      "summary": "หน้าหลักดูสต็อกรายสล็อต บันทึกแผนเติมผ่าน /api/refill-plan และสั่งซิงค์สต็อก",
+      "summary": "หน้าหลักดูสต็อกรายสล็อต บันทึกแผนเติมผ่าน /api/refill-plan และสั่งซิงค์สต็อกแล้วเฝ้าเวลาซิงค์ล่าสุดจนข้อมูลเข้า",
       "tags": [
         "component",
         "stock",
@@ -2100,8 +2118,8 @@
       "name": "Th",
       "filePath": "deploy/components/pages/PageMachineStockView.jsx",
       "lineRange": [
-        856,
-        867
+        905,
+        916
       ],
       "summary": "ส่วนหัวคอลัมน์ตารางแบบเรียงได้",
       "tags": [
@@ -54325,6 +54343,27 @@
       "direction": "forward",
       "weight": 0.7,
       "recoveredFromImportMap": true
+    },
+    {
+      "source": "file:deploy/components/pages/PageMachineStockView.jsx",
+      "target": "function:deploy/components/pages/PageMachineStockView.jsx:latestSyncedAt",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:deploy/components/pages/PageMachineStockView.jsx",
+      "target": "file:deploy/lib/supabase.js",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "function:deploy/components/pages/PageMachineStockView.jsx:PageMachineStockView",
+      "target": "function:deploy/components/pages/PageMachineStockView.jsx:latestSyncedAt",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
     }
   ],
   "layers": [

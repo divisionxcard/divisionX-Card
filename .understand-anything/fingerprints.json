@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
-  "gitCommitHash": "16f6d9a07981e10a863641850e88be1e446dcb56",
-  "generatedAt": "2026-11-18T05:28:56.880Z",
+  "gitCommitHash": "06fa989cc59d4300ab6e3ceefb1ffd251e1ed8a1",
+  "generatedAt": "2026-11-23T04:51:36Z",
   "files": {
     ".env.example": {
       "filePath": ".env.example",
@@ -19961,8 +19961,16 @@
     },
     "deploy/components/pages/PageMachineStockView.jsx": {
       "filePath": "deploy/components/pages/PageMachineStockView.jsx",
-      "contentHash": "2b4135043a554925404aac40e1bc6cefae36a7a3bb5762b72d0beabf48a23879",
+      "contentHash": "a8107306c8737b63c3f11431531872e038e5821ea263d5814e82f128eabcd0ce",
       "functions": [
+        {
+          "name": "latestSyncedAt",
+          "params": [
+            "machineIds"
+          ],
+          "exported": false,
+          "lineCount": 9
+        },
         {
           "name": "LocalSyncButton",
           "params": [],
@@ -19973,7 +19981,7 @@
           "name": "PageMachineStockView",
           "params": [],
           "exported": true,
-          "lineCount": 768
+          "lineCount": 798
         },
         {
           "name": "Th",
@@ -20039,6 +20047,12 @@
           ]
         },
         {
+          "source": "../../lib/supabase",
+          "specifiers": [
+            "supabase"
+          ]
+        },
+        {
           "source": "../../lib/thaiDate",
           "specifiers": [
             "thaiDateTime"
@@ -20048,7 +20062,7 @@
       "exports": [
         "PageMachineStockView"
       ],
-      "totalLines": 868,
+      "totalLines": 916,
       "hasStructuralAnalysis": true
     },
     "deploy/components/pages/PageMyStock.jsx": {
@@ -20250,7 +20264,7 @@
     },
     "deploy/components/pages/PageSales.jsx": {
       "filePath": "deploy/components/pages/PageSales.jsx",
-      "contentHash": "3b8379228a5850f8da2b2f13f59d03e5572fa9b62ffc1504217a294037f88a50",
+      "contentHash": "f5741269e1e1ee109cc015948fb79584e3cb1210a70c73a844609bb1d453c619",
       "functions": [
         {
           "name": "skuRank",
@@ -20956,7 +20970,7 @@
     },
     "deploy/components/shared/constants.js": {
       "filePath": "deploy/components/shared/constants.js",
-      "contentHash": "1ae451082652de65799ef185ef19b308e2c7429928a2b2f53763f0dd6d7afafe",
+      "contentHash": "091452bdbfb7b662c025a9f10a1425160428f29f61fc0c8d8762bc378981a24b",
       "functions": [],
       "classes": [],
       "imports": [],
@@ -25448,7 +25462,7 @@
     },
     "deploy/scraper/payif_sales_sync.py": {
       "filePath": "deploy/scraper/payif_sales_sync.py",
-      "contentHash": "62a4724f5852a984d3e79e80318b4d9f01dd02706794425edc47a4e57897f2f9",
+      "contentHash": "7ccfd88d0cc93c4189c74277633e03d2ad0d54ff6086409bef9c59ad677e7180",
       "functions": [
         {
           "name": "dec",
@@ -25622,7 +25636,7 @@
         "save_to_supabase",
         "main"
       ],
-      "totalLines": 323,
+      "totalLines": 322,
       "hasStructuralAnalysis": true
     },
     "deploy/scraper/payif_stock_sync.py": {
@@ -26789,7 +26803,7 @@
     },
     "deploy/scraper/test_sku_mapping.py": {
       "filePath": "deploy/scraper/test_sku_mapping.py",
-      "contentHash": "7bc7e67d93f523c0f472c73617d1bb877df3a8abb2520aad277bbd373d95ccdc",
+      "contentHash": "2518133f8f289e05d12371da971c2d9aa09a8f594600b454efab7c6e8b0aced9",
       "functions": [
         {
           "name": "load",
@@ -26844,12 +26858,12 @@
         "load",
         "main"
       ],
-      "totalLines": 307,
+      "totalLines": 308,
       "hasStructuralAnalysis": true
     },
     "deploy/scraper/vms_sales_api.py": {
       "filePath": "deploy/scraper/vms_sales_api.py",
-      "contentHash": "38d3d5bcf229745f70e2bf27bd3d9605c3d31632e4c03a5cb74ad9cf804855ec",
+      "contentHash": "d2235b3e01c8ed1ea2df247eaa3bc8508fdfd3de4a89a41a0b5fe9be3c397963",
       "functions": [
         {
           "name": "map_product_to_sku",
@@ -27042,7 +27056,7 @@
     },
     "deploy/scraper/vms_scraper.py": {
       "filePath": "deploy/scraper/vms_scraper.py",
-      "contentHash": "fb0cb2bc0faebd1e8bb1c9a3d2bc83a43aad8df59c87f9b483b712ffc31348e6",
+      "contentHash": "daae4e5f2d9d1b7d317ea6115ff38d38d94e7d30341babc5626c9ba41112593f",
       "functions": [
         {
           "name": "normalize",
@@ -27341,7 +27355,7 @@
     },
     "deploy/scraper/worldwide_sales_api.py": {
       "filePath": "deploy/scraper/worldwide_sales_api.py",
-      "contentHash": "d516ad7654c16a8ccd66e927b13369e23ab4f3c4a913abec9426ba884d5810b2",
+      "contentHash": "7284cce7ff0ced3f71a7eed956ed28c66cd2f31565b7335f65f7a625102d6be2",
       "functions": [
         {
           "name": "map_goods_to_sku",
@@ -27528,7 +27542,7 @@
         "save_ship_fails",
         "main"
       ],
-      "totalLines": 534,
+      "totalLines": 533,
       "hasStructuralAnalysis": true
     },
     "deploy/scraper/worldwide_stock_sync.py": {
